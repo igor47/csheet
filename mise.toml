@@ -1,0 +1,19 @@
+[tools]
+bun = "latest"
+jj = "latest"
+
+[env]
+# Optional: Set default port
+PORT = "3000"
+
+[tasks.dev]
+run = "bun run --hot index.tsx"
+description = "Start development server with hot reload"
+
+[tasks.start]
+run = "bun run index.tsx"
+description = "Start production server"
+
+[tasks.install]
+run = "bun install"
+description = "Install dependencies"

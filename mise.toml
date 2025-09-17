@@ -7,11 +7,11 @@ jj = "latest"
 PORT = "3000"
 
 [tasks.dev]
-run = "bun run --hot index.tsx"
+run = "bun run --watch main.ts"
 description = "Start development server with hot reload"
 
 [tasks.start]
-run = "bun run index.tsx"
+run = "bun run main.tsx"
 description = "Start production server"
 
 [tasks.install]

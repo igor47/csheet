@@ -7,7 +7,20 @@ import { Layout } from './components/Layout'
 const app = new Hono()
 
 // jsx renderer
+// use the layout for all routes
 app.use(jsxRenderer(Layout))
+
+// update typescript to indicate the title prop on the layout
+// see: https://hono.dev/docs/api/context#render-setrenderer
+declare module 'hono' {
+  interface ContextRenderer {
+    (
+      content: string | Promise<string>,
+      head: { title: string }
+    ): Response | Promise<Response>
+  }
+}
+
 
 // Serve static files
 app.use('/static/*', serveStatic({ root: './' }))

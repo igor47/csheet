@@ -1,10 +1,54 @@
+import type { User } from "@src/db/users";
+
 export interface NavbarProps {
   currentPage?: string;
-  isLoggedIn?: boolean;
+  user?: User;
 }
 
-export const Navbar = ({ currentPage, isLoggedIn }: NavbarProps) => {
+interface NavLink {
+  href: string;
+  label: string;
+  isActive: boolean;
+}
+
+const getNavLinks = (isLoggedIn: boolean, currentPage?: string): NavLink[] => {
+  const allLinks = [
+    { href: '/', label: 'Home', requiresAuth: undefined },
+  ];
+
+  return allLinks
+    .filter(link => {
+      if (link.requiresAuth === true) return isLoggedIn;
+      if (link.requiresAuth === false) return !isLoggedIn;
+      return true;
+    })
+    .map(link => ({
+      href: link.href,
+      label: link.label,
+      isActive: currentPage === link.href,
+    }));
+};
+
+const LoggedInContent = ({ user }: { user: User }) => {
+  const username = user.email?.split('@')[0];
+
+  return (
+    <div class="d-flex align-items-center">
+      <span class="navbar-text me-3">
+        {username}
+      </span>
+      <a href="/logout" class="btn btn-outline-secondary btn-sm">Logout</a>
+    </div>
+  );
+};
+
+const LoggedOutContent = () => (
+  <a href="/login" class="btn btn-outline-primary btn-sm">Login</a>
+);
+
+export const Navbar = ({ currentPage, user }: NavbarProps) => {
   const collapseId = "navbarContent";
+  const navLinks = getNavLinks(!!user, currentPage);
 
   return (
     <nav class="navbar navbar-expand-md bg-body-tertiary">
@@ -26,20 +70,19 @@ export const Navbar = ({ currentPage, isLoggedIn }: NavbarProps) => {
 
         <div class="collapse navbar-collapse" id={ collapseId }>
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="#">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">Link</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-            </li>
+            {navLinks.map(link => (
+              <li class="nav-item">
+                <a
+                  class={`nav-link ${link.isActive ? 'active' : ''}`}
+                  aria-current={link.isActive ? 'page' : undefined}
+                  href={link.href}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
           </ul>
-          <form class="d-flex" role="search">
-            <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search"/>
-            <button class="btn btn-outline-success" type="submit">Search</button>
-          </form>
+          {user ? <LoggedInContent user={user} /> : <LoggedOutContent />}
         </div>
       </div>
     </nav>

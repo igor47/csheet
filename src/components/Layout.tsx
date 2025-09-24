@@ -1,6 +1,14 @@
 import { Navbar } from "@src/components/ui/Navbar";
+import type { User } from "@src/db/users";
 
-export const Layout = ({ children, title = "CSheet" }: { children?: any, title?: string }) => (
+export interface LayoutProps {
+  children?: any;
+  title?: string;
+  user?: User;
+  currentPage?: string;
+}
+
+export const Layout = ({ children, title = "CSheet", user, currentPage }: LayoutProps) => (
   <html>
     <head>
       <title>{title}</title>
@@ -20,7 +28,7 @@ export const Layout = ({ children, title = "CSheet" }: { children?: any, title?:
       <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     </head>
     <body data-bs-theme="dark">
-      <Navbar />
+      <Navbar user={user} currentPage={currentPage} />
 
       <main>
         {children}

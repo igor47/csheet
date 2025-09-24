@@ -1,6 +1,8 @@
 [tools]
 bun = "latest"
 jj = "latest"
+dbmate = "latest"
+jq = "latest"
 
 [env]
 # Optional: Set default port
@@ -17,3 +19,11 @@ description = "Start production server"
 [tasks.install]
 run = "bun install"
 description = "Install dependencies"
+
+[tasks.dbmate]
+run = """
+  DB_PATH=$(bun src/config.ts | jq -r '.sqliteDbPath')
+  echo "Using database path: $DB_PATH"
+  DATABASE_URL="sqlite:$DB_PATH" DBMATE_MIGRATIONS_DIR="./migrations" dbmate "$@"
+"""
+description = "Run dbmate with configured database path"

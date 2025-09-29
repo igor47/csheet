@@ -1,4 +1,11 @@
-export const Character = () => {
+
+import type { Character as CharacterData } from '@src/db/characters';
+
+type CharacterProps = {
+  character: CharacterData;
+}
+
+export const Character = ({ character }: CharacterProps) => {
   return (<>
     {/* Content */}
     <div class="container-fluid my-3">

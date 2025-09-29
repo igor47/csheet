@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { create, findByEmail } from '@src/db/users'
 import { setAuthCookie, clearAuthCookie } from '@src/middleware/auth'
 import { Login } from '@src/components/Login'
-import { Logout } from '@src/components/Logout'
 
 export const authRoutes = new Hono()
 
@@ -33,10 +32,6 @@ authRoutes.post('/login', async (c) => {
 })
 
 authRoutes.get('/logout', (c) => {
-  return c.render(<Logout />, { title: "Logout" })
-})
-
-authRoutes.post('/logout', (c) => {
   clearAuthCookie(c);
   return c.redirect('/');
 })

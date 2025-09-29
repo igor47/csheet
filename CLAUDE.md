@@ -1,4 +1,6 @@
 
+# CSheet Project Guidelines
+
 Default to using Bun instead of Node.js.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`
@@ -8,9 +10,136 @@ Default to using Bun instead of Node.js.
 - Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
 - Bun automatically loads .env, so don't use dotenv.
 
+## Framework
+
+This project uses **Hono** as the web framework with JSX rendering.
+
+- We use `hono/jsx-renderer` for server-side rendering
+- All routes use `c.render()` to render components with the Layout
+- Bootstrap 5 is used for styling (via CDN in Layout)
+
+## Project Structure
+
+```
+src/
+├── app.ts              # Main app entry point, registers routes and middleware
+├── components/         # React/JSX components
+│   ├── Layout.tsx      # Main layout wrapper with Navbar
+│   ├── Welcome.tsx     # Home page component
+│   ├── Character.tsx   # Character sheet component
+│   ├── CharacterNew.tsx # Character creation component
+│   ├── Login.tsx       # Login page component
+│   └── ui/
+│       └── Navbar.tsx  # Navigation bar with auth status
+├── routes/             # Route handlers
+│   ├── index.tsx       # Home route (/)
+│   ├── auth.tsx        # Auth routes (/login, /logout)
+│   └── character.tsx   # Character routes (/character/new, /character/view)
+├── middleware/         # Middleware
+│   └── auth.ts         # Auth middleware (sets c.var.user)
+├── db/                 # Database layer
+│   └── users.ts        # User model and queries
+└── config.ts           # Configuration
+```
+
+## Routes
+
+Routes are defined in `src/routes/` and registered in `src/app.ts`:
+
+```tsx
+// src/routes/index.tsx
+export const indexRoutes = new Hono()
+
+indexRoutes.get('/', (c) => {
+  return c.render(<Welcome user={c.var.user} />, { title: "Welcome to CSheet" })
+})
+```
+
+Register routes in `src/app.ts`:
+
+```tsx
+app.route('/', indexRoutes)
+app.route('/', authRoutes)
+app.route('/character', characterRoutes)
+```
+
+## Components
+
+Components live in `src/components/` and should:
+
+- Use Bootstrap 5 classes for styling
+- Define a TypeScript interface for props (e.g., `WelcomeProps`, `LayoutProps`)
+- Break complex UI into sub-components within the same file
+- Accept `user?: User` prop when auth state is needed
+
+Example:
+
+```tsx
+import type { User } from "@src/db/users";
+
+export interface WelcomeProps {
+  user?: User;
+}
+
+export const Welcome = ({ user }: WelcomeProps) => (
+  <div class="container">
+    {/* ... */}
+  </div>
+)
+```
+
+## Layout & Rendering
+
+The Layout component (`src/components/Layout.tsx`) wraps all pages:
+
+- Automatically receives `user` from auth middleware via renderer
+- Automatically receives `currentPage` from `c.req.path`
+- Passes these props to Navbar for auth UI and active link highlighting
+
+```tsx
+// In src/app.ts
+app.use(jsxRenderer((props, c) => {
+  const user = c.get('user')
+  const currentPage = c.req.path
+  return Layout({ ...props, user, currentPage })
+}))
+```
+
+Routes just need to call `c.render()`:
+
+```tsx
+c.render(<Component />, { title: "Page Title" })
+```
+
+## Authentication
+
+Authentication is handled via signed cookies:
+
+- Middleware: `src/middleware/auth.ts` sets `c.var.user` if authenticated
+- Access user in routes: `c.var.user`
+- Auth functions: `setAuthCookie(c, userId)`, `clearAuthCookie(c)`
+- Login: `/login` (GET shows form, POST authenticates)
+- Logout: `/logout` (GET logs out and redirects to home)
+
+The auth middleware runs on all routes (`app.use('*', authMiddleware)`).
+
+## Navbar
+
+The Navbar (`src/components/ui/Navbar.tsx`):
+
+- Shows username (from email) and logout button when logged in
+- Shows login button when logged out
+- Highlights active page based on `currentPage` prop
+- Uses `getNavLinks()` function to generate nav items with `isActive` flag
+
+## Database
+
+- Using `bun:sqlite` for SQLite database
+- Models defined in `src/db/` (e.g., `users.ts`)
+- Database helpers: `findById`, `findByEmail`, `create`, etc.
+
 ## APIs
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
 - `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
 - `Bun.redis` for Redis. Don't use `ioredis`.
 - `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
@@ -29,78 +158,3 @@ test("hello world", () => {
   expect(1).toBe(1);
 });
 ```
-
-## Frontend
-
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
-
-Server:
-
-```ts#index.ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
-
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
-
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-
-// import .css files directly and it works
-import './index.css';
-
-import { createRoot } from "react-dom/client";
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.

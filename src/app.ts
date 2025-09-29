@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { indexRoutes } from './routes/index'
 import { authRoutes } from './routes/auth'
+import { characterRoutes } from './routes/character'
 import { jsxRenderer } from 'hono/jsx-renderer'
 import { Layout } from './components/Layout'
 import { applyMiddleware } from './middleware'
@@ -37,5 +38,6 @@ app.use('/favicon.ico', cachingServeStatic({ path: './static/favicon.ico' }))
 // Routes
 app.route('/', indexRoutes)
 app.route('/', authRoutes)
+app.route('/', characterRoutes)
 
 export default app

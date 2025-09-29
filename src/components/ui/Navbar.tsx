@@ -1,33 +1,25 @@
 import type { User } from "@src/db/users";
 
 export interface NavbarProps {
-  currentPage?: string;
+  currentPage: string;
   user?: User;
 }
 
 interface NavLink {
   href: string;
   label: string;
-  isActive: boolean;
+  requiresAuth?: boolean;
+  isActive: (currentPage: string) => boolean;
 }
 
-const getNavLinks = (isLoggedIn: boolean, currentPage?: string): NavLink[] => {
-  const allLinks = [
-    { href: '/', label: 'Home', requiresAuth: undefined },
-  ];
-
-  return allLinks
-    .filter(link => {
-      if (link.requiresAuth === true) return isLoggedIn;
-      if (link.requiresAuth === false) return !isLoggedIn;
-      return true;
-    })
-    .map(link => ({
-      href: link.href,
-      label: link.label,
-      isActive: currentPage === link.href,
-    }));
-};
+const NavLinks: NavLink[] = [
+  {
+    href: '/character',
+    label: 'Characters',
+    requiresAuth: true,
+    isActive: (path: string) => path.startsWith('/character')
+  },
+] as const;
 
 const LoggedInContent = ({ user }: { user: User }) => {
   const username = user.email?.split('@')[0];
@@ -48,7 +40,7 @@ const LoggedOutContent = () => (
 
 export const Navbar = ({ currentPage, user }: NavbarProps) => {
   const collapseId = "navbarContent";
-  const navLinks = getNavLinks(!!user, currentPage);
+  const navLinks = NavLinks.filter(link => !link.requiresAuth || user);
 
   return (
     <nav class="navbar navbar-expand-md bg-body-tertiary">
@@ -73,8 +65,8 @@ export const Navbar = ({ currentPage, user }: NavbarProps) => {
             {navLinks.map(link => (
               <li class="nav-item">
                 <a
-                  class={`nav-link ${link.isActive ? 'active' : ''}`}
-                  aria-current={link.isActive ? 'page' : undefined}
+                  class={`nav-link ${link.isActive(currentPage) ? 'active' : ''}`}
+                  aria-current={link.isActive(currentPage) ? 'page' : undefined}
                   href={link.href}
                 >
                   {link.label}

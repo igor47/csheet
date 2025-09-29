@@ -1,10 +1,10 @@
 import { Hono } from 'hono'
-import { serveStatic } from 'hono/bun'
 import { indexRoutes } from './routes/index'
 import { authRoutes } from './routes/auth'
 import { jsxRenderer } from 'hono/jsx-renderer'
 import { Layout } from './components/Layout'
 import { applyMiddleware } from './middleware'
+import { cachingServeStatic } from './middleware/cachingServeStatic'
 
 const app = new Hono()
 
@@ -31,8 +31,8 @@ declare module 'hono' {
 applyMiddleware(app);
 
 // Serve static files
-app.use('/static/*', serveStatic({ root: './' }))
-app.use('/favicon.ico', serveStatic({ path: './static/favicon.ico' }))
+app.use('/static/*', cachingServeStatic({ root: './' }))
+app.use('/favicon.ico', cachingServeStatic({ path: './static/favicon.ico' }))
 
 // Routes
 app.route('/', indexRoutes)

@@ -6,8 +6,8 @@ export interface WelcomeProps {
 
 const LoggedInContent = () => (
   <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-    <a href="/character/new" class="btn btn-primary btn-lg">Create Character</a>
-    <a href="/character/view" class="btn btn-outline-secondary btn-lg">View Character</a>
+    <a href="/characters/view" class="btn btn-primary btn-lg">View Characters</a>
+    <a href="/characters/new" class="btn btn-primary btn-lg">Create Character</a>
   </div>
 );
 

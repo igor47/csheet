@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { create, findByEmail } from '@src/db/users'
 import { setAuthCookie, clearAuthCookie } from '@src/middleware/auth'
 import { Login } from '@src/components/Login'
+import { setFlashMsg } from '@src/middleware/flash'
 
 export const authRoutes = new Hono()
 
@@ -25,13 +26,17 @@ authRoutes.post('/login', async (c) => {
 
   if (!user) {
     user = await create(email)
+    await setFlashMsg(c, 'Account created. You are now logged in.', 'info')
+  } else {
+    await setFlashMsg(c, 'Logged in successfully.', 'success')
   }
 
   await setAuthCookie(c, user.id)
-  return c.redirect('/');
+  return c.redirect('/characters');
 })
 
-authRoutes.get('/logout', (c) => {
+authRoutes.get('/logout', async (c) => {
   clearAuthCookie(c);
+  await setFlashMsg(c, 'You have been logged out.', 'warning');
   return c.redirect('/');
 })

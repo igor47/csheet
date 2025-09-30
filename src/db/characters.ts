@@ -1,20 +1,30 @@
 import { ulid } from "ulid";
+import { z } from "zod";
 import { db } from "../db";
 
-export interface Character {
-  id: string;
-  user_id: string;
-  name: string;
-  race: string;
-  class: string;
-  background: string;
-  size: string;
-  alignment?: string;
-  created_at: string;
-  updated_at: string;
-}
+export const CharacterSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  name: z.string().min(1),
+  race: z.string().min(1),
+  class: z.string().min(1),
+  background: z.string().min(1),
+  size: z.string().min(1),
+  alignment: z.nullish(z.string()),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
 
-export async function create(character: Omit<Character, 'id' | 'created_at' | 'updated_at'>): Promise<Character> {
+export const CreateCharacterSchema = CharacterSchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type Character = z.infer<typeof CharacterSchema>;
+export type CreateCharacter = z.infer<typeof CreateCharacterSchema>;
+
+export async function create(character: CreateCharacter): Promise<Character> {
   const id = ulid();
 
   const result = await db`
@@ -32,7 +42,12 @@ export async function create(character: Omit<Character, 'id' | 'created_at' | 'u
     RETURNING *
   `;
 
-  return result[0] as Character;
+  const row = result[0];
+  return CharacterSchema.parse({
+    ...row,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  });
 }
 
 export async function findById(id: string): Promise<Character | null> {
@@ -42,7 +57,14 @@ export async function findById(id: string): Promise<Character | null> {
     LIMIT 1
   `;
 
-  return result[0] as Character || null;
+  if (!result[0]) return null;
+
+  const row = result[0];
+  return CharacterSchema.parse({
+    ...row,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  });
 }
 
 export async function findByUserId(userId: string): Promise<Character[]> {
@@ -52,5 +74,19 @@ export async function findByUserId(userId: string): Promise<Character[]> {
     ORDER BY created_at DESC
   `;
 
-  return result as Character[];
+  return result.map((row: any) => CharacterSchema.parse({
+    ...row,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  }));
+}
+
+export async function nameExistsForUser(userId: string, name: string): Promise<boolean> {
+  const result = await db`
+    SELECT COUNT(*) as count FROM characters
+    WHERE user_id = ${userId} AND LOWER(name) = LOWER(${name})
+    LIMIT 1
+  `;
+
+  return result[0].count > 0;
 }

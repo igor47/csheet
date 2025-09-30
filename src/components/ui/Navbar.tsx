@@ -1,7 +1,7 @@
 import type { User } from "@src/db/users";
 
 export interface NavbarProps {
-  currentPage: string;
+  currentPage?: string;
   user?: User;
 }
 
@@ -9,15 +9,15 @@ interface NavLink {
   href: string;
   label: string;
   requiresAuth?: boolean;
-  isActive: (currentPage: string) => boolean;
+  isActive: (currentPage?: string) => boolean;
 }
 
 const NavLinks: NavLink[] = [
   {
-    href: '/character',
+    href: '/characters',
     label: 'Characters',
     requiresAuth: true,
-    isActive: (path: string) => path.startsWith('/character')
+    isActive: (currentPage) => (currentPage ? currentPage.startsWith('/characters') : false),
   },
 ] as const;
 

@@ -1,12 +1,10 @@
 import type { Character } from "@src/db/characters";
-import type { User } from "@src/db/users";
 
 export interface CharactersProps {
-  user: User;
   characters: Character[];
 }
 
-export const Characters = ({ user, characters }: CharactersProps) => (
+export const Characters = ({ characters }: CharactersProps) => (
   <div class="container mt-5">
     <div class="row justify-content-center">
       <div class="col-md-10">
@@ -14,7 +12,7 @@ export const Characters = ({ user, characters }: CharactersProps) => (
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-4">
               <h1 class="card-title mb-0">My Characters</h1>
-              <a href="/character/new" class="btn btn-primary">
+              <a href="/characters/new" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Create New Character
               </a>
             </div>
@@ -22,7 +20,7 @@ export const Characters = ({ user, characters }: CharactersProps) => (
             {characters.length === 0 ? (
               <div class="text-center py-5">
                 <p class="text-muted">You haven't created any characters yet.</p>
-                <a href="/character/new" class="btn btn-primary mt-3">Create Your First Character</a>
+                <a href="/characters/new" class="btn btn-primary mt-3">Create Your First Character</a>
               </div>
             ) : (
               <div class="table-responsive">
@@ -50,7 +48,7 @@ export const Characters = ({ user, characters }: CharactersProps) => (
                         <td>{char.alignment || '-'}</td>
                         <td>{new Date(char.created_at).toLocaleDateString()}</td>
                         <td>
-                          <a href={`/character/view?id=${char.id}`} class="btn btn-sm btn-outline-primary">
+                          <a href={`/characters/${char.id}`} class="btn btn-sm btn-outline-primary">
                             View
                           </a>
                         </td>

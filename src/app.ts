@@ -14,7 +14,8 @@ const app = new Hono()
 app.use(jsxRenderer((props, c) => {
   const user = c.get('user')
   const currentPage = c.req.path
-  return Layout({ ...props, user, currentPage })
+  const flash = c.get('flash')
+  return Layout({ ...props, user, currentPage, flash })
 }))
 
 // update typescript to indicate the title prop on the layout

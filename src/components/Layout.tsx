@@ -1,14 +1,24 @@
+import { clsx } from "clsx";
+
 import { Navbar } from "@src/components/ui/Navbar";
 import type { User } from "@src/db/users";
+import type { Flash } from "@src/middleware/flash";
 
 export interface LayoutProps {
   children?: any;
   title?: string;
   user?: User;
   currentPage?: string;
+  flash: Flash
 }
 
-export const Layout = ({ children, title = "CSheet", user, currentPage }: LayoutProps) => (
+export const Layout = ({ children, title = "CSheet", user, currentPage, flash }: LayoutProps) => {
+  const flashClass = clsx(
+    "alert alert-dismissible fade show",
+    flash ? `alert-${flash.level}` : null,
+  );
+
+  return (
   <html>
     <head>
       <title>{title}</title>
@@ -29,6 +39,18 @@ export const Layout = ({ children, title = "CSheet", user, currentPage }: Layout
     </head>
     <body data-bs-theme="dark">
       <Navbar user={user} currentPage={currentPage} />
+      { flash ? (
+      <div class="container-fluid mt-3" id="messages">
+        <div class="row">
+          <div class="col-md-8 offset-md-4 col-lg-6 offset-lg-6 col-xl-4 offset-xl-8">
+            <div class={ flashClass } role="alert">
+              { flash.msg }
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      ) : null }
 
       <main>
         {children}
@@ -37,4 +59,5 @@ export const Layout = ({ children, title = "CSheet", user, currentPage }: Layout
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous" />
     </body>
   </html>
-)
+  )
+}

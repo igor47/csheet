@@ -1,15 +1,17 @@
 import { ulid } from "ulid";
 import { z } from "zod";
-import { db } from "../db";
+
+import { db } from "@src/db";
+
+import { BackgroundNamesSchema, RaceNamesSchema, SubraceNames } from "@src/lib/dnd"
 
 export const CharacterSchema = z.object({
   id: z.string(),
   user_id: z.string(),
-  name: z.string().min(1),
-  race: z.string().min(1),
-  class: z.string().min(1),
-  background: z.string().min(1),
-  size: z.string().min(1),
+  name: z.string().min(3),
+  race: RaceNamesSchema,
+  subrace: z.enum(SubraceNames).nullable().default(null),
+  background: BackgroundNamesSchema,
   alignment: z.nullish(z.string()),
   created_at: z.date(),
   updated_at: z.date(),
@@ -28,15 +30,14 @@ export async function create(character: CreateCharacter): Promise<Character> {
   const id = ulid();
 
   const result = await db`
-    INSERT INTO characters (id, user_id, name, race, class, background, size, alignment)
+    INSERT INTO characters (id, user_id, name, race, subrace, background, alignment)
     VALUES (
       ${id},
       ${character.user_id},
       ${character.name},
       ${character.race},
-      ${character.class},
+      ${character.subrace},
       ${character.background},
-      ${character.size},
       ${character.alignment}
     )
     RETURNING *

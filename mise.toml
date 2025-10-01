@@ -27,3 +27,10 @@ run = """
   DATABASE_URL="sqlite:$DB_PATH" DBMATE_MIGRATIONS_DIR="./migrations" dbmate "$@"
 """
 description = "Run dbmate with configured database path"
+
+[tasks.db]
+run = """
+  DB_PATH=$(bun src/config.ts | jq -r '.sqliteDbPath')
+  sqlite3 "$DB_PATH" -init db/init.sql
+"""
+description = "Open SQLite shell for the database"

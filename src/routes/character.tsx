@@ -2,9 +2,8 @@ import { Hono } from 'hono'
 import { Character } from '@src/components/Character'
 import { CharacterNew } from '@src/components/CharacterNew'
 import { Characters } from '@src/components/Characters'
-import { CharacterNameInput } from '@src/components/ui/CharacterNameInput'
-import { findById, findByUserId, create, CreateCharacterSchema, nameExistsForUser } from '@src/db/characters'
-import { z } from 'zod'
+import { findById, findByUserId, nameExistsForUser } from '@src/db/characters'
+import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 
@@ -33,26 +32,29 @@ characterRoutes.get('/characters/new', (c) => {
   return c.render(<CharacterNew />, { title: "New Character" })
 })
 
-characterRoutes.post('/characters/new/name', async (c) => {
+characterRoutes.post('/characters/new/check', async (c) => {
   const user = c.var.user
   if (!user) {
-    return c.html(<CharacterNameInput error="Authentication required" />)
+    return c.html(<CharacterNew errors={{ name: "Authentication required" }} />)
   }
 
-  const body = await c.req.parseBody()
-  const name = body.name as string
+  const body = await c.req.parseBody() as Record<string, string>
+  const values = body
+  const errors: Record<string, string> = {}
 
-  if (!name || name.trim().length === 0) {
-    return c.html(<CharacterNameInput error="Character name is required" value={name} />)
+  // Validate name if provided
+  if (values.name) {
+    if (values.name.trim().length === 0) {
+      errors.name = "Character name is required"
+    } else {
+      const exists = await nameExistsForUser(user.id, values.name)
+      if (exists) {
+        errors.name = "You already have a character with this name"
+      }
+    }
   }
 
-  const exists = await nameExistsForUser(user.id, name)
-
-  if (exists) {
-    return c.html(<CharacterNameInput error="You already have a character with this name" value={name} />)
-  }
-
-  return c.html(<CharacterNameInput value={name} />)
+  return c.html(<CharacterNew values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />)
 })
 
 characterRoutes.post('/characters/new', async (c) => {
@@ -64,21 +66,23 @@ characterRoutes.post('/characters/new', async (c) => {
   const body = await c.req.parseBody() as Record<string, string>
   const values = {...body, user_id: user.id}
 
-  const result = CreateCharacterSchema.safeParse(values)
+  const result = CreateCharacterApiSchema.safeParse(values)
   if (!result.success) {
     const errors = zodToFormErrors(result.error)
+    console.log("Validation errors:", errors)
     return c.html(<CharacterNew values={values} errors={errors} />)
   }
 
-  if (await nameExistsForUser(user.id, result.data.name)) {
-    const errors = { name: "You already have a character with this name" }
-    return c.html(<CharacterNew values={values} errors={errors} />)
+  try {
+    const character = await createCharacter(result.data)
+    await setFlashMsg(c, 'Character created successfully!', 'success');
+    return c.redirect(`/characters/${character.id}`)
+  } catch (error) {
+    console.dir(error)
+    const errorMsg = error instanceof Error ? error.message : "Failed to create character"
+    await setFlashMsg(c, errorMsg, 'error');
+    return c.html(<CharacterNew values={values} />)
   }
-
-  const character = await create(result.data)
-
-  await setFlashMsg(c, 'Character created successfully!', 'success');
-  return c.redirect(`/characters/${character.id}`)
 })
 
 characterRoutes.get('/characters/:id', async (c) => {

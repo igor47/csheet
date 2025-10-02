@@ -2,8 +2,9 @@ import { Hono } from 'hono'
 import { Character } from '@src/components/Character'
 import { CharacterNew } from '@src/components/CharacterNew'
 import { Characters } from '@src/components/Characters'
-import { findById, findByUserId, nameExistsForUser } from '@src/db/characters'
+import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
+import { computeCharacter } from '@src/services/computeCharacter'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 import { db } from '@src/db'
@@ -75,8 +76,9 @@ characterRoutes.post('/characters/new', async (c) => {
 
 characterRoutes.get('/characters/:id', async (c) => {
   const id = c.req.param('id') as string;
-  const char = await findById(db, id);
+  const char = await computeCharacter(db, id);
   if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
     return c.redirect('/characters');
   }
 

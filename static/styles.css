@@ -1,0 +1,42 @@
+/* Character page grid layout */
+
+/* Grid area assignments */
+.character-info {
+  grid-area: info;
+}
+
+.character-notes {
+  grid-area: notes;
+}
+
+.character-panels {
+  grid-area: panels;
+}
+
+/* The grid container */
+.character-grid {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+/* Mobile: single column, vertical stack */
+.character-grid {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "info"
+    "notes"
+    "panels";
+}
+
+/* Desktop: two columns, notes on right spanning full height */
+@media (min-width: 992px) {
+  .character-grid {
+    grid-template-columns: minmax(300px, 1fr) 2fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "info notes"
+      "panels notes";
+  }
+}
+

@@ -158,3 +158,4 @@ test("hello world", () => {
   expect(1).toBe(1);
 });
 ```
+- i don't like * imports, please import what you need only

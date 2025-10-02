@@ -1,7 +1,7 @@
 import { ulid } from "ulid";
 import { z } from "zod";
+import type { SQL } from "bun";
 
-import { db } from "@src/db";
 import { ClassNamesSchema } from "@src/lib/dnd";
 
 export const CharLevelSchema = z.object({
@@ -24,7 +24,7 @@ export const CreateCharLevelSchema = CharLevelSchema.omit({
 export type CharLevel = z.infer<typeof CharLevelSchema>;
 export type CreateCharLevel = z.infer<typeof CreateCharLevelSchema>;
 
-export async function create(charLevel: CreateCharLevel): Promise<CharLevel> {
+export async function create(db: SQL, charLevel: CreateCharLevel): Promise<CharLevel> {
   const id = ulid();
 
   const result = await db`
@@ -49,7 +49,7 @@ export async function create(charLevel: CreateCharLevel): Promise<CharLevel> {
   });
 }
 
-export async function findByCharacterId(characterId: string): Promise<CharLevel[]> {
+export async function findByCharacterId(db: SQL, characterId: string): Promise<CharLevel[]> {
   const result = await db`
     SELECT * FROM char_levels
     WHERE character_id = ${characterId}
@@ -63,7 +63,7 @@ export async function findByCharacterId(characterId: string): Promise<CharLevel[
   }));
 }
 
-export async function deleteById(id: string): Promise<void> {
+export async function deleteById(db: SQL, id: string): Promise<void> {
   await db`
     DELETE FROM char_levels
     WHERE id = ${id}

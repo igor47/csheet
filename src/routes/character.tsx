@@ -6,13 +6,14 @@ import { findById, findByUserId, nameExistsForUser } from '@src/db/characters'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
+import { db } from '@src/db'
 
 export const characterRoutes = new Hono()
 
 characterRoutes.get('/characters', async (c) => {
   const user = c.var.user!
 
-  const characters = await findByUserId(user.id)
+  const characters = await findByUserId(db, user.id)
   if (characters.length === 0) {
     await setFlashMsg(c, 'Create a character to get started!', 'info');
     return c.redirect('/characters/new');
@@ -37,7 +38,7 @@ characterRoutes.post('/characters/new/check', async (c) => {
     if (values.name.trim().length === 0) {
       errors.name = "Character name is required"
     } else {
-      const exists = await nameExistsForUser(user.id, values.name)
+      const exists = await nameExistsForUser(db, user.id, values.name)
       if (exists) {
         errors.name = "You already have a character with this name"
       }
@@ -56,7 +57,6 @@ characterRoutes.post('/characters/new', async (c) => {
   const result = CreateCharacterApiSchema.safeParse(values)
   if (!result.success) {
     const errors = zodToFormErrors(result.error)
-    console.log("Validation errors:", errors)
     return c.html(<CharacterNew values={values} errors={errors} />)
   }
 
@@ -66,7 +66,7 @@ characterRoutes.post('/characters/new', async (c) => {
     c.header('HX-Redirect', `/characters/${character.id}`)
     return c.body(null, 204)
   } catch (error) {
-    console.dir(error)
+    console.error("creating character", error)
     const errorMsg = error instanceof Error ? error.message : "Failed to create character"
     await setFlashMsg(c, errorMsg, 'error');
     return c.html(<CharacterNew values={values} />)
@@ -75,7 +75,7 @@ characterRoutes.post('/characters/new', async (c) => {
 
 characterRoutes.get('/characters/:id', async (c) => {
   const id = c.req.param('id') as string;
-  const char = await findById(id);
+  const char = await findById(db, id);
   if (!char) {
     return c.redirect('/characters');
   }

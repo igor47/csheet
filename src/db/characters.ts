@@ -1,7 +1,6 @@
 import { ulid } from "ulid";
 import { z } from "zod";
-
-import { db } from "@src/db";
+import type { SQL } from "bun";
 
 import { BackgroundNamesSchema, RaceNamesSchema, SubraceNames } from "@src/lib/dnd"
 
@@ -26,7 +25,7 @@ export const CreateCharacterSchema = CharacterSchema.omit({
 export type Character = z.infer<typeof CharacterSchema>;
 export type CreateCharacter = z.infer<typeof CreateCharacterSchema>;
 
-export async function create(character: CreateCharacter): Promise<Character> {
+export async function create(db: SQL, character: CreateCharacter): Promise<Character> {
   const id = ulid();
 
   const result = await db`
@@ -51,7 +50,7 @@ export async function create(character: CreateCharacter): Promise<Character> {
   });
 }
 
-export async function findById(id: string): Promise<Character | null> {
+export async function findById(db: SQL, id: string): Promise<Character | null> {
   const result = await db`
     SELECT * FROM characters
     WHERE id = ${id}
@@ -68,7 +67,7 @@ export async function findById(id: string): Promise<Character | null> {
   });
 }
 
-export async function findByUserId(userId: string): Promise<Character[]> {
+export async function findByUserId(db: SQL, userId: string): Promise<Character[]> {
   const result = await db`
     SELECT * FROM characters
     WHERE user_id = ${userId}
@@ -82,7 +81,7 @@ export async function findByUserId(userId: string): Promise<Character[]> {
   }));
 }
 
-export async function nameExistsForUser(userId: string, name: string): Promise<boolean> {
+export async function nameExistsForUser(db: SQL, userId: string, name: string): Promise<boolean> {
   const result = await db`
     SELECT COUNT(*) as count FROM characters
     WHERE user_id = ${userId} AND LOWER(name) = LOWER(${name})

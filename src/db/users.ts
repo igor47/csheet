@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import { db } from "../db";
+import type { SQL } from "bun";
 
 export interface User {
   id: string;
@@ -8,7 +8,7 @@ export interface User {
   updated_at: string;
 }
 
-export async function create(email: string): Promise<User> {
+export async function create(db: SQL, email: string): Promise<User> {
   const id = ulid();
 
   const result = await db`
@@ -20,7 +20,7 @@ export async function create(email: string): Promise<User> {
   return result[0] as User;
 }
 
-export async function findById(id: string): Promise<User | null> {
+export async function findById(db: SQL, id: string): Promise<User | null> {
   const result = await db`
     SELECT * FROM users
     WHERE id = ${id}
@@ -30,7 +30,7 @@ export async function findById(id: string): Promise<User | null> {
   return result[0] as User || null;
 }
 
-export async function findByEmail(email: string): Promise<User | null> {
+export async function findByEmail(db: SQL, email: string): Promise<User | null> {
   const result = await db`
     SELECT * FROM users
     WHERE email = ${email}

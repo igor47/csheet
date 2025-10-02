@@ -2,6 +2,7 @@ import { z } from "zod";
 import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames } from "@src/lib/dnd";
 import { create as createCharacterDb, nameExistsForUser, type Character } from "@src/db/characters";
 import { create as createClassLevelDb } from "@src/db/char_levels";
+import { db } from "@src/db";
 
 /**
  * API Schema for creating a new character
@@ -26,30 +27,31 @@ export type CreateCharacterApi = z.infer<typeof CreateCharacterApiSchema>;
  * Handles validation and business logic before persisting to the database
  */
 export async function createCharacter(data: CreateCharacterApi): Promise<Character> {
-  const exists = await nameExistsForUser(data.user_id, data.name);
-  if (exists) {
-    throw new Error("You already have a character with this name");
-  }
+  return db.begin(async (tx) => {
+    const exists = await nameExistsForUser(tx, data.user_id, data.name);
+    if (exists) {
+      throw new Error("You already have a character with this name");
+    }
 
-  // Create the character in the database
-  console.dir(data);
-  const character = await createCharacterDb({
-    user_id: data.user_id,
-    name: data.name,
-    race: data.race,
-    subrace: data.subrace,
-    background: data.background,
-    alignment: data.alignment,
+    // Create the character in the database
+    const character = await createCharacterDb(tx, {
+      user_id: data.user_id,
+      name: data.name,
+      race: data.race,
+      subrace: data.subrace,
+      background: data.background,
+      alignment: data.alignment,
+    });
+
+    // set initial level in the class
+    const level = await createClassLevelDb(tx, {
+      character_id: character.id,
+      class: data.class,
+      subclass: data.subclass,
+      level: 1,
+      note: "Starting Level",
+    })
+
+    return character;
   });
-
-  // set initial level in the class
-  const level = await createClassLevelDb({
-    character_id: character.id,
-    class: data.class,
-    subclass: data.subclass,
-    level: 1,
-    note: "Starting Level",
-  })
-
-  return character;
 }

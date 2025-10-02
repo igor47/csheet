@@ -3,6 +3,7 @@ import { create, findByEmail } from '@src/db/users'
 import { setAuthCookie, clearAuthCookie } from '@src/middleware/auth'
 import { Login } from '@src/components/Login'
 import { setFlashMsg } from '@src/middleware/flash'
+import { db } from '@src/db'
 
 export const authRoutes = new Hono()
 
@@ -24,10 +25,10 @@ authRoutes.post('/login', async (c) => {
     return c.text("Invalid email", 400)
   }
 
-  let user = await findByEmail(email)
+  let user = await findByEmail(db, email)
 
   if (!user) {
-    user = await create(email)
+    user = await create(db, email)
     await setFlashMsg(c, 'Account created. You are now logged in.', 'info')
   } else {
     await setFlashMsg(c, 'Logged in successfully.', 'success')

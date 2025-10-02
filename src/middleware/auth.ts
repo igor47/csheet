@@ -3,6 +3,7 @@ import { getSignedCookie, setSignedCookie, deleteCookie } from "hono/cookie";
 import { findById } from "../db/users";
 import { config } from "../config";
 import { setFlashMsg } from "./flash";
+import { db } from "../db";
 
 import type { Context } from "hono";
 import type { User } from "../db/users";
@@ -22,7 +23,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
   }
 
   try {
-    const user = await findById(userId);
+    const user = await findById(db, userId);
     if (user && user.id === userId) {
       c.set("user", user);
     }

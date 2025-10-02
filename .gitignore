@@ -35,5 +35,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # data
 database.db
+database.db-wal
+database.db-shm
 !migrations/*.sql
 !db/schema.sql

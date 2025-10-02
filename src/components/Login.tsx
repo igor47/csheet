@@ -1,4 +1,8 @@
-export const Login = () => (
+export interface LoginProps {
+  redirect?: string;
+}
+
+export const Login = ({ redirect }: LoginProps) => (
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-md-6 col-lg-4">
@@ -6,6 +10,9 @@ export const Login = () => (
           <div class="card-body">
             <h1 class="card-title text-center mb-4">Login</h1>
             <form method="post" action="/login">
+              {redirect && (
+                <input type="hidden" name="redirect" value={redirect} />
+              )}
               <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
                 <input

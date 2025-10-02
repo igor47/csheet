@@ -2,6 +2,7 @@ import { createMiddleware } from "hono/factory";
 import { getSignedCookie, setSignedCookie, deleteCookie } from "hono/cookie";
 import { findById } from "../db/users";
 import { config } from "../config";
+import { setFlashMsg } from "./flash";
 
 import type { Context } from "hono";
 import type { User } from "../db/users";
@@ -45,3 +46,13 @@ export async function setAuthCookie(c: Context, userId: string) {
 export function clearAuthCookie(c: Context) {
   deleteCookie(c, AUTH_COOKIE_NAME);
 }
+
+export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(async (c, next) => {
+  const user = c.get("user");
+  if (!user) {
+    await setFlashMsg(c, 'Please log in to continue.', 'warning');
+    const redirectTo = encodeURIComponent(c.req.path);
+    return c.redirect(`/login?redirect=${redirectTo}`);
+  }
+  await next();
+});

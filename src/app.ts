@@ -6,6 +6,7 @@ import { jsxRenderer } from 'hono/jsx-renderer'
 import { Layout } from './components/Layout'
 import { applyMiddleware } from './middleware'
 import { cachingServeStatic } from './middleware/cachingServeStatic'
+import { requireAuth } from './middleware/auth'
 
 const app = new Hono()
 
@@ -36,9 +37,15 @@ applyMiddleware(app);
 app.use('/static/*', cachingServeStatic({ root: './' }))
 app.use('/favicon.ico', cachingServeStatic({ path: './static/favicon.ico' }))
 
-// Routes
+// Public routes (no auth required)
 app.route('/', indexRoutes)
 app.route('/', authRoutes)
-app.route('/', characterRoutes)
+
+// Protected routes (auth required)
+const protectedRoutes = new Hono()
+protectedRoutes.use('*', requireAuth)
+protectedRoutes.route('/', characterRoutes)
+
+app.route('/', protectedRoutes)
 
 export default app

@@ -7,12 +7,14 @@ import { setFlashMsg } from '@src/middleware/flash'
 export const authRoutes = new Hono()
 
 authRoutes.get('/login', (c) => {
-  return c.render(<Login />, { title: "Login" })
+  const redirect = c.req.query('redirect')
+  return c.render(<Login redirect={redirect} />, { title: "Login" })
 })
 
 authRoutes.post('/login', async (c) => {
   const formData = await c.req.formData()
   const email = formData.get("email") as string
+  const redirect = formData.get("redirect") as string | null
 
   if (!email) {
     return c.text("Email is required", 400)
@@ -32,7 +34,7 @@ authRoutes.post('/login', async (c) => {
   }
 
   await setAuthCookie(c, user.id)
-  return c.redirect('/characters');
+  return c.redirect(redirect || '/characters');
 })
 
 authRoutes.get('/logout', async (c) => {

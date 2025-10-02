@@ -10,10 +10,7 @@ import { zodToFormErrors } from '@src/lib/formErrors'
 export const characterRoutes = new Hono()
 
 characterRoutes.get('/characters', async (c) => {
-  const user = c.var.user
-  if (!user) {
-    return c.redirect('/login')
-  }
+  const user = c.var.user!
 
   const characters = await findByUserId(user.id)
   if (characters.length === 0) {
@@ -25,18 +22,11 @@ characterRoutes.get('/characters', async (c) => {
 })
 
 characterRoutes.get('/characters/new', (c) => {
-  const user = c.var.user
-  if (!user) {
-    return c.redirect('/login')
-  }
   return c.render(<CharacterNew />, { title: "New Character" })
 })
 
 characterRoutes.post('/characters/new/check', async (c) => {
-  const user = c.var.user
-  if (!user) {
-    return c.html(<CharacterNew errors={{ name: "Authentication required" }} />)
-  }
+  const user = c.var.user!
 
   const body = await c.req.parseBody() as Record<string, string>
   const values = body
@@ -58,10 +48,7 @@ characterRoutes.post('/characters/new/check', async (c) => {
 })
 
 characterRoutes.post('/characters/new', async (c) => {
-  const user = c.var.user
-  if (!user) {
-    return c.redirect('/login')
-  }
+  const user = c.var.user!
 
   const body = await c.req.parseBody() as Record<string, string>
   const values = {...body, user_id: user.id}
@@ -76,7 +63,8 @@ characterRoutes.post('/characters/new', async (c) => {
   try {
     const character = await createCharacter(result.data)
     await setFlashMsg(c, 'Character created successfully!', 'success');
-    return c.redirect(`/characters/${character.id}`)
+    c.header('HX-Redirect', `/characters/${character.id}`)
+    return c.body(null, 204)
   } catch (error) {
     console.dir(error)
     const errorMsg = error instanceof Error ? error.message : "Failed to create character"

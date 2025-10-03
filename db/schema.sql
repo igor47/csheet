@@ -56,7 +56,7 @@ CREATE TABLE char_abilities (
   score INTEGER NOT NULL CHECK(score BETWEEN 1 AND 30),
   note TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, proficiency INTEGER NOT NULL DEFAULT 0 CHECK(proficiency IN (0, 1)),
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_char_abilities_char_id_ability_created_at ON char_abilities(character_id, ability, created_at);
@@ -71,4 +71,5 @@ INSERT INTO "schema_migrations" (version) VALUES
   ('20250924190507'),
   ('20250929165649'),
   ('20251001204923'),
-  ('20251002222515');
+  ('20251002222515'),
+  ('20251003120515');

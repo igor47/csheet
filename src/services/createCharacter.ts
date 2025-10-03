@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames, Abilities, Races, type AbilityType } from "@src/lib/dnd";
+import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames, Abilities, Races, Classes, type AbilityType } from "@src/lib/dnd";
 import { create as createCharacterDb, nameExistsForUser, type Character } from "@src/db/characters";
 import { create as createClassLevelDb } from "@src/db/char_levels";
 import { create as createAbilityDb } from "@src/db/char_abilities";
@@ -93,11 +93,17 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
 
     // populate initial ability scores with race/subrace modifiers
     const initialScores = calculateInitialAbilityScores(data.race, data.subrace);
+
+    // Get saving throw proficiencies from class
+    const classDef = Classes.find(c => c.name === data.class);
+    const savingThrowProficiencies = new Set(classDef?.savingThrows || []);
+
     for (const ability of Abilities) {
       await createAbilityDb(tx, {
         character_id: character.id,
         ability,
         score: initialScores[ability],
+        proficiency: savingThrowProficiencies.has(ability),
         note: "Initial score",
       });
     }

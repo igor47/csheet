@@ -2,7 +2,7 @@ import type { SQL } from "bun";
 import { findById, type Character } from "@src/db/characters";
 import { findByCharacterId } from "@src/db/char_levels";
 import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilities";
-import { Races, Classes, type SizeType, type AbilityType } from "@src/lib/dnd";
+import { Races, type SizeType, type AbilityType } from "@src/lib/dnd";
 
 export interface CharacterClass {
   class: string;
@@ -66,20 +66,10 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   const race = Races.find(r => r.name === character.race)!;
   const subrace = race.subraces?.find(sr => sr.name === character.subrace);
 
-  // Get all saving throw proficiencies from all classes
-  const savingThrowProficiencies = new Set<AbilityType>();
-  for (const charClass of classes) {
-    const classDef = Classes.find(c => c.name === charClass.class);
-    if (classDef) {
-      classDef.savingThrows.forEach(st => savingThrowProficiencies.add(st));
-    }
-  }
-
   // Calculate modifier and saving throw for each ability
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2);
 
-  const computeAbilityScore = (ability: AbilityType, score: number): AbilityScore => {
-    const proficient = savingThrowProficiencies.has(ability);
+  const computeAbilityScore = (ability: AbilityType, score: number, proficient: boolean): AbilityScore => {
     const modifier = calculateModifier(score);
     return {
       score,
@@ -90,12 +80,12 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   };
 
   const abilityScores: Record<AbilityType, AbilityScore> = {
-    strength: computeAbilityScore('strength', currentAbilityScores.strength),
-    dexterity: computeAbilityScore('dexterity', currentAbilityScores.dexterity),
-    constitution: computeAbilityScore('constitution', currentAbilityScores.constitution),
-    intelligence: computeAbilityScore('intelligence', currentAbilityScores.intelligence),
-    wisdom: computeAbilityScore('wisdom', currentAbilityScores.wisdom),
-    charisma: computeAbilityScore('charisma', currentAbilityScores.charisma),
+    strength: computeAbilityScore('strength', currentAbilityScores.strength.score, currentAbilityScores.strength.proficient),
+    dexterity: computeAbilityScore('dexterity', currentAbilityScores.dexterity.score, currentAbilityScores.dexterity.proficient),
+    constitution: computeAbilityScore('constitution', currentAbilityScores.constitution.score, currentAbilityScores.constitution.proficient),
+    intelligence: computeAbilityScore('intelligence', currentAbilityScores.intelligence.score, currentAbilityScores.intelligence.proficient),
+    wisdom: computeAbilityScore('wisdom', currentAbilityScores.wisdom.score, currentAbilityScores.wisdom.proficient),
+    charisma: computeAbilityScore('charisma', currentAbilityScores.charisma.score, currentAbilityScores.charisma.proficient),
   };
 
   // Initiative is DEX modifier

@@ -1,71 +1,68 @@
-export const AbilitiesPanel = () => {
+import { clsx } from 'clsx';
+import type { ComputedCharacter } from '@src/services/computeCharacter';
+import { Abilities, type AbilityType } from '@src/lib/dnd';
+
+interface AbilityBoxProps {
+  ability: AbilityType;
+  score: number;
+  savingThrow: number;
+  proficient: boolean;
+}
+
+const AbilityBox = ({ ability, score, savingThrow, proficient }: AbilityBoxProps) => {
+  const formatModifier = (value: number) => value >= 0 ? `+${value}` : `${value}`;
+  const abilityNameClass = clsx('fw-medium text-uppercase border', {
+    'bg-primary-subtle': proficient,
+    'bg-dark-subtle': !proficient,
+  });
+
+  return (
+    <div class="col">
+      <div class="border rounded p-2 text-center position-relative" style="padding-bottom: 35px !important;">
+        <div class={abilityNameClass} style="font-size: 0.7rem;">{ability}</div>
+        <div class="fw-bold p-2 d-flex align-items-center justify-content-center">
+          <span class="fs-3 pe-1">{formatModifier(savingThrow)}</span>
+        </div>
+
+        <div
+          class="rounded-circle bg-secondary-subtle border d-flex align-items-center justify-content-center mx-auto fw-bold position-absolute start-50 translate-middle-x"
+          style="width: 40px; height: 40px; font-size: 0.85rem; bottom: -10px;"
+        >
+          {score}
+        </div>
+
+        <div class="position-absolute d-flex flex-column gap-1" style="right: 8px; top: 30px;">
+          <button class="btn btn-sm btn-outline-secondary border p-1" style="width: 24px; height: 24px; line-height: 1;">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-secondary border p-1" style="width: 24px; height: 24px; line-height: 1;">
+            <i class="bi bi-journals"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface AbilitiesPanelProps {
+  character: ComputedCharacter;
+}
+
+export const AbilitiesPanel = ({ character }: AbilitiesPanelProps) => {
   return (
     <div class="accordion-body">
       <div class="row row-cols-3 g-2">
-        {/* Example stat pill */}
-        <div class="col">
-          <div class="bg-body border rounded p-2 text-center">
-            <div class="ability-circle bg-secondary-subtle border mb-1">16</div>
-            <div class="fw-medium">STR</div>
-            <div class="text-muted small">Save +5</div>
-          </div>
-        </div>
-        <div class="col">
-          <div class="bg-body border rounded p-2 text-center">
-            <div class="ability-circle bg-secondary-subtle border mb-1">14</div>
-            <div class="fw-medium">DEX</div>
-            <div class="text-muted small">Save +2</div>
-          </div>
-        </div>
-        <div class="col">
-          <div class="bg-body border rounded p-2 text-center">
-            <div class="ability-circle bg-secondary-subtle border mb-1">12</div>
-            <div class="fw-medium">CON</div>
-            <div class="text-muted small">Save +1</div>
-          </div>
-        </div>
-        <div class="col">
-          <div class="bg-body border rounded p-2 text-center">
-            <div class="ability-circle bg-secondary-subtle border mb-1">18</div>
-            <div class="fw-medium">INT</div>
-            <div class="text-muted small">Save +7</div>
-          </div>
-        </div>
-        <div class="col">
-          <div class="bg-body border rounded p-2 text-center">
-            <div class="ability-circle bg-secondary-subtle border mb-1">10</div>
-            <div class="fw-medium">WIS</div>
-            <div class="text-muted small">Save +0</div>
-          </div>
-        </div>
-        <div class="col">
-          <div class="bg-body border rounded p-2 text-center">
-            <div class="ability-circle bg-secondary-subtle border mb-1">8</div>
-            <div class="fw-medium">CHA</div>
-            <div class="text-muted small">Save -1</div>
-          </div>
-        </div>
-      </div>
-
-      <hr />
-
-      <div class="row g-2">
-        <div class="col-6">
-          <label class="form-label small text-muted mb-1">Proficiency Bonus</label>
-          <input class="form-control form-control-sm" value="+3" />
-        </div>
-        <div class="col-6">
-          <label class="form-label small text-muted mb-1">Initiative</label>
-          <input class="form-control form-control-sm" value="+2" />
-        </div>
-        <div class="col-6">
-          <label class="form-label small text-muted mb-1">Armor Class</label>
-          <input class="form-control form-control-sm" value="16" />
-        </div>
-        <div class="col-6">
-          <label class="form-label small text-muted mb-1">Speed</label>
-          <input class="form-control form-control-sm" value="30 ft." />
-        </div>
+        {Abilities.map(ability => {
+          const abilityScore = character.abilityScores[ability];
+          return (
+            <AbilityBox
+              ability={ability}
+              score={abilityScore.score}
+              savingThrow={abilityScore.savingThrow}
+              proficient={abilityScore.proficient}
+            />
+          );
+        })}
       </div>
     </div>
   );

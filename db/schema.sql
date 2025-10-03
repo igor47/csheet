@@ -49,8 +49,26 @@ FOR EACH ROW
 BEGIN
     UPDATE char_levels SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
+CREATE TABLE char_abilities (
+  id TEXT PRIMARY KEY CHECK(length(id) = 26),
+  character_id TEXT NOT NULL,
+  ability TEXT NOT NULL CHECK(ability IN ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma')),
+  score INTEGER NOT NULL CHECK(score BETWEEN 1 AND 30),
+  note TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_char_abilities_char_id_ability_created_at ON char_abilities(character_id, ability, created_at);
+CREATE TRIGGER char_abilities_updated_at
+AFTER UPDATE ON char_abilities
+FOR EACH ROW
+BEGIN
+    UPDATE char_abilities SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 -- Dbmate schema migrations
 INSERT INTO "schema_migrations" (version) VALUES
   ('20250924190507'),
   ('20250929165649'),
-  ('20251001204923');
+  ('20251001204923'),
+  ('20251002222515');

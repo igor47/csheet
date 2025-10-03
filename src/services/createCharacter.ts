@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames } from "@src/lib/dnd";
+import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames, Abilities, Races, type AbilityType } from "@src/lib/dnd";
 import { create as createCharacterDb, nameExistsForUser, type Character } from "@src/db/characters";
 import { create as createClassLevelDb } from "@src/db/char_levels";
+import { create as createAbilityDb } from "@src/db/char_abilities";
 import { db } from "@src/db";
 
 /**
@@ -21,6 +22,44 @@ export const CreateCharacterApiSchema = z.object({
 });
 
 export type CreateCharacterApi = z.infer<typeof CreateCharacterApiSchema>;
+
+/**
+ * Calculate initial ability scores based on race and subrace modifiers
+ */
+function calculateInitialAbilityScores(raceName: string, subraceName: string | null): Record<AbilityType, number> {
+  const baseScore = 10;
+  const scores: Record<AbilityType, number> = {
+    strength: baseScore,
+    dexterity: baseScore,
+    constitution: baseScore,
+    intelligence: baseScore,
+    wisdom: baseScore,
+    charisma: baseScore,
+  };
+
+  // Find race
+  const race = Races.find(r => r.name === raceName);
+  if (!race) return scores;
+
+  // Apply race modifiers
+  if (race.ability_score_modifiers) {
+    for (const [ability, modifier] of Object.entries(race.ability_score_modifiers)) {
+      scores[ability as AbilityType] += modifier;
+    }
+  }
+
+  // Apply subrace modifiers
+  if (subraceName) {
+    const subrace = race.subraces?.find(sr => sr.name === subraceName);
+    if (subrace?.ability_score_modifiers) {
+      for (const [ability, modifier] of Object.entries(subrace.ability_score_modifiers)) {
+        scores[ability as AbilityType] += modifier;
+      }
+    }
+  }
+
+  return scores;
+}
 
 /**
  * Create a new character
@@ -51,6 +90,17 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
       level: 1,
       note: "Starting Level",
     })
+
+    // populate initial ability scores with race/subrace modifiers
+    const initialScores = calculateInitialAbilityScores(data.race, data.subrace);
+    for (const ability of Abilities) {
+      await createAbilityDb(tx, {
+        character_id: character.id,
+        ability,
+        score: initialScores[ability],
+        note: "Initial score",
+      });
+    }
 
     return character;
   });

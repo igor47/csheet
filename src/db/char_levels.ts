@@ -2,7 +2,7 @@ import { ulid } from "ulid";
 import { z } from "zod";
 import type { SQL } from "bun";
 
-import { ClassNamesSchema } from "@src/lib/dnd";
+import { ClassNamesSchema, type ClassNameType } from "@src/lib/dnd";
 
 export const CharLevelSchema = z.object({
   id: z.string(),
@@ -84,6 +84,25 @@ export async function getCurrentLevels(db: SQL, characterId: string): Promise<Ch
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
+}
+
+export async function maxClassLevel(db: SQL, characterId: string): Promise<CharLevel> {
+  const result = await db`
+    SELECT *
+    FROM char_levels
+    WHERE character_id = ${characterId}
+    ORDER BY level DESC
+    LIMIT 1
+  `;
+  if (result.length === 0) {
+    throw new Error("Character has no levels");
+  }
+  const row = result[0];
+  return CharLevelSchema.parse({
+    ...row,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  });
 }
 
 export async function deleteById(db: SQL, id: string): Promise<void> {

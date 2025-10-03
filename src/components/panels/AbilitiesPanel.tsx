@@ -7,9 +7,10 @@ interface AbilityBoxProps {
   score: number;
   savingThrow: number;
   proficient: boolean;
+  characterId: string;
 }
 
-const AbilityBox = ({ ability, score, savingThrow, proficient }: AbilityBoxProps) => {
+const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: AbilityBoxProps) => {
   const formatModifier = (value: number) => value >= 0 ? `+${value}` : `${value}`;
   const abilityNameClass = clsx('fw-medium text-uppercase border', {
     'bg-primary-subtle': proficient,
@@ -36,14 +37,24 @@ const AbilityBox = ({ ability, score, savingThrow, proficient }: AbilityBoxProps
             class="btn btn-sm btn-outline-secondary border p-1"
             style="width: 24px; height: 24px; line-height: 1;"
             aria-label={`edit ${ability}`}
-            title={`edit ${ability}`}>
+            title={`edit ${ability}`}
+            hx-get={`/characters/${characterId}/edit/${ability}`}
+            hx-target="#editModalContent"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#editModal">
             <i class="bi bi-pencil"></i>
           </button>
           <button
             class="btn btn-sm btn-outline-secondary border p-1"
             style="width: 24px; height: 24px; line-height: 1;"
             aria-label={`${ability} history`}
-            title={`${ability} history`}>
+            title={`${ability} history`}
+            hx-get={`/characters/${characterId}/history/${ability}`}
+            hx-target="#editModalContent"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#editModal">
             <i class="bi bi-journals"></i>
           </button>
         </div>
@@ -68,6 +79,7 @@ export const AbilitiesPanel = ({ character }: AbilitiesPanelProps) => {
               score={abilityScore.score}
               savingThrow={abilityScore.savingThrow}
               proficient={abilityScore.proficient}
+              characterId={character.id}
             />
           );
         })}

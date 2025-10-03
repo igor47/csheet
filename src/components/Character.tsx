@@ -95,5 +95,14 @@ export const Character = ({ character }: CharacterProps) => {
       </div>
     </div>
 
+    {/* Edit/History Modal */}
+    <div class="modal fade" id="editModal" tabindex={-1} aria-labelledby="editModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content" id="editModalContent">
+          {/* Content loaded via htmx */}
+        </div>
+      </div>
+    </div>
+
   </>)
 }

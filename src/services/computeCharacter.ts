@@ -1,6 +1,6 @@
 import type { SQL } from "bun";
 import { findById, type Character } from "@src/db/characters";
-import { getCurrentLevels } from "@src/db/char_levels";
+import { getCurrentLevels, findByCharacterId as getAllLevels } from "@src/db/char_levels";
 import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilities";
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills";
 import { getHpDelta } from "@src/db/char_hp";
@@ -113,15 +113,10 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   let maxHitPoints = 0;
   const hitDice: HitDieType[] = [];
 
-  for (const level of levels) {
+  const allLevels = await getAllLevels(db, characterId);
+  for (const level of allLevels) {
     const classDef = Classes.find(c => c.name === level.class)!;
-
-    // Add hit dice to the list (one per level in this class)
-    for (let i = 0; i < level.level; i++) {
-      hitDice.push(classDef.hitDie);
-    }
-
-    // Add HP from hit die roll
+    hitDice.push(classDef.hitDie);
     maxHitPoints += level.hit_die_roll;
   }
 
@@ -137,13 +132,13 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   for (const change of hitDiceChanges) {
     if (change.action === 'use') {
       // Remove one die of this type
-      const index = availableHitDice.indexOf(change.die_value);
+      const index = availableHitDice.indexOf(change.die_value as HitDieType);
       if (index !== -1) {
         availableHitDice.splice(index, 1);
       }
     } else if (change.action === 'restore') {
       // Add one die of this type
-      availableHitDice.push(change.die_value);
+      availableHitDice.push(change.die_value as HitDieType);
     }
   }
 

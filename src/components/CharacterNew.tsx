@@ -2,10 +2,7 @@ import clsx from 'clsx';
 
 import { Select } from '@src/components/ui/Select'
 import { BackgroundNames, Classes, ClassNames, RaceNames, Races, SubraceNames } from '@src/lib/dnd';
-
-function toTitleCase(str: string) {
-  return str.replace(/\b\w/g, char => char.toUpperCase());
-}
+import { toTitleCase } from '@src/lib/strings';
 
 export interface CharacterNewProps {
   values?: Record<string, string>,
@@ -149,7 +146,14 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         <div class="card shadow-sm">
           <div class="card-body">
             <h1 class="card-title mb-4">Create New Character</h1>
-            <form hx-post="/characters/new/check" hx-trigger="change delay:300ms" hx-target="#character-new" hx-swap="outerHTML" class="needs-validation" novalidate>
+            <form
+              hx-post="/characters/new/check"
+              hx-trigger="change delay:300ms"
+              hx-target="#character-new"
+              hx-swap="outerHTML"
+              class="needs-validation"
+              novalidate
+              >
               {fields.map((field) => field)}
 
               <div class="d-flex gap-2">

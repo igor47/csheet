@@ -4,9 +4,10 @@ import { Skills, type SkillType, type ProficiencyLevel } from '@src/lib/dnd';
 interface SkillRowProps {
   skill: SkillType;
   skillScore: SkillScore;
+  characterId: string;
 }
 
-const SkillRow = ({ skill, skillScore }: SkillRowProps) => {
+const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
   const formatModifier = (value: number) => value >= 0 ? `+${value}` : `${value}`;
 
   const getProficiencyIcon = (proficiency: ProficiencyLevel): string => {
@@ -35,14 +36,24 @@ const SkillRow = ({ skill, skillScore }: SkillRowProps) => {
           class="btn btn-sm btn-outline-secondary border p-1"
           style="width: 24px; height: 24px; line-height: 1;"
           aria-label={`edit ${skill}`}
-          title={`edit ${skill}`}>
+          title={`edit ${skill}`}
+          hx-get={`/characters/${characterId}/edit/${skill}`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+          data-bs-toggle="modal"
+          data-bs-target="#editModal">
           <i class="bi bi-pencil"></i>
         </button>
         <button
           class="btn btn-sm btn-outline-secondary border p-1"
           style="width: 24px; height: 24px; line-height: 1;"
           aria-label={`${skill} history`}
-          title={`${skill} history`}>
+          title={`${skill} history`}
+          hx-get={`/characters/${characterId}/history/${skill}`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+          data-bs-toggle="modal"
+          data-bs-target="#editModal">
           <i class="bi bi-journals"></i>
         </button>
       </div>
@@ -61,7 +72,7 @@ export const SkillsPanel = ({ character }: SkillsPanelProps) => {
         <div class="col-12 col-md-6">
           <div class="list-group small">
             {Skills.map(skill => (
-              <SkillRow skill={skill} skillScore={character.skills[skill]} />
+              <SkillRow skill={skill} skillScore={character.skills[skill]} characterId={character.id} />
             ))}
           </div>
         </div>

@@ -72,14 +72,24 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
                       class="btn btn-sm btn-outline-secondary border p-1"
                       style="width: 24px; height: 24px; line-height: 1;"
                       aria-label="edit class"
-                      title="edit class">
+                      title="edit class"
+                      hx-get={`/characters/${character.id}/edit/class`}
+                      hx-target="#editModalContent"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editModal">
                       <i class="bi bi-pencil"></i>
                     </button>
                     <button
                       class="btn btn-sm btn-outline-secondary border p-1"
                       style="width: 24px; height: 24px; line-height: 1;"
                       aria-label="class history"
-                      title="class history">
+                      title="class history"
+                      hx-get={`/characters/${character.id}/history/class`}
+                      hx-target="#editModalContent"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editModal">
                       <i class="bi bi-journals"></i>
                     </button>
                   </div>
@@ -117,10 +127,10 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
 
             {/* Hit Points Progress Bar */}
             <div class="row g-2 h-auto mt-2">
-              <div class="col-1">
-                <div class="text-muted small">Hit Points</div>
+              <div class="col-10 col-md-2">
+                <div class="text-muted small text-center">Hit Points</div>
               </div>
-              <div class="col-10">
+              <div class="col-10 col-md-8">
                 <div class="progress" style="height: 25px;">
                   <div
                     class={hpProgressCls}
@@ -134,19 +144,29 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
                   </div>
                 </div>
               </div>
-              <div class="col-1 d-flex gap-1 align-items-center">
+              <div class="col-2 d-flex gap-1 align-items-center">
                 <button
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="edit hit points"
-                  title="edit hit points">
+                  title="edit hit points"
+                  hx-get={`/characters/${character.id}/edit/hitpoints`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
                   <i class="bi bi-pencil"></i>
                 </button>
                 <button
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="hit points history"
-                  title="hit points history">
+                  title="hit points history"
+                  hx-get={`/characters/${character.id}/history/hitpoints`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
                   <i class="bi bi-journals"></i>
                 </button>
               </div>
@@ -154,10 +174,10 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
 
             {/* Hit Dice */}
             <div class="row g-2 h-auto mt-2">
-              <div class="col-1">
+              <div class="col-10 col-md-2">
                 <div class="text-muted small text-center">Hit Dice</div>
               </div>
-              <div class="col-10">
+              <div class="col-10 col-md-8">
                 <div class="d-flex justify-content-center">
                   <ul class="list-group list-group-horizontal">
                     {hitDice.map(({value, used}) => {
@@ -175,19 +195,29 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
                   </ul>
                 </div>
               </div>
-              <div class="col-1 d-flex gap-1 align-items-center">
+              <div class="col-2 d-flex gap-1 align-items-center">
                 <button
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="edit hit dice"
-                  title="edit hit dice">
+                  title="edit hit dice"
+                  hx-get={`/characters/${character.id}/edit/hitdice`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
                   <i class="bi bi-pencil"></i>
                 </button>
                 <button
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="hit dice history"
-                  title="hit dice history">
+                  title="hit dice history"
+                  hx-get={`/characters/${character.id}/history/hitdice`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
                   <i class="bi bi-journals"></i>
                 </button>
               </div>

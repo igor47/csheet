@@ -12,6 +12,31 @@ export const Skills = ["acrobatics","animal handling","arcana","athletics","dece
 export const SkillSchema = z.enum(Skills);
 export type SkillType = z.infer<typeof SkillSchema>;
 
+export const ProficiencyLevels = ["none", "half", "proficient", "expert"] as const;
+export const ProficiencyLevelSchema = z.enum(ProficiencyLevels);
+export type ProficiencyLevel = z.infer<typeof ProficiencyLevelSchema>;
+
+export const SkillAbilities: Record<SkillType, AbilityType> = {
+  "acrobatics": "dexterity",
+  "animal handling": "wisdom",
+  "arcana": "intelligence",
+  "athletics": "strength",
+  "deception": "charisma",
+  "history": "intelligence",
+  "insight": "wisdom",
+  "intimidation": "charisma",
+  "investigation": "intelligence",
+  "medicine": "wisdom",
+  "nature": "intelligence",
+  "perception": "wisdom",
+  "performance": "charisma",
+  "persuasion": "charisma",
+  "religion": "intelligence",
+  "sleight of hand": "dexterity",
+  "stealth": "dexterity",
+  "survival": "wisdom",
+};
+
 export type AbilityScoreModifiers = {
   [key in AbilityType]?: number;
 }

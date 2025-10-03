@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames, Abilities, Races, Classes, type AbilityType } from "@src/lib/dnd";
+import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames, Abilities, Races, Classes, Skills, Backgrounds, type AbilityType, type SkillType } from "@src/lib/dnd";
 import { create as createCharacterDb, nameExistsForUser, type Character } from "@src/db/characters";
 import { create as createClassLevelDb } from "@src/db/char_levels";
 import { create as createAbilityDb } from "@src/db/char_abilities";
+import { create as createSkillDb } from "@src/db/char_skills";
 import { db } from "@src/db";
 
 /**
@@ -105,6 +106,29 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
         score: initialScores[ability],
         proficiency: savingThrowProficiencies.has(ability),
         note: "Initial score",
+      });
+    }
+
+    // Get skill proficiencies from background
+    const background = Backgrounds.find(b => b.name === data.background);
+    const backgroundSkillProficiencies = new Set<SkillType>();
+
+    if (background) {
+      for (const skill of background.skillProficiencies) {
+        // Only handle fixed skills (not Choice objects)
+        if (typeof skill === 'string') {
+          backgroundSkillProficiencies.add(skill as SkillType);
+        }
+      }
+    }
+
+    // Only create skill entries for proficient skills
+    for (const skill of backgroundSkillProficiencies) {
+      await createSkillDb(tx, {
+        character_id: character.id,
+        skill,
+        proficiency: 'proficient',
+        note: 'From background',
       });
     }
 

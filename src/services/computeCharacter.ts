@@ -2,7 +2,8 @@ import type { SQL } from "bun";
 import { findById, type Character } from "@src/db/characters";
 import { findByCharacterId } from "@src/db/char_levels";
 import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilities";
-import { Races, type SizeType, type AbilityType } from "@src/lib/dnd";
+import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills";
+import { Races, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel } from "@src/lib/dnd";
 
 export interface CharacterClass {
   class: string;
@@ -17,6 +18,12 @@ export interface AbilityScore {
   proficient: boolean;
 }
 
+export interface SkillScore {
+  modifier: number;
+  proficiency: ProficiencyLevel;
+  ability: AbilityType;
+}
+
 export interface ComputedCharacter extends Character {
   classes: CharacterClass[];
   totalLevel: number;
@@ -24,6 +31,7 @@ export interface ComputedCharacter extends Character {
   speed: number;
   proficiencyBonus: number;
   abilityScores: Record<AbilityType, AbilityScore>;
+  skills: Record<SkillType, SkillScore>;
   armorClass: number;
   initiative: number;
 }
@@ -34,6 +42,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
 
   const levels = await findByCharacterId(db, characterId);
   const currentAbilityScores = await getCurrentAbilities(db, characterId);
+  const currentSkills = await getCurrentSkills(db, characterId);
 
   // Sum levels by class
   const classMap = new Map<string, { level: number; subclass: string | null }>();
@@ -88,6 +97,34 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     charisma: computeAbilityScore('charisma', currentAbilityScores.charisma.score, currentAbilityScores.charisma.proficient),
   };
 
+  // Compute skill modifiers
+  const computeSkillModifier = (skill: SkillType, proficiency: ProficiencyLevel): number => {
+    const ability = SkillAbilities[skill];
+    const abilityModifier = abilityScores[ability].modifier;
+
+    switch (proficiency) {
+      case 'none':
+        return abilityModifier;
+      case 'half':
+        return abilityModifier + Math.floor(proficiencyBonus / 2);
+      case 'proficient':
+        return abilityModifier + proficiencyBonus;
+      case 'expert':
+        return abilityModifier + (proficiencyBonus * 2);
+    }
+  };
+
+  const skills: Record<SkillType, SkillScore> = {} as Record<SkillType, SkillScore>;
+  for (const skill of Skills) {
+    const proficiency = currentSkills[skill]?.proficiency || 'none';
+    const ability = SkillAbilities[skill];
+    skills[skill] = {
+      modifier: computeSkillModifier(skill, proficiency),
+      proficiency,
+      ability,
+    };
+  }
+
   // Initiative is DEX modifier
   const initiative = abilityScores.dexterity.modifier;
 
@@ -102,6 +139,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     speed: race.speed,
     proficiencyBonus,
     abilityScores,
+    skills,
     armorClass,
     initiative,
   };

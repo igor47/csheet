@@ -4,6 +4,9 @@ export const Sizes = ["tiny", "small", "medium", "large", "huge", "gargantuan"] 
 export const SizeSchema = z.enum(Sizes);
 export type SizeType = z.infer<typeof SizeSchema>;
 
+export const HitDice = [6, 8, 10, 12] as const;
+export type HitDieType = typeof HitDice[number];
+
 export const Abilities = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"] as const;
 export const AbilitySchema = z.enum(Abilities);
 export type AbilityType = z.infer<typeof AbilitySchema>;
@@ -219,7 +222,7 @@ export type SpellcastingInfo = { notes?: string} & ({ enabled: false } | {
 
 export interface ClassDef {
   name: string;
-  hitDie: "d6" | "d8" | "d10" | "d12";
+  hitDie: HitDieType;
   primaryAbilities: AbilityType[];
   savingThrows: AbilityType[];
 
@@ -242,7 +245,7 @@ export interface ClassDef {
 export const Classes: ClassDef[] = [
   {
     name: "barbarian",
-    hitDie: "d12",
+    hitDie: 12,
     primaryAbilities: ["strength", "constitution"],
     savingThrows: ["strength", "constitution"],
     armorProficiencies: ["light", "medium", "shields"],
@@ -258,7 +261,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "bard",
-    hitDie: "d8",
+    hitDie: 8,
     primaryAbilities: ["charisma", "dexterity"],
     savingThrows: ["dexterity", "charisma"],
     armorProficiencies: ["light"],
@@ -279,7 +282,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "cleric",
-    hitDie: "d8",
+    hitDie: 8,
     primaryAbilities: ["wisdom"],
     savingThrows: ["wisdom", "charisma"],
     armorProficiencies: ["light", "medium", "heavy", "shields"],
@@ -292,7 +295,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "druid",
-    hitDie: "d8",
+    hitDie: 8,
     primaryAbilities: ["wisdom"],
     savingThrows: ["intelligence", "wisdom"],
     armorProficiencies: ["light (nonmetal)", "medium (nonmetal)", "shields (nonmetal)"],
@@ -305,7 +308,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "fighter",
-    hitDie: "d10",
+    hitDie: 10,
     primaryAbilities: ["strength", "dexterity", "constitution"],
     savingThrows: ["strength", "constitution"],
     armorProficiencies: ["light", "medium", "heavy", "shields"],
@@ -318,7 +321,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "monk",
-    hitDie: "d8",
+    hitDie: 8,
     primaryAbilities: ["dexterity", "wisdom"],
     savingThrows: ["strength", "dexterity"],
     armorProficiencies: [],
@@ -331,7 +334,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "paladin",
-    hitDie: "d10",
+    hitDie: 10,
     primaryAbilities: ["strength", "charisma"],
     savingThrows: ["wisdom", "charisma"],
     armorProficiencies: ["light", "medium", "heavy", "shields"],
@@ -344,7 +347,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "ranger",
-    hitDie: "d10",
+    hitDie: 10,
     primaryAbilities: ["dexterity", "wisdom"],
     savingThrows: ["strength", "dexterity"],
     armorProficiencies: ["light", "medium", "shields"],
@@ -357,7 +360,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "rogue",
-    hitDie: "d8",
+    hitDie: 8,
     primaryAbilities: ["dexterity"],
     savingThrows: ["dexterity", "intelligence"],
     armorProficiencies: ["light"],
@@ -370,7 +373,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "sorcerer",
-    hitDie: "d6",
+    hitDie: 6,
     primaryAbilities: ["charisma"],
     savingThrows: ["constitution", "charisma"],
     armorProficiencies: [],
@@ -383,7 +386,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "warlock",
-    hitDie: "d8",
+    hitDie: 8,
     primaryAbilities: ["charisma"],
     savingThrows: ["wisdom", "charisma"],
     armorProficiencies: ["light"],
@@ -396,7 +399,7 @@ export const Classes: ClassDef[] = [
   },
   {
     name: "wizard",
-    hitDie: "d6",
+    hitDie: 6,
     primaryAbilities: ["intelligence"],
     savingThrows: ["intelligence", "wisdom"],
     armorProficiencies: [],

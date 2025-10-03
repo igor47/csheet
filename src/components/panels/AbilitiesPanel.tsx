@@ -32,10 +32,18 @@ const AbilityBox = ({ ability, score, savingThrow, proficient }: AbilityBoxProps
         </div>
 
         <div class="position-absolute d-flex flex-column gap-1" style="right: 8px; top: 30px;">
-          <button class="btn btn-sm btn-outline-secondary border p-1" style="width: 24px; height: 24px; line-height: 1;">
+          <button
+            class="btn btn-sm btn-outline-secondary border p-1"
+            style="width: 24px; height: 24px; line-height: 1;"
+            aria-label={`edit ${ability}`}
+            title={`edit ${ability}`}>
             <i class="bi bi-pencil"></i>
           </button>
-          <button class="btn btn-sm btn-outline-secondary border p-1" style="width: 24px; height: 24px; line-height: 1;">
+          <button
+            class="btn btn-sm btn-outline-secondary border p-1"
+            style="width: 24px; height: 24px; line-height: 1;"
+            aria-label={`${ability} history`}
+            title={`${ability} history`}>
             <i class="bi bi-journals"></i>
           </button>
         </div>

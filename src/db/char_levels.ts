@@ -10,6 +10,7 @@ export const CharLevelSchema = z.object({
   class: ClassNamesSchema,
   level: z.number().int().min(1).max(20),
   subclass: z.string().nullable().default(null),
+  hit_die_roll: z.number().int().min(1).max(12),
   note: z.string().nullable().default(null),
   created_at: z.date(),
   updated_at: z.date(),
@@ -28,13 +29,14 @@ export async function create(db: SQL, charLevel: CreateCharLevel): Promise<CharL
   const id = ulid();
 
   const result = await db`
-    INSERT INTO char_levels (id, character_id, class, level, subclass, note, created_at)
+    INSERT INTO char_levels (id, character_id, class, level, subclass, hit_die_roll, note, created_at)
     VALUES (
       ${id},
       ${charLevel.character_id},
       ${charLevel.class},
       ${charLevel.level},
       ${charLevel.subclass},
+      ${charLevel.hit_die_roll},
       ${charLevel.note},
       CURRENT_TIMESTAMP
     )
@@ -54,6 +56,27 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     SELECT * FROM char_levels
     WHERE character_id = ${characterId}
     ORDER BY created_at ASC
+  `;
+
+  return result.map((row: any) => CharLevelSchema.parse({
+    ...row,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  }));
+}
+
+export async function getCurrentLevels(db: SQL, characterId: string): Promise<CharLevel[]> {
+  const result = await db`
+    WITH ranked AS (
+      SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY class ORDER BY created_at DESC) as rn
+      FROM char_levels
+      WHERE character_id = ${characterId}
+    )
+    SELECT *
+    FROM ranked
+    WHERE rn = 1
   `;
 
   return result.map((row: any) => CharLevelSchema.parse({

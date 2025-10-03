@@ -30,6 +30,22 @@ const SkillRow = ({ skill, skillScore }: SkillRowProps) => {
       <span class="badge bg-secondary text-uppercase" style="width: 40px; font-size: 0.7rem;">{abilityAbbr}</span>
       <span class="flex-grow-1 text-capitalize">{skill}</span>
       <span class="badge text-bg-info">{formatModifier(skillScore.modifier)}</span>
+      <div class="d-flex gap-1">
+        <button
+          class="btn btn-sm btn-outline-secondary border p-1"
+          style="width: 24px; height: 24px; line-height: 1;"
+          aria-label={`edit ${skill}`}
+          title={`edit ${skill}`}>
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button
+          class="btn btn-sm btn-outline-secondary border p-1"
+          style="width: 24px; height: 24px; line-height: 1;"
+          aria-label={`${skill} history`}
+          title={`${skill} history`}>
+          <i class="bi bi-journals"></i>
+        </button>
+      </div>
     </div>
   );
 };

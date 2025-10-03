@@ -1,9 +1,11 @@
 import type { SQL } from "bun";
 import { findById, type Character } from "@src/db/characters";
-import { findByCharacterId } from "@src/db/char_levels";
+import { getCurrentLevels } from "@src/db/char_levels";
 import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilities";
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills";
-import { Races, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel } from "@src/lib/dnd";
+import { getHpDelta } from "@src/db/char_hp";
+import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice";
+import { Races, Classes, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities } from "@src/lib/dnd";
 
 export interface CharacterClass {
   class: string;
@@ -34,51 +36,38 @@ export interface ComputedCharacter extends Character {
   skills: Record<SkillType, SkillScore>;
   armorClass: number;
   initiative: number;
+  maxHitPoints: number;
+  currentHP: number;
+  hitDice: HitDieType[];
+  availableHitDice: HitDieType[];
 }
 
 export async function computeCharacter(db: SQL, characterId: string): Promise<ComputedCharacter | null> {
   const character = await findById(db, characterId);
   if (!character) return null;
 
-  const levels = await findByCharacterId(db, characterId);
+  const levels = await getCurrentLevels(db, characterId);
   const currentAbilityScores = await getCurrentAbilities(db, characterId);
   const currentSkills = await getCurrentSkills(db, characterId);
+  const hpDelta = await getHpDelta(db, characterId);
+  const hitDiceChanges = await findHitDiceChanges(db, characterId);
 
-  // Sum levels by class
-  const classMap = new Map<string, { level: number; subclass: string | null }>();
-
-  for (const level of levels) {
-    const existing = classMap.get(level.class);
-    if (existing) {
-      existing.level += level.level;
-      // Keep the most recent subclass (non-null)
-      if (level.subclass) {
-        existing.subclass = level.subclass;
-      }
-    } else {
-      classMap.set(level.class, {
-        level: level.level,
-        subclass: level.subclass,
-      });
-    }
-  }
-
-  const classes: CharacterClass[] = Array.from(classMap.entries()).map(([className, data]) => ({
-    class: className,
-    level: data.level,
-    subclass: data.subclass,
+  // Get class information from current levels
+  const classes: CharacterClass[] = levels.map(level => ({
+    class: level.class,
+    level: level.level,
+    subclass: level.subclass,
   }));
 
   const totalLevel = classes.reduce((sum, c) => sum + c.level, 0);
   const proficiencyBonus = Math.floor((totalLevel - 1) / 4) + 2;
 
   const race = Races.find(r => r.name === character.race)!;
-  const subrace = race.subraces?.find(sr => sr.name === character.subrace);
 
   // Calculate modifier and saving throw for each ability
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2);
 
-  const computeAbilityScore = (ability: AbilityType, score: number, proficient: boolean): AbilityScore => {
+  const computeAbilityScore = (score: number, proficient: boolean): AbilityScore => {
     const modifier = calculateModifier(score);
     return {
       score,
@@ -88,14 +77,9 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     };
   };
 
-  const abilityScores: Record<AbilityType, AbilityScore> = {
-    strength: computeAbilityScore('strength', currentAbilityScores.strength.score, currentAbilityScores.strength.proficient),
-    dexterity: computeAbilityScore('dexterity', currentAbilityScores.dexterity.score, currentAbilityScores.dexterity.proficient),
-    constitution: computeAbilityScore('constitution', currentAbilityScores.constitution.score, currentAbilityScores.constitution.proficient),
-    intelligence: computeAbilityScore('intelligence', currentAbilityScores.intelligence.score, currentAbilityScores.intelligence.proficient),
-    wisdom: computeAbilityScore('wisdom', currentAbilityScores.wisdom.score, currentAbilityScores.wisdom.proficient),
-    charisma: computeAbilityScore('charisma', currentAbilityScores.charisma.score, currentAbilityScores.charisma.proficient),
-  };
+  const abilityScores = Object.fromEntries(Abilities.map(ability => (
+    [ability, computeAbilityScore(currentAbilityScores[ability]!.score, currentAbilityScores[ability]!.proficient)]
+  ))) as Record<AbilityType, AbilityScore>;
 
   // Compute skill modifiers
   const computeSkillModifier = (skill: SkillType, proficiency: ProficiencyLevel): number => {
@@ -125,6 +109,44 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     };
   }
 
+  // Compute hit points and hit dice
+  let maxHitPoints = 0;
+  const hitDice: HitDieType[] = [];
+
+  for (const level of levels) {
+    const classDef = Classes.find(c => c.name === level.class)!;
+
+    // Add hit dice to the list (one per level in this class)
+    for (let i = 0; i < level.level; i++) {
+      hitDice.push(classDef.hitDie);
+    }
+
+    // Add HP from hit die roll
+    maxHitPoints += level.hit_die_roll;
+  }
+
+  // Add CON modifier per total level
+  const conModifier = abilityScores.constitution.modifier;
+  maxHitPoints += conModifier * totalLevel;
+
+  // Compute current HP
+  const currentHP = maxHitPoints + hpDelta;
+
+  // Compute available hit dice by applying uses and restores
+  const availableHitDice = [...hitDice];
+  for (const change of hitDiceChanges) {
+    if (change.action === 'use') {
+      // Remove one die of this type
+      const index = availableHitDice.indexOf(change.die_value);
+      if (index !== -1) {
+        availableHitDice.splice(index, 1);
+      }
+    } else if (change.action === 'restore') {
+      // Add one die of this type
+      availableHitDice.push(change.die_value);
+    }
+  }
+
   // Initiative is DEX modifier
   const initiative = abilityScores.dexterity.modifier;
 
@@ -142,5 +164,9 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     skills,
     armorClass,
     initiative,
+    maxHitPoints,
+    currentHP,
+    hitDice,
+    availableHitDice,
   };
 }

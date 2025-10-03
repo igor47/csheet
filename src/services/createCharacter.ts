@@ -84,11 +84,15 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
     });
 
     // set initial level in the class
-    const level = await createClassLevelDb(tx, {
+    // At first level, characters get the maximum value of their hit die
+    const classDef = Classes.find(c => c.name === data.class)!;
+
+    await createClassLevelDb(tx, {
       character_id: character.id,
-      class: data.class,
+      class: classDef.name,
       subclass: data.subclass,
       level: 1,
+      hit_die_roll: classDef.hitDie,
       note: "Starting Level",
     })
 
@@ -96,8 +100,7 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
     const initialScores = calculateInitialAbilityScores(data.race, data.subrace);
 
     // Get saving throw proficiencies from class
-    const classDef = Classes.find(c => c.name === data.class);
-    const savingThrowProficiencies = new Set(classDef?.savingThrows || []);
+    const savingThrowProficiencies = new Set(classDef.savingThrows);
 
     for (const ability of Abilities) {
       await createAbilityDb(tx, {

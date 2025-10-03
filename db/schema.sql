@@ -39,7 +39,7 @@ CREATE TABLE char_levels (
   subclass TEXT,                  -- e.g., "Evocation"
   note TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, hit_die_roll INTEGER NOT NULL DEFAULT 1 CHECK(hit_die_roll BETWEEN 1 AND 12),
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_char_levels_char_id_created_at ON char_levels(character_id, created_at);
@@ -83,6 +83,39 @@ FOR EACH ROW
 BEGIN
     UPDATE char_skills SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
+CREATE TABLE char_hp (
+  id TEXT PRIMARY KEY CHECK(length(id) = 26),
+  character_id TEXT NOT NULL,
+  delta INTEGER NOT NULL,
+  note TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_char_hp_char_id_created_at ON char_hp(character_id, created_at);
+CREATE TRIGGER char_hp_updated_at
+AFTER UPDATE ON char_hp
+FOR EACH ROW
+BEGIN
+    UPDATE char_hp SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+CREATE TABLE char_hit_dice (
+  id TEXT PRIMARY KEY CHECK(length(id) = 26),
+  character_id TEXT NOT NULL,
+  die_value INTEGER NOT NULL CHECK(die_value IN (6, 8, 10, 12)),
+  action TEXT NOT NULL CHECK(action IN ('use', 'restore')),
+  note TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_char_hit_dice_char_id_die_value_created_at ON char_hit_dice(character_id, die_value, created_at);
+CREATE TRIGGER char_hit_dice_updated_at
+AFTER UPDATE ON char_hit_dice
+FOR EACH ROW
+BEGIN
+    UPDATE char_hit_dice SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 -- Dbmate schema migrations
 INSERT INTO "schema_migrations" (version) VALUES
   ('20250924190507'),
@@ -90,4 +123,7 @@ INSERT INTO "schema_migrations" (version) VALUES
   ('20251001204923'),
   ('20251002222515'),
   ('20251003120515'),
-  ('20251003124131');
+  ('20251003124131'),
+  ('20251003131932'),
+  ('20251003140146'),
+  ('20251003140147');

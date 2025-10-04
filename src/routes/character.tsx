@@ -7,13 +7,17 @@ import { ClassEditForm } from '@src/components/ClassEditForm'
 import { ClassHistory } from '@src/components/ClassHistory'
 import { HitPointsEditForm } from '@src/components/HitPointsEditForm'
 import { HitPointsHistory, type HPHistoryEvent } from '@src/components/HitPointsHistory'
+import { HitDiceEditForm } from '@src/components/HitDiceEditForm'
+import { HitDiceHistory } from '@src/components/HitDiceHistory'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
 import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
+import { findByCharacterId as findHitDiceChanges } from '@src/db/char_hit_dice'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { computeCharacter } from '@src/services/computeCharacter'
 import { addLevel, AddLevelApiSchema, prepareAddLevelForm, validateAddLevel } from '@src/services/addLevel'
 import { updateHitPoints, UpdateHitPointsApiSchema, prepareUpdateHitPointsForm, validateUpdateHitPoints } from '@src/services/updateHitPoints'
+import { updateHitDice, UpdateHitDiceApiSchema, prepareUpdateHitDiceForm, validateUpdateHitDice } from '@src/services/updateHitDice'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 import { db } from '@src/db'
@@ -125,6 +129,25 @@ characterRoutes.get('/characters/:id/edit/:field', async (c) => {
     return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={values} />);
   }
 
+  if (field === 'hitdice') {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const defaultAction = char.availableHitDice.length < char.hitDice.length ? 'restore' : 'spend';
+    const values = { action: defaultAction };
+    return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} />);
+  }
+
   return c.html(<>
     <div class="modal-header">
       <h5 class="modal-title">Edit {field}</h5>
@@ -168,6 +191,27 @@ characterRoutes.post('/characters/:id/edit/hitpoints/check', async (c) => {
 
   const { values, errors } = prepareUpdateHitPointsForm(body, char.currentHP, char.maxHitPoints);
   return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
+})
+
+characterRoutes.post('/characters/:id/edit/hitdice/check', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    return c.html(<>
+      <div class="modal-header">
+        <h5 class="modal-title">Error</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">Character not found</div>
+      </div>
+    </>);
+  }
+
+  const { values, errors } = prepareUpdateHitDiceForm(body, char.hitDice, char.availableHitDice);
+  return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
 })
 
 characterRoutes.post('/characters/:id/edit/class', async (c) => {
@@ -270,6 +314,56 @@ characterRoutes.post('/characters/:id/edit/hitpoints', async (c) => {
   }
 })
 
+characterRoutes.post('/characters/:id/edit/hitdice', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  // Strict validation (no mutation)
+  const body = await c.req.parseBody() as Record<string, string>;
+  const validation = validateUpdateHitDice(body, char.hitDice, char.availableHitDice);
+
+  if (!validation.valid) {
+    return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={body} errors={validation.errors} />);
+  }
+
+  // Parse with Zod
+  const result = UpdateHitDiceApiSchema.safeParse({
+    character_id: characterId,
+    action: body.action,
+    die_value: body.die_value ? parseInt(body.die_value) : null,
+    hp_rolled: body.hp_rolled ? parseInt(body.hp_rolled) : null,
+    note: body.note || null,
+  });
+
+  if (!result.success) {
+    const errors = zodToFormErrors(result.error)
+    return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={body} errors={errors} />);
+  }
+
+  try {
+    await updateHitDice(db, result.data, char.hitDice, char.availableHitDice, char.currentHP, char.maxHitPoints);
+
+    // Recompute character with updated hit dice
+    const updatedChar = await computeCharacter(db, characterId);
+    if (!updatedChar) {
+      return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={body} errors={{ action: 'Failed to reload character' }} />);
+    }
+
+    // Trigger modal close
+    c.header('HX-Trigger', 'closeEditModal');
+    return c.html(<CharacterInfo character={updatedChar} />);
+
+  } catch (error) {
+    console.error("updating hit dice", error);
+    return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={body} errors={{ action: 'Failed to update hit dice' }} />);
+  }
+})
+
 characterRoutes.get('/characters/:id/history/:field', async (c) => {
   const characterId = c.req.param('id') as string;
   const field = c.req.param('field') as string;
@@ -315,6 +409,13 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
     events.sort((a, b) => b.date.getTime() - a.date.getTime());
 
     return c.html(<HitPointsHistory events={events} />);
+  }
+
+  if (field === 'hitdice') {
+    const hitDiceEvents = await findHitDiceChanges(db, characterId);
+    // Reverse to show most recent first
+    hitDiceEvents.reverse();
+    return c.html(<HitDiceHistory events={hitDiceEvents} />);
   }
 
   return c.html(<>

@@ -1,6 +1,6 @@
 import { LabeledValue } from "./ui/LabeledValue";
 import { HitPointsBar } from "./ui/HitPointsBar";
-import clsx from "clsx";
+import { HitDiceDisplay } from "./ui/HitDiceDisplay";
 
 import type { ComputedCharacter } from "@src/services/computeCharacter";
 
@@ -26,15 +26,6 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
       parts.push(`(${c.subclass})`)
     }
     classStrings.push(parts.join(' '))
-  }
-
-  // Track which hit dice are used
-  const hitDice: { value: number, used: boolean }[] = character.hitDice.map(die => ({ value: die, used: true }));
-  for (const die of character.availableHitDice) {
-    const index = hitDice.findIndex(d => d.value === die && d.used);
-    if (index !== -1) {
-      hitDice[index]!.used = false;
-    }
   }
 
   return (
@@ -160,22 +151,7 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
                 <div class="text-muted small text-center">Hit Dice</div>
               </div>
               <div class="col-10 col-md-8">
-                <div class="d-flex justify-content-center">
-                  <ul class="list-group list-group-horizontal">
-                    {hitDice.map(({value, used}) => {
-                      return (
-                        <li
-                          class={clsx('list-group-item', 'position-relative', 'p-2', { 'bg-success-suble': !used, 'bg-danger-subtle': used })}
-                        >
-                          D{value}
-                          {used && (
-                            <i class={clsx('bi', 'bi-x-lg', 'position-absolute', 'top-50', 'start-50', 'translate-middle')} style="font-size: 1.5rem; opacity: 0.5;"></i>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
+                <HitDiceDisplay allHitDice={character.hitDice} availableHitDice={character.availableHitDice} />
               </div>
               <div class="col-2 d-flex gap-1 align-items-center">
                 <button

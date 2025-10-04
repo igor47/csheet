@@ -92,15 +92,22 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
 
             {/* Second row: Speed, Proficiency Bonus, Armor Class */}
             <div class="row g-2 h-auto mt-1">
-              <div class="col-sm-3">
+              <div class="col-sm-4">
                 <LabeledValue label="Speed" value={`${character.speed} ft.`} />
               </div>
 
-              <div class="col-sm-3">
+              <div class="col-sm-4">
                 <LabeledValue label="Proficiency Bonus" value={`+${character.proficiencyBonus}`} />
               </div>
 
-              <div class="col-sm-3">
+              <div class="col-sm-4">
+                <LabeledValue label="Passive Perception" value={`${character.passivePerception}`} />
+              </div>
+            </div>
+
+            {/* third row: AC, initiative */}
+            <div class="row g-2 h-auto mt-1">
+              <div class="col-sm-3 offset-sm-3">
                 <LabeledValue label="Armor Class" value={character.armorClass} />
               </div>
 

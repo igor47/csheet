@@ -36,6 +36,7 @@ export interface ComputedCharacter extends Character {
   skills: Record<SkillType, SkillScore>;
   armorClass: number;
   initiative: number;
+  passivePerception: number;
   maxHitPoints: number;
   currentHP: number;
   hitDice: HitDieType[];
@@ -148,6 +149,9 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   // Armor Class (unarmored: 10 + DEX modifier)
   const armorClass = 10 + abilityScores.dexterity.modifier;
 
+  // Passive Perception is 10 + Perception skill modifier
+  const passivePerception = 10 + skills.perception.modifier;
+
   return {
     ...character,
     classes,
@@ -159,6 +163,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     skills,
     armorClass,
     initiative,
+    passivePerception,
     maxHitPoints,
     currentHP,
     hitDice,

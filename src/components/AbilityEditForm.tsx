@@ -174,6 +174,8 @@ export const AbilityEditForm = ({ characterId, ability, currentScore, currentMod
             type="submit"
             class="btn btn-primary"
             hx-post={`/characters/${characterId}/edit/${ability}`}
+            hx-target="#editModalContent"
+            hx-swap="innerHTML"
           >
             Update Ability
           </button>

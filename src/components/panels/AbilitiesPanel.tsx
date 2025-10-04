@@ -65,11 +65,12 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
 
 interface AbilitiesPanelProps {
   character: ComputedCharacter;
+  swapOob?: boolean;
 }
 
-export const AbilitiesPanel = ({ character }: AbilitiesPanelProps) => {
+export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
   return (
-    <div class="accordion-body">
+    <div class="accordion-body" id="abilities-panel" hx-swap-oob={swapOob && 'true'}>
       <div class="row row-cols-3 g-2">
         {Abilities.map(ability => {
           const abilityScore = character.abilityScores[ability];

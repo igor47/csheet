@@ -1,31 +1,75 @@
-export const SpellsPanel = () => {
+import type { ComputedCharacter } from '@src/services/computeCharacter';
+import { LabeledValue } from '@src/components/ui/LabeledValue';
+import { SpellSlotsDisplay } from '@src/components/ui/SpellSlotsDisplay';
+
+export interface SpellsPanelProps {
+  character: ComputedCharacter;
+  swapOob?: boolean;
+}
+
+export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
+  const formatBonus = (value: number) => value >= 0 ? `+${value}` : `${value}`;
+
   return (
-    <div class="accordion-body">
-      {/* Spellcasting header */}
-      <div class="row g-2 mb-3">
-        <div class="col-4">
-          <label class="form-label small text-muted mb-1">Spell Mod</label>
-          <input class="form-control form-control-sm" value="+7" />
+    <div class="accordion-body" id="spells-panel" hx-swap-oob={swapOob && 'true'}>
+      {/* Spellcasting stats per class */}
+      {character.spellcasting.map((stats) => (
+        <div class="row g-2 h-auto">
+          <div class="col-3 d-flex align-items-center justify-content-center">
+            <div class="text-center text-capitalize">{stats.class} Spells</div>
+          </div>
+          <div class="col-4">
+            <LabeledValue label="Spell Attack" value={formatBonus(stats.spellAttackBonus)} />
+          </div>
+          <div class="col-4">
+            <LabeledValue label="Spell Save DC" value={stats.spellSaveDC} />
+          </div>
         </div>
-        <div class="col-4">
-          <label class="form-label small text-muted mb-1">Spell Save DC</label>
-          <input class="form-control form-control-sm" value="15" />
-        </div>
-        <div class="col-4">
-          <label class="form-label small text-muted mb-1">Attack Bonus</label>
-          <input class="form-control form-control-sm" value="+7" />
-        </div>
-      </div>
+      ))}
 
       {/* Spell slots */}
-      <div class="mb-3">
-        <label class="form-label small text-muted">Level 1 Slots</label>
-        <div class="progress">
-          <div class="progress-bar" style="width: 50%">2 / 4</div>
-        </div>
-      </div>
+      {character.spellSlots && (
+        <div class="row g-2 h-auto mt-2 mb-2">
+          <div class="col-10 col-md-2">
+            <div class="text-muted small text-center">Spell Slots</div>
+          </div>
+          <div class="col-10 col-md-8">
+            <SpellSlotsDisplay
+              allSlots={character.spellSlots}
+              availableSlots={character.availableSpellSlots}
+            />
+          </div>
+          <div class="col-2 d-flex gap-1 align-items-center">
+            <button
+              class="btn btn-sm btn-outline-secondary border p-1"
+              style="width: 24px; height: 24px; line-height: 1;"
+              aria-label="Edit spell slots"
+              title="Edit spell slots"
+              hx-get={`/characters/${character.id}/edit/spellslots`}
+              hx-target="#editModalContent"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#editModal">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button
+              class="btn btn-sm btn-outline-secondary border p-1"
+              style="width: 24px; height: 24px; line-height: 1;"
+              aria-label="Spell splot history"
+              title="Spell slot history"
+              hx-get={`/characters/${character.id}/history/spellslots`}
+              hx-target="#editModalContent"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#editModal">
+              <i class="bi bi-journals"></i>
+            </button>
+          </div>
 
-      {/* Tabs for spell levels */}
+        </div>
+      )}
+
+      {/* TODO: Spell list - Tabs for spell levels */}
       <ul class="nav nav-tabs small" id="spellTabs" role="tablist">
         <li class="nav-item" role="presentation">
           <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cantrips" type="button" role="tab">Cantrips</button>

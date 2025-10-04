@@ -126,8 +126,8 @@ export const HitPointsEditForm = ({ characterId, currentHP, maxHitPoints, values
             type="submit"
             class="btn btn-primary"
             hx-post={`/characters/${characterId}/edit/hitpoints`}
-            hx-target="#character-info"
-            hx-swap="outerHTML"
+            hx-target="#editModalContent"
+            hx-swap="innerHTML"
           >
             Update Hit Points
           </button>

@@ -161,6 +161,8 @@ export const SkillEditForm = ({
             type="submit"
             class="btn btn-primary"
             hx-post={`/characters/${characterId}/edit/${skill}`}
+            hx-target="#editModalContent"
+            hx-swap="innerHTML"
           >
             Update Skill
           </button>

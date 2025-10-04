@@ -5,7 +5,8 @@ import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilit
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills";
 import { getHpDelta } from "@src/db/char_hp";
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice";
-import { Races, Classes, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities } from "@src/lib/dnd";
+import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots";
+import { Races, Classes, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities, type SlotsBySpellLevel, type PactMagicRow, getSlotsFor, getWarlockPactAt, type ClassNameType } from "@src/lib/dnd";
 
 export interface CharacterClass {
   class: string;
@@ -26,6 +27,13 @@ export interface SkillScore {
   ability: AbilityType;
 }
 
+export interface SpellcastingStats {
+  class: ClassNameType;
+  ability: AbilityType;
+  spellAttackBonus: number;
+  spellSaveDC: number;
+}
+
 export interface ComputedCharacter extends Character {
   classes: CharacterClass[];
   totalLevel: number;
@@ -41,6 +49,10 @@ export interface ComputedCharacter extends Character {
   currentHP: number;
   hitDice: HitDieType[];
   availableHitDice: HitDieType[];
+  spellSlots: SlotsBySpellLevel | null;
+  availableSpellSlots: SlotsBySpellLevel | null;
+  pactMagic: PactMagicRow | null;
+  spellcasting: SpellcastingStats[];
 }
 
 export async function computeCharacter(db: SQL, characterId: string): Promise<ComputedCharacter | null> {
@@ -52,6 +64,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   const currentSkills = await getCurrentSkills(db, characterId);
   const hpDelta = await getHpDelta(db, characterId);
   const hitDiceChanges = await findHitDiceChanges(db, characterId);
+  const spellSlotChanges = await findSpellSlotChanges(db, characterId);
 
   // Get class information from current levels
   const classes: CharacterClass[] = levels.map(level => ({
@@ -152,7 +165,107 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   // Passive Perception is 10 + Perception skill modifier
   const passivePerception = 10 + skills.perception.modifier;
 
-  return {
+  // Compute spell slots and spellcasting stats
+  let spellSlots: SlotsBySpellLevel | null = null;
+  let pactMagic: PactMagicRow | null = null;
+  const spellcastingStats: SpellcastingStats[] = [];
+
+  // Calculate caster levels for multiclassing
+  let fullCasterLevel = 0;
+  let halfCasterLevel = 0;
+  let thirdCasterLevel = 0;
+
+  for (const charClass of classes) {
+    const classDef = Classes.find(c => c.name === charClass.class);
+    if (!classDef || !classDef.spellcasting.enabled) continue;
+
+    const spellcasting = classDef.spellcasting;
+    console.dir(spellcasting);
+
+    // Check if spellcasting is subclass-specific
+    if (spellcasting.subclasses && spellcasting.subclasses.length > 0) {
+      // Only count if character has the right subclass
+      if (!charClass.subclass || !spellcasting.subclasses.includes(charClass.subclass)) {
+        continue;
+      }
+    }
+
+    // Calculate spellcasting stats for this class
+    const abilityModifier = abilityScores[spellcasting.ability].modifier;
+    spellcastingStats.push({
+      class: charClass.class,
+      ability: spellcasting.ability,
+      spellAttackBonus: proficiencyBonus + abilityModifier,
+      spellSaveDC: 8 + proficiencyBonus + abilityModifier,
+    });
+
+    // Add to appropriate caster level
+    if (spellcasting.kind === 'pact') {
+      // Warlock pact magic is separate
+      pactMagic = getWarlockPactAt(charClass.level);
+    } else if (spellcasting.kind === 'full') {
+      fullCasterLevel += charClass.level;
+    } else if (spellcasting.kind === 'half') {
+      halfCasterLevel += charClass.level;
+    } else if (spellcasting.kind === 'third') {
+      thirdCasterLevel += charClass.level;
+    }
+  }
+
+  // Determine spell slots
+  // For single-class casters, use actual class level
+  // For multiclassing, use effective caster level with highest tier progression
+  const casterTypeCount = (fullCasterLevel > 0 ? 1 : 0) + (halfCasterLevel > 0 ? 1 : 0) + (thirdCasterLevel > 0 ? 1 : 0);
+
+  if (casterTypeCount === 1) {
+    // Single caster type - use actual class level
+    if (fullCasterLevel > 0) {
+      spellSlots = getSlotsFor('full', fullCasterLevel);
+    } else if (halfCasterLevel > 0) {
+      spellSlots = getSlotsFor('half', halfCasterLevel);
+    } else if (thirdCasterLevel > 0) {
+      spellSlots = getSlotsFor('third', thirdCasterLevel);
+    }
+  } else if (casterTypeCount > 1) {
+    // Multiclassing - use effective caster level with highest tier progression
+    const effectiveCasterLevel =
+      fullCasterLevel +
+      Math.floor(halfCasterLevel / 2) +
+      Math.floor(thirdCasterLevel / 3);
+
+    if (fullCasterLevel > 0) {
+      spellSlots = getSlotsFor('full', effectiveCasterLevel);
+    } else if (halfCasterLevel > 0) {
+      spellSlots = getSlotsFor('half', effectiveCasterLevel);
+    } else if (thirdCasterLevel > 0) {
+      spellSlots = getSlotsFor('third', effectiveCasterLevel);
+    }
+  }
+
+  // Compute available spell slots by applying uses and restores
+  let availableSpellSlots: SlotsBySpellLevel | null = null;
+  if (spellSlots) {
+    // Start with a copy of base spell slots
+    availableSpellSlots = { ...spellSlots };
+
+    // Apply each spell slot change
+    for (const change of spellSlotChanges) {
+      const level = change.slot_level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+      const currentCount = availableSpellSlots[level] || 0;
+
+      if (change.action === 'use') {
+        // Decrease slot count (don't go below 0)
+        availableSpellSlots[level] = Math.max(0, currentCount - 1);
+      } else if (change.action === 'restore') {
+        // Increase slot count (don't exceed base slots)
+        const maxSlots = spellSlots[level] || 0;
+        availableSpellSlots[level] = Math.min(maxSlots, currentCount + 1);
+      }
+    }
+
+  }
+
+  const char =  {
     ...character,
     classes,
     totalLevel,
@@ -168,5 +281,12 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     currentHP,
     hitDice,
     availableHitDice,
+    spellSlots,
+    availableSpellSlots,
+    pactMagic,
+    spellcasting: spellcastingStats,
   };
+
+  console.dir(char);
+  return char;
 }

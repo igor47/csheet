@@ -9,6 +9,8 @@ import { HitPointsEditForm } from '@src/components/HitPointsEditForm'
 import { HitPointsHistory, type HPHistoryEvent } from '@src/components/HitPointsHistory'
 import { HitDiceEditForm } from '@src/components/HitDiceEditForm'
 import { HitDiceHistory } from '@src/components/HitDiceHistory'
+import { SpellSlotsEditForm } from '@src/components/SpellSlotsEditForm'
+import { SpellSlotsHistory } from '@src/components/SpellSlotsHistory'
 import { AbilityEditForm } from '@src/components/AbilityEditForm'
 import { AbilityHistory } from '@src/components/AbilityHistory'
 import { SkillEditForm } from '@src/components/SkillEditForm'
@@ -17,6 +19,7 @@ import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
 import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
 import { findByCharacterId as findHitDiceChanges } from '@src/db/char_hit_dice'
+import { findByCharacterId as findSpellSlotChanges } from '@src/db/char_spell_slots'
 import { findByCharacterId as findAbilityChanges } from '@src/db/char_abilities'
 import { findByCharacterId as findSkillChanges } from '@src/db/char_skills'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
@@ -24,12 +27,16 @@ import { computeCharacter } from '@src/services/computeCharacter'
 import { addLevel, AddLevelApiSchema, prepareAddLevelForm, validateAddLevel } from '@src/services/addLevel'
 import { updateHitPoints, UpdateHitPointsApiSchema, prepareUpdateHitPointsForm, validateUpdateHitPoints } from '@src/services/updateHitPoints'
 import { updateHitDice, UpdateHitDiceApiSchema, prepareUpdateHitDiceForm, validateUpdateHitDice } from '@src/services/updateHitDice'
+import { updateSpellSlots, UpdateSpellSlotsApiSchema, prepareUpdateSpellSlotsForm, validateUpdateSpellSlots } from '@src/services/updateSpellSlots'
 import { updateAbility, UpdateAbilityApiSchema, prepareUpdateAbilityForm, validateUpdateAbility } from '@src/services/updateAbility'
 import { updateSkill, UpdateSkillApiSchema, prepareUpdateSkillForm, validateUpdateSkill } from '@src/services/updateSkill'
 import { Abilities, Skills, SkillAbilities, type AbilityType, type SkillType } from '@src/lib/dnd'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 import { db } from '@src/db'
+import { SpellsPanel } from '@src/components/panels/SpellsPanel'
+import { AbilitiesPanel } from '@src/components/panels/AbilitiesPanel'
+import { SkillsPanel } from '@src/components/panels/SkillsPanel'
 
 export const characterRoutes = new Hono()
 
@@ -155,6 +162,25 @@ characterRoutes.get('/characters/:id/edit/:field', async (c) => {
     const defaultAction = char.availableHitDice.length < char.hitDice.length ? 'restore' : 'spend';
     const values = { action: defaultAction };
     return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} />);
+  }
+
+  if (field === 'spellslots') {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const defaultAction = 'longrest';
+    const values = { action: defaultAction };
+    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} values={values} />);
   }
 
   // Check if field is an ability
@@ -287,6 +313,27 @@ characterRoutes.post('/characters/:id/edit/hitdice/check', async (c) => {
 
   const { values, errors } = prepareUpdateHitDiceForm(body, char.hitDice, char.availableHitDice);
   return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
+})
+
+characterRoutes.post('/characters/:id/edit/spellslots/check', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    return c.html(<>
+      <div class="modal-header">
+        <h5 class="modal-title">Error</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">Character not found</div>
+      </div>
+    </>);
+  }
+
+  const { values, errors } = prepareUpdateSpellSlotsForm(body, char.spellSlots, char.availableSpellSlots);
+  return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
 })
 
 characterRoutes.post('/characters/:id/edit/:field/check', async (c) => {
@@ -429,15 +476,21 @@ characterRoutes.post('/characters/:id/edit/class', async (c) => {
 
   try {
     await addLevel(db, result.data);
-    await setFlashMsg(c, 'Level added successfully!', 'success');
-    c.header('HX-Redirect', `/characters/${characterId}`);
-    return c.body(null, 204);
 
   } catch (error) {
     console.error("adding level", error);
     await setFlashMsg(c, 'Failed to add level', 'error');
     return c.html(<ClassEditForm characterId={characterId} currentClassLevel={currentClassLevel} values={body} />);
   }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  return c.html(<>
+    <CharacterInfo character={updatedChar} />
+    <AbilitiesPanel character={updatedChar} swapOob={true} />
+    <SkillsPanel character={updatedChar} swapOob={true} />
+    <SpellsPanel character={updatedChar} swapOob={true} />
+  </>)
+
 })
 
 characterRoutes.post('/characters/:id/edit/hitpoints', async (c) => {
@@ -477,20 +530,15 @@ characterRoutes.post('/characters/:id/edit/hitpoints', async (c) => {
 
   try {
     await updateHitPoints(db, result.data);
-
-    // Recompute character with updated HP
-    const updatedChar = await computeCharacter(db, characterId);
-    if (!updatedChar) {
-      return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={body} errors={{ amount: 'Failed to reload character' }} />);
-    }
-
-    // Trigger modal close
-    c.header('HX-Trigger', 'closeEditModal');
-    return c.html(<CharacterInfo character={updatedChar} />);
   } catch (error) {
     console.error("updating hit points", error);
     return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={body} errors={{ amount: 'Failed to update hit points' }} />);
   }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+
+  c.header('HX-Trigger', 'closeEditModal');
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />);
 })
 
 characterRoutes.post('/characters/:id/edit/hitdice', async (c) => {
@@ -526,37 +574,73 @@ characterRoutes.post('/characters/:id/edit/hitdice', async (c) => {
 
   try {
     await updateHitDice(db, result.data, char.hitDice, char.availableHitDice, char.currentHP, char.maxHitPoints);
-
-    // Recompute character with updated hit dice
-    const updatedChar = await computeCharacter(db, characterId);
-    if (!updatedChar) {
-      return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={body} errors={{ action: 'Failed to reload character' }} />);
-    }
-
-    // Trigger modal close
-    c.header('HX-Trigger', 'closeEditModal');
-    return c.html(<CharacterInfo character={updatedChar} />);
-
   } catch (error) {
     console.error("updating hit dice", error);
     return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={body} errors={{ action: 'Failed to update hit dice' }} />);
   }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  c.header('HX-Trigger', 'closeEditModal');
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />);
+})
+
+characterRoutes.post('/characters/:id/edit/spellslots', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  // Strict validation (no mutation)
+  const body = await c.req.parseBody() as Record<string, string>;
+  const validation = validateUpdateSpellSlots(body, char.spellSlots, char.availableSpellSlots);
+
+  if (!validation.valid) {
+    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} values={body} errors={validation.errors} />);
+  }
+
+  // Parse with Zod
+  const result = UpdateSpellSlotsApiSchema.safeParse({
+    character_id: characterId,
+    action: body.action,
+    slot_level: body.slot_level ? parseInt(body.slot_level) : null,
+    note: body.note || null,
+  });
+
+  if (!result.success) {
+    const errors = zodToFormErrors(result.error)
+    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} values={body} errors={errors} />);
+  }
+
+  try {
+    await updateSpellSlots(db, result.data, char.spellSlots, char.availableSpellSlots);
+  } catch (error) {
+    console.error("updating spell slots", error);
+    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} values={body} errors={{ action: 'Failed to update spell slots' }} />);
+  }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  c.header('HX-Trigger', 'closeEditModal');
+  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.post('/characters/:id/edit/:field', async (c) => {
   const characterId = c.req.param('id') as string;
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+
   const field = c.req.param('field') as string;
   const body = await c.req.parseBody() as Record<string, string>;
 
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      await setFlashMsg(c, 'Character not found', 'error');
-      c.header('HX-Redirect', `/characters`);
-      return c.body(null, 204);
-    }
-
     const ability = field as AbilityType;
     const abilityScore = char.abilityScores[ability];
 
@@ -602,10 +686,6 @@ characterRoutes.post('/characters/:id/edit/:field', async (c) => {
     try {
       await updateAbility(db, result.data, abilityScore.proficient);
 
-      // Ability changes affect many computed values, so redirect to reload the full character
-      await setFlashMsg(c, 'Ability updated successfully!', 'success');
-      c.header('HX-Redirect', `/characters/${characterId}`);
-      return c.body(null, 204);
     } catch (error) {
       console.error("updating ability", error);
       return c.html(<AbilityEditForm
@@ -614,21 +694,24 @@ characterRoutes.post('/characters/:id/edit/:field', async (c) => {
         currentScore={abilityScore.score}
         currentModifier={abilityScore.modifier}
         isProficient={abilityScore.proficient}
+        proficiencyBonus={char.proficiencyBonus}
         values={body}
         errors={{ score: 'Failed to update ability' }}
       />);
     }
+
+    const updatedChar = (await computeCharacter(db, characterId))!;
+    c.header('HX-Trigger', 'closeEditModal');
+    return c.html(<>
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
+    </>)
   }
 
   // Check if field is a skill
-  if (Skills.includes(field as SkillType)) {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      await setFlashMsg(c, 'Character not found', 'error');
-      c.header('HX-Redirect', `/characters`);
-      return c.body(null, 204);
-    }
-
+  else if (Skills.includes(field as SkillType)) {
     const skill = field as SkillType;
     const skillScore = char.skills[skill];
     const ability = SkillAbilities[skill];
@@ -672,11 +755,6 @@ characterRoutes.post('/characters/:id/edit/:field', async (c) => {
 
     try {
       await updateSkill(db, result.data);
-
-      // Skill changes affect passive perception and other computed values, so redirect to reload
-      await setFlashMsg(c, 'Skill updated successfully!', 'success');
-      c.header('HX-Redirect', `/characters/${characterId}`);
-      return c.body(null, 204);
     } catch (error) {
       console.error("updating skill", error);
       return c.html(<SkillEditForm
@@ -689,6 +767,13 @@ characterRoutes.post('/characters/:id/edit/:field', async (c) => {
         errors={{ proficiency: 'Failed to update skill' }}
       />);
     }
+
+    const updatedChar = (await computeCharacter(db, characterId))!;
+    c.header('HX-Trigger', 'closeEditModal');
+    return c.html(<>
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+    </>)
   }
 
   // Not found
@@ -755,6 +840,13 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
     // Reverse to show most recent first
     hitDiceEvents.reverse();
     return c.html(<HitDiceHistory events={hitDiceEvents} />);
+  }
+
+  if (field === 'spellslots') {
+    const spellSlotEvents = await findSpellSlotChanges(db, characterId);
+    // Reverse to show most recent first
+    spellSlotEvents.reverse();
+    return c.html(<SpellSlotsHistory events={spellSlotEvents} />);
   }
 
   // Check if field is an ability

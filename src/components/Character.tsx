@@ -75,7 +75,7 @@ export const Character = ({ character }: CharacterProps) => {
                 </button>
               </h2>
               <div id="col-spells" class="accordion-collapse collapse" aria-labelledby="hdr-spells">
-                <SpellsPanel />
+                <SpellsPanel character={character} />
               </div>
             </div>
 

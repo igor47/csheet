@@ -213,11 +213,16 @@ const Instruments = [
 // =====================
 // Data (Player’s handbook)
 // =====================
-//
+
+const CasterKind = ["full", "half", "third", "pact"] as const;
+const CasterKindSchema = z.enum(CasterKind);
+type CasterKindType = z.infer<typeof CasterKindSchema>;
 
 export type SpellcastingInfo = { notes?: string} & ({ enabled: false } | {
   enabled: true;
+  kind: CasterKindType;
   ability: AbilityType;
+  subclasses?: string[]; // Subclasses that grant/modify spellcasting
 })
 
 export interface ClassDef {
@@ -278,7 +283,7 @@ export const Classes: ClassDef[] = [
     },
     subclasses: ["college of lore", "college of valor"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, ability: "charisma" },
+    spellcasting: { enabled: true, kind: "full", ability: "charisma" },
   },
   {
     name: "cleric",
@@ -291,7 +296,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 2, from: ["history", "insight", "medicine", "persuasion", "religion"] },
     subclasses: ["knowledge", "life", "light", "nature", "tempest", "trickery", "war"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, ability: "wisdom" },
+    spellcasting: { enabled: true, kind: "full", ability: "wisdom" },
   },
   {
     name: "druid",
@@ -304,7 +309,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 2, from: ["arcana","animal handling","insight","medicine","nature","perception","religion","survival"] },
     subclasses: ["circle of the land", "circle of the moon"],
     subclassLevel: 2,
-    spellcasting: { enabled: true, ability: "wisdom" },
+    spellcasting: { enabled: true, kind: "full", ability: "wisdom" },
   },
   {
     name: "fighter",
@@ -317,7 +322,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 2, from: ["acrobatics","animal handling","athletics","history","insight","intimidation","perception","survival"] },
     subclasses: ["champion", "battle master", "eldritch knight"],
     subclassLevel: 3,
-    spellcasting: { enabled: false, notes: "eldritch knight subclass gains limited casting (intelligence)" },
+    spellcasting: { enabled: true, kind: "third", subclasses: ["eldritch knight"], ability: "intelligence"},
   },
   {
     name: "monk",
@@ -343,7 +348,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 2, from: ["athletics","insight","intimidation","medicine","persuasion","religion"] },
     subclasses: ["oath of devotion", "oath of the ancients", "oath of vengeance"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, ability: "charisma", notes: "half-caster progression" },
+    spellcasting: { enabled: true, kind: "half", ability: "charisma", notes: "half-caster progression" },
   },
   {
     name: "ranger",
@@ -356,7 +361,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 3, from: ["animal handling","athletics","insight","investigation","nature","perception","stealth","survival"] },
     subclasses: ["hunter", "beast master"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, ability: "wisdom", notes: "half-caster progression" },
+    spellcasting: { enabled: true, kind: "half", ability: "wisdom", notes: "half-caster progression" },
   },
   {
     name: "rogue",
@@ -369,7 +374,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 4, from: ["acrobatics","athletics","deception","insight","intimidation","investigation","perception","performance","persuasion","sleight of hand","stealth"] },
     subclasses: ["thief", "assassin", "arcane trickster"],
     subclassLevel: 3,
-    spellcasting: { enabled: false, notes: "arcane trickster subclass gains limited casting (intelligence)" },
+    spellcasting: { enabled: true, kind: "third", subclasses: ["arcane trickster"], ability: "intelligence"},
   },
   {
     name: "sorcerer",
@@ -382,7 +387,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 2, from: ["arcana","deception","insight","intimidation","persuasion","religion"] },
     subclasses: ["draconic bloodline", "wild magic"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, ability: "charisma" },
+    spellcasting: { enabled: true, kind: "full", ability: "charisma" },
   },
   {
     name: "warlock",
@@ -395,7 +400,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 2, from: ["arcana","deception","history","intimidation","investigation","nature","religion"] },
     subclasses: ["the archfey", "the fiend", "the great old one"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, ability: "charisma", notes: "pact magic progression" },
+    spellcasting: { enabled: true, kind: "pact", ability: "charisma", notes: "pact magic progression" },
   },
   {
     name: "wizard",
@@ -408,7 +413,7 @@ export const Classes: ClassDef[] = [
     skillChoices: { choose: 2, from: ["arcana","history","insight","investigation","medicine","religion"] },
     subclasses: ["school of abjuration","school of conjuration","school of divination","school of enchantment","school of evocation","school of illusion","school of necromancy","school of transmutation"],
     subclassLevel: 2,
-    spellcasting: { enabled: true, ability: "intelligence" },
+    spellcasting: { enabled: true, kind: "full", ability: "intelligence" },
   }
 ];
 export const ClassNames = Classes.map(c => c.name);
@@ -606,3 +611,150 @@ export const Backgrounds: Background[] = [
 export const BackgroundNames = Backgrounds.map(b => b.name);
 export const BackgroundNamesSchema = z.enum(BackgroundNames);
 export type BackgroundNameType = z.infer<typeof BackgroundNamesSchema>;
+
+/** Spell slot counts per spell level. Keys are 1..9 (no cantrips here). */
+export type SlotsBySpellLevel = Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
+
+/** Rows are indexed by character level (1..20). Index 0 is a dummy for convenience. */
+export type SlotProgression = SlotsBySpellLevel[];
+
+/** ---------- Full Caster Slots (Bard, Cleric, Druid, Sorcerer, Wizard) ---------- */
+export const FULL_CASTER_SLOTS: SlotProgression = [
+  {}, // 0 (unused)
+  { 1: 2 },                                    // 1
+  { 1: 3 },                                    // 2
+  { 1: 4, 2: 2 },                              // 3
+  { 1: 4, 2: 3 },                              // 4
+  { 1: 4, 2: 3, 3: 2 },                        // 5
+  { 1: 4, 2: 3, 3: 3 },                        // 6
+  { 1: 4, 2: 3, 3: 3, 4: 1 },                  // 7
+  { 1: 4, 2: 3, 3: 3, 4: 2 },                  // 8
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },            // 9
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },            // 10
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },      // 11
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },      // 12
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },// 13
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },// 14
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 }, // 15
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 }, // 16
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1, 9: 1 }, // 17
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 }, // 18
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 }, // 19
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 }, // 20
+];
+
+/** ---------- Half Caster Slots (Paladin, Ranger) ---------- */
+export const HALF_CASTER_SLOTS: SlotProgression = [
+  {}, // 0
+  {}, // 1
+  { 1: 2 },                        // 2
+  { 1: 3 },                        // 3
+  { 1: 3 },                        // 4
+  { 1: 4, 2: 2 },                  // 5
+  { 1: 4, 2: 2 },                  // 6
+  { 1: 4, 2: 3 },                  // 7
+  { 1: 4, 2: 3 },                  // 8
+  { 1: 4, 2: 3, 3: 2 },            // 9
+  { 1: 4, 2: 3, 3: 2 },            // 10
+  { 1: 4, 2: 3, 3: 3 },            // 11
+  { 1: 4, 2: 3, 3: 3 },            // 12
+  { 1: 4, 2: 3, 3: 3, 4: 1 },      // 13
+  { 1: 4, 2: 3, 3: 3, 4: 1 },      // 14
+  { 1: 4, 2: 3, 3: 3, 4: 2 },      // 15
+  { 1: 4, 2: 3, 3: 3, 4: 2 },      // 16
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },// 17
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },// 18
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },// 19
+  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },// 20
+];
+
+/** ---------- Third Caster Slots (Eldritch Knight / Arcane Trickster) ---------- */
+export const THIRD_CASTER_SLOTS: SlotProgression = [
+  {}, // 0
+  {}, // 1
+  {}, // 2
+  { 1: 2 },            // 3
+  { 1: 3 },            // 4
+  { 1: 3 },            // 5
+  { 1: 3, 2: 2 },      // 6
+  { 1: 4, 2: 2 },      // 7
+  { 1: 4, 2: 2 },      // 8
+  { 1: 4, 2: 2 },      // 9
+  { 1: 4, 2: 3 },      // 10
+  { 1: 4, 2: 3 },      // 11
+  { 1: 4, 2: 3 },      // 12
+  { 1: 4, 2: 3, 3: 2 },// 13
+  { 1: 4, 2: 3, 3: 2 },// 14
+  { 1: 4, 2: 3, 3: 2 },// 15
+  { 1: 4, 2: 3, 3: 3 },// 16
+  { 1: 4, 2: 3, 3: 3 },// 17
+  { 1: 4, 2: 3, 3: 3 },// 18
+  { 1: 4, 2: 3, 3: 3, 4: 1 }, // 19
+  { 1: 4, 2: 3, 3: 3, 4: 1 }, // 20
+];
+
+/** ---------- Warlock (Pact Magic) ---------- */
+export interface PactMagicRow {
+  /** Character level 1..20 */
+  level: number;
+  /** Number of Pact Magic slots available (refresh on short rest). */
+  slots: number;
+  /** The fixed level of those slots at this level. */
+  slotLevel: 1 | 2 | 3 | 4 | 5;
+  /** Mystic Arcanum: cumulative once-per-long-rest spell uses by level. */
+  arcanum?: Partial<Record<6 | 7 | 8 | 9, 1>>;
+}
+
+/** Warlock’s slots + Arcanum (Arcanum are not slots). */
+export const WARLOCK_PACT_MAGIC: PactMagicRow[] = [
+  { level: 1, slots: 1, slotLevel: 1 },
+  { level: 2, slots: 2, slotLevel: 1 },
+  { level: 3, slots: 2, slotLevel: 2 },
+  { level: 4, slots: 2, slotLevel: 2 },
+  { level: 5, slots: 2, slotLevel: 3 },
+  { level: 6, slots: 2, slotLevel: 3 },
+  { level: 7, slots: 2, slotLevel: 4 },
+  { level: 8, slots: 2, slotLevel: 4 },
+  { level: 9, slots: 2, slotLevel: 5 },
+  { level: 10, slots: 2, slotLevel: 5 },
+  { level: 11, slots: 3, slotLevel: 5, arcanum: { 6: 1 } },
+  { level: 12, slots: 3, slotLevel: 5, arcanum: { 6: 1 } },
+  { level: 13, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1 } },
+  { level: 14, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1 } },
+  { level: 15, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1 } },
+  { level: 16, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1 } },
+  { level: 17, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
+  { level: 18, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
+  { level: 19, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
+  { level: 20, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
+];
+
+/** ---------- Tiny helpers ---------- */
+
+export const getSlotsFor = (kind: Exclude<CasterKindType, "warlock">, level: number): SlotsBySpellLevel => {
+  const table =
+    kind === "full" ? FULL_CASTER_SLOTS
+    : kind === "half" ? HALF_CASTER_SLOTS
+    : THIRD_CASTER_SLOTS;
+  return table[level]!
+};
+
+export const getWarlockPactAt = (level: number): PactMagicRow => (
+  WARLOCK_PACT_MAGIC.find(r => r.level === level)!
+)
+
+/** Example class → caster kind mapping (SRD classes). */
+export const CLASS_CASTER_KIND: Record<string, CasterKind | null> = {
+  bard: "full",
+  cleric: "full",
+  druid: "full",
+  sorcerer: "full",
+  wizard: "full",
+  paladin: "half",
+  ranger: "half",
+  fighter: "third",          // Eldritch Knight only (otherwise null)
+  rogue: "third",            // Arcane Trickster only (otherwise null)
+  warlock: "warlock",
+  barbarian: null,
+  monk: null,
+};

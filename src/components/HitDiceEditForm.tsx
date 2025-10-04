@@ -188,8 +188,8 @@ export const HitDiceEditForm = ({ characterId, allHitDice, availableHitDice, val
             type="submit"
             class="btn btn-primary"
             hx-post={`/characters/${characterId}/edit/hitdice`}
-            hx-target="#character-info"
-            hx-swap="outerHTML"
+            hx-target="#editModalContent"
+            hx-swap="innerHTML"
           >
             Update Hit Dice
           </button>

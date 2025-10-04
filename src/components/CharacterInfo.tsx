@@ -6,6 +6,7 @@ import type { ComputedCharacter } from "@src/services/computeCharacter";
 
 export interface CharacterInfoProps {
   character: ComputedCharacter;
+  swapOob?: boolean;
 }
 
 function numToOrdinal(n: number): string {
@@ -16,7 +17,7 @@ function numToOrdinal(n: number): string {
 }
 
 
-export const CharacterInfo = ({ character }: CharacterInfoProps) => {
+export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
   const classStrings: string[] = []
   for (const c of character.classes) {
     const parts: string[] = []
@@ -29,7 +30,7 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
   }
 
   return (
-    <div class="card shadow-sm mb-3" id="character-info">
+    <div class="card shadow-sm mb-3" id="character-info" hx-swap-oob={swapOob && 'true'}>
       <div class="card-body">
         <div class="row g-2 d-flex align-items-center">
           <div class="col-3 col-lg-2">

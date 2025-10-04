@@ -17,22 +17,30 @@ export const HitDiceDisplay = ({ allHitDice, availableHitDice }: HitDiceDisplayP
   }
 
   return (
-    <div class="d-flex justify-content-center">
-      <ul class="list-group list-group-horizontal">
-        {hitDice.map(({value, used}, idx) => {
-          return (
-            <li
-              key={idx}
-              class={clsx('list-group-item', 'position-relative', 'p-2', { 'bg-success-suble': !used, 'bg-danger-subtle': used })}
-            >
-              D{value}
-              {used && (
-                <i class={clsx('bi', 'bi-x-lg', 'position-absolute', 'top-50', 'start-50', 'translate-middle')} style="font-size: 1.5rem; opacity: 0.5;"></i>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+    <div class="d-flex justify-content-center flex-wrap gap-1">
+      {hitDice.map(({value, used}, idx) => (
+        <div
+          key={idx}
+          class={clsx(
+            'position-relative',
+            'border',
+            'rounded',
+            'px-2',
+            'py-1',
+            'small',
+            { 'bg-success-subtle': !used, 'bg-danger-subtle': used }
+          )}
+          style="min-width: 50px; text-align: center;"
+        >
+          D{value}
+          {used && (
+            <i
+              class={clsx('bi', 'bi-x-lg', 'position-absolute', 'top-50', 'start-50', 'translate-middle')}
+              style="font-size: 1.5rem; opacity: 0.7; z-index: 1; pointer-events: none;"
+            ></i>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

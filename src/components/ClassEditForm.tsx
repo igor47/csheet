@@ -152,6 +152,7 @@ export const ClassEditForm = ({ characterId, currentClassLevel, values, errors }
             class="btn btn-primary"
             hx-post={`/characters/${characterId}/edit/class`}
             hx-target="#editModalContent"
+            hx-swap="innerHTML"
           >
             Add Level
           </button>

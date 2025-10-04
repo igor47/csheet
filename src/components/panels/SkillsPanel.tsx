@@ -63,11 +63,12 @@ const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
 
 interface SkillsPanelProps {
   character: ComputedCharacter;
+  swapOob?: boolean;
 }
 
-export const SkillsPanel = ({ character }: SkillsPanelProps) => {
+export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
   return (
-    <div class="accordion-body">
+    <div class="accordion-body" hx-swap-oob={swapOob && 'true'}>
       <div class="row g-2">
         <div class="col-12 col-md-6">
           <div class="list-group small">

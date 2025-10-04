@@ -104,5 +104,8 @@ export const Character = ({ character }: CharacterProps) => {
       </div>
     </div>
 
+    {/* Character-specific scripts */}
+    <script src="/static/character.js"></script>
+
   </>)
 }

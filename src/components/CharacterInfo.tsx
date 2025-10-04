@@ -1,4 +1,5 @@
 import { LabeledValue } from "./ui/LabeledValue";
+import { HitPointsBar } from "./ui/HitPointsBar";
 import clsx from "clsx";
 
 import type { ComputedCharacter } from "@src/services/computeCharacter";
@@ -26,14 +27,6 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
     }
     classStrings.push(parts.join(' '))
   }
-
-  // Calculate HP percentage and color
-  const hpPercent = (character.currentHP / character.maxHitPoints) * 100;
-  const hpProgressCls = clsx('progress-bar', {
-    'bg-success': hpPercent > 75,
-    'bg-warning': hpPercent > 25 && hpPercent <= 75,
-    'bg-danger': hpPercent <= 25,
-  });
 
   // Track which hit dice are used
   const hitDice: { value: number, used: boolean }[] = character.hitDice.map(die => ({ value: die, used: true }));
@@ -131,18 +124,7 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
                 <div class="text-muted small text-center">Hit Points</div>
               </div>
               <div class="col-10 col-md-8">
-                <div class="progress" style="height: 25px;">
-                  <div
-                    class={hpProgressCls}
-                    role="progressbar"
-                    style={`width: ${hpPercent}%`}
-                    aria-valuenow={character.currentHP}
-                    aria-valuemin="0"
-                    aria-valuemax={character.maxHitPoints}
-                  >
-                    {character.currentHP} / {character.maxHitPoints}
-                  </div>
-                </div>
+                <HitPointsBar currentHP={character.currentHP} maxHitPoints={character.maxHitPoints} />
               </div>
               <div class="col-2 d-flex gap-1 align-items-center">
                 <button

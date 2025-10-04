@@ -2,13 +2,18 @@ import { Hono } from 'hono'
 import { Character } from '@src/components/Character'
 import { CharacterNew } from '@src/components/CharacterNew'
 import { Characters } from '@src/components/Characters'
+import { CharacterInfo } from '@src/components/CharacterInfo'
 import { ClassEditForm } from '@src/components/ClassEditForm'
 import { ClassHistory } from '@src/components/ClassHistory'
+import { HitPointsEditForm } from '@src/components/HitPointsEditForm'
+import { HitPointsHistory, type HPHistoryEvent } from '@src/components/HitPointsHistory'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
+import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { computeCharacter } from '@src/services/computeCharacter'
 import { addLevel, AddLevelApiSchema, prepareAddLevelForm, validateAddLevel } from '@src/services/addLevel'
+import { updateHitPoints, UpdateHitPointsApiSchema, prepareUpdateHitPointsForm, validateUpdateHitPoints } from '@src/services/updateHitPoints'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 import { db } from '@src/db'
@@ -101,6 +106,25 @@ characterRoutes.get('/characters/:id/edit/:field', async (c) => {
     return c.html(<ClassEditForm characterId={characterId} currentClassLevel={maxLevel} values={values} />);
   }
 
+  if (field === 'hitpoints') {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const defaultAction = char.currentHP >= char.maxHitPoints ? 'lose' : 'restore';
+    const values = { action: defaultAction, amount: '' };
+    return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={values} />);
+  }
+
   return c.html(<>
     <div class="modal-header">
       <h5 class="modal-title">Edit {field}</h5>
@@ -123,6 +147,27 @@ characterRoutes.post('/characters/:id/edit/class/check', async (c) => {
   // Prepare form values and get soft validation hints
   const { values, errors } = prepareAddLevelForm(body, currentLevels);
   return c.html(<ClassEditForm characterId={characterId} currentClassLevel={currentClassLevel} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
+})
+
+characterRoutes.post('/characters/:id/edit/hitpoints/check', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    return c.html(<>
+      <div class="modal-header">
+        <h5 class="modal-title">Error</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">Character not found</div>
+      </div>
+    </>);
+  }
+
+  const { values, errors } = prepareUpdateHitPointsForm(body, char.currentHP, char.maxHitPoints);
+  return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
 })
 
 characterRoutes.post('/characters/:id/edit/class', async (c) => {
@@ -172,6 +217,59 @@ characterRoutes.post('/characters/:id/edit/class', async (c) => {
   }
 })
 
+characterRoutes.post('/characters/:id/edit/hitpoints', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  // Strict validation (no mutation)
+  const validation = validateUpdateHitPoints(body, char.currentHP, char.maxHitPoints);
+
+  if (!validation.valid) {
+    return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={body} errors={validation.errors} />);
+  }
+
+  // Parse with Zod
+  const result = UpdateHitPointsApiSchema.safeParse({
+    character_id: characterId,
+    action: body.action,
+    amount: parseInt(body.amount || ''),
+    note: body.note || null,
+  });
+
+  if (!result.success) {
+    const errors: Record<string, string> = {};
+    for (const issue of result.error.issues) {
+      const field = issue.path[0] as string;
+      errors[field] = issue.message;
+    }
+    return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={body} errors={errors} />);
+  }
+
+  try {
+    await updateHitPoints(db, result.data);
+
+    // Recompute character with updated HP
+    const updatedChar = await computeCharacter(db, characterId);
+    if (!updatedChar) {
+      return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={body} errors={{ amount: 'Failed to reload character' }} />);
+    }
+
+    // Trigger modal close
+    c.header('HX-Trigger', 'closeEditModal');
+    return c.html(<CharacterInfo character={updatedChar} />);
+  } catch (error) {
+    console.error("updating hit points", error);
+    return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={body} errors={{ amount: 'Failed to update hit points' }} />);
+  }
+})
+
 characterRoutes.get('/characters/:id/history/:field', async (c) => {
   const characterId = c.req.param('id') as string;
   const field = c.req.param('field') as string;
@@ -179,6 +277,42 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
   if (field === 'class') {
     const levels = await findByCharacterId(db, characterId);
     return c.html(<ClassHistory levels={levels} />);
+  }
+
+  if (field === 'hitpoints') {
+    // Fetch both HP changes and level-ups
+    const hpChanges = await findHPChanges(db, characterId);
+    const levels = await findByCharacterId(db, characterId);
+
+    // Merge into unified events
+    const events: HPHistoryEvent[] = [];
+
+    // Add HP delta events
+    for (const hp of hpChanges) {
+      events.push({
+        date: hp.created_at,
+        type: 'delta',
+        delta: hp.delta,
+        note: hp.note || undefined,
+      });
+    }
+
+    // Add level-up events (each grants max HP)
+    for (const level of levels) {
+      events.push({
+        date: level.created_at,
+        type: 'level',
+        class: level.class,
+        level: level.level,
+        hitDieRoll: level.hit_die_roll,
+        note: level.note || undefined,
+      });
+    }
+
+    // Sort by date descending (most recent first)
+    events.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    return c.html(<HitPointsHistory events={events} />);
   }
 
   return c.html(<>

@@ -11,18 +11,22 @@ import { HitDiceEditForm } from '@src/components/HitDiceEditForm'
 import { HitDiceHistory } from '@src/components/HitDiceHistory'
 import { AbilityEditForm } from '@src/components/AbilityEditForm'
 import { AbilityHistory } from '@src/components/AbilityHistory'
+import { SkillEditForm } from '@src/components/SkillEditForm'
+import { SkillHistory } from '@src/components/SkillHistory'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
 import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
 import { findByCharacterId as findHitDiceChanges } from '@src/db/char_hit_dice'
 import { findByCharacterId as findAbilityChanges } from '@src/db/char_abilities'
+import { findByCharacterId as findSkillChanges } from '@src/db/char_skills'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { computeCharacter } from '@src/services/computeCharacter'
 import { addLevel, AddLevelApiSchema, prepareAddLevelForm, validateAddLevel } from '@src/services/addLevel'
 import { updateHitPoints, UpdateHitPointsApiSchema, prepareUpdateHitPointsForm, validateUpdateHitPoints } from '@src/services/updateHitPoints'
 import { updateHitDice, UpdateHitDiceApiSchema, prepareUpdateHitDiceForm, validateUpdateHitDice } from '@src/services/updateHitDice'
 import { updateAbility, UpdateAbilityApiSchema, prepareUpdateAbilityForm, validateUpdateAbility } from '@src/services/updateAbility'
-import { Abilities, type AbilityType } from '@src/lib/dnd'
+import { updateSkill, UpdateSkillApiSchema, prepareUpdateSkillForm, validateUpdateSkill } from '@src/services/updateSkill'
+import { Abilities, Skills, SkillAbilities, type AbilityType, type SkillType } from '@src/lib/dnd'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 import { db } from '@src/db'
@@ -186,6 +190,39 @@ characterRoutes.get('/characters/:id/edit/:field', async (c) => {
     />);
   }
 
+  // Check if field is a skill
+  if (Skills.includes(field as SkillType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const skill = field as SkillType;
+    const skillScore = char.skills[skill];
+    const ability = SkillAbilities[skill];
+    const abilityAbbr = ability.slice(0, 3).toUpperCase();
+    const values = {
+      proficiency: skillScore.proficiency,
+    };
+
+    return c.html(<SkillEditForm
+      characterId={characterId}
+      skill={skill}
+      abilityAbbr={abilityAbbr}
+      currentModifier={skillScore.modifier}
+      currentProficiency={skillScore.proficiency}
+      values={values}
+    />);
+  }
+
   return c.html(<>
     <div class="modal-header">
       <h5 class="modal-title">Edit {field}</h5>
@@ -283,6 +320,62 @@ characterRoutes.post('/characters/:id/edit/:field/check', async (c) => {
       currentModifier={abilityScore.modifier}
       isProficient={abilityScore.proficient}
       proficiencyBonus={char.proficiencyBonus}
+      values={values}
+      errors={Object.keys(errors).length > 0 ? errors : undefined}
+    />);
+  }
+
+  // Check if field is a skill
+  if (Skills.includes(field as SkillType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const skill = field as SkillType;
+    const skillScore = char.skills[skill];
+    const ability = SkillAbilities[skill];
+    const abilityAbbr = ability.slice(0, 3).toUpperCase();
+    const { values, errors } = prepareUpdateSkillForm(body, skillScore.proficiency);
+
+    // Calculate new modifier for preview
+    const calculateModifier = (score: number) => Math.floor((score - 10) / 2);
+    const abilityModifier = char.abilityScores[ability].modifier;
+    let newModifier: number | undefined = undefined;
+
+    if (values.proficiency && values.proficiency !== skillScore.proficiency) {
+      const proficiency = values.proficiency as any;
+      switch (proficiency) {
+        case 'none':
+          newModifier = abilityModifier;
+          break;
+        case 'half':
+          newModifier = abilityModifier + Math.floor(char.proficiencyBonus / 2);
+          break;
+        case 'proficient':
+          newModifier = abilityModifier + char.proficiencyBonus;
+          break;
+        case 'expert':
+          newModifier = abilityModifier + (char.proficiencyBonus * 2);
+          break;
+      }
+    }
+
+    return c.html(<SkillEditForm
+      characterId={characterId}
+      skill={skill}
+      abilityAbbr={abilityAbbr}
+      currentModifier={skillScore.modifier}
+      currentProficiency={skillScore.proficiency}
+      newModifier={newModifier}
       values={values}
       errors={Object.keys(errors).length > 0 ? errors : undefined}
     />);
@@ -527,6 +620,77 @@ characterRoutes.post('/characters/:id/edit/:field', async (c) => {
     }
   }
 
+  // Check if field is a skill
+  if (Skills.includes(field as SkillType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      await setFlashMsg(c, 'Character not found', 'error');
+      c.header('HX-Redirect', `/characters`);
+      return c.body(null, 204);
+    }
+
+    const skill = field as SkillType;
+    const skillScore = char.skills[skill];
+    const ability = SkillAbilities[skill];
+    const abilityAbbr = ability.slice(0, 3).toUpperCase();
+
+    // Strict validation (no mutation)
+    const validation = validateUpdateSkill(body, skillScore.proficiency);
+
+    if (!validation.valid) {
+      return c.html(<SkillEditForm
+        characterId={characterId}
+        skill={skill}
+        abilityAbbr={abilityAbbr}
+        currentModifier={skillScore.modifier}
+        currentProficiency={skillScore.proficiency}
+        values={body}
+        errors={validation.errors}
+      />);
+    }
+
+    // Parse with Zod
+    const result = UpdateSkillApiSchema.safeParse({
+      character_id: characterId,
+      skill: skill,
+      proficiency: body.proficiency,
+      note: body.note || null,
+    });
+
+    if (!result.success) {
+      const errors = zodToFormErrors(result.error);
+      return c.html(<SkillEditForm
+        characterId={characterId}
+        skill={skill}
+        abilityAbbr={abilityAbbr}
+        currentModifier={skillScore.modifier}
+        currentProficiency={skillScore.proficiency}
+        values={body}
+        errors={errors}
+      />);
+    }
+
+    try {
+      await updateSkill(db, result.data);
+
+      // Skill changes affect passive perception and other computed values, so redirect to reload
+      await setFlashMsg(c, 'Skill updated successfully!', 'success');
+      c.header('HX-Redirect', `/characters/${characterId}`);
+      return c.body(null, 204);
+    } catch (error) {
+      console.error("updating skill", error);
+      return c.html(<SkillEditForm
+        characterId={characterId}
+        skill={skill}
+        abilityAbbr={abilityAbbr}
+        currentModifier={skillScore.modifier}
+        currentProficiency={skillScore.proficiency}
+        values={body}
+        errors={{ proficiency: 'Failed to update skill' }}
+      />);
+    }
+  }
+
   // Not found
   return c.html(<>
     <div class="modal-header">
@@ -601,6 +765,16 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
       .filter(event => event.ability === field)
       .reverse();
     return c.html(<AbilityHistory ability={field} events={filteredEvents} />);
+  }
+
+  // Check if field is a skill
+  if (Skills.includes(field as SkillType)) {
+    const skillEvents = await findSkillChanges(db, characterId);
+    // Filter to only this skill and reverse to show most recent first
+    const filteredEvents = skillEvents
+      .filter(event => event.skill === field)
+      .reverse();
+    return c.html(<SkillHistory skill={field} events={filteredEvents} />);
   }
 
   return c.html(<>

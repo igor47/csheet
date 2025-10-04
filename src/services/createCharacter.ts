@@ -27,15 +27,20 @@ export type CreateCharacterApi = z.infer<typeof CreateCharacterApiSchema>;
 /**
  * Calculate initial ability scores based on race and subrace modifiers
  */
-function calculateInitialAbilityScores(raceName: string, subraceName: string | null): Record<AbilityType, number> {
-  const baseScore = 10;
-  const scores: Record<AbilityType, number> = {
-    strength: baseScore,
-    dexterity: baseScore,
-    constitution: baseScore,
-    intelligence: baseScore,
-    wisdom: baseScore,
-    charisma: baseScore,
+type AbilityScore = {
+  score: number;
+  note: string;
+}
+
+function calculateInitialAbilityScores(raceName: string, subraceName: string | null): Record<AbilityType, AbilityScore> {
+  const baseScore: AbilityScore = { score: 10, note: "Base score" };
+  const scores: Record<AbilityType, AbilityScore> = {
+    strength: {...baseScore},
+    dexterity: {...baseScore},
+    constitution: {...baseScore},
+    intelligence: {...baseScore},
+    wisdom: {...baseScore},
+    charisma: {...baseScore},
   };
 
   // Find race
@@ -45,7 +50,10 @@ function calculateInitialAbilityScores(raceName: string, subraceName: string | n
   // Apply race modifiers
   if (race.ability_score_modifiers) {
     for (const [ability, modifier] of Object.entries(race.ability_score_modifiers)) {
-      scores[ability as AbilityType] += modifier;
+      scores[ability as AbilityType] = {
+        score: baseScore.score + modifier,
+        note: `Base score for ${race.name}`,
+      }
     }
   }
 
@@ -54,7 +62,10 @@ function calculateInitialAbilityScores(raceName: string, subraceName: string | n
     const subrace = race.subraces?.find(sr => sr.name === subraceName);
     if (subrace?.ability_score_modifiers) {
       for (const [ability, modifier] of Object.entries(subrace.ability_score_modifiers)) {
-        scores[ability as AbilityType] += modifier;
+        scores[ability as AbilityType] = {
+          score: baseScore.score + modifier,
+          note: `Base score for ${subrace.name}`,
+        }
       }
     }
   }
@@ -98,17 +109,27 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
 
     // populate initial ability scores with race/subrace modifiers
     const initialScores = calculateInitialAbilityScores(data.race, data.subrace);
+    const promises = Object.entries(initialScores).map(([ability, score]) => (
+      createAbilityDb(tx, {
+        character_id: character.id,
+        ability: ability as AbilityType,
+        score: score.score,
+        proficiency: false,
+        note: score.note,
+      })
+    ));
+    const scores = await Promise.all(promises);
 
     // Get saving throw proficiencies from class
     const savingThrowProficiencies = new Set(classDef.savingThrows);
-
-    for (const ability of Abilities) {
+    for (const prof of savingThrowProficiencies) {
+      const existing = scores.find(s => s.ability === prof)!;
       await createAbilityDb(tx, {
         character_id: character.id,
-        ability,
-        score: initialScores[ability],
-        proficiency: savingThrowProficiencies.has(ability),
-        note: "Initial score",
+        ability: prof,
+        score: existing.score,
+        proficiency: true,
+        note: `Proficiency from ${classDef.name}`,
       });
     }
 
@@ -131,7 +152,7 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
         character_id: character.id,
         skill,
         proficiency: 'proficient',
-        note: 'From background',
+        note: `Proficiency as ${background!.name}`,
       });
     }
 

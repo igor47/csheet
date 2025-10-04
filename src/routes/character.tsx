@@ -9,15 +9,20 @@ import { HitPointsEditForm } from '@src/components/HitPointsEditForm'
 import { HitPointsHistory, type HPHistoryEvent } from '@src/components/HitPointsHistory'
 import { HitDiceEditForm } from '@src/components/HitDiceEditForm'
 import { HitDiceHistory } from '@src/components/HitDiceHistory'
+import { AbilityEditForm } from '@src/components/AbilityEditForm'
+import { AbilityHistory } from '@src/components/AbilityHistory'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
 import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
 import { findByCharacterId as findHitDiceChanges } from '@src/db/char_hit_dice'
+import { findByCharacterId as findAbilityChanges } from '@src/db/char_abilities'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { computeCharacter } from '@src/services/computeCharacter'
 import { addLevel, AddLevelApiSchema, prepareAddLevelForm, validateAddLevel } from '@src/services/addLevel'
 import { updateHitPoints, UpdateHitPointsApiSchema, prepareUpdateHitPointsForm, validateUpdateHitPoints } from '@src/services/updateHitPoints'
 import { updateHitDice, UpdateHitDiceApiSchema, prepareUpdateHitDiceForm, validateUpdateHitDice } from '@src/services/updateHitDice'
+import { updateAbility, UpdateAbilityApiSchema, prepareUpdateAbilityForm, validateUpdateAbility } from '@src/services/updateAbility'
+import { Abilities, type AbilityType } from '@src/lib/dnd'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 import { db } from '@src/db'
@@ -148,6 +153,39 @@ characterRoutes.get('/characters/:id/edit/:field', async (c) => {
     return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} />);
   }
 
+  // Check if field is an ability
+  if (Abilities.includes(field as AbilityType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const ability = field as AbilityType;
+    const abilityScore = char.abilityScores[ability];
+    const values = {
+      score: abilityScore.score.toString(),
+      proficiency_change: 'none',
+    };
+
+    return c.html(<AbilityEditForm
+      characterId={characterId}
+      ability={ability}
+      currentScore={abilityScore.score}
+      currentModifier={abilityScore.modifier}
+      isProficient={abilityScore.proficient}
+      proficiencyBonus={char.proficiencyBonus}
+      values={values}
+    />);
+  }
+
   return c.html(<>
     <div class="modal-header">
       <h5 class="modal-title">Edit {field}</h5>
@@ -212,6 +250,54 @@ characterRoutes.post('/characters/:id/edit/hitdice/check', async (c) => {
 
   const { values, errors } = prepareUpdateHitDiceForm(body, char.hitDice, char.availableHitDice);
   return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
+})
+
+characterRoutes.post('/characters/:id/edit/:field/check', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const field = c.req.param('field') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  // Check if field is an ability
+  if (Abilities.includes(field as AbilityType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const ability = field as AbilityType;
+    const abilityScore = char.abilityScores[ability];
+    const { values, errors } = prepareUpdateAbilityForm(body, abilityScore.score, abilityScore.proficient);
+
+    return c.html(<AbilityEditForm
+      characterId={characterId}
+      ability={ability}
+      currentScore={abilityScore.score}
+      currentModifier={abilityScore.modifier}
+      isProficient={abilityScore.proficient}
+      proficiencyBonus={char.proficiencyBonus}
+      values={values}
+      errors={Object.keys(errors).length > 0 ? errors : undefined}
+    />);
+  }
+
+  // Not found
+  return c.html(<>
+    <div class="modal-header">
+      <h5 class="modal-title">Error</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-danger">Unknown field: {field}</div>
+    </div>
+  </>);
 })
 
 characterRoutes.post('/characters/:id/edit/class', async (c) => {
@@ -364,6 +450,95 @@ characterRoutes.post('/characters/:id/edit/hitdice', async (c) => {
   }
 })
 
+characterRoutes.post('/characters/:id/edit/:field', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const field = c.req.param('field') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  // Check if field is an ability
+  if (Abilities.includes(field as AbilityType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      await setFlashMsg(c, 'Character not found', 'error');
+      c.header('HX-Redirect', `/characters`);
+      return c.body(null, 204);
+    }
+
+    const ability = field as AbilityType;
+    const abilityScore = char.abilityScores[ability];
+
+    // Strict validation (no mutation)
+    const validation = validateUpdateAbility(body, abilityScore.score, abilityScore.proficient);
+
+    if (!validation.valid) {
+      return c.html(<AbilityEditForm
+        characterId={characterId}
+        ability={ability}
+        currentScore={abilityScore.score}
+        currentModifier={abilityScore.modifier}
+        isProficient={abilityScore.proficient}
+        proficiencyBonus={char.proficiencyBonus}
+        values={body}
+        errors={validation.errors}
+      />);
+    }
+
+    // Parse with Zod
+    const result = UpdateAbilityApiSchema.safeParse({
+      character_id: characterId,
+      ability: ability,
+      score: parseInt(body.score || ''),
+      proficiency_change: body.proficiency_change,
+      note: body.note || null,
+    });
+
+    if (!result.success) {
+      const errors = zodToFormErrors(result.error);
+      return c.html(<AbilityEditForm
+        characterId={characterId}
+        ability={ability}
+        currentScore={abilityScore.score}
+        currentModifier={abilityScore.modifier}
+        isProficient={abilityScore.proficient}
+        proficiencyBonus={char.proficiencyBonus}
+        values={body}
+        errors={errors}
+      />);
+    }
+
+    try {
+      await updateAbility(db, result.data, abilityScore.proficient);
+
+      // Ability changes affect many computed values, so redirect to reload the full character
+      await setFlashMsg(c, 'Ability updated successfully!', 'success');
+      c.header('HX-Redirect', `/characters/${characterId}`);
+      return c.body(null, 204);
+    } catch (error) {
+      console.error("updating ability", error);
+      return c.html(<AbilityEditForm
+        characterId={characterId}
+        ability={ability}
+        currentScore={abilityScore.score}
+        currentModifier={abilityScore.modifier}
+        isProficient={abilityScore.proficient}
+        values={body}
+        errors={{ score: 'Failed to update ability' }}
+      />);
+    }
+  }
+
+  // Not found
+  return c.html(<>
+    <div class="modal-header">
+      <h5 class="modal-title">Error</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-danger">Unknown field: {field}</div>
+    </div>
+  </>);
+})
+
 characterRoutes.get('/characters/:id/history/:field', async (c) => {
   const characterId = c.req.param('id') as string;
   const field = c.req.param('field') as string;
@@ -416,6 +591,16 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
     // Reverse to show most recent first
     hitDiceEvents.reverse();
     return c.html(<HitDiceHistory events={hitDiceEvents} />);
+  }
+
+  // Check if field is an ability
+  if (Abilities.includes(field as AbilityType)) {
+    const abilityEvents = await findAbilityChanges(db, characterId);
+    // Filter to only this ability and reverse to show most recent first
+    const filteredEvents = abilityEvents
+      .filter(event => event.ability === field)
+      .reverse();
+    return c.html(<AbilityHistory ability={field} events={filteredEvents} />);
   }
 
   return c.html(<>

@@ -276,6 +276,8 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
 
   if (field === 'class') {
     const levels = await findByCharacterId(db, characterId);
+    // Reverse to show most recent first
+    levels.reverse();
     return c.html(<ClassHistory levels={levels} />);
   }
 

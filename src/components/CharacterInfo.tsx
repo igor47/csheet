@@ -46,74 +46,74 @@ export const CharacterInfo = ({ character }: CharacterInfoProps) => {
           </div>
           <div class="col-9 col-lg-10">
             <h2>{character.name}</h2>
+
+            {/* Class - full width under name */}
+            <div class="row g-0 mt-2">
+              <div class="col-11">
+                <LabeledValue label="Class" value={classStrings.join(' / ')} className="text-capitalize" />
+              </div>
+              <div class="col-1 d-flex flex-column gap-1 align-items-center">
+                <button
+                  class="btn btn-sm btn-outline-secondary border p-1"
+                  style="width: 24px; height: 24px; line-height: 1;"
+                  aria-label="edit class"
+                  title="edit class"
+                  hx-get={`/characters/${character.id}/edit/class`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary border p-1"
+                  style="width: 24px; height: 24px; line-height: 1;"
+                  aria-label="class history"
+                  title="class history"
+                  hx-get={`/characters/${character.id}/history/class`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
+                  <i class="bi bi-journals"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+
         <div class="row mt-2">
           <div class="col">
+            {/* First row: Race, Background, Size */}
             <div class="row g-2 h-auto">
               <div class="col-sm-4">
                 <LabeledValue label="Race" value={character.subrace || character.race} className="text-capitalize" />
               </div>
 
               <div class="col-sm-4">
-                <div class="row g-0">
-                  <div class="col-11">
-                    <LabeledValue label="Class" value={classStrings.join(' / ')} className="text-capitalize" />
-                  </div>
-                  <div class="col-1 d-flex flex-column gap-1 align-items-center">
-                    <button
-                      class="btn btn-sm btn-outline-secondary border p-1"
-                      style="width: 24px; height: 24px; line-height: 1;"
-                      aria-label="edit class"
-                      title="edit class"
-                      hx-get={`/characters/${character.id}/edit/class`}
-                      hx-target="#editModalContent"
-                      hx-swap="innerHTML"
-                      data-bs-toggle="modal"
-                      data-bs-target="#editModal">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button
-                      class="btn btn-sm btn-outline-secondary border p-1"
-                      style="width: 24px; height: 24px; line-height: 1;"
-                      aria-label="class history"
-                      title="class history"
-                      hx-get={`/characters/${character.id}/history/class`}
-                      hx-target="#editModalContent"
-                      hx-swap="innerHTML"
-                      data-bs-toggle="modal"
-                      data-bs-target="#editModal">
-                      <i class="bi bi-journals"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-sm-4">
                 <LabeledValue label="Background" value={character.background} className="text-capitalize" />
               </div>
-            </div>
 
-            <div class="row g-2 h-auto mt-1">
               <div class="col-sm-4">
                 <LabeledValue label="Size" value={character.size} className="text-capitalize" />
               </div>
+            </div>
 
-              <div class="col-sm-4">
+            {/* Second row: Speed, Proficiency Bonus, Armor Class */}
+            <div class="row g-2 h-auto mt-1">
+              <div class="col-sm-3">
                 <LabeledValue label="Speed" value={`${character.speed} ft.`} />
               </div>
 
-              <div class="col-sm-4">
+              <div class="col-sm-3">
                 <LabeledValue label="Proficiency Bonus" value={`+${character.proficiencyBonus}`} />
               </div>
-            </div>
 
-            <div class="row g-2 h-auto mt-1">
-              <div class="col-sm-4 offset-sm-2">
+              <div class="col-sm-3">
                 <LabeledValue label="Armor Class" value={character.armorClass} />
               </div>
 
-              <div class="col-sm-4">
+              <div class="col-sm-3">
                 <LabeledValue label="Initiative" value={character.initiative >= 0 ? `+${character.initiative}` : `${character.initiative}`} />
               </div>
             </div>

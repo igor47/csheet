@@ -17,32 +17,10 @@ export const HitDiceEditForm = ({ characterId, allHitDice, availableHitDice, val
 
   // Calculate preview dice
   let previewAvailable = [...availableHitDice];
-  let restoredCount = 0;
-  if (action === 'restore') {
-    // Long rest restores half of total dice (rounded down)
-    const maxRestoration = Math.floor(allHitDice.length / 2);
-    const currentlyUsed = allHitDice.length - availableHitDice.length;
-    const toRestore = Math.min(maxRestoration, currentlyUsed);
 
-    // Find used dice to restore (same logic as service)
-    const usedDice = [...allHitDice];
-    for (const die of availableHitDice) {
-      const index = usedDice.indexOf(die);
-      if (index !== -1) {
-        usedDice.splice(index, 1);
-      }
-    }
-
-    // Sort largest-first
-    usedDice.sort((a, b) => b - a);
-
-    // Preview: restore dice
-    for (let i = 0; i < toRestore; i++) {
-      if (usedDice[i]) {
-        previewAvailable.push(usedDice[i]);
-        restoredCount++;
-      }
-    }
+  if (action === 'restore' && dieValue) {
+    // Preview: restore one die
+    previewAvailable.push(dieValue as HitDieType);
   } else if (action === 'spend' && dieValue) {
     // Preview: spend the selected die
     const index = previewAvailable.indexOf(dieValue as HitDieType);
@@ -51,10 +29,20 @@ export const HitDiceEditForm = ({ characterId, allHitDice, availableHitDice, val
     }
   }
 
-  const showPreview = (action === 'restore' && availableHitDice.length < allHitDice.length) || (action === 'spend' && dieValue);
+  const showPreview = (action === 'restore' || action === 'spend') && dieValue;
 
-  // Get unique available die types for dropdown
+  // Get unique available die types for dropdown (for spending)
   const uniqueAvailableDice = Array.from(new Set(availableHitDice)).sort((a, b) => a - b);
+
+  // Get unique used die types for dropdown (for restoring)
+  const usedDice = [...allHitDice];
+  for (const die of availableHitDice) {
+    const index = usedDice.indexOf(die);
+    if (index !== -1) {
+      usedDice.splice(index, 1);
+    }
+  }
+  const uniqueUsedDice = Array.from(new Set(usedDice)).sort((a, b) => a - b);
 
   return (<>
     <div class="modal-header">
@@ -77,7 +65,7 @@ export const HitDiceEditForm = ({ characterId, allHitDice, availableHitDice, val
           <HitDiceDisplay allHitDice={allHitDice} availableHitDice={availableHitDice} />
         </div>
 
-        {/* Action: Long Rest or Spend */}
+        {/* Action: Restore or Spend */}
         <div class="mb-3">
           <label class="form-label">Action</label>
           <div class="btn-group w-100" role="group">
@@ -88,11 +76,11 @@ export const HitDiceEditForm = ({ characterId, allHitDice, availableHitDice, val
               id="action-restore"
               value="restore"
               checked={action === 'restore'}
-              disabled={availableHitDice.length >= allHitDice.length}
+              disabled={uniqueUsedDice.length === 0}
               autocomplete="off"
             />
             <label class="btn btn-outline-success" for="action-restore">
-              Long Rest (Restore Dice)
+              Restore Die
             </label>
 
             <input
@@ -110,6 +98,27 @@ export const HitDiceEditForm = ({ characterId, allHitDice, availableHitDice, val
             </label>
           </div>
         </div>
+
+        {/* Restore: Die selection */}
+        {action === 'restore' && (
+          <div class="mb-3">
+            <label for="die_value" class="form-label">Select Die to Restore</label>
+            <select
+              class={clsx('form-select', { 'is-invalid': errors?.die_value })}
+              id="die_value"
+              name="die_value"
+              required
+            >
+              <option value="">Choose a die...</option>
+              {uniqueUsedDice.map(die => (
+                <option key={die} value={die} selected={dieValue === die}>
+                  D{die}
+                </option>
+              ))}
+            </select>
+            {errors?.die_value && <div class="invalid-feedback d-block">{errors.die_value}</div>}
+          </div>
+        )}
 
         {/* Spend: Die selection and HP rolled */}
         {action === 'spend' && (
@@ -162,7 +171,7 @@ export const HitDiceEditForm = ({ characterId, allHitDice, availableHitDice, val
             <HitDiceDisplay allHitDice={allHitDice} availableHitDice={previewAvailable} />
             <small class="form-text text-muted">
               {action === 'restore'
-                ? `Long rest will restore ${restoredCount} hit dice`
+                ? `Restoring D${dieValue}`
                 : `Spending D${dieValue}${hpRolled ? ` (restoring ${hpRolled} HP)` : ''}`
               }
             </small>

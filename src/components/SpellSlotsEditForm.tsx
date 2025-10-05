@@ -11,24 +11,30 @@ export interface SpellSlotsEditFormProps {
 }
 
 export const SpellSlotsEditForm = ({ characterId, allSlots, availableSlots, values, errors }: SpellSlotsEditFormProps) => {
-  const action = values?.action || 'longrest';
+  // Determine default action based on current state
+  let defaultAction = 'use';
+  if (allSlots && availableSlots) {
+    let hasUsedSlots = false;
+    for (let level = 1; level <= 9; level++) {
+      const total = allSlots[level as keyof SlotsBySpellLevel] || 0;
+      const available = availableSlots[level as keyof SlotsBySpellLevel] || 0;
+      if (available < total) {
+        hasUsedSlots = true;
+        break;
+      }
+    }
+    if (hasUsedSlots) {
+      defaultAction = 'restore';
+    }
+  }
+
+  const action = values?.action || defaultAction;
   const slotLevel = values?.slot_level ? parseInt(values.slot_level) : null;
 
   // Calculate preview slots
   let previewAvailable = availableSlots ? { ...availableSlots } : {};
-  let restoredCount = 0;
 
-  if (action === 'longrest') {
-    // Long rest restores all slots
-    previewAvailable = allSlots ? { ...allSlots } : {};
-    if (allSlots && availableSlots) {
-      for (let level = 1; level <= 9; level++) {
-        const total = allSlots[level as keyof SlotsBySpellLevel] || 0;
-        const available = availableSlots[level as keyof SlotsBySpellLevel] || 0;
-        restoredCount += (total - available);
-      }
-    }
-  } else if (action === 'use' && slotLevel) {
+  if (action === 'use' && slotLevel) {
     // Preview: use one slot
     const currentCount = previewAvailable[slotLevel as keyof SlotsBySpellLevel] || 0;
     previewAvailable[slotLevel as keyof SlotsBySpellLevel] = Math.max(0, currentCount - 1);
@@ -39,7 +45,7 @@ export const SpellSlotsEditForm = ({ characterId, allSlots, availableSlots, valu
     previewAvailable[slotLevel as keyof SlotsBySpellLevel] = Math.min(maxCount, currentCount + 1);
   }
 
-  const showPreview = (action === 'longrest' && restoredCount > 0) || ((action === 'use' || action === 'restore') && slotLevel);
+  const showPreview = (action === 'use' || action === 'restore') && slotLevel;
 
   // Get available slot levels for dropdowns
   const availableLevels: number[] = [];
@@ -75,24 +81,10 @@ export const SpellSlotsEditForm = ({ characterId, allSlots, availableSlots, valu
           <SpellSlotsDisplay allSlots={allSlots} availableSlots={availableSlots} />
         </div>
 
-        {/* Action: Long Rest, Use, or Restore */}
+        {/* Action: Use or Restore */}
         <div class="mb-3">
           <label class="form-label">Action</label>
           <div class="btn-group w-100" role="group">
-            <input
-              type="radio"
-              class="btn-check"
-              name="action"
-              id="action-longrest"
-              value="longrest"
-              checked={action === 'longrest'}
-              disabled={restoredCount === 0}
-              autocomplete="off"
-            />
-            <label class="btn btn-outline-primary" for="action-longrest">
-              Long Rest
-            </label>
-
             <input
               type="radio"
               class="btn-check"
@@ -171,9 +163,7 @@ export const SpellSlotsEditForm = ({ characterId, allSlots, availableSlots, valu
             <label class="form-label">Preview</label>
             <SpellSlotsDisplay allSlots={allSlots} availableSlots={previewAvailable} />
             <small class="form-text text-muted">
-              {action === 'longrest'
-                ? `Long rest will restore ${restoredCount} spell slot${restoredCount !== 1 ? 's' : ''}`
-                : action === 'use'
+              {action === 'use'
                 ? `Using Level ${slotLevel} spell slot`
                 : `Restoring Level ${slotLevel} spell slot`
               }

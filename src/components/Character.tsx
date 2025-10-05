@@ -1,5 +1,6 @@
 import type { ComputedCharacter } from '@src/services/computeCharacter';
 import { CharacterInfo } from './CharacterInfo';
+import { CurrentStatus } from './CurrentStatus';
 import { AbilitiesPanel } from './panels/AbilitiesPanel';
 import { SkillsPanel } from './panels/SkillsPanel';
 import { TraitsPanel } from './panels/TraitsPanel';
@@ -17,7 +18,9 @@ export const Character = ({ character }: CharacterProps) => {
       <div class="character-grid">
         <CharacterInfo character={character} />
 
-        <div class="character-notes d-lg-flex flex-lg-column">
+        <div class="character-main-view d-lg-flex flex-lg-column" id="character-main-view">
+          <CurrentStatus character={character} />
+
           <div class="card shadow-sm flex-lg-fill d-lg-flex flex-lg-column">
             <div class="card-header">
               <h5 class="mb-0">Session Notes</h5>

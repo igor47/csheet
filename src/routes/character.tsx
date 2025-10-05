@@ -30,6 +30,7 @@ import { updateHitDice, UpdateHitDiceApiSchema, prepareUpdateHitDiceForm, valida
 import { updateSpellSlots, UpdateSpellSlotsApiSchema, prepareUpdateSpellSlotsForm, validateUpdateSpellSlots } from '@src/services/updateSpellSlots'
 import { updateAbility, UpdateAbilityApiSchema, prepareUpdateAbilityForm, validateUpdateAbility } from '@src/services/updateAbility'
 import { updateSkill, UpdateSkillApiSchema, prepareUpdateSkillForm, validateUpdateSkill } from '@src/services/updateSkill'
+import { longRest, LongRestApiSchema } from '@src/services/longRest'
 import { Abilities, Skills, SkillAbilities, type AbilityType, type SkillType } from '@src/lib/dnd'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
@@ -37,6 +38,7 @@ import { db } from '@src/db'
 import { SpellsPanel } from '@src/components/panels/SpellsPanel'
 import { AbilitiesPanel } from '@src/components/panels/AbilitiesPanel'
 import { SkillsPanel } from '@src/components/panels/SkillsPanel'
+import { CurrentStatus } from '@src/components/CurrentStatus'
 
 export const characterRoutes = new Hono()
 
@@ -178,9 +180,7 @@ characterRoutes.get('/characters/:id/edit/:field', async (c) => {
       </>);
     }
 
-    const defaultAction = 'longrest';
-    const values = { action: defaultAction };
-    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} values={values} />);
+    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} />);
   }
 
   // Check if field is an ability
@@ -538,7 +538,10 @@ characterRoutes.post('/characters/:id/edit/hitpoints', async (c) => {
   const updatedChar = (await computeCharacter(db, characterId))!;
 
   c.header('HX-Trigger', 'closeEditModal');
-  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />);
+  return c.html(<>
+    <CharacterInfo character={updatedChar} swapOob={true} />
+    <CurrentStatus character={updatedChar} swapOob={true} />
+  </>);
 })
 
 characterRoutes.post('/characters/:id/edit/hitdice', async (c) => {
@@ -581,7 +584,10 @@ characterRoutes.post('/characters/:id/edit/hitdice', async (c) => {
 
   const updatedChar = (await computeCharacter(db, characterId))!;
   c.header('HX-Trigger', 'closeEditModal');
-  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />);
+  return c.html(<>
+    <CharacterInfo character={updatedChar} swapOob={true} />
+    <CurrentStatus character={updatedChar} swapOob={true} />
+  </>);
 })
 
 characterRoutes.post('/characters/:id/edit/spellslots', async (c) => {
@@ -623,7 +629,10 @@ characterRoutes.post('/characters/:id/edit/spellslots', async (c) => {
 
   const updatedChar = (await computeCharacter(db, characterId))!;
   c.header('HX-Trigger', 'closeEditModal');
-  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
+  return c.html(<>
+    <SpellsPanel character={updatedChar} swapOob={true} />
+    <CurrentStatus character={updatedChar} swapOob={true} />
+  </>)
 })
 
 characterRoutes.post('/characters/:id/edit/:field', async (c) => {
@@ -785,6 +794,63 @@ characterRoutes.post('/characters/:id/edit/:field', async (c) => {
     <div class="modal-body">
       <div class="alert alert-danger">Unknown field: {field}</div>
     </div>
+  </>);
+})
+
+characterRoutes.post('/characters/:id/longrest', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  // Parse with Zod
+  const result = LongRestApiSchema.safeParse({
+    character_id: characterId,
+    note: null,
+  });
+
+  if (!result.success) {
+    await setFlashMsg(c, 'Failed to take long rest', 'error');
+    return c.html(<CurrentStatus character={char} />);
+  }
+
+  try {
+    const summary = await longRest(
+      db,
+      result.data,
+      char.currentHP,
+      char.maxHitPoints,
+      char.hitDice,
+      char.availableHitDice,
+      char.spellSlots,
+      char.availableSpellSlots
+    );
+
+    // Build summary message
+    const summaryParts: string[] = [];
+    if (summary.hpRestored > 0) summaryParts.push(`${summary.hpRestored} HP`);
+    if (summary.hitDiceRestored > 0) summaryParts.push(`${summary.hitDiceRestored} hit dice`);
+    if (summary.spellSlotsRestored > 0) summaryParts.push(`${summary.spellSlotsRestored} spell slots`);
+
+    const message = summaryParts.length > 0
+      ? `Long rest complete! Restored: ${summaryParts.join(', ')}`
+      : 'Long rest complete!';
+
+    await setFlashMsg(c, message, 'success');
+  } catch (error) {
+    console.error("taking long rest", error);
+    await setFlashMsg(c, 'Failed to take long rest', 'error');
+    return c.html(<CurrentStatus character={char} />);
+  }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  return c.html(<>
+    <CurrentStatus character={updatedChar} />
+    <CharacterInfo character={updatedChar} swapOob={true} />
+    <SpellsPanel character={updatedChar} swapOob={true} />
   </>);
 })
 

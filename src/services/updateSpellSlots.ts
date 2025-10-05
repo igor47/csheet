@@ -5,7 +5,7 @@ import { create as createSpellSlotDb } from "@src/db/char_spell_slots";
 
 export const UpdateSpellSlotsApiSchema = z.object({
   character_id: z.string(),
-  action: z.enum(['longrest', 'use', 'restore']),
+  action: z.enum(['use', 'restore']),
   slot_level: z.number().int().min(1).max(9).nullable().optional(),
   note: z.string().nullable().optional(),
 });
@@ -27,7 +27,7 @@ export function prepareUpdateSpellSlotsForm(
 
   // Default action
   if (!preparedValues.action) {
-    // Default to long rest if any slots are used
+    // Default to restore if any slots are used, otherwise use
     let hasUsedSlots = false;
     if (allSlots && availableSlots) {
       for (let level = 1; level <= 9; level++) {
@@ -39,31 +39,13 @@ export function prepareUpdateSpellSlotsForm(
         }
       }
     }
-    preparedValues.action = hasUsedSlots ? 'longrest' : 'use';
+    preparedValues.action = hasUsedSlots ? 'restore' : 'use';
   }
 
   // Validate action
-  if (preparedValues.action !== 'longrest' && preparedValues.action !== 'use' && preparedValues.action !== 'restore') {
-    errors.action = "Action must be 'longrest', 'use', or 'restore'";
+  if (preparedValues.action !== 'use' && preparedValues.action !== 'restore') {
+    errors.action = "Action must be 'use' or 'restore'";
     return { values: preparedValues, errors };
-  }
-
-  // Validate long rest action
-  if (preparedValues.action === 'longrest') {
-    let hasUsedSlots = false;
-    if (allSlots && availableSlots) {
-      for (let level = 1; level <= 9; level++) {
-        const total = allSlots[level as keyof SlotsBySpellLevel] || 0;
-        const available = availableSlots[level as keyof SlotsBySpellLevel] || 0;
-        if (available < total) {
-          hasUsedSlots = true;
-          break;
-        }
-      }
-    }
-    if (!hasUsedSlots) {
-      errors.action = "All spell slots are already available";
-    }
   }
 
   // Validate use action
@@ -155,28 +137,9 @@ export function validateUpdateSpellSlots(
     return { valid: false, errors };
   }
 
-  if (values.action !== 'longrest' && values.action !== 'use' && values.action !== 'restore') {
+  if (values.action !== 'use' && values.action !== 'restore') {
     errors.action = "Invalid action";
     return { valid: false, errors };
-  }
-
-  // Validate long rest
-  if (values.action === 'longrest') {
-    let hasUsedSlots = false;
-    if (allSlots && availableSlots) {
-      for (let level = 1; level <= 9; level++) {
-        const total = allSlots[level as keyof SlotsBySpellLevel] || 0;
-        const available = availableSlots[level as keyof SlotsBySpellLevel] || 0;
-        if (available < total) {
-          hasUsedSlots = true;
-          break;
-        }
-      }
-    }
-    if (!hasUsedSlots) {
-      errors.action = "All spell slots are already available";
-      return { valid: false, errors };
-    }
   }
 
   // Validate use
@@ -226,7 +189,6 @@ export function validateUpdateSpellSlots(
 
 /**
  * Update spell slots by creating appropriate records
- * For longrest: creates restore records for all used slots
  * For use: creates use record for one slot
  * For restore: creates restore record for one slot
  */
@@ -236,28 +198,7 @@ export async function updateSpellSlots(
   allSlots: SlotsBySpellLevel | null,
   availableSlots: SlotsBySpellLevel | null
 ): Promise<void> {
-  if (data.action === 'longrest') {
-    // Long rest: restore all spell slots
-    if (!allSlots || !availableSlots) {
-      throw new Error("No spell slots to restore");
-    }
-
-    for (let level = 1; level <= 9; level++) {
-      const total = allSlots[level as keyof SlotsBySpellLevel] || 0;
-      const available = availableSlots[level as keyof SlotsBySpellLevel] || 0;
-      const toRestore = total - available;
-
-      // Create restore records for each used slot
-      for (let i = 0; i < toRestore; i++) {
-        await createSpellSlotDb(db, {
-          character_id: data.character_id,
-          slot_level: level,
-          action: 'restore',
-          note: data.note || "Took a long rest",
-        });
-      }
-    }
-  } else if (data.action === 'use') {
+  if (data.action === 'use') {
     // Use: create use record for one slot
     if (!data.slot_level) {
       throw new Error("Slot level is required for using");

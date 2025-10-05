@@ -42,6 +42,27 @@ export function prepareUpdateHitDiceForm(
   if (preparedValues.action === 'restore') {
     if (availableHitDice.length >= allHitDice.length) {
       errors.action = "All hit dice are already available";
+      return { values: preparedValues, errors };
+    }
+
+    // Validate die_value for restore
+    if (preparedValues.die_value) {
+      const dieValue = parseInt(preparedValues.die_value);
+      if (isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
+        errors.die_value = "Invalid die value";
+      } else {
+        // Check if this die type is actually used
+        const usedDice = [...allHitDice];
+        for (const die of availableHitDice) {
+          const index = usedDice.indexOf(die);
+          if (index !== -1) {
+            usedDice.splice(index, 1);
+          }
+        }
+        if (!usedDice.includes(dieValue as HitDieType)) {
+          errors.die_value = `You don't have a used D${dieValue}`;
+        }
+      }
     }
   }
 
@@ -103,6 +124,30 @@ export function validateUpdateHitDice(
       errors.action = "All hit dice are already available";
       return { valid: false, errors };
     }
+
+    if (!values.die_value) {
+      errors.die_value = "Die value is required";
+      return { valid: false, errors };
+    }
+
+    const dieValue = parseInt(values.die_value);
+    if (isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
+      errors.die_value = "Invalid die value";
+      return { valid: false, errors };
+    }
+
+    // Check if this die type is actually used
+    const usedDice = [...allHitDice];
+    for (const die of availableHitDice) {
+      const index = usedDice.indexOf(die);
+      if (index !== -1) {
+        usedDice.splice(index, 1);
+      }
+    }
+    if (!usedDice.includes(dieValue as HitDieType)) {
+      errors.die_value = `You don't have a used D${dieValue}`;
+      return { valid: false, errors };
+    }
   }
 
   // Validate spend
@@ -146,7 +191,7 @@ export function validateUpdateHitDice(
 
 /**
  * Update hit dice by creating appropriate records
- * For restore: creates multiple restore records (long rest)
+ * For restore: creates single restore record for one die
  * For spend: creates use record and HP delta
  */
 export async function updateHitDice(
@@ -158,38 +203,17 @@ export async function updateHitDice(
   maxHitPoints: number
 ): Promise<void> {
   if (data.action === 'restore') {
-    // Long rest: restore half of total dice (rounded down)
-    const maxRestoration = Math.floor(allHitDice.length / 2);
-    const currentlyUsed = allHitDice.length - availableHitDice.length;
-    const toRestore = Math.min(maxRestoration, currentlyUsed);
-
-    if (toRestore === 0) {
-      throw new Error("No dice to restore");
+    // Restore: restore single die
+    if (!data.die_value) {
+      throw new Error("Die value is required for restoring");
     }
 
-    // Find used dice to restore
-    const usedDice = [...allHitDice];
-    for (const die of availableHitDice) {
-      const index = usedDice.indexOf(die);
-      if (index !== -1) {
-        usedDice.splice(index, 1);
-      }
-    }
-
-    // largest-first
-    usedDice.sort((a, b) => b - a);
-
-    // Create restore records
-    for (let i = 0; i < toRestore; i++) {
-      if (usedDice[i]) {
-        await createHitDiceDb(db, {
-          character_id: data.character_id,
-          die_value: usedDice[i]!,
-          action: 'restore',
-          note: data.note || "Took a long rest",
-        });
-      }
-    }
+    await createHitDiceDb(db, {
+      character_id: data.character_id,
+      die_value: data.die_value,
+      action: 'restore',
+      note: data.note || null,
+    });
   } else {
     // Spend: create use record and HP delta
     if (!data.die_value || !data.hp_rolled) {

@@ -5,8 +5,8 @@
   grid-area: info;
 }
 
-.character-notes {
-  grid-area: notes;
+.character-main-view {
+  grid-area: main;
 }
 
 .character-panels {
@@ -25,18 +25,18 @@
   grid-template-columns: 1fr;
   grid-template-areas:
     "info"
-    "notes"
+    "main"
     "panels";
 }
 
-/* Desktop: two columns, notes on right spanning full height */
+/* Desktop: two columns, main view on right spanning full height */
 @media (min-width: 992px) {
   .character-grid {
     grid-template-columns: minmax(300px, 1fr) 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
-      "info notes"
-      "panels notes";
+      "info main"
+      "panels main";
   }
 }
 
@@ -45,8 +45,8 @@
     grid-template-columns: minmax(300px, 2fr) 3fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
-      "info notes"
-      "panels notes";
+      "info main"
+      "panels main";
   }
 }
 
@@ -55,8 +55,8 @@
     grid-template-columns: minmax(300px, 1fr) 2fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
-      "info notes"
-      "panels notes";
+      "info main"
+      "panels main";
   }
 }
 

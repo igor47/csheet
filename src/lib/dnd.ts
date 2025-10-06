@@ -214,9 +214,13 @@ const Instruments = [
 // Data (Player’s handbook)
 // =====================
 
-const CasterKind = ["full", "half", "third", "pact"] as const;
-const CasterKindSchema = z.enum(CasterKind);
-type CasterKindType = z.infer<typeof CasterKindSchema>;
+export const ClassNames = ["barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard"] as const;
+export const ClassNamesSchema = z.enum(ClassNames);
+export type ClassNameType = z.infer<typeof ClassNamesSchema>;
+
+export const CasterKind = ["full", "half", "third", "pact"] as const;
+export const CasterKindSchema = z.enum(CasterKind);
+export type CasterKindType = z.infer<typeof CasterKindSchema>;
 
 export type SpellcastingInfo = { notes?: string} & ({ enabled: false } | {
   enabled: true;
@@ -226,7 +230,7 @@ export type SpellcastingInfo = { notes?: string} & ({ enabled: false } | {
 })
 
 export interface ClassDef {
-  name: string;
+  name: ClassNameType;
   hitDie: HitDieType;
   primaryAbilities: AbilityType[];
   savingThrows: AbilityType[];
@@ -246,9 +250,8 @@ export interface ClassDef {
 // =====================
 // Data (Player’s Handbook classes, lowercase)
 // =====================
-
-export const Classes: ClassDef[] = [
-  {
+export const Classes: Record<ClassNameType, ClassDef> = {
+  barbarian: {
     name: "barbarian",
     hitDie: 12,
     primaryAbilities: ["strength", "constitution"],
@@ -264,7 +267,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 3,
     spellcasting: { enabled: false },
   },
-  {
+  bard: {
     name: "bard",
     hitDie: 8,
     primaryAbilities: ["charisma", "dexterity"],
@@ -285,7 +288,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 3,
     spellcasting: { enabled: true, kind: "full", ability: "charisma" },
   },
-  {
+  cleric: {
     name: "cleric",
     hitDie: 8,
     primaryAbilities: ["wisdom"],
@@ -298,7 +301,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 1,
     spellcasting: { enabled: true, kind: "full", ability: "wisdom" },
   },
-  {
+  druid: {
     name: "druid",
     hitDie: 8,
     primaryAbilities: ["wisdom"],
@@ -311,7 +314,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 2,
     spellcasting: { enabled: true, kind: "full", ability: "wisdom" },
   },
-  {
+  fighter: {
     name: "fighter",
     hitDie: 10,
     primaryAbilities: ["strength", "dexterity", "constitution"],
@@ -324,7 +327,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 3,
     spellcasting: { enabled: true, kind: "third", subclasses: ["eldritch knight"], ability: "intelligence"},
   },
-  {
+  monk: {
     name: "monk",
     hitDie: 8,
     primaryAbilities: ["dexterity", "wisdom"],
@@ -337,7 +340,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 3,
     spellcasting: { enabled: false },
   },
-  {
+  paladin: {
     name: "paladin",
     hitDie: 10,
     primaryAbilities: ["strength", "charisma"],
@@ -350,7 +353,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 3,
     spellcasting: { enabled: true, kind: "half", ability: "charisma", notes: "half-caster progression" },
   },
-  {
+  ranger: {
     name: "ranger",
     hitDie: 10,
     primaryAbilities: ["dexterity", "wisdom"],
@@ -363,7 +366,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 3,
     spellcasting: { enabled: true, kind: "half", ability: "wisdom", notes: "half-caster progression" },
   },
-  {
+  rogue: {
     name: "rogue",
     hitDie: 8,
     primaryAbilities: ["dexterity"],
@@ -376,7 +379,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 3,
     spellcasting: { enabled: true, kind: "third", subclasses: ["arcane trickster"], ability: "intelligence"},
   },
-  {
+  sorcerer: {
     name: "sorcerer",
     hitDie: 6,
     primaryAbilities: ["charisma"],
@@ -389,7 +392,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 1,
     spellcasting: { enabled: true, kind: "full", ability: "charisma" },
   },
-  {
+  warlock: {
     name: "warlock",
     hitDie: 8,
     primaryAbilities: ["charisma"],
@@ -402,7 +405,7 @@ export const Classes: ClassDef[] = [
     subclassLevel: 1,
     spellcasting: { enabled: true, kind: "pact", ability: "charisma", notes: "pact magic progression" },
   },
-  {
+  wizard: {
     name: "wizard",
     hitDie: 6,
     primaryAbilities: ["intelligence"],
@@ -415,13 +418,10 @@ export const Classes: ClassDef[] = [
     subclassLevel: 2,
     spellcasting: { enabled: true, kind: "full", ability: "intelligence" },
   }
-];
-export const ClassNames = Classes.map(c => c.name);
-export const ClassNamesSchema = z.enum(ClassNames);
-export type ClassNameType = z.infer<typeof ClassNamesSchema>;
+};
 
-export const SubclassNames = Classes.flatMap(c => c.subclasses ? c.subclasses : []);
-export const SubclassNamesSchema = z.enum(ClassNames);
+export const SubclassNames = Object.values(Classes).flatMap(c => c.subclasses ? c.subclasses : []);
+export const SubclassNamesSchema = z.enum(SubclassNames);
 export type SubclassNameType = z.infer<typeof SubclassNamesSchema>;
 
 export interface BackgroundFeature {
@@ -430,7 +430,7 @@ export interface BackgroundFeature {
 }
 
 export interface Background {
-  name: string;
+  name: BackgroundNameType;
 
   /** Usually two fixed skills; sometimes represent “choose” for variants/future content */
   skillProficiencies: (SkillType | Choice<SkillType>)[];
@@ -445,23 +445,26 @@ export interface Background {
   equipment?: string[];
 
   feature: BackgroundFeature;
-
-  /** Optional notes for PHB variants (e.g., Sailor → pirate feature swap) */
-  variants?: Background[];
 }
 
-export const Backgrounds: Background[] = [
-  {
+export const BackgroundNames = [
+  "acolyte", "charlatan", "criminal", "entertainer", "folk hero", "guild artisan", "hermit", "noble", "outlander", "sage", "sailor", "soldier", "urchin", "pirate",
+] as const;
+export const BackgroundNamesSchema = z.enum(BackgroundNames);
+export type BackgroundNameType = z.infer<typeof BackgroundNamesSchema>;
+
+export const Backgrounds: Record<BackgroundNameType, Background> = {
+  acolyte: {
     name: "acolyte",
     skillProficiencies: ["insight", "religion"],
     languageProficiencies: 2,
     equipment: ["holy symbol", "prayer book or prayer wheel", "5 sticks of incense", "vestments", "common clothes", "15 gp"],
     feature: {
-      name: "shelter of the Faithful",
+      name: "shelter of the faithful",
       summary: "free support and lodging at a temple of your faith; connections to clergy.",
     },
   },
-  {
+  charlatan: {
     name: "charlatan",
     skillProficiencies: ["deception", "sleight of hand"],
     toolProficiencies: ["disguise kit", "forgery kit"],
@@ -471,7 +474,7 @@ export const Backgrounds: Background[] = [
       summary: "you maintain a second identity with documentation, acquaintances, and disguises.",
     },
   },
-  {
+  criminal: {
     name: "criminal",
     skillProficiencies: ["deception", "stealth"],
     toolProficiencies: [
@@ -484,7 +487,7 @@ export const Backgrounds: Background[] = [
       summary: "a reliable and trustworthy contact within the criminal underworld.",
     },
   },
-  {
+  entertainer: {
     name: "entertainer",
     skillProficiencies: ["acrobatics", "performance"],
     toolProficiencies: [
@@ -493,11 +496,11 @@ export const Backgrounds: Background[] = [
     ],
     equipment: ["musical instrument (one of your choice)", "favor of an admirer", "costume", "15 gp"],
     feature: {
-      name: "by Popular Demand",
+      name: "by popular demand",
       summary: "you can find a place to perform and secure free lodging and modest food.",
     },
   },
-  {
+  "folk hero": {
     name: "folk hero",
     skillProficiencies: ["animal handling", "survival"],
     toolProficiencies: [
@@ -506,22 +509,22 @@ export const Backgrounds: Background[] = [
     ],
     equipment: ["artisan’s tools (one of your choice)", "shovel", "iron pot", "common clothes", "10 gp"],
     feature: {
-      name: "rustic Hospitality",
+      name: "rustic hospitality",
       summary: "common folk will shelter you; you can hide among them.",
     },
   },
-  {
+  "guild artisan": {
     name: "guild artisan",
     skillProficiencies: ["insight", "persuasion"],
     toolProficiencies: [{ choose: 1, from: [...ArtisanTools] as unknown as string[] }],
     languageProficiencies: 1,
     equipment: ["artisan’s tools (one of your choice)", "letter of introduction from your guild", "traveler’s clothes", "15 gp"],
     feature: {
-      name: "guild Membership",
+      name: "guild membership",
       summary: "access to guild facilities, contacts, and legal support (with dues).",
     },
   },
-  {
+  hermit: {
     name: "hermit",
     skillProficiencies: ["medicine", "religion"],
     toolProficiencies: ["herbalism kit"],
@@ -532,18 +535,18 @@ export const Backgrounds: Background[] = [
       summary: "you uncovered a unique and powerful insight during seclusion.",
     },
   },
-  {
+  noble: {
     name: "noble",
     skillProficiencies: ["history", "persuasion"],
     toolProficiencies: [{ choose: 1, from: [...GamingSets] as unknown as string[] }],
     languageProficiencies: 1,
     equipment: ["fine clothes", "signet ring", "scroll of pedigree", "25 gp"],
     feature: {
-      name: "position of Privilege",
+      name: "position of privilege",
       summary: "high social standing; easier audience with nobles and officials.",
     },
   },
-  {
+  outlander: {
     name: "outlander",
     skillProficiencies: ["athletics", "survival"],
     toolProficiencies: [{ choose: 1, from: [...Instruments] as unknown as string[] }],
@@ -554,7 +557,7 @@ export const Backgrounds: Background[] = [
       summary: "excellent memory for maps and geography; find food and fresh water for your group.",
     },
   },
-  {
+  sage: {
     name: "sage",
     skillProficiencies: ["arcana", "history"],
     languageProficiencies: 2,
@@ -564,7 +567,7 @@ export const Backgrounds: Background[] = [
       summary: "you can usually find where to obtain lore; you know how to get answers.",
     },
   },
-  {
+  sailor: {
     name: "sailor",
     skillProficiencies: ["athletics", "perception"],
     toolProficiencies: ["navigator’s tools", "vehicles (water)"],
@@ -573,44 +576,38 @@ export const Backgrounds: Background[] = [
       name: "ship’s passage",
       summary: "secure free passage on a sailing ship for you and companions (with obligations).",
     },
-    variants: [
-      {
-        name: "pirate",
-        skillProficiencies: ["athletics", "perception"],
-        toolProficiencies: ["navigator’s tools", "vehicles (water)"],
-        equipment: ["belaying pin (club)", "50 feet of silk rope", "lucky charm", "common clothes", "10 gp"],
-        feature: {
-          name: "bad reputation",
-          summary: "your notoriety lets you get away with minor crimes; people fear you.",
-        },
-      },
-    ],
   },
-  {
+  pirate: {
+    name: "pirate",
+    skillProficiencies: ["athletics", "perception"],
+    toolProficiencies: ["navigator’s tools", "vehicles (water)"],
+    equipment: ["belaying pin (club)", "50 feet of silk rope", "lucky charm", "common clothes", "10 gp"],
+    feature: {
+      name: "bad reputation",
+      summary: "your notoriety lets you get away with minor crimes; people fear you.",
+    },
+  },
+  soldier: {
     name: "soldier",
     skillProficiencies: ["athletics", "intimidation"],
     toolProficiencies: [{ choose: 1, from: [...GamingSets] as unknown as string[] }, "vehicles (land)"],
     equipment: ["insignia of rank", "trophy from a fallen enemy", "bone dice or deck of cards", "common clothes", "10 gp"],
     feature: {
-      name: "military Rank",
+      name: "military rank",
       summary: "you have a rank; soldiers loyal to your former organization recognize authority.",
     },
   },
-  {
+  urchin: {
     name: "urchin",
     skillProficiencies: ["sleight of hand", "stealth"],
     toolProficiencies: ["disguise kit", "thieves’ tools"],
     equipment: ["small knife", "map of city you grew up in", "pet mouse", "token to remember parents", "common clothes", "10 gp"],
     feature: {
-      name: "city Secrets",
+      name: "city secrets",
       summary: "you and companions can move through a city twice as fast via alleys and passages.",
     },
   },
-] as const;
-
-export const BackgroundNames = Backgrounds.map(b => b.name);
-export const BackgroundNamesSchema = z.enum(BackgroundNames);
-export type BackgroundNameType = z.infer<typeof BackgroundNamesSchema>;
+} as const;
 
 /** Spell slot counts per spell level. Keys are 1..9 (no cantrips here). */
 export type SlotsBySpellLevel = Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
@@ -729,8 +726,6 @@ export const WARLOCK_PACT_MAGIC: PactMagicRow[] = [
   { level: 20, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
 ];
 
-/** ---------- Tiny helpers ---------- */
-
 export const getSlotsFor = (kind: Exclude<CasterKindType, "warlock">, level: number): SlotsBySpellLevel => {
   const table =
     kind === "full" ? FULL_CASTER_SLOTS
@@ -742,19 +737,3 @@ export const getSlotsFor = (kind: Exclude<CasterKindType, "warlock">, level: num
 export const getWarlockPactAt = (level: number): PactMagicRow => (
   WARLOCK_PACT_MAGIC.find(r => r.level === level)!
 )
-
-/** Example class → caster kind mapping (SRD classes). */
-export const CLASS_CASTER_KIND: Record<string, CasterKind | null> = {
-  bard: "full",
-  cleric: "full",
-  druid: "full",
-  sorcerer: "full",
-  wizard: "full",
-  paladin: "half",
-  ranger: "half",
-  fighter: "third",          // Eldritch Knight only (otherwise null)
-  rogue: "third",            // Arcane Trickster only (otherwise null)
-  warlock: "warlock",
-  barbarian: null,
-  monk: null,
-};

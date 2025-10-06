@@ -9,7 +9,7 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { Races, Classes, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities, type SlotsBySpellLevel, type PactMagicRow, getSlotsFor, getWarlockPactAt, type ClassNameType } from "@src/lib/dnd";
 
 export interface CharacterClass {
-  class: string;
+  class: ClassNameType;
   level: number;
   subclass: string | null;
 }
@@ -129,7 +129,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
 
   const allLevels = await getAllLevels(db, characterId);
   for (const level of allLevels) {
-    const classDef = Classes.find(c => c.name === level.class)!;
+    const classDef = Classes[level.class];
     hitDice.push(classDef.hitDie);
     maxHitPoints += level.hit_die_roll;
   }
@@ -176,8 +176,8 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   let thirdCasterLevel = 0;
 
   for (const charClass of classes) {
-    const classDef = Classes.find(c => c.name === charClass.class);
-    if (!classDef || !classDef.spellcasting.enabled) continue;
+    const classDef = Classes[charClass.class];
+    if (!classDef.spellcasting.enabled) continue;
 
     const spellcasting = classDef.spellcasting;
     console.dir(spellcasting);

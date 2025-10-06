@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 
 import { Select } from '@src/components/ui/Select'
-import { BackgroundNames, Classes, ClassNames, RaceNames, Races, SubraceNames } from '@src/lib/dnd';
+import { BackgroundNames, Classes, ClassNames, RaceNames, Races, SubraceNames, type ClassNameType } from '@src/lib/dnd';
 import { toTitleCase } from '@src/lib/strings';
 
 export interface CharacterNewProps {
@@ -78,7 +78,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
     </div>,
   );
 
-  const selectedClass = values?.class ? Classes.find(c => c.name === values.class) : null;
+  const selectedClass = Classes[values?.class as ClassNameType] || null;
   const subclasses = (selectedClass && selectedClass.subclassLevel == 1) ? selectedClass.subclasses : [];
   const subclassPlh = selectedClass ? (selectedClass.subclassLevel === 1 ? 'Select a subclass' : `Subclasses available at level ${selectedClass.subclassLevel}` ) : 'Select a class first';
   fields.push(

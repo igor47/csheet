@@ -96,8 +96,7 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
 
     // set initial level in the class
     // At first level, characters get the maximum value of their hit die
-    const classDef = Classes.find(c => c.name === data.class)!;
-
+    const classDef = Classes[data.class];
     await createClassLevelDb(tx, {
       character_id: character.id,
       class: classDef.name,
@@ -134,7 +133,7 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
     }
 
     // Get skill proficiencies from background
-    const background = Backgrounds.find(b => b.name === data.background);
+    const background = Backgrounds[data.background];
     const backgroundSkillProficiencies = new Set<SkillType>();
 
     if (background) {

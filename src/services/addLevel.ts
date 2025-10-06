@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { SQL } from "bun";
-import { ClassNamesSchema, Classes } from "@src/lib/dnd";
+import { ClassNames, ClassNamesSchema, Classes, type ClassNameType } from "@src/lib/dnd";
 import { create as createCharLevelDb } from "@src/db/char_levels";
 import { getCurrentLevels, type CharLevel } from "@src/db/char_levels";
 
@@ -27,11 +27,11 @@ export function prepareAddLevelForm(
   const errors: Record<string, string> = {};
   const preparedValues = { ...values };
 
-  if (!preparedValues.class) {
+  if (!(preparedValues.class && ClassNames.includes(values.class as ClassNameType) )) {
     return { values: preparedValues, errors };
   }
 
-  const classDef = Classes.find(c => c.name === preparedValues.class);
+  const classDef = Classes[preparedValues.class as ClassNameType];
   if (!classDef) {
     errors.class = "Invalid class";
     return { values: preparedValues, errors };
@@ -86,12 +86,12 @@ export function validateAddLevel(
 ): { valid: boolean, errors: Record<string, string> } {
   const errors: Record<string, string> = {};
 
-  if (!values.class) {
+  if (!values.class || !ClassNames.includes(values.class as ClassNameType)) {
     errors.class = "Class is required";
     return { valid: false, errors };
   }
 
-  const classDef = Classes.find(c => c.name === values.class);
+  const classDef = Classes[values.class as ClassNameType];
   if (!classDef) {
     errors.class = "Invalid class";
     return { valid: false, errors };
@@ -159,7 +159,7 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
   }
 
   // Validate hit die roll is within range for this class
-  const classDef = Classes.find(c => c.name === data.class);
+  const classDef = Classes[data.class];
   if (!classDef) {
     throw new Error(`Invalid class: ${data.class}`);
   }

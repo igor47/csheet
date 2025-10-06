@@ -19,6 +19,11 @@ const NavLinks: NavLink[] = [
     requiresAuth: true,
     isActive: (currentPage) => (currentPage ? currentPage.startsWith('/characters') : false),
   },
+  {
+    href: '/spells',
+    label: 'Spells',
+    isActive: (currentPage) => (currentPage ? currentPage.startsWith('/spells') : false),
+  },
 ] as const;
 
 const LoggedInContent = ({ user }: { user: User }) => {

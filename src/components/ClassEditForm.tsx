@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 
 import { Select } from '@src/components/ui/Select';
-import { Classes, ClassNames } from '@src/lib/dnd';
+import { Classes, ClassNames, type ClassNameType } from '@src/lib/dnd';
 import { toTitleCase } from '@src/lib/strings';
 
 import type { CharLevel } from '@src/db/char_levels';
@@ -14,7 +14,7 @@ export interface ClassEditFormProps {
 }
 
 export const ClassEditForm = ({ characterId, currentClassLevel, values, errors }: ClassEditFormProps) => {
-  const selectedClass = values?.class ? Classes.find(c => c.name === values.class) : null;
+  const selectedClass = Classes[values?.class as ClassNameType] || null;
   const subclasses = selectedClass?.subclasses || [];
 
   const level = values?.level ? parseInt(values.level) : 1;

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { indexRoutes } from './routes/index'
 import { authRoutes } from './routes/auth'
 import { characterRoutes } from './routes/character'
+import { spellsRoutes } from './routes/spells'
 import { jsxRenderer } from 'hono/jsx-renderer'
 import { Layout } from './components/Layout'
 import { applyMiddleware } from './middleware'
@@ -40,6 +41,7 @@ app.use('/favicon.ico', cachingServeStatic({ path: './static/favicon.ico' }))
 // Public routes (no auth required)
 app.route('/', indexRoutes)
 app.route('/', authRoutes)
+app.route('/', spellsRoutes)
 
 // Protected routes (auth required)
 const protectedRoutes = new Hono()

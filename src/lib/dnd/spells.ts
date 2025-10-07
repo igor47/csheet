@@ -106,6 +106,7 @@ export type DamageScaling =
 
 export interface Spell {
   // Identity
+  id: string;
   name: string;
   level: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   school: SpellSchoolType;
@@ -148,6 +149,7 @@ export interface Spell {
 
 export const spells: Spell[] = [
   {
+    id: 'srd_acid_arrow',
     name: 'Acid Arrow',
     level: 2,
     school: 'evocation',
@@ -172,6 +174,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_acid_splash',
     name: 'Acid Splash',
     level: 0,
     school: 'evocation',
@@ -193,6 +196,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_aid',
     name: 'Aid',
     level: 2,
     school: 'abjuration',
@@ -213,6 +217,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_alarm',
     name: 'Alarm',
     level: 1,
     school: 'abjuration',
@@ -233,6 +238,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_alter self',
     name: 'Alter Self',
     level: 2,
     school: 'transmutation',
@@ -248,6 +254,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_animal_friendship',
     name: 'Animal Friendship',
     level: 1,
     school: 'enchantment',
@@ -269,6 +276,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_animal_messenger',
     name: 'Animal Messenger',
     level: 2,
     school: 'enchantment',
@@ -290,6 +298,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_animal_shapes',
     name: 'Animal Shapes',
     level: 8,
     school: 'transmutation',
@@ -305,6 +314,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_animate_dead',
     name: 'Animate Dead',
     level: 3,
     school: 'necromancy',
@@ -328,6 +338,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_animate_objects',
     name: 'Animate Objects',
     level: 5,
     school: 'transmutation',
@@ -345,6 +356,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_antilife_shell',
     name: 'Antilife Shell',
     level: 5,
     school: 'abjuration',
@@ -360,6 +372,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_antimagic_field',
     name: 'Antimagic Field',
     level: 8,
     school: 'abjuration',
@@ -375,6 +388,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_antipathy/sympathy',
     name: 'Antipathy/Sympathy',
     level: 8,
     school: 'enchantment',
@@ -395,6 +409,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_arcane_eye',
     name: 'Arcane Eye',
     level: 4,
     school: 'divination',
@@ -414,6 +429,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_arcane_hand',
     name: 'Arcane Hand',
     level: 5,
     school: 'evocation',
@@ -434,6 +450,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_arcane_lock',
     name: 'Arcane Lock',
     level: 2,
     school: 'abjuration',
@@ -457,6 +474,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_arcane_sword',
     name: 'Arcane Sword',
     level: 7,
     school: 'evocation',
@@ -477,6 +495,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_arcanist’s_magic_aura',
     name: 'Arcanist’s Magic Aura',
     level: 2,
     school: 'illusion',
@@ -496,6 +515,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_astral_projection',
     name: 'Astral Projection',
     level: 9,
     school: 'necromancy',
@@ -519,6 +539,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_augury',
     name: 'Augury',
     level: 2,
     school: 'divination',
@@ -542,6 +563,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_aura_of_life',
     name: 'Aura of Life',
     level: 4,
     school: 'abjuration',
@@ -557,6 +579,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_awaken',
     name: 'Awaken',
     level: 5,
     school: 'transmutation',
@@ -577,6 +600,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_bane',
     name: 'Bane',
     level: 1,
     school: 'enchantment',
@@ -597,6 +621,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_banishment',
     name: 'Banishment',
     level: 4,
     school: 'abjuration',
@@ -618,6 +643,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_barkskin',
     name: 'Barkskin',
     level: 2,
     school: 'transmutation',
@@ -637,6 +663,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_beacon_of_hope',
     name: 'Beacon of Hope',
     level: 3,
     school: 'abjuration',
@@ -652,6 +679,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_befuddlement',
     name: 'Befuddlement',
     level: 8,
     school: 'enchantment',
@@ -672,6 +700,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_bestow_curse',
     name: 'Bestow Curse',
     level: 3,
     school: 'necromancy',
@@ -688,6 +717,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_blade_barrier',
     name: 'Black Tentacles',
     level: 4,
     school: 'conjuration',
@@ -709,6 +739,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_blade_barrier',
     name: 'Blade Barrier',
     level: 6,
     school: 'evocation',
@@ -725,6 +756,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_bless',
     name: 'Bless',
     level: 1,
     school: 'enchantment',
@@ -745,6 +777,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_blight',
     name: 'Blight',
     level: 4,
     school: 'necromancy',
@@ -762,6 +795,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_blindness/deafness',
     name: 'Blindness/Deafness',
     level: 2,
     school: 'transmutation',
@@ -779,6 +813,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_blink',
     name: 'Blink',
     level: 3,
     school: 'transmutation',
@@ -794,6 +829,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_blur',
     name: 'Blur',
     level: 2,
     school: 'illusion',
@@ -809,6 +845,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_burning_hands',
     name: 'Burning Hands',
     level: 1,
     school: 'evocation',
@@ -826,6 +863,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_call_lightning',
     name: 'Call Lightning',
     level: 3,
     school: 'conjuration',
@@ -843,6 +881,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_calm_emotions',
     name: 'Calm Emotions',
     level: 2,
     school: 'enchantment',
@@ -858,6 +897,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_chain_lightning',
     name: 'Chain Lightning',
     level: 6,
     school: 'evocation',
@@ -879,6 +919,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_charm_person',
     name: 'Charm Monster',
     level: 4,
     school: 'enchantment',
@@ -896,6 +937,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_charm_person',
     name: 'Charm Person',
     level: 1,
     school: 'enchantment',
@@ -913,6 +955,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_chromatic_orb',
     name: 'Chill Touch',
     level: 0,
     school: 'necromancy',
@@ -939,6 +982,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_chromatic_orb',
     name: 'Chromatic Orb',
     level: 1,
     school: 'evocation',
@@ -966,6 +1010,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_circle_of_death',
     name: 'Circle of Death',
     level: 6,
     school: 'necromancy',
@@ -990,6 +1035,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_clairvoyance',
     name: 'Clairvoyance',
     level: 3,
     school: 'divination',
@@ -1012,6 +1058,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_clone',
     name: 'Clone',
     level: 8,
     school: 'necromancy',
@@ -1035,6 +1082,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_cloudkill',
     name: 'Cloudkill',
     level: 5,
     school: 'conjuration',
@@ -1052,6 +1100,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_color_spray',
     name: 'Color Spray',
     level: 1,
     school: 'illusion',
@@ -1072,6 +1121,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_command',
     name: 'Command',
     level: 1,
     school: 'enchantment',
@@ -1088,6 +1138,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_commune',
     name: 'Commune',
     level: 5,
     school: 'divination',
@@ -1104,6 +1155,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_commune_with_nature',
     name: 'Commune with Nature',
     level: 5,
     school: 'divination',
@@ -1120,6 +1172,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_comprehend_languages',
     name: 'Comprehend Languages',
     level: 1,
     school: 'divination',
@@ -1140,6 +1193,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_compulsion',
     name: 'Compulsion',
     level: 4,
     school: 'enchantment',
@@ -1156,6 +1210,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_cone_of_cold',
     name: 'Cone of Cold',
     level: 5,
     school: 'evocation',
@@ -1177,6 +1232,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_confusion',
     name: 'Confusion',
     level: 4,
     school: 'enchantment',
@@ -1197,6 +1253,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_conjure_animals',
     name: 'Conjure Animals',
     level: 3,
     school: 'conjuration',
@@ -1214,6 +1271,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_conjure_celestial',
     name: 'Conjure Celestial',
     level: 7,
     school: 'conjuration',
@@ -1232,6 +1290,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_conjure_elemental',
     name: 'Conjure Elemental',
     level: 5,
     school: 'conjuration',
@@ -1256,6 +1315,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_conjure_fey',
     name: 'Conjure Fey',
     level: 6,
     school: 'conjuration',
@@ -1274,6 +1334,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_conjure_minor_elementals',
     name: 'Conjure Minor Elementals',
     level: 4,
     school: 'conjuration',
@@ -1297,6 +1358,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_conjure_woodland_beings',
     name: 'Conjure Woodland Beings',
     level: 4,
     school: 'conjuration',
@@ -1314,6 +1376,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_contact_other_plane',
     name: 'Contact Other Plane',
     level: 5,
     school: 'divination',
@@ -1330,6 +1393,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_contagion',
     name: 'Contagion',
     level: 5,
     school: 'necromancy',
@@ -1347,6 +1411,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_contingency',
     name: 'Contingency',
     level: 6,
     school: 'abjuration',
@@ -1369,6 +1434,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_continual_flame',
     name: 'Continual Flame',
     level: 2,
     school: 'evocation',
@@ -1388,6 +1454,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_control_water',
     name: 'Control Water',
     level: 4,
     school: 'transmutation',
@@ -1407,6 +1474,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_control_weather',
     name: 'Control Weather',
     level: 8,
     school: 'transmutation',
@@ -1426,6 +1494,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_counterspell',
     name: 'Counterspell',
     level: 3,
     school: 'abjuration',
@@ -1444,6 +1513,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_create_food_and_water',
     name: 'Create Food and Water',
     level: 3,
     school: 'conjuration',
@@ -1459,6 +1529,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_create_or_destroy_water',
     name: 'Create or Destroy Water',
     level: 1,
     school: 'transmutation',
@@ -1479,6 +1550,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_create_undead',
     name: 'Create Undead',
     level: 6,
     school: 'necromancy',
@@ -1500,6 +1572,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_creation',
     name: 'Creation',
     level: 5,
     school: 'illusion',
@@ -1520,6 +1593,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_cure_wounds',
     name: 'Cure Wounds',
     level: 1,
     school: 'abjuration',
@@ -1537,6 +1611,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dancing_lights',
     name: 'Dancing Lights',
     level: 0,
     school: 'illusion',
@@ -1556,6 +1631,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_darkness',
     name: 'Darkness',
     level: 2,
     school: 'evocation',
@@ -1575,6 +1651,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_darkvision',
     name: 'Darkvision',
     level: 2,
     school: 'transmutation',
@@ -1594,6 +1671,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_daylight',
     name: 'Daylight',
     level: 3,
     school: 'evocation',
@@ -1609,6 +1687,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_death_ward',
     name: 'Death Ward',
     level: 4,
     school: 'abjuration',
@@ -1624,6 +1703,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_delayed_blast_fireball',
     name: 'Delayed Blast Fireball',
     level: 7,
     school: 'evocation',
@@ -1645,6 +1725,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_demiplane',
     name: 'Demiplane',
     level: 8,
     school: 'conjuration',
@@ -1660,6 +1741,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_detect_evil_and_good',
     name: 'Detect Evil and Good',
     level: 1,
     school: 'divination',
@@ -1675,6 +1757,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_detect_magic',
     name: 'Detect Magic',
     level: 1,
     school: 'divination',
@@ -1691,6 +1774,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_detect_poison_and_disease',
     name: 'Detect Poison and Disease',
     level: 1,
     school: 'divination',
@@ -1711,6 +1795,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_detect_thoughts',
     name: 'Detect Thoughts',
     level: 2,
     school: 'divination',
@@ -1730,6 +1815,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dimension_door',
     name: 'Dimension Door',
     level: 4,
     school: 'conjuration',
@@ -1745,6 +1831,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_disguise_self',
     name: 'Disguise Self',
     level: 1,
     school: 'illusion',
@@ -1760,6 +1847,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_disintegrate',
     name: 'Disintegrate',
     level: 6,
     school: 'transmutation',
@@ -1781,6 +1869,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dispel_evil_and_good',
     name: 'Dispel Evil and Good',
     level: 5,
     school: 'abjuration',
@@ -1800,6 +1889,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dispel_magic',
     name: 'Dispel Magic',
     level: 3,
     school: 'abjuration',
@@ -1816,6 +1906,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dissonant_whispers',
     name: 'Dissonant Whispers',
     level: 1,
     school: 'enchantment',
@@ -1833,6 +1924,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_divination',
     name: 'Divination',
     level: 4,
     school: 'divination',
@@ -1853,6 +1945,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_divine_favor',
     name: 'Divine Favor',
     level: 1,
     school: 'transmutation',
@@ -1869,6 +1962,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_divine_smite',
     name: 'Divine Smite',
     level: 1,
     school: 'evocation',
@@ -1889,6 +1983,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_divine_word',
     name: 'Divine Word',
     level: 7,
     school: 'evocation',
@@ -1905,6 +2000,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dominate_beast',
     name: 'Dominate Beast',
     level: 4,
     school: 'enchantment',
@@ -1922,6 +2018,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dominate_monster',
     name: 'Dominate Monster',
     level: 8,
     school: 'enchantment',
@@ -1939,6 +2036,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dominate_person',
     name: 'Dominate Person',
     level: 5,
     school: 'enchantment',
@@ -1956,6 +2054,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dragon’s_breath',
     name: 'Dragon’s Breath',
     level: 2,
     school: 'transmutation',
@@ -1976,6 +2075,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_dream',
     name: 'Dream',
     level: 5,
     school: 'illusion',
@@ -1995,6 +2095,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_druidcraft',
     name: 'Druidcraft',
     level: 0,
     school: 'transmutation',
@@ -2010,6 +2111,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_earthquake',
     name: 'Earthquake',
     level: 8,
     school: 'transmutation',
@@ -2030,6 +2132,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_eldritch_blast',
     name: 'Eldritch Blast',
     level: 0,
     school: 'evocation',
@@ -2047,6 +2150,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_elementalism',
     name: 'Elementalism',
     level: 0,
     school: 'transmutation',
@@ -2062,6 +2166,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_enhance_ability',
     name: 'Enhance Ability',
     level: 2,
     school: 'transmutation',
@@ -2082,6 +2187,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_enlarge/reduce',
     name: 'Enlarge/Reduce',
     level: 2,
     school: 'transmutation',
@@ -2101,6 +2207,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_ensnaring_strike',
     name: 'Ensnaring Strike',
     level: 1,
     school: 'conjuration',
@@ -2119,6 +2226,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_entangle',
     name: 'Entangle',
     level: 1,
     school: 'conjuration',
@@ -2135,6 +2243,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_enthrall',
     name: 'Enthrall',
     level: 2,
     school: 'enchantment',
@@ -2150,6 +2259,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_etherealness',
     name: 'Etherealness',
     level: 7,
     school: 'conjuration',
@@ -2166,6 +2276,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_expeditious_retreat',
     name: 'Expeditious Retreat',
     level: 1,
     school: 'transmutation',
@@ -2181,6 +2292,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_eyebite',
     name: 'Eyebite',
     level: 6,
     school: 'necromancy',
@@ -2197,6 +2309,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fabricate',
     name: 'Fabricate',
     level: 4,
     school: 'transmutation',
@@ -2212,6 +2325,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_faerie_fire',
     name: 'Faerie Fire',
     level: 1,
     school: 'evocation',
@@ -2227,6 +2341,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_faithful_hound',
     name: 'Faithful Hound',
     level: 4,
     school: 'conjuration',
@@ -2247,6 +2362,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_false_life',
     name: 'False Life',
     level: 1,
     school: 'necromancy',
@@ -2267,6 +2383,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fear',
     name: 'Fear',
     level: 3,
     school: 'illusion',
@@ -2287,6 +2404,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_feather_fall',
     name: 'Feather Fall',
     level: 1,
     school: 'transmutation',
@@ -2305,6 +2423,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_find_familiar',
     name: 'Find Familiar',
     level: 1,
     school: 'conjuration',
@@ -2326,6 +2445,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_find_steed',
     name: 'Find Steed',
     level: 2,
     school: 'conjuration',
@@ -2343,6 +2463,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_find_the_path',
     name: 'Find the Path',
     level: 6,
     school: 'divination',
@@ -2362,6 +2483,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_find_traps',
     name: 'Find Traps',
     level: 2,
     school: 'divination',
@@ -2377,6 +2499,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_finger_of_death',
     name: 'Finger of Death',
     level: 7,
     school: 'necromancy',
@@ -2393,6 +2516,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fireball',
     name: 'Fireball',
     level: 3,
     school: 'evocation',
@@ -2414,6 +2538,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fire_bolt',
     name: 'Fire Bolt',
     level: 0,
     school: 'evocation',
@@ -2435,6 +2560,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fire_shield',
     name: 'Fire Shield',
     level: 4,
     school: 'evocation',
@@ -2458,6 +2584,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fire_storm',
     name: 'Fire Storm',
     level: 7,
     school: 'evocation',
@@ -2474,6 +2601,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_flame_blade',
     name: 'Flame Blade',
     level: 2,
     school: 'evocation',
@@ -2495,6 +2623,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_flame_strike',
     name: 'Flame Strike',
     level: 5,
     school: 'evocation',
@@ -2519,6 +2648,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_flaming_sphere',
     name: 'Flaming Sphere',
     level: 2,
     school: 'conjuration',
@@ -2540,6 +2670,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_flesh_to_stone',
     name: 'Flesh to Stone',
     level: 6,
     school: 'transmutation',
@@ -2560,6 +2691,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_floating_disk',
     name: 'Floating Disk',
     level: 1,
     school: 'conjuration',
@@ -2580,6 +2712,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fly',
     name: 'Fly',
     level: 3,
     school: 'transmutation',
@@ -2600,6 +2733,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_fog_cloud',
     name: 'Fog Cloud',
     level: 1,
     school: 'conjuration',
@@ -2616,6 +2750,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_forbiddance',
     name: 'Forbiddance',
     level: 6,
     school: 'abjuration',
@@ -2637,6 +2772,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_forcecage',
     name: 'Forcecage',
     level: 7,
     school: 'evocation',
@@ -2656,6 +2792,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_foresight',
     name: 'Foresight',
     level: 9,
     school: 'divination',
@@ -2675,6 +2812,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_freedom_of_movement',
     name: 'Freedom of Movement',
     level: 4,
     school: 'abjuration',
@@ -2695,6 +2833,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_freezing_sphere',
     name: 'Freezing Sphere',
     level: 6,
     school: 'evocation',
@@ -2717,6 +2856,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_gaseous_form',
     name: 'Gaseous Form',
     level: 3,
     school: 'transmutation',
@@ -2737,6 +2877,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_gate',
     name: 'Gate',
     level: 9,
     school: 'conjuration',
@@ -2756,6 +2897,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_geas',
     name: 'Geas',
     level: 5,
     school: 'enchantment',
@@ -2774,6 +2916,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_gentle_repose',
     name: 'Gentle Repose',
     level: 2,
     school: 'necromancy',
@@ -2794,6 +2937,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_giant_insect',
     name: 'Giant Insect',
     level: 4,
     school: 'conjuration',
@@ -2811,6 +2955,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_glibness',
     name: 'Glibness',
     level: 8,
     school: 'enchantment',
@@ -2826,6 +2971,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_globe_of_invulnerability',
     name: 'Globe of Invulnerability',
     level: 6,
     school: 'abjuration',
@@ -2846,6 +2992,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_glyph_of_warding',
     name: 'Glyph of Warding',
     level: 3,
     school: 'abjuration',
@@ -2866,6 +3013,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_goodberry',
     name: 'Goodberry',
     level: 1,
     school: 'conjuration',
@@ -2885,6 +3033,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_grease',
     name: 'Grease',
     level: 1,
     school: 'conjuration',
@@ -2905,6 +3054,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_greater_invisibility',
     name: 'Greater Invisibility',
     level: 4,
     school: 'illusion',
@@ -2920,6 +3070,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_greater_restoration',
     name: 'Greater Restoration',
     level: 5,
     school: 'abjuration',
@@ -2939,6 +3090,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_guardian_of_faith',
     name: 'Guardian of Faith',
     level: 4,
     school: 'conjuration',
@@ -2955,6 +3107,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_guards_and_wards',
     name: 'Guards and Wards',
     level: 6,
     school: 'abjuration',
@@ -2974,6 +3127,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_guidance',
     name: 'Guidance',
     level: 0,
     school: 'divination',
@@ -2989,6 +3143,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_guiding_bolt',
     name: 'Guiding Bolt',
     level: 1,
     school: 'evocation',
@@ -3006,6 +3161,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_gust_of_wind',
     name: 'Gust of Wind',
     level: 2,
     school: 'evocation',
@@ -3025,6 +3181,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hallow',
     name: 'Hallow',
     level: 5,
     school: 'abjuration',
@@ -3044,6 +3201,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hallucinatory_terrain',
     name: 'Hallucinatory Terrain',
     level: 4,
     school: 'illusion',
@@ -3063,6 +3221,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_harm',
     name: 'Harm',
     level: 6,
     school: 'necromancy',
@@ -3079,6 +3238,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_haste',
     name: 'Haste',
     level: 3,
     school: 'transmutation',
@@ -3099,6 +3259,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_heal',
     name: 'Heal',
     level: 6,
     school: 'abjuration',
@@ -3115,6 +3276,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_healing_word',
     name: 'Healing Word',
     level: 1,
     school: 'abjuration',
@@ -3132,6 +3294,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_heat_metal',
     name: 'Heat Metal',
     level: 2,
     school: 'transmutation',
@@ -3153,6 +3316,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hellish_rebuke',
     name: 'Hellish Rebuke',
     level: 1,
     school: 'evocation',
@@ -3170,6 +3334,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_heroes’_feast',
     name: 'Heroes’ Feast',
     level: 6,
     school: 'conjuration',
@@ -3189,6 +3354,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_heroism',
     name: 'Heroism',
     level: 1,
     school: 'enchantment',
@@ -3205,6 +3371,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hex',
     name: 'Hex',
     level: 1,
     school: 'enchantment',
@@ -3226,6 +3393,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hideous_laughter',
     name: 'Hideous Laughter',
     level: 1,
     school: 'enchantment',
@@ -3247,6 +3415,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hold_monster',
     name: 'Hold Monster',
     level: 5,
     school: 'enchantment',
@@ -3268,6 +3437,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hold_person',
     name: 'Hold Person',
     level: 2,
     school: 'enchantment',
@@ -3289,6 +3459,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_holy_aura',
     name: 'Holy Aura',
     level: 8,
     school: 'abjuration',
@@ -3308,6 +3479,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hunter’s_mark',
     name: 'Hunter’s Mark',
     level: 1,
     school: 'divination',
@@ -3325,6 +3497,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_hypnotic_pattern',
     name: 'Hypnotic Pattern',
     level: 3,
     school: 'illusion',
@@ -3344,6 +3517,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_ice_knife',
     name: 'Ice Knife',
     level: 1,
     school: 'conjuration',
@@ -3367,6 +3541,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_ice_storm',
     name: 'Ice Storm',
     level: 4,
     school: 'evocation',
@@ -3391,6 +3566,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_identify',
     name: 'Identify',
     level: 1,
     school: 'divination',
@@ -3411,6 +3587,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_illusory_script',
     name: 'Illusory Script',
     level: 1,
     school: 'illusion',
@@ -3430,6 +3607,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_imprisonment',
     name: 'Imprisonment',
     level: 9,
     school: 'abjuration',
@@ -3449,6 +3627,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_incendiary_cloud',
     name: 'Incendiary Cloud',
     level: 8,
     school: 'conjuration',
@@ -3465,6 +3644,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_inflict_wounds',
     name: 'Inflict Wounds',
     level: 1,
     school: 'necromancy',
@@ -3482,6 +3662,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_insect_plague',
     name: 'Insect Plague',
     level: 5,
     school: 'conjuration',
@@ -3503,6 +3684,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_instant_summons',
     name: 'Instant Summons',
     level: 6,
     school: 'conjuration',
@@ -3523,6 +3705,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_irresistible_dance',
     name: 'Irresistible Dance',
     level: 6,
     school: 'enchantment',
@@ -3539,6 +3722,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_invisibility',
     name: 'Invisibility',
     level: 2,
     school: 'illusion',
@@ -3559,6 +3743,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_jump',
     name: 'Jump',
     level: 1,
     school: 'transmutation',
@@ -3579,6 +3764,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_knock',
     name: 'Knock',
     level: 2,
     school: 'transmutation',
@@ -3594,6 +3780,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_legend_lore',
     name: 'Legend Lore',
     level: 5,
     school: 'divination',
@@ -3613,6 +3800,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_lesser_restoration',
     name: 'Lesser Restoration',
     level: 2,
     school: 'abjuration',
@@ -3628,6 +3816,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_levitate',
     name: 'Levitate',
     level: 2,
     school: 'transmutation',
@@ -3647,6 +3836,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_light',
     name: 'Light',
     level: 0,
     school: 'evocation',
@@ -3665,6 +3855,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_lightning_bolt',
     name: 'Lightning Bolt',
     level: 3,
     school: 'evocation',
@@ -3686,6 +3877,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_locate_animals_or_plants',
     name: 'Locate Animals or Plants',
     level: 2,
     school: 'divination',
@@ -3706,6 +3898,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_locate_creature',
     name: 'Locate Creature',
     level: 4,
     school: 'divination',
@@ -3725,6 +3918,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_locate_object',
     name: 'Locate Object',
     level: 2,
     school: 'divination',
@@ -3744,6 +3938,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_longstrider',
     name: 'Longstrider',
     level: 1,
     school: 'transmutation',
@@ -3764,6 +3959,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mage_armor',
     name: 'Mage Armor',
     level: 1,
     school: 'abjuration',
@@ -3783,6 +3979,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mage_hand',
     name: 'Mage Hand',
     level: 0,
     school: 'conjuration',
@@ -3798,6 +3995,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_magic_circle',
     name: 'Magic Circle',
     level: 3,
     school: 'abjuration',
@@ -3818,6 +4016,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_magic_jar',
     name: 'Magic Jar',
     level: 6,
     school: 'necromancy',
@@ -3837,6 +4036,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_magic_missile',
     name: 'Magic Missile',
     level: 1,
     school: 'evocation',
@@ -3854,6 +4054,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_magic_mouth',
     name: 'Magic Mouth',
     level: 2,
     school: 'illusion',
@@ -3874,6 +4075,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_magic_weapon',
     name: 'Magic Weapon',
     level: 2,
     school: 'transmutation',
@@ -3890,6 +4092,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_magnificent_mansion',
     name: 'Magnificent Mansion',
     level: 7,
     school: 'conjuration',
@@ -3909,6 +4112,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_major_image',
     name: 'Major Image',
     level: 3,
     school: 'illusion',
@@ -3929,6 +4133,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mass_cure_wounds',
     name: 'Mass Cure Wounds',
     level: 5,
     school: 'abjuration',
@@ -3946,6 +4151,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mass_heal',
     name: 'Mass Heal',
     level: 9,
     school: 'abjuration',
@@ -3961,6 +4167,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mass_healing_word',
     name: 'Mass Healing Word',
     level: 3,
     school: 'abjuration',
@@ -3978,6 +4185,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mass_suggestion',
     name: 'Mass Suggestion',
     level: 6,
     school: 'enchantment',
@@ -3995,6 +4203,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_maze',
     name: 'Maze',
     level: 8,
     school: 'conjuration',
@@ -4010,6 +4219,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_meld_into_stone',
     name: 'Meld into Stone',
     level: 3,
     school: 'transmutation',
@@ -4026,6 +4236,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mending',
     name: 'Mending',
     level: 0,
     school: 'transmutation',
@@ -4045,6 +4256,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_message',
     name: 'Message',
     level: 0,
     school: 'transmutation',
@@ -4060,6 +4272,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_meteor_swarm',
     name: 'Meteor Swarm',
     level: 9,
     school: 'evocation',
@@ -4079,6 +4292,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mind_blank',
     name: 'Mind Blank',
     level: 8,
     school: 'abjuration',
@@ -4094,6 +4308,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mind_spike',
     name: 'Mind Spike',
     level: 2,
     school: 'divination',
@@ -4111,6 +4326,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_minor_illusion',
     name: 'Minor Illusion',
     level: 0,
     school: 'illusion',
@@ -4129,6 +4345,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mirage_arcane',
     name: 'Mirage Arcane',
     level: 7,
     school: 'illusion',
@@ -4144,6 +4361,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mirror_image',
     name: 'Mirror Image',
     level: 2,
     school: 'illusion',
@@ -4159,6 +4377,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_mislead',
     name: 'Mislead',
     level: 5,
     school: 'illusion',
@@ -4174,6 +4393,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_misty_step',
     name: 'Misty Step',
     level: 2,
     school: 'conjuration',
@@ -4189,6 +4409,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_modify_memory',
     name: 'Modify Memory',
     level: 5,
     school: 'enchantment',
@@ -4206,6 +4427,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_moonbeam',
     name: 'Moonbeam',
     level: 2,
     school: 'evocation',
@@ -4227,6 +4449,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_move_earth',
     name: 'Move Earth',
     level: 6,
     school: 'transmutation',
@@ -4246,6 +4469,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_nondetection',
     name: 'Nondetection',
     level: 3,
     school: 'abjuration',
@@ -4265,6 +4489,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_passwall',
     name: 'Passwall',
     level: 5,
     school: 'transmutation',
@@ -4284,6 +4509,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_pass_without_trace',
     name: 'Pass without Trace',
     level: 2,
     school: 'abjuration',
@@ -4303,6 +4529,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_phantasmal_force',
     name: 'Phantasmal Force',
     level: 2,
     school: 'illusion',
@@ -4323,6 +4550,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_phantasmal_killer',
     name: 'Phantasmal Killer',
     level: 4,
     school: 'illusion',
@@ -4340,6 +4568,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_phantom_steed',
     name: 'Phantom Steed',
     level: 3,
     school: 'illusion',
@@ -4357,6 +4586,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_planar_ally',
     name: 'Planar Ally',
     level: 6,
     school: 'conjuration',
@@ -4372,6 +4602,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_planar_binding',
     name: 'Planar Binding',
     level: 5,
     school: 'abjuration',
@@ -4393,6 +4624,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_plane_shift',
     name: 'Plane Shift',
     level: 7,
     school: 'conjuration',
@@ -4412,6 +4644,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_plant_growth',
     name: 'Plant Growth',
     level: 3,
     school: 'transmutation',
@@ -4427,6 +4660,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_poison_spray',
     name: 'Poison Spray',
     level: 0,
     school: 'necromancy',
@@ -4448,6 +4682,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_polymorph',
     name: 'Polymorph',
     level: 4,
     school: 'transmutation',
@@ -4467,6 +4702,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_power_word_heal',
     name: 'Power Word Heal',
     level: 9,
     school: 'enchantment',
@@ -4482,6 +4718,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_power_word_kill',
     name: 'Power Word Kill',
     level: 9,
     school: 'enchantment',
@@ -4498,6 +4735,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_power_word_stun',
     name: 'Power Word Stun',
     level: 8,
     school: 'enchantment',
@@ -4514,6 +4752,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_prayer_of_healing',
     name: 'Prayer of Healing',
     level: 2,
     school: 'abjuration',
@@ -4531,6 +4770,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_prestidigitation',
     name: 'Prestidigitation',
     level: 0,
     school: 'transmutation',
@@ -4546,6 +4786,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_prismatic_spray',
     name: 'Prismatic Spray',
     level: 7,
     school: 'evocation',
@@ -4569,6 +4810,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_prismatic_wall',
     name: 'Prismatic Wall',
     level: 9,
     school: 'abjuration',
@@ -4592,6 +4834,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_private_sanctum',
     name: 'Private Sanctum',
     level: 4,
     school: 'abjuration',
@@ -4612,6 +4855,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_produce_flame',
     name: 'Produce Flame',
     level: 0,
     school: 'conjuration',
@@ -4633,6 +4877,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_programmed_illusion',
     name: 'Programmed Illusion',
     level: 6,
     school: 'illusion',
@@ -4652,6 +4897,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_project_image',
     name: 'Project Image',
     level: 7,
     school: 'illusion',
@@ -4671,6 +4917,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_protection_from_energy',
     name: 'Protection from Energy',
     level: 3,
     school: 'abjuration',
@@ -4686,6 +4933,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_protection_from_evil_and_good',
     name: 'Protection from Evil and Good',
     level: 1,
     school: 'abjuration',
@@ -4705,6 +4953,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_protection_from_poison',
     name: 'Protection from Poison',
     level: 2,
     school: 'abjuration',
@@ -4720,6 +4969,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_purify_food_and_drink',
     name: 'Purify Food and Drink',
     level: 1,
     school: 'transmutation',
@@ -4736,6 +4986,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_raise_dead',
     name: 'Raise Dead',
     level: 5,
     school: 'necromancy',
@@ -4755,6 +5006,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_ray_of_enfeeblement',
     name: 'Ray of Enfeeblement',
     level: 2,
     school: 'necromancy',
@@ -4770,6 +5022,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_ray_of_frost',
     name: 'Ray of Frost',
     level: 0,
     school: 'evocation',
@@ -4791,6 +5044,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_regenerate',
     name: 'Regenerate',
     level: 7,
     school: 'transmutation',
@@ -4811,6 +5065,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_ray_of_sickness',
     name: 'Ray of Sickness',
     level: 1,
     school: 'necromancy',
@@ -4829,6 +5084,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_reincarnate',
     name: 'Reincarnate',
     level: 5,
     school: 'necromancy',
@@ -4848,6 +5104,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_remove_curse',
     name: 'Remove Curse',
     level: 3,
     school: 'abjuration',
@@ -4863,6 +5120,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_resilient_sphere',
     name: 'Resilient Sphere',
     level: 4,
     school: 'abjuration',
@@ -4882,6 +5140,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_resistance',
     name: 'Resistance',
     level: 0,
     school: 'abjuration',
@@ -4897,6 +5156,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_resurrection',
     name: 'Resurrection',
     level: 7,
     school: 'necromancy',
@@ -4916,6 +5176,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_reverse_gravity',
     name: 'Reverse Gravity',
     level: 7,
     school: 'transmutation',
@@ -4935,6 +5196,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_revivify',
     name: 'Revivify',
     level: 3,
     school: 'necromancy',
@@ -4954,6 +5216,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_rope_trick',
     name: 'Rope Trick',
     level: 2,
     school: 'transmutation',
@@ -4973,6 +5236,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sacred_flame',
     name: 'Sacred Flame',
     level: 0,
     school: 'evocation',
@@ -4994,6 +5258,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sanctuary',
     name: 'Sanctuary',
     level: 1,
     school: 'abjuration',
@@ -5012,8 +5277,8 @@ export const spells: Spell[] = [
     resolution: { kind: 'none' },
     source: 'SRD',
   },
-
   {
+    id: 'srd_scorching_ray',
     name: 'Scorching Ray',
     level: 2,
     school: 'evocation',
@@ -5031,6 +5296,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_scrying',
     name: 'Scrying',
     level: 5,
     school: 'divination',
@@ -5050,6 +5316,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_searing_smite',
     name: 'Searing Smite',
     level: 1,
     school: 'evocation',
@@ -5070,6 +5337,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_secret_chest',
     name: 'Secret Chest',
     level: 4,
     school: 'conjuration',
@@ -5089,6 +5357,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_see_invisibility',
     name: 'See Invisibility',
     level: 2,
     school: 'divination',
@@ -5108,6 +5377,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_seeming',
     name: 'Seeming',
     level: 5,
     school: 'illusion',
@@ -5123,6 +5393,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sending',
     name: 'Sending',
     level: 3,
     school: 'divination',
@@ -5142,6 +5413,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sequester',
     name: 'Sequester',
     level: 7,
     school: 'transmutation',
@@ -5162,6 +5434,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_shapechange',
     name: 'Shapechange',
     level: 9,
     school: 'transmutation',
@@ -5181,6 +5454,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_shatter',
     name: 'Shatter',
     level: 2,
     school: 'evocation',
@@ -5202,6 +5476,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_shield',
     name: 'Shield',
     level: 1,
     school: 'abjuration',
@@ -5217,6 +5492,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_shield_of_faith',
     name: 'Shield of Faith',
     level: 1,
     school: 'abjuration',
@@ -5236,6 +5512,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_shillelagh',
     name: 'Shillelagh',
     level: 0,
     school: 'transmutation',
@@ -5256,6 +5533,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_shining_smite',
     name: 'Shining Smite',
     level: 2,
     school: 'transmutation',
@@ -5273,6 +5551,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_shocking_grasp',
     name: 'Shocking Grasp',
     level: 0,
     school: 'evocation',
@@ -5294,6 +5573,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_silence',
     name: 'Silence',
     level: 2,
     school: 'illusion',
@@ -5311,6 +5591,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_silent_image',
     name: 'Silent Image',
     level: 1,
     school: 'illusion',
@@ -5330,6 +5611,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_simulacrum',
     name: 'Simulacrum',
     level: 7,
     school: 'illusion',
@@ -5349,6 +5631,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sleep',
     name: 'Sleep',
     level: 1,
     school: 'enchantment',
@@ -5369,6 +5652,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sleet_storm',
     name: 'Sleet Storm',
     level: 3,
     school: 'conjuration',
@@ -5389,6 +5673,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_slow',
     name: 'Slow',
     level: 3,
     school: 'transmutation',
@@ -5408,6 +5693,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sorcerous_burst',
     name: 'Sorcerous Burst',
     level: 0,
     school: 'evocation',
@@ -5429,6 +5715,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_spare_the_dying',
     name: 'Spare the Dying',
     level: 0,
     school: 'necromancy',
@@ -5445,6 +5732,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_speak_with_animals',
     name: 'Speak with Animals',
     level: 1,
     school: 'divination',
@@ -5461,6 +5749,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_speak_with_dead',
     name: 'Speak with Dead',
     level: 3,
     school: 'necromancy',
@@ -5480,6 +5769,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_speak_with_plants',
     name: 'Speak with Plants',
     level: 3,
     school: 'transmutation',
@@ -5495,6 +5785,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_spider_climb',
     name: 'Spider Climb',
     level: 2,
     school: 'transmutation',
@@ -5515,6 +5806,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_spike_growth',
     name: 'Spike Growth',
     level: 2,
     school: 'transmutation',
@@ -5535,6 +5827,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_spirit_guardians',
     name: 'Spirit Guardians',
     level: 3,
     school: 'conjuration',
@@ -5556,6 +5849,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_spiritual_weapon',
     name: 'Spiritual Weapon',
     level: 2,
     school: 'evocation',
@@ -5573,6 +5867,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
     {
+    id: 'srd_starry_wisp',
     name: 'Starry Wisp',
     level: 0,
     school: 'evocation',
@@ -5594,6 +5889,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_stinking_cloud',
     name: 'Stinking Cloud',
     level: 3,
     school: 'conjuration',
@@ -5614,6 +5910,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_stone_shape',
     name: 'Stone Shape',
     level: 4,
     school: 'transmutation',
@@ -5633,6 +5930,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_stoneskin',
     name: 'Stoneskin',
     level: 4,
     school: 'transmutation',
@@ -5652,6 +5950,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_storm_of_vengeance',
     name: 'Storm of Vengeance',
     level: 9,
     school: 'conjuration',
@@ -5675,6 +5974,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_suggestion',
     name: 'Suggestion',
     level: 2,
     school: 'enchantment',
@@ -5695,6 +5995,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_summon_dragon',
     name: 'Summon Dragon',
     level: 5,
     school: 'conjuration',
@@ -5715,6 +6016,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sunbeam',
     name: 'Sunbeam',
     level: 6,
     school: 'evocation',
@@ -5736,6 +6038,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_sunburst',
     name: 'Sunburst',
     level: 8,
     school: 'evocation',
@@ -5757,6 +6060,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_symbol',
     name: 'Symbol',
     level: 7,
     school: 'abjuration',
@@ -5778,6 +6082,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_telekinesis',
     name: 'Telekinesis',
     level: 5,
     school: 'transmutation',
@@ -5794,6 +6099,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_telepathic_bond',
     name: 'Telepathic Bond',
     level: 5,
     school: 'divination',
@@ -5814,6 +6120,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_teleport',
     name: 'Teleport',
     level: 7,
     school: 'conjuration',
@@ -5829,6 +6136,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_teleportation_circle',
     name: 'Teleportation Circle',
     level: 5,
     school: 'conjuration',
@@ -5847,6 +6155,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_thaumaturgy',
     name: 'Thaumaturgy',
     level: 0,
     school: 'transmutation',
@@ -5862,6 +6171,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_thunderwave',
     name: 'Thunderwave',
     level: 1,
     school: 'evocation',
@@ -5879,6 +6189,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_time_stop',
     name: 'Time Stop',
     level: 9,
     school: 'transmutation',
@@ -5894,6 +6205,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_tiny_hut',
     name: 'Tiny Hut',
     level: 3,
     school: 'evocation',
@@ -5914,6 +6226,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_tongues',
     name: 'Tongues',
     level: 3,
     school: 'divination',
@@ -5932,6 +6245,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_transport_via_plants',
     name: 'Transport via Plants',
     level: 6,
     school: 'conjuration',
@@ -5947,6 +6261,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_tree_stride',
     name: 'Tree Stride',
     level: 5,
     school: 'conjuration',
@@ -5962,6 +6277,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_true_polymorph',
     name: 'True Polymorph',
     level: 9,
     school: 'transmutation',
@@ -5983,6 +6299,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_true_resurrection',
     name: 'True Resurrection',
     level: 9,
     school: 'necromancy',
@@ -6002,6 +6319,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_true_seeing',
     name: 'True Seeing',
     level: 6,
     school: 'divination',
@@ -6021,6 +6339,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_true_strike',
     name: 'True Strike',
     level: 0,
     school: 'divination',
@@ -6043,6 +6362,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_tsunami',
     name: 'Tsunami',
     level: 8,
     school: 'conjuration',
@@ -6059,6 +6379,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_unseen_servant',
     name: 'Unseen Servant',
     level: 1,
     school: 'conjuration',
@@ -6080,6 +6401,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_vampiric_touch',
     name: 'Vampiric Touch',
     level: 3,
     school: 'necromancy',
@@ -6097,6 +6419,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_vicious_mockery',
     name: 'Vicious Mockery',
     level: 0,
     school: 'enchantment',
@@ -6118,6 +6441,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_vitriolic_sphere',
     name: 'Vitriolic Sphere',
     level: 4,
     school: 'evocation',
@@ -6142,6 +6466,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wall_of_fire',
     name: 'Wall of Fire',
     level: 4,
     school: 'evocation',
@@ -6163,6 +6488,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wall_of_force',
     name: 'Wall of Force',
     level: 5,
     school: 'evocation',
@@ -6182,6 +6508,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wall_of_ice',
     name: 'Wall of Ice',
     level: 6,
     school: 'evocation',
@@ -6203,6 +6530,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wall_of_stone',
     name: 'Wall of Stone',
     level: 5,
     school: 'evocation',
@@ -6222,6 +6550,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wall_of_thorns',
     name: 'Wall of Thorns',
     level: 6,
     school: 'conjuration',
@@ -6246,6 +6575,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_warding_bond',
     name: 'Warding Bond',
     level: 2,
     school: 'abjuration',
@@ -6268,6 +6598,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_water_breathing',
     name: 'Water Breathing',
     level: 3,
     school: 'transmutation',
@@ -6288,6 +6619,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_water_walk',
     name: 'Water Walk',
     level: 3,
     school: 'transmutation',
@@ -6308,6 +6640,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_web',
     name: 'Web',
     level: 2,
     school: 'conjuration',
@@ -6328,6 +6661,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_weird',
     name: 'Weird',
     level: 9,
     school: 'illusion',
@@ -6348,6 +6682,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wind_walk',
     name: 'Wind Walk',
     level: 6,
     school: 'transmutation',
@@ -6367,6 +6702,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wind_wall',
     name: 'Wind Wall',
     level: 3,
     school: 'evocation',
@@ -6387,6 +6723,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_wish',
     name: 'Wish',
     level: 9,
     school: 'conjuration',
@@ -6402,6 +6739,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_word_of_recall',
     name: 'Word of Recall',
     level: 6,
     school: 'conjuration',
@@ -6417,6 +6755,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
+    id: 'srd_zone_of_truth',
     name: 'Zone of Truth',
     level: 2,
     school: 'enchantment',

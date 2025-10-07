@@ -17,6 +17,7 @@ spellsRoutes.get('/spells', async (c) => {
   const searchQuery = c.req.query('search');
   const sortBy = c.req.query('sortBy') || 'level';
   const sortOrder = c.req.query('sortOrder') || 'asc';
+  const openSpellId = c.req.query('openSpell');
 
   // Filter spells
   let filteredSpells = [...spells];
@@ -83,6 +84,9 @@ spellsRoutes.get('/spells', async (c) => {
     );
   }
 
+  // Find spell to open if openSpell param is present
+  const openSpell = openSpellId ? spells.find(s => s.id === openSpellId) : undefined;
+
   // Return full page for initial load
   return c.render(
     <Spells
@@ -93,18 +97,23 @@ spellsRoutes.get('/spells', async (c) => {
       searchQuery={searchQuery}
       sortBy={sortBy}
       sortOrder={sortOrder}
+      openSpell={openSpell}
     />,
     { title: 'Spells' }
   );
 });
 
-spellsRoutes.get('/spells/:name', async (c) => {
-  const spellName = decodeURIComponent(c.req.param('name'));
+spellsRoutes.get('/spells/:id', async (c) => {
+  const spellId = c.req.param('id');
+  const isHtmxRequest = c.req.header('HX-Request') === 'true';
 
-  // Find spell by name (case-insensitive)
-  const spell = spells.find(
-    s => s.name.toLowerCase() === spellName.toLowerCase()
-  );
+  // If not HTMX, redirect to /spells?openSpell=:id
+  if (!isHtmxRequest) {
+    return c.redirect(`/spells?openSpell=${spellId}`);
+  }
+
+  // Find spell by ID
+  const spell = spells.find(s => s.id === spellId);
 
   if (!spell) {
     return c.html(
@@ -115,7 +124,7 @@ spellsRoutes.get('/spells/:name', async (c) => {
         </div>
         <div class="modal-body">
           <div class="alert alert-danger">
-            The spell "{spellName}" could not be found.
+            The spell with ID "{spellId}" could not be found.
           </div>
         </div>
       </>

@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 
 import { Select } from '@src/components/ui/Select'
-import { BackgroundNames, Classes, ClassNames, RaceNames, Races, SubraceNames, type ClassNameType } from '@src/lib/dnd';
+import { BackgroundNames, Classes, ClassNames, RaceNames, Races, type ClassNameType } from '@src/lib/dnd';
 import { toTitleCase } from '@src/lib/strings';
 
 export interface CharacterNewProps {

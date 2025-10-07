@@ -1,4 +1,5 @@
 import { SpellsTable } from "@src/components/SpellsTable";
+import { SpellDetail } from "@src/components/SpellDetail";
 import { ClassNames } from "@src/lib/dnd";
 import { SpellSchools } from "@src/lib/dnd/spells";
 import type { Spell } from "@src/lib/dnd/spells";
@@ -11,9 +12,10 @@ export interface SpellsProps {
   searchQuery?: string;
   sortBy?: string;
   sortOrder?: string;
+  openSpell?: Spell;
 }
 
-export const Spells = ({ spells, selectedClass, selectedMaxLevel, selectedSchool, searchQuery, sortBy, sortOrder }: SpellsProps) => {
+export const Spells = ({ spells, selectedClass, selectedMaxLevel, selectedSchool, searchQuery, sortBy, sortOrder, openSpell }: SpellsProps) => {
   // Build query params for current filter state
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -133,10 +135,13 @@ export const Spells = ({ spells, selectedClass, selectedMaxLevel, selectedSchool
     <div class="modal fade" id="spellModal" tabindex={-1} aria-labelledby="spellModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-lg">
         <div class="modal-content" id="spellModalContent">
-          {/* Content loaded via htmx */}
+          {openSpell ? <SpellDetail spell={openSpell} /> : null}
         </div>
       </div>
     </div>
-    </>
+
+    {/* Character-specific scripts */}
+    <script src="/static/spells.js"></script>
+  </>
   );
 };

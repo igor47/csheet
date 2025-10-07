@@ -115,33 +115,46 @@ export const SpellsTable = ({
             </td>
           </tr>
         ) : (
-          spells.map(spell => (
-            <tr>
-              <td>
-                <button
-                  class="btn btn-link p-0 text-start"
-                  data-bs-toggle="modal"
-                  data-bs-target="#spellModal"
-                  hx-get={`/spells/${encodeURIComponent(spell.name)}`}
-                  hx-target="#spellModalContent"
-                  hx-swap="innerHTML"
-                >
-                  {spell.name}
-                </button>
-              </td>
-              <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
-              <td class="text-capitalize">{spell.school}</td>
-              <td>
-                {spell.classes.map((cls, idx) => (
-                  <>
-                    <span class="text-capitalize">{cls}</span>
-                    {idx < spell.classes.length - 1 ? ', ' : ''}
-                  </>
-                ))}
-              </td>
-              <td>{spell.briefDescription}</td>
-            </tr>
-          ))
+          spells.map(spell => {
+            // Build URL with openSpell param, preserving current filters
+            const params = new URLSearchParams();
+            if (selectedClass) params.set('class', selectedClass);
+            if (selectedMaxLevel) params.set('maxLevel', selectedMaxLevel);
+            if (selectedSchool) params.set('school', selectedSchool);
+            if (searchQuery) params.set('search', searchQuery);
+            params.set('sortBy', sortBy);
+            params.set('sortOrder', sortOrder);
+            params.set('openSpell', spell.id);
+
+            return (
+              <tr>
+                <td>
+                  <button
+                    class="btn btn-link p-0 text-start"
+                    data-bs-toggle="modal"
+                    data-bs-target="#spellModal"
+                    hx-get={`/spells/${spell.id}`}
+                    hx-target="#spellModalContent"
+                    hx-swap="innerHTML"
+                    hx-push-url={`/spells?${params.toString()}`}
+                  >
+                    {spell.name}
+                  </button>
+                </td>
+                <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
+                <td class="text-capitalize">{spell.school}</td>
+                <td>
+                  {spell.classes.map((cls, idx) => (
+                    <>
+                      <span class="text-capitalize">{cls}</span>
+                      {idx < spell.classes.length - 1 ? ', ' : ''}
+                    </>
+                  ))}
+                </td>
+                <td>{spell.briefDescription}</td>
+              </tr>
+            );
+          })
         )}
       </tbody>
     </table>

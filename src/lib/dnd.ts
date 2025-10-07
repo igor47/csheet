@@ -222,10 +222,15 @@ export const CasterKind = ["full", "half", "third", "pact"] as const;
 export const CasterKindSchema = z.enum(CasterKind);
 export type CasterKindType = z.infer<typeof CasterKindSchema>;
 
-export type SpellcastingInfo = { notes?: string} & ({ enabled: false } | {
+export const SpellcastingType = ["prepared", "known", "none"] as const;
+export const SpellcastingTypeSchema = z.enum(SpellcastingType);
+export type SpellcastingTypeType = z.infer<typeof SpellcastingTypeSchema>;
+
+export type SpellcastingInfo = { notes?: string} & ({ enabled: false; spellcastingType: "none" } | {
   enabled: true;
   kind: CasterKindType;
   ability: AbilityType;
+  spellcastingType: SpellcastingTypeType;
   subclasses?: string[]; // Subclasses that grant/modify spellcasting
 })
 
@@ -265,7 +270,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     },
     subclasses: ["path of the berserker", "path of the totem warrior"],
     subclassLevel: 3,
-    spellcasting: { enabled: false },
+    spellcasting: { enabled: false, spellcastingType: "none" },
   },
   bard: {
     name: "bard",
@@ -286,7 +291,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     },
     subclasses: ["college of lore", "college of valor"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "full", ability: "charisma" },
+    spellcasting: { enabled: true, kind: "full", ability: "charisma", spellcastingType: "known" },
   },
   cleric: {
     name: "cleric",
@@ -299,7 +304,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["history", "insight", "medicine", "persuasion", "religion"] },
     subclasses: ["knowledge", "life", "light", "nature", "tempest", "trickery", "war"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, kind: "full", ability: "wisdom" },
+    spellcasting: { enabled: true, kind: "full", ability: "wisdom", spellcastingType: "prepared" },
   },
   druid: {
     name: "druid",
@@ -312,7 +317,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","animal handling","insight","medicine","nature","perception","religion","survival"] },
     subclasses: ["circle of the land", "circle of the moon"],
     subclassLevel: 2,
-    spellcasting: { enabled: true, kind: "full", ability: "wisdom" },
+    spellcasting: { enabled: true, kind: "full", ability: "wisdom", spellcastingType: "prepared" },
   },
   fighter: {
     name: "fighter",
@@ -325,7 +330,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["acrobatics","animal handling","athletics","history","insight","intimidation","perception","survival"] },
     subclasses: ["champion", "battle master", "eldritch knight"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "third", subclasses: ["eldritch knight"], ability: "intelligence"},
+    spellcasting: { enabled: true, kind: "third", subclasses: ["eldritch knight"], ability: "intelligence", spellcastingType: "known"},
   },
   monk: {
     name: "monk",
@@ -334,11 +339,11 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     savingThrows: ["strength", "dexterity"],
     armorProficiencies: [],
     weaponProficiencies: ["simple", "shortsword"],
-    toolProficiencies: [{ choose: 1, from: ["artisan’s tools", "musical instrument"] }],
+    toolProficiencies: [{ choose: 1, from: ["artisan's tools", "musical instrument"] }],
     skillChoices: { choose: 2, from: ["acrobatics","athletics","history","insight","religion","stealth"] },
     subclasses: ["way of the open hand", "way of shadow", "way of the four elements"],
     subclassLevel: 3,
-    spellcasting: { enabled: false },
+    spellcasting: { enabled: false, spellcastingType: "none" },
   },
   paladin: {
     name: "paladin",
@@ -351,7 +356,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["athletics","insight","intimidation","medicine","persuasion","religion"] },
     subclasses: ["oath of devotion", "oath of the ancients", "oath of vengeance"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "half", ability: "charisma", notes: "half-caster progression" },
+    spellcasting: { enabled: true, kind: "half", ability: "charisma", spellcastingType: "prepared", notes: "half-caster progression" },
   },
   ranger: {
     name: "ranger",
@@ -364,7 +369,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 3, from: ["animal handling","athletics","insight","investigation","nature","perception","stealth","survival"] },
     subclasses: ["hunter", "beast master"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "half", ability: "wisdom", notes: "half-caster progression" },
+    spellcasting: { enabled: true, kind: "half", ability: "wisdom", spellcastingType: "known", notes: "half-caster progression" },
   },
   rogue: {
     name: "rogue",
@@ -373,11 +378,11 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     savingThrows: ["dexterity", "intelligence"],
     armorProficiencies: ["light"],
     weaponProficiencies: ["simple", "hand crossbow", "longsword", "rapier", "shortsword"],
-    toolProficiencies: ["thieves’ tools"],
+    toolProficiencies: ["thieves' tools"],
     skillChoices: { choose: 4, from: ["acrobatics","athletics","deception","insight","intimidation","investigation","perception","performance","persuasion","sleight of hand","stealth"] },
     subclasses: ["thief", "assassin", "arcane trickster"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "third", subclasses: ["arcane trickster"], ability: "intelligence"},
+    spellcasting: { enabled: true, kind: "third", subclasses: ["arcane trickster"], ability: "intelligence", spellcastingType: "known"},
   },
   sorcerer: {
     name: "sorcerer",
@@ -390,7 +395,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","deception","insight","intimidation","persuasion","religion"] },
     subclasses: ["draconic bloodline", "wild magic"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, kind: "full", ability: "charisma" },
+    spellcasting: { enabled: true, kind: "full", ability: "charisma", spellcastingType: "known" },
   },
   warlock: {
     name: "warlock",
@@ -403,7 +408,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","deception","history","intimidation","investigation","nature","religion"] },
     subclasses: ["the archfey", "the fiend", "the great old one"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, kind: "pact", ability: "charisma", notes: "pact magic progression" },
+    spellcasting: { enabled: true, kind: "pact", ability: "charisma", spellcastingType: "known", notes: "pact magic progression" },
   },
   wizard: {
     name: "wizard",
@@ -416,7 +421,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","history","insight","investigation","medicine","religion"] },
     subclasses: ["school of abjuration","school of conjuration","school of divination","school of enchantment","school of evocation","school of illusion","school of necromancy","school of transmutation"],
     subclassLevel: 2,
-    spellcasting: { enabled: true, kind: "full", ability: "intelligence" },
+    spellcasting: { enabled: true, kind: "full", ability: "intelligence", spellcastingType: "prepared" },
   }
 };
 
@@ -608,6 +613,144 @@ export const Backgrounds: Record<BackgroundNameType, Background> = {
     },
   },
 } as const;
+
+// =====================
+// Spells Known & Cantrips
+// =====================
+
+/** Number of cantrips known by class and level. Index 0 is unused. */
+export type CantripsKnownProgression = number[];
+
+/** Number of spells known by class and level for "spells known" casters. Index 0 is unused. */
+export type SpellsKnownProgression = number[];
+
+/** Bard cantrips known by level */
+export const BARD_CANTRIPS_KNOWN: CantripsKnownProgression = [
+  0, // 0 (unused)
+  2, 2, 2, 3, 3, 3, 3, 3, 3, 4, // 1-10
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 11-20
+];
+
+/** Bard spells known by level */
+export const BARD_SPELLS_KNOWN: SpellsKnownProgression = [
+  0, // 0 (unused)
+  4, 5, 6, 7, 8, 9, 10, 11, 12, 14, // 1-10
+  15, 15, 16, 18, 19, 19, 20, 22, 22, 22, // 11-20
+];
+
+/** Sorcerer cantrips known by level */
+export const SORCERER_CANTRIPS_KNOWN: CantripsKnownProgression = [
+  0, // 0 (unused)
+  4, 4, 4, 5, 5, 5, 5, 5, 5, 6, // 1-10
+  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, // 11-20
+];
+
+/** Sorcerer spells known by level */
+export const SORCERER_SPELLS_KNOWN: SpellsKnownProgression = [
+  0, // 0 (unused)
+  2, 3, 4, 5, 6, 7, 8, 9, 10, 11, // 1-10
+  12, 12, 13, 13, 14, 14, 15, 15, 15, 15, // 11-20
+];
+
+/** Warlock cantrips known by level */
+export const WARLOCK_CANTRIPS_KNOWN: CantripsKnownProgression = [
+  0, // 0 (unused)
+  2, 2, 2, 3, 3, 3, 3, 3, 3, 4, // 1-10
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 11-20
+];
+
+/** Warlock spells known by level */
+export const WARLOCK_SPELLS_KNOWN: SpellsKnownProgression = [
+  0, // 0 (unused)
+  2, 3, 4, 5, 6, 7, 8, 9, 10, 10, // 1-10
+  11, 11, 12, 12, 13, 13, 14, 14, 15, 15, // 11-20
+];
+
+/** Ranger spells known by level (half-caster, starts at level 2) */
+export const RANGER_SPELLS_KNOWN: SpellsKnownProgression = [
+  0, // 0 (unused)
+  0, 2, 3, 3, 4, 4, 5, 5, 6, 6, // 1-10
+  7, 7, 8, 8, 9, 9, 10, 10, 11, 11, // 11-20
+];
+
+/** Eldritch Knight / Arcane Trickster cantrips known by level (third-caster, starts at level 3) */
+export const THIRD_CASTER_CANTRIPS_KNOWN: CantripsKnownProgression = [
+  0, 0, 0, // 0-2 (unused / not yet a caster)
+  2, 2, 2, 2, 2, 2, 2, 3, // 3-10
+  3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // 11-20
+];
+
+/** Eldritch Knight / Arcane Trickster spells known by level (third-caster, starts at level 3) */
+export const THIRD_CASTER_SPELLS_KNOWN: SpellsKnownProgression = [
+  0, 0, 0, // 0-2 (unused / not yet a caster)
+  3, 4, 4, 5, 6, 6, 7, 8, // 3-10
+  8, 9, 10, 10, 11, 11, 12, 13, 13, 13, // 11-20
+];
+
+/** Cleric cantrips known by level */
+export const CLERIC_CANTRIPS_KNOWN: CantripsKnownProgression = [
+  0, // 0 (unused)
+  3, 3, 3, 4, 4, 4, 4, 4, 4, 5, // 1-10
+  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 11-20
+];
+
+/** Druid cantrips known by level */
+export const DRUID_CANTRIPS_KNOWN: CantripsKnownProgression = [
+  0, // 0 (unused)
+  2, 2, 2, 3, 3, 3, 3, 3, 3, 4, // 1-10
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 11-20
+];
+
+/** Wizard cantrips known by level */
+export const WIZARD_CANTRIPS_KNOWN: CantripsKnownProgression = [
+  0, // 0 (unused)
+  3, 3, 3, 4, 4, 4, 4, 4, 4, 5, // 1-10
+  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 11-20
+];
+
+/** Paladin doesn't get cantrips, but does get spells prepared (half-caster) */
+
+/** Helper function to get cantrips known for a class at a given level */
+export function maxCantripsKnown(className: ClassNameType, level: number): number {
+  const classDef = Classes[className];
+  if (!classDef.spellcasting.enabled) return 0;
+
+  switch (className) {
+    case "bard": return BARD_CANTRIPS_KNOWN[level] || 0;
+    case "sorcerer": return SORCERER_CANTRIPS_KNOWN[level] || 0;
+    case "warlock": return WARLOCK_CANTRIPS_KNOWN[level] || 0;
+    case "cleric": return CLERIC_CANTRIPS_KNOWN[level] || 0;
+    case "druid": return DRUID_CANTRIPS_KNOWN[level] || 0;
+    case "wizard": return WIZARD_CANTRIPS_KNOWN[level] || 0;
+    case "fighter": // Eldritch Knight
+    case "rogue":   // Arcane Trickster
+      return THIRD_CASTER_CANTRIPS_KNOWN[level] || 0;
+    default: return 0;
+  }
+}
+
+/** Helper function to get spells known for "known caster" classes at a given level */
+export function maxSpellsKnown(className: ClassNameType, level: number): number | null {
+  const classDef = Classes[className];
+  if (!classDef.spellcasting.enabled || classDef.spellcasting.spellcastingType !== "known") {
+    return null; // Not a "known" caster
+  }
+
+  switch (className) {
+    case "bard": return BARD_SPELLS_KNOWN[level] || 0;
+    case "sorcerer": return SORCERER_SPELLS_KNOWN[level] || 0;
+    case "warlock": return WARLOCK_SPELLS_KNOWN[level] || 0;
+    case "ranger": return RANGER_SPELLS_KNOWN[level] || 0;
+    case "fighter": // Eldritch Knight
+    case "rogue":   // Arcane Trickster
+      return THIRD_CASTER_SPELLS_KNOWN[level] || 0;
+    default: return null;
+  }
+}
+
+// =====================
+// Spell Slots
+// =====================
 
 /** Spell slot counts per spell level. Keys are 1..9 (no cantrips here). */
 export type SlotsBySpellLevel = Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;

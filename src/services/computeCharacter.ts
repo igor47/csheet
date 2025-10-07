@@ -7,6 +7,7 @@ import { getHpDelta } from "@src/db/char_hp";
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice";
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots";
 import { Races, Classes, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities, type SlotsBySpellLevel, type PactMagicRow, getSlotsFor, getWarlockPactAt, type ClassNameType } from "@src/lib/dnd";
+import { computeSpells, type SpellInfoForClass } from "@src/services/computeSpells";
 
 export interface CharacterClass {
   class: ClassNameType;
@@ -27,13 +28,6 @@ export interface SkillScore {
   ability: AbilityType;
 }
 
-export interface SpellcastingStats {
-  class: ClassNameType;
-  ability: AbilityType;
-  spellAttackBonus: number;
-  spellSaveDC: number;
-}
-
 export interface ComputedCharacter extends Character {
   classes: CharacterClass[];
   totalLevel: number;
@@ -52,7 +46,7 @@ export interface ComputedCharacter extends Character {
   spellSlots: SlotsBySpellLevel | null;
   availableSpellSlots: SlotsBySpellLevel | null;
   pactMagic: PactMagicRow | null;
-  spellcasting: SpellcastingStats[];
+  spells: SpellInfoForClass[];
 }
 
 export async function computeCharacter(db: SQL, characterId: string): Promise<ComputedCharacter | null> {
@@ -165,10 +159,9 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   // Passive Perception is 10 + Perception skill modifier
   const passivePerception = 10 + skills.perception.modifier;
 
-  // Compute spell slots and spellcasting stats
+  // Compute spell slots
   let spellSlots: SlotsBySpellLevel | null = null;
   let pactMagic: PactMagicRow | null = null;
-  const spellcastingStats: SpellcastingStats[] = [];
 
   // Calculate caster levels for multiclassing
   let fullCasterLevel = 0;
@@ -180,7 +173,6 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     if (!classDef.spellcasting.enabled) continue;
 
     const spellcasting = classDef.spellcasting;
-    console.dir(spellcasting);
 
     // Check if spellcasting is subclass-specific
     if (spellcasting.subclasses && spellcasting.subclasses.length > 0) {
@@ -189,15 +181,6 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
         continue;
       }
     }
-
-    // Calculate spellcasting stats for this class
-    const abilityModifier = abilityScores[spellcasting.ability].modifier;
-    spellcastingStats.push({
-      class: charClass.class,
-      ability: spellcasting.ability,
-      spellAttackBonus: proficiencyBonus + abilityModifier,
-      spellSaveDC: 8 + proficiencyBonus + abilityModifier,
-    });
 
     // Add to appropriate caster level
     if (spellcasting.kind === 'pact') {
@@ -265,6 +248,9 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
 
   }
 
+  // Compute spell information (includes spellcasting stats per class)
+  const spells = await computeSpells(db, characterId, classes, abilityScores, proficiencyBonus);
+
   const char =  {
     ...character,
     classes,
@@ -284,7 +270,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     spellSlots,
     availableSpellSlots,
     pactMagic,
-    spellcasting: spellcastingStats,
+    spells,
   };
 
   console.dir(char);

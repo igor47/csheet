@@ -1,5 +1,3 @@
-import clsx from 'clsx';
-
 import { Select } from '@src/components/ui/Select';
 import { spells, type Spell } from '@src/lib/dnd/spells';
 import { type ClassNameType } from '@src/lib/dnd';
@@ -26,28 +24,39 @@ function LearnSpellFormBody({ character, values={}, errors={}, }: LearnSpellForm
     values.class = spellInfos[0]!.class;
   }
 
+  // Initialize spell_type if not set
+  if (!values.spell_type) {
+    values.spell_type = 'spell';
+  }
+
   const selectedClassName = values.class as ClassNameType;
   const selectedSI = spellInfos.find(si => si.class === selectedClassName)!;
+  const isCantrip = values.spell_type === 'cantrip';
+  const allowHighLevel = values.allowHighLevel === 'true';
 
   // Show evict spell dropdown if at max spells
+  const currentList = isCantrip ? selectedSI.cantrips : selectedSI.knownSpells;
+  const maxSpells = isCantrip ? selectedSI.maxCantrips : selectedSI.maxSpellsKnown;
   const isAtMaxSpells = (
-    selectedSI.spellcastingType === 'known' && selectedSI.knownSpells.length >= selectedSI.maxSpellsKnown
+    selectedSI.spellcastingType === 'known' && currentList.length >= maxSpells
   );
   const showEvictDropdown = isAtMaxSpells;
-  const knownSpells = selectedSI.knownSpells.map(
+  const knownSpells = currentList.map(
     id => spells.find(s => s.id === id)
   ).filter(Boolean) as Spell[];
   const evictSpellOptions = knownSpells.map(s => ({
     value: s.id,
-    label: `${s.name} (Level ${s.level})`,
+    label: `${s.name} (Level ${s.level === 0 ? 'Cantrip' : s.level})`,
   }));
 
   // figure out which spells are available to learn
+  const maxSpellLevel = allowHighLevel ? 9 : selectedSI.maxSpellLevel;
   const classLevelSpells = spells.filter(
-    s => s.classes.includes(selectedClassName) && s.level <= selectedSI.maxSpellLevel
+    s => s.classes.includes(selectedClassName)
+      && (isCantrip ? s.level === 0 : s.level > 0 && s.level <= maxSpellLevel)
   );
   const availableSpells = classLevelSpells.filter(
-    s => !selectedSI.knownSpells.includes(s.id)
+    s => !currentList.includes(s.id)
   ).sort((a, b) => {
     if (a.level !== b.level) return a.level - b.level;
     return a.name.localeCompare(b.name);
@@ -63,7 +72,8 @@ function LearnSpellFormBody({ character, values={}, errors={}, }: LearnSpellForm
     <div class="modal-body">
       <form
         id="learn-spell-form"
-        hx-post={`/characters/${character.id}/learn-spell/check`}
+        hx-post={`/characters/${character.id}/learn-spell`}
+        hx-vals='{"is_check": "true"}'
         hx-trigger="change delay:300ms"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
@@ -91,23 +101,111 @@ function LearnSpellFormBody({ character, values={}, errors={}, }: LearnSpellForm
           </>)}
         </div>
 
-        {/* Evict Spell (if at max) */}
-        {showEvictDropdown && (
-          <div class="mb-3">
-            <label for="forget_spell_id" class="form-label">Spell to Forget</label>
-            <Select
-              name="forget_spell_id"
-              id="forget_spell_id"
-              options={evictSpellOptions}
-              placeholder="Select a spell to forget"
-              required
-              error={errors?.forget_spell_id}
-              value={values.forget_spell_id}
-            />
-            <small class="form-text text-muted">
-              You are at maximum spells known. Select a spell to forget in order to learn a new one.
-            </small>
+        {/* Spell Type Selection */}
+        <div class="mb-3">
+          <div class="btn-group" role="group" aria-label="Spell Type">
+            <input
+              type="radio"
+              class="btn-check"
+              name="spell_type"
+              id="spell_type_cantrip"
+              value="cantrip"
+              checked={values.spell_type === 'cantrip'} />
+            <label class="btn btn-outline-primary" for="spell_type_cantrip">Cantrips</label>
+
+            <input
+              type="radio"
+              class="btn-check"
+              name="spell_type"
+              id="spell_type_spell"
+              value="spell"
+              checked={values.spell_type === 'spell'} />
+            <label class="btn btn-outline-primary" for="spell_type_spell">Spells</label>
           </div>
+        </div>
+
+        {/* Allow High-Level Spells */}
+        <div class="mb-3">
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              name="allowHighLevel"
+              id="allowHighLevel"
+              value="true"
+              checked={values.allowHighLevel === 'true'}
+            />
+            <label class="form-check-label" for="allowHighLevel">
+              Show spells above my maximum spell level
+            </label>
+          </div>
+          {errors?.allowHighLevel && <div class="invalid-feedback d-block">{errors.allowHighLevel}</div>}
+        </div>
+
+        {/* Options when at max spells */}
+        {showEvictDropdown && (
+        <>
+        <div class="alert alert-info">
+          You are at maximum {isCantrip ? 'cantrips' : 'spells'} known ({currentList.length}/{maxSpells}).
+          You can either forget a spell to learn a new one, or allow learning extra spells.
+        </div>
+
+        <div class="mb-3">
+          <label for="forget_spell_id" class="form-label">Spell to Forget (Optional)</label>
+          <Select
+            name="forget_spell_id"
+            id="forget_spell_id"
+            options={evictSpellOptions}
+            placeholder="Select a spell to forget"
+            error={errors?.forget_spell_id}
+            value={values.forget_spell_id}
+          />
+        </div>
+
+        {values.forget_spell_id && (
+        <>
+        <div class="alert alert-info">
+          A {selectedClassName} can replace one {isCantrip ? 'cantrip' : 'spell'} only while leveling up.
+          Confirm that you are able to replace this {isCantrip ? 'cantrip' : 'spell'}.
+        </div>
+
+        <div class="mb-3">
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              name="allowForgetting"
+              id="allowForgetting"
+              value="true"
+              checked={values.allowForgetting === 'true'}
+            />
+            <label class="form-check-label" for="allowForgetting">
+              Allow forgetting this spell
+            </label>
+          </div>
+          {errors?.allowForgetting && <div class="invalid-feedback d-block">{errors.allowForgetting}</div>}
+        </div>
+        </>
+        )}
+
+        <div class="mb-3">
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              name="allowExtraSpells"
+              id="allowExtraSpells"
+              value="true"
+              checked={values.allowExtraSpells === 'true'}
+              disabled={!!values.forget_spell_id}
+            />
+            <label class="form-check-label" for="allowExtraSpells">
+              Allow learning extra {isCantrip ? 'cantrips' : 'spells'} (bypass maximum)
+            </label>
+          </div>
+          {errors?.allowExtraSpells && <div class="invalid-feedback d-block">{errors.allowExtraSpells}</div>}
+        </div>
+        </>
         )}
 
         {/* Spell Selection */}
@@ -189,6 +287,7 @@ function LearnSpellFormBody({ character, values={}, errors={}, }: LearnSpellForm
             type="submit"
             class="btn btn-primary"
             hx-post={`/characters/${character.id}/learn-spell`}
+            hx-vals='{}'
             hx-target="#editModalContent"
             hx-swap="innerHTML"
             disabled={!selectedSpell}

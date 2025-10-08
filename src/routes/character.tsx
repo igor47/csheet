@@ -967,23 +967,6 @@ characterRoutes.get('/characters/:id/learn-spell', async (c) => {
   />);
 })
 
-characterRoutes.post('/characters/:id/learn-spell/check', async (c) => {
-  const characterId = c.req.param('id') as string;
-  const body = await c.req.parseBody() as Record<string, string>;
-
-  const char = await computeCharacter(db, characterId);
-  if (!char) {
-    await setFlashMsg(c, 'Character not found', 'error');
-    c.header('HX-Redirect', `/characters`);
-    return c.body(null, 204);
-  }
-
-  return c.html(<LearnSpellForm
-    character={char}
-    values={body}
-  />);
-})
-
 characterRoutes.post('/characters/:id/learn-spell', async (c) => {
   const characterId = c.req.param('id') as string;
   const body = await c.req.parseBody() as Record<string, string>;
@@ -995,47 +978,13 @@ characterRoutes.post('/characters/:id/learn-spell', async (c) => {
     return c.body(null, 204);
   }
 
-  const spellcastingClasses = char.spells;
+  const result = await learnSpell(db, char, body);
 
-  // Validate form data with Zod
-  const result = LearnSpellApiSchema.safeParse({
-    character_id: characterId,
-    spell_id: body.spell_id,
-    forget_spell_id: body.forget_spell_id || undefined,
-    note: body.note || null,
-  });
-
-  if (!result.success) {
-    const errors = zodToFormErrors(result.error);
+  if (!result.complete) {
     return c.html(<LearnSpellForm
-      characterId={characterId}
-      spellcastingClasses={spellcastingClasses}
-      values={body}
-      errors={errors}
-    />);
-  }
-
-  // Get selected class info
-  const selectedClass = body.class as ClassNameType;
-  const classInfo = spellcastingClasses.find(sc => sc.class === selectedClass);
-  if (!classInfo) {
-    return c.html(<LearnSpellForm
-      characterId={characterId}
-      spellcastingClasses={spellcastingClasses}
-      values={body}
-      errors={{ class: 'Invalid class' }}
-    />);
-  }
-
-  try {
-    await learnSpell(db, result.data, selectedClass, classInfo.level);
-  } catch (error) {
-    console.error("learning spell", error);
-    await setFlashMsg(c, error instanceof Error ? error.message : 'Failed to learn spell', 'error');
-    return c.html(<LearnSpellForm
-      characterId={characterId}
-      spellcastingClasses={spellcastingClasses}
-      values={body}
+      character={char}
+      values={result.values}
+      errors={result.errors}
     />);
   }
 

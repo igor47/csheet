@@ -88,6 +88,9 @@ export async function learnSpell(
       } else if (spell.level > si.maxSpellLevel && !values.allowHighLevel) {
         errors.spell_id = `${spell.name} is level ${spell.level}, higher than character max ${si.maxSpellLevel}`
 
+      } else if (values.allowHighLevel && spell.level <= si.maxSpellLevel) {
+        errors.allowHighLevel = `You don't need to allow high-level spells - ${spell.name} is within your maximum spell level`
+
       } else {
         const currentList = spell.level === 0 ? si.cantrips : si.knownSpells
         const maxSpells = spell.level === 0 ? si.maxCantrips : si.maxSpellsKnown
@@ -109,6 +112,14 @@ export async function learnSpell(
           }
         } else if (values.forget_spell_id) {
           errors.forget_spell_id = `You don't need to forget any spells to learn a new one`
+        } else {
+          // Not maxed out, check for unnecessary guardrails
+          if (values.allowExtraSpells) {
+            errors.allowExtraSpells = `You don't need to allow extra spells - you have room for more`
+          }
+          if (values.allowForgetting) {
+            errors.allowForgetting = `You don't need to allow forgetting - you're not replacing any spells`
+          }
         }
       }
     }

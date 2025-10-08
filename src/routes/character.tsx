@@ -15,6 +15,7 @@ import { AbilityEditForm } from '@src/components/AbilityEditForm'
 import { AbilityHistory } from '@src/components/AbilityHistory'
 import { SkillEditForm } from '@src/components/SkillEditForm'
 import { SkillHistory } from '@src/components/SkillHistory'
+import { LearnSpellForm } from '@src/components/LearnSpellForm'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
 import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
@@ -22,6 +23,7 @@ import { findByCharacterId as findHitDiceChanges } from '@src/db/char_hit_dice'
 import { findByCharacterId as findSpellSlotChanges } from '@src/db/char_spell_slots'
 import { findByCharacterId as findAbilityChanges } from '@src/db/char_abilities'
 import { findByCharacterId as findSkillChanges } from '@src/db/char_skills'
+import { getCurrentLearnedSpells } from '@src/db/char_spells_learned'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { computeCharacter } from '@src/services/computeCharacter'
 import { addLevel, AddLevelApiSchema, prepareAddLevelForm, validateAddLevel } from '@src/services/addLevel'
@@ -31,7 +33,10 @@ import { updateSpellSlots, UpdateSpellSlotsApiSchema, prepareUpdateSpellSlotsFor
 import { updateAbility, UpdateAbilityApiSchema, prepareUpdateAbilityForm, validateUpdateAbility } from '@src/services/updateAbility'
 import { updateSkill, UpdateSkillApiSchema, prepareUpdateSkillForm, validateUpdateSkill } from '@src/services/updateSkill'
 import { longRest, LongRestApiSchema } from '@src/services/longRest'
-import { Abilities, Skills, SkillAbilities, type AbilityType, type SkillType } from '@src/lib/dnd'
+import { learnSpell, LearnSpellApiSchema } from '@src/services/learnSpell'
+import { getMaxSpellLevel } from '@src/services/computeSpells'
+import { Abilities, Skills, SkillAbilities, type AbilityType, type SkillType, Classes, type ClassNameType } from '@src/lib/dnd'
+import { spells } from '@src/lib/dnd/spells'
 import { setFlashMsg } from '@src/middleware/flash'
 import { zodToFormErrors } from '@src/lib/formErrors'
 import { db } from '@src/db'
@@ -943,5 +948,177 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
     <div class="modal-body">
       Coming soon
     </div>
+  </>)
+})
+
+// Learn spell routes
+characterRoutes.get('/characters/:id/learn-spell', async (c) => {
+  const characterId = c.req.param('id') as string;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  return c.html(<LearnSpellForm
+    character={char}
+  />);
+})
+
+characterRoutes.post('/characters/:id/learn-spell/check', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  const spellcastingClasses = char.spells;
+  const errors: Record<string, string> = {};
+
+  // Get selected class
+  const selectedClass = body.class as ClassNameType | undefined;
+
+  // Validate class selection
+  if (!selectedClass) {
+    return c.html(<LearnSpellForm
+      characterId={characterId}
+      spellcastingClasses={spellcastingClasses}
+      values={body}
+      errors={{ class: 'Please select a class' }}
+    />);
+  }
+
+  const classInfo = spellcastingClasses.find(sc => sc.class === selectedClass);
+  if (!classInfo) {
+    return c.html(<LearnSpellForm
+      characterId={characterId}
+      spellcastingClasses={spellcastingClasses}
+      values={body}
+      errors={{ class: 'Invalid class' }}
+    />);
+  }
+
+  // Check if this is a prepared caster (non-wizard)
+  const classDef = Classes[selectedClass];
+  if (classDef.spellcasting.enabled &&
+      classDef.spellcasting.spellcastingType === 'prepared' &&
+      selectedClass !== 'wizard') {
+    return c.html(<LearnSpellForm
+      characterId={characterId}
+      spellcastingClasses={spellcastingClasses}
+      values={body}
+      errors={{ class: 'This class already knows all spells from its spell list and doesn\'t need to learn individual spells.' }}
+    />);
+  }
+
+  // Get currently learned spells
+  const currentlyKnownSpellIds = await getCurrentLearnedSpells(db, characterId);
+
+  // Filter available spells
+  const maxSpellLevel = getMaxSpellLevel(classDef, classInfo.level);
+  const availableSpells = spells.filter(spell => {
+    // Must be available to this class
+    if (!spell.classes.includes(selectedClass)) return false;
+
+    // Must be within level range
+    if (spell.level > maxSpellLevel) return false;
+
+    // Must not already be known
+    if (currentlyKnownSpellIds.includes(spell.id)) return false;
+
+    return true;
+  });
+
+  // Check if at max spells known
+  let isAtMaxSpells = false;
+  if (classDef.spellcasting.spellcastingType === 'known') {
+    const knownSpells = classInfo.knownSpells || [];
+    const maxSpells = classInfo.maxSpellsKnown || 0;
+    isAtMaxSpells = knownSpells.length >= maxSpells;
+  }
+
+  // Get selected spell if any
+  const selectedSpell = body.spell_id
+    ? spells.find(s => s.id === body.spell_id)
+    : undefined;
+
+  return c.html(<LearnSpellForm
+    characterId={characterId}
+    spellcastingClasses={spellcastingClasses}
+    values={body}
+    errors={Object.keys(errors).length > 0 ? errors : undefined}
+    availableSpells={availableSpells}
+    currentlyKnownSpellIds={currentlyKnownSpellIds}
+    selectedSpell={selectedSpell}
+    isAtMaxSpells={isAtMaxSpells}
+  />);
+})
+
+characterRoutes.post('/characters/:id/learn-spell', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  const spellcastingClasses = char.spells;
+
+  // Validate form data with Zod
+  const result = LearnSpellApiSchema.safeParse({
+    character_id: characterId,
+    spell_id: body.spell_id,
+    forget_spell_id: body.forget_spell_id || undefined,
+    note: body.note || null,
+  });
+
+  if (!result.success) {
+    const errors = zodToFormErrors(result.error);
+    return c.html(<LearnSpellForm
+      characterId={characterId}
+      spellcastingClasses={spellcastingClasses}
+      values={body}
+      errors={errors}
+    />);
+  }
+
+  // Get selected class info
+  const selectedClass = body.class as ClassNameType;
+  const classInfo = spellcastingClasses.find(sc => sc.class === selectedClass);
+  if (!classInfo) {
+    return c.html(<LearnSpellForm
+      characterId={characterId}
+      spellcastingClasses={spellcastingClasses}
+      values={body}
+      errors={{ class: 'Invalid class' }}
+    />);
+  }
+
+  try {
+    await learnSpell(db, result.data, selectedClass, classInfo.level);
+  } catch (error) {
+    console.error("learning spell", error);
+    await setFlashMsg(c, error instanceof Error ? error.message : 'Failed to learn spell', 'error');
+    return c.html(<LearnSpellForm
+      characterId={characterId}
+      spellcastingClasses={spellcastingClasses}
+      values={body}
+    />);
+  }
+
+  await setFlashMsg(c, 'Spell learned successfully', 'success');
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  return c.html(<>
+    <CharacterInfo character={updatedChar} />
+    <SpellsPanel character={updatedChar} swapOob={true} />
   </>)
 })

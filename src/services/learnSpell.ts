@@ -1,13 +1,14 @@
 import { z } from "zod";
 import type { SQL } from "bun";
 import { create as createSpellLearned, getCurrentLearnedSpells } from "@src/db/char_spells_learned";
-import { Classes, type ClassNameType } from "@src/lib/dnd";
+import { Classes, maxSpellsKnown, type ClassNameType } from "@src/lib/dnd";
 import { spells } from "@src/lib/dnd/spells";
 import { getMaxSpellLevel } from "@src/services/computeSpells";
 
 export const LearnSpellApiSchema = z.object({
   character_id: z.string(),
   spell_id: z.string(),
+  forget_spell_id: z.string().optional(),
   note: z.string().nullable().optional(),
 });
 
@@ -81,14 +82,62 @@ export async function learnSpell(
         `${validationClass} is a prepared caster and doesn't learn individual spells. They can prepare any spell from their class list.`
       );
     }
+
+    // Check if at max spells known (for "known" casters)
+    if (spellcastingType === "known") {
+      const maxSpells = maxSpellsKnown(validationClass, classLevel);
+      if (maxSpells !== null) {
+        const isAtMax = currentLearnedSpells.length >= maxSpells;
+
+        // Validate forget_spell_id logic
+        if (isAtMax && !data.forget_spell_id) {
+          throw new Error(`You are at maximum spells known (${maxSpells}). You must select a spell to forget in order to learn a new one.`);
+        }
+        if (!isAtMax && data.forget_spell_id) {
+          throw new Error("Cannot forget a spell when not at maximum spells known.");
+        }
+      }
+    }
+
+    // Wizards can always learn more spells, so forget_spell_id is an error
+    if (validationClass === "wizard" && data.forget_spell_id) {
+      throw new Error("Wizards don't need to forget spells to learn new ones.");
+    }
   }
 
-  // Create the learned spell record
+  // If replacing, forget the old spell first
+  if (data.forget_spell_id) {
+    const oldSpell = spells.find(s => s.id === data.forget_spell_id);
+    const newSpell = spells.find(s => s.id === data.spell_id);
+
+    if (!oldSpell) {
+      throw new Error(`Spell to forget with ID ${data.forget_spell_id} not found`);
+    }
+
+    // Verify the old spell is actually known
+    if (!currentLearnedSpells.includes(data.forget_spell_id)) {
+      throw new Error(`You don't know ${oldSpell.name}, so you can't forget it`);
+    }
+
+    await createSpellLearned(db, {
+      character_id: data.character_id,
+      spell_id: data.forget_spell_id,
+      action: "forget",
+      note: `Replaced with ${newSpell?.name}${data.note ? `: ${data.note}` : ''}`,
+    });
+  }
+
+  // Learn the new spell
+  const forgetNote = data.forget_spell_id
+    ? `Replaced ${spells.find(s => s.id === data.forget_spell_id)?.name}`
+    : null;
+  const finalNote = data.note || forgetNote;
+
   await createSpellLearned(db, {
     character_id: data.character_id,
     spell_id: data.spell_id,
     action: "learn",
-    note: data.note || null,
+    note: finalNote,
   });
 }
 

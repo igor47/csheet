@@ -170,7 +170,21 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
 
         return (
           <div class="mt-3">
-            <h6 class="mb-2">Spellbook</h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Spellbook</h6>
+              <button
+                class="btn btn-sm btn-outline-secondary border p-1"
+                style="width: 24px; height: 24px; line-height: 1;"
+                aria-label="Learn spell"
+                title="Learn spell"
+                hx-get={`/characters/${character.id}/learn-spell`}
+                hx-target="#editModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#editModal">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </div>
             {spellRows.length > 0 ? (
               <div class="table-responsive">
                 <table class="table table-sm table-hover small">

@@ -1,216 +1,153 @@
 import { z } from "zod";
 import type { SQL } from "bun";
-import { create as createSpellLearned, getCurrentLearnedSpells } from "@src/db/char_spells_learned";
-import { Classes, maxSpellsKnown, type ClassNameType } from "@src/lib/dnd";
+import { create as createSpellLearned } from "@src/db/char_spells_learned";
+import { Classes, ClassNames, ClassNamesSchema, type ClassDef } from "@src/lib/dnd";
 import { spells } from "@src/lib/dnd/spells";
-import { getMaxSpellLevel } from "@src/services/computeSpells";
+import type { ComputedCharacter } from "./computeCharacter";
+import { zodToFormErrors } from "@src/lib/formErrors";
 
 export const LearnSpellApiSchema = z.object({
-  character_id: z.string(),
-  spell_id: z.string(),
+  class: ClassNamesSchema,
   forget_spell_id: z.string().optional(),
-  note: z.string().nullable().optional(),
-});
-
-export type LearnSpellApi = z.infer<typeof LearnSpellApiSchema>;
-
-export const ForgetSpellApiSchema = z.object({
-  character_id: z.string(),
   spell_id: z.string(),
-  note: z.string().nullable().optional(),
+  allowForgetting: z.boolean(),
+  allowExtraSpells: z.boolean(),
+  allowHighLevel: z.boolean(),
+  note: z.string().nullable().optional().default(null),
+  is_check: z.boolean().optional().default(false)
 });
 
-export type ForgetSpellApi = z.infer<typeof ForgetSpellApiSchema>;
+type LearnSpellData = Partial<z.infer<typeof LearnSpellApiSchema>>
+
+export type LearnSpellResult =
+  | { complete: true }
+  | { complete: false, values: Record<string, string>, errors: Record<string, string> }
 
 /**
  * Learn a new spell (primarily for wizards copying spells to spellbook)
  * Can also be used for "spells known" casters when leveling up
- *
- * @param validationClass - The class to validate spell learning against (e.g., "wizard", "sorcerer")
  */
 export async function learnSpell(
   db: SQL,
-  data: LearnSpellApi,
-  validationClass: ClassNameType,
-  classLevel: number
-): Promise<void> {
-  const spell = spells.find(s => s.id === data.spell_id);
-  if (!spell) {
-    throw new Error(`Spell with ID ${data.spell_id} not found`);
-  }
+  char: ComputedCharacter,
+  data: Record<string, string>,
+): Promise<LearnSpellResult> {
+  const errors: Record<string, string> = {}
 
-  // Validate that the class can learn this spell
-  const classDef = Classes[validationClass];
-  if (!classDef) {
-    throw new Error(`Invalid class: ${validationClass}`);
-  }
+  const values = data as LearnSpellData
+  const isCheck = values.is_check || false
 
-  if (!classDef.spellcasting.enabled) {
-    throw new Error(`${validationClass} is not a spellcasting class`);
-  }
-
-  // Check if spell is available to this class
-  if (!spell.classes.includes(validationClass)) {
-    throw new Error(`${spell.name} is not available to ${validationClass}`);
-  }
-
-  // Check if already learned
-  const currentLearnedSpells = await getCurrentLearnedSpells(db, data.character_id);
-  if (currentLearnedSpells.includes(data.spell_id)) {
-    throw new Error(`You already know ${spell.name}`);
-  }
-
-  // Check if spell level is appropriate for character
-  const maxSpellLevel = getMaxSpellLevel(classDef, classLevel);
-  if (spell.level > maxSpellLevel) {
-    throw new Error(
-      `${spell.name} is level ${spell.level}, but you can only learn spells up to level ${maxSpellLevel} with your current ${validationClass} level (${classLevel})`
-    );
-  }
-
-  // Cantrips (level 0) can always be learned if within cantrip limit (validated elsewhere)
-  // For leveled spells, validate based on spellcasting type
-  if (spell.level > 0) {
-    const spellcastingType = classDef.spellcasting.spellcastingType;
-
-    // For "prepared" casters (except wizards), they don't "learn" spells - they prepare from full list
-    // So this function is primarily for:
-    // 1. Wizards adding spells to spellbook
-    // 2. "Known" casters learning spells when leveling up
-    if (spellcastingType === "prepared" && validationClass !== "wizard") {
-      throw new Error(
-        `${validationClass} is a prepared caster and doesn't learn individual spells. They can prepare any spell from their class list.`
-      );
+  let classDef: ClassDef | null = null
+  if (!values.class) {
+    if (isCheck) {
+      errors.class = "A class is required"
+      return { complete: false, errors, values: {}}
     }
+  } else {
+    if (!ClassNames.includes(values.class)) {
+      errors.class = `Invalid class ${values.class}`
+      if (isCheck) {
+        return { complete: false, errors, values: data }
+      }
+    }
+    classDef = Classes[values.class]
+  }
 
-    // Check if at max spells known (for "known" casters)
-    if (spellcastingType === "known") {
-      const maxSpells = maxSpellsKnown(validationClass, classLevel);
-      if (maxSpells !== null) {
-        const isAtMax = currentLearnedSpells.length >= maxSpells;
+  const si = classDef ? char.spells.find(s => s.class == classDef.name) : null
+  if (classDef && !si) {
+    errors.class = `${char.name} does not have class ${classDef.name}`
+    if (isCheck) {
+      return { complete: false, errors, values: data }
+    }
+  }
 
-        // Validate forget_spell_id logic
-        if (isAtMax && !data.forget_spell_id) {
-          throw new Error(`You are at maximum spells known (${maxSpells}). You must select a spell to forget in order to learn a new one.`);
-        }
-        if (!isAtMax && data.forget_spell_id) {
-          throw new Error("Cannot forget a spell when not at maximum spells known.");
-        }
+  if (si) {
+    if (si.spellcastingType === "none") {
+      errors.class = `${si.class} is not a spellcasting class`
+      if (isCheck) {
+        return { complete: false, errors, values: data }
       }
     }
 
-    // Wizards can always learn more spells, so forget_spell_id is an error
-    if (validationClass === "wizard" && data.forget_spell_id) {
-      throw new Error("Wizards don't need to forget spells to learn new ones.");
+    if (si.spellcastingType === "prepared" && si.class !== "wizard") {
+      errors.class = `${si.class} is a prepared caster, and doesn't learn individual spells`;
+      if (isCheck) {
+        return { complete: false, errors, values: data }
+      }
     }
   }
 
-  // If replacing, forget the old spell first
-  if (data.forget_spell_id) {
-    const oldSpell = spells.find(s => s.id === data.forget_spell_id);
-    const newSpell = spells.find(s => s.id === data.spell_id);
-
-    if (!oldSpell) {
-      throw new Error(`Spell to forget with ID ${data.forget_spell_id} not found`);
-    }
-
-    // Verify the old spell is actually known
-    if (!currentLearnedSpells.includes(data.forget_spell_id)) {
-      throw new Error(`You don't know ${oldSpell.name}, so you can't forget it`);
-    }
-
-    await createSpellLearned(db, {
-      character_id: data.character_id,
-      spell_id: data.forget_spell_id,
-      action: "forget",
-      note: `Replaced with ${newSpell?.name}${data.note ? `: ${data.note}` : ''}`,
-    });
-  }
-
-  // Learn the new spell
-  const forgetNote = data.forget_spell_id
-    ? `Replaced ${spells.find(s => s.id === data.forget_spell_id)?.name}`
-    : null;
-  const finalNote = data.note || forgetNote;
-
-  await createSpellLearned(db, {
-    character_id: data.character_id,
-    spell_id: data.spell_id,
-    action: "learn",
-    note: finalNote,
-  });
-}
-
-/**
- * Validate whether a character can learn a specific spell
- * Returns validation errors, or null if valid
- *
- * @param validationClass - The class to validate spell learning against (e.g., "wizard", "sorcerer")
- */
-export async function validateLearnSpell(
-  db: SQL,
-  data: LearnSpellApi,
-  validationClass: ClassNameType,
-  classLevel: number
-): Promise<{ valid: boolean; error?: string }> {
-  try {
-    const spell = spells.find(s => s.id === data.spell_id);
+  if (values.spell_id) {
+    const spell = spells.find(s => s.id === values.spell_id);
     if (!spell) {
-      return { valid: false, error: `Spell not found` };
+      errors.spell_id = `Spell with ID ${values.spell_id} not found`;
+    } else if (si) {
+      if (!spell.classes.includes(si.class)) {
+        errors.spell_id = `Cannot learn ${spell.name} as a ${si.class}`
+
+      } else if (spell.level > si.maxSpellLevel && !values.allowHighLevel) {
+        errors.spell_id = `${spell.name} is level ${spell.level}, higher than character max ${si.maxSpellLevel}`
+
+      } else {
+        const currentList = spell.level === 0 ? si.cantrips : si.knownSpells
+        const maxSpells = spell.level === 0 ? si.maxCantrips : si.maxSpellsKnown
+        const maxedOut = currentList.length >= maxSpells;
+
+        if (currentList.includes(spell.name)) {
+          errors.spell_id = `${spell.name} is already known`
+        } else if (maxedOut) {
+          if (values.forget_spell_id) {
+            if (si.class === "wizard") {
+              errors.forget_spell_id = "Wizards do not forget spells"
+            } else if (!values.allowForgetting) {
+              errors.forget_spell_id = "You are not allowed to forget spells"
+            }
+          } else if (values.allowExtraSpells) {
+            // nothing to say here
+          } else {
+            errors.spell_id = `You already know the maximum number of ${ spell.level === 0 ? 'cantrips' : 'spells' }`
+          }
+        } else if (values.forget_spell_id) {
+          errors.forget_spell_id = `You don't need to forget any spells to learn a new one`
+        }
+      }
     }
-
-    const classDef = Classes[validationClass];
-    if (!classDef) {
-      return { valid: false, error: `Invalid class` };
+  } else {
+    if (!isCheck) {
+      errors.spell_id = "Select a spell to learn"
     }
-
-    if (!classDef.spellcasting.enabled) {
-      return { valid: false, error: `Not a spellcasting class` };
-    }
-
-    if (!spell.classes.includes(validationClass)) {
-      return { valid: false, error: `${spell.name} is not available to ${validationClass}` };
-    }
-
-    const currentLearnedSpells = await getCurrentLearnedSpells(db, data.character_id);
-    if (currentLearnedSpells.includes(data.spell_id)) {
-      return { valid: false, error: `Already known` };
-    }
-
-    const maxSpellLevel = getMaxSpellLevel(classDef, classLevel);
-    if (spell.level > maxSpellLevel) {
-      return { valid: false, error: `Spell level too high (max: ${maxSpellLevel})` };
-    }
-
-    return { valid: true };
-  } catch (error) {
-    return { valid: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
-/**
- * Forget a spell (for spell replacement when leveling up)
- */
-export async function forgetSpell(
-  db: SQL,
-  data: ForgetSpellApi
-): Promise<void> {
-  const spell = spells.find(s => s.id === data.spell_id);
-  if (!spell) {
-    throw new Error(`Spell with ID ${data.spell_id} not found`);
   }
 
-  // Check if the spell is currently learned
-  const currentLearnedSpells = await getCurrentLearnedSpells(db, data.character_id);
-  if (!currentLearnedSpells.includes(data.spell_id)) {
-    throw new Error(`You don't know ${spell.name}, so you can't forget it`);
+  if (isCheck || Object.keys(errors).length > 0) {
+    return { complete: false, values: data, errors }
   }
 
-  // Create the forget action record
-  await createSpellLearned(db, {
-    character_id: data.character_id,
-    spell_id: data.spell_id,
-    action: "forget",
-    note: data.note || null,
-  });
+  // if we got here, lets actually validate and persist the data
+  const result = LearnSpellApiSchema.safeParse(values)
+
+  if (!result.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
+  }
+
+  const newSpell = spells.find(sp => sp.id === result.data.spell_id)!
+
+  db.begin(async (tx) => {
+    if (result.data.forget_spell_id) {
+      await createSpellLearned(tx, {
+        character_id: char.id,
+        spell_id: result.data.forget_spell_id,
+        action: "forget",
+        note: `Replaced with ${newSpell.name}`,
+      });
+    }
+
+    await createSpellLearned(tx, {
+      character_id: char.id,
+      spell_id: result.data.spell_id,
+      action: "learn",
+      note: result.data.note
+    });
+  })
+
+  return { complete: true }
 }

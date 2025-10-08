@@ -21,15 +21,15 @@ export interface SpellInfoForClass {
   maxCantrips: number;
 
   // For "known" casters (Bard, Sorcerer, Warlock, Ranger, EK, AT)
-  knownSpells?: string[];
-  maxSpellsKnown?: number;
+  knownSpells: string[];
+  maxSpellsKnown: number;
 
   // For "prepared" casters (Cleric, Druid, Paladin, Wizard)
-  preparedSpells?: string[];
-  maxSpellsPrepared?: number;
+  preparedSpells: string[];
+  maxSpellsPrepared: number;
 
   // Wizard special case: has both spellbook (known) AND prepared
-  spellbookSpells?: string[];  // Only for wizards
+  spellbookSpells: string[];  // Only for wizards
 }
 
 /**
@@ -90,6 +90,12 @@ async function computeSpellsForClass(
     maxSpellLevel,
     cantrips: cantrips.map(s => s.id),
     maxCantrips,
+
+    knownSpells: [],
+    maxSpellsKnown: 0,
+    preparedSpells: [],
+    maxSpellsPrepared: 0,
+    spellbookSpells: [],
   };
 
   // Handle based on spellcasting type

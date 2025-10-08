@@ -1,69 +1,69 @@
 import clsx from 'clsx';
+
 import { Select } from '@src/components/ui/Select';
 import { spells, type Spell } from '@src/lib/dnd/spells';
-import { Classes, type ClassNameType } from '@src/lib/dnd';
+import { type ClassNameType } from '@src/lib/dnd';
 import { toTitleCase } from '@src/lib/strings';
-import type { SpellInfoForClass } from '@src/services/computeSpells';
+import type { ComputedCharacter } from '@src/services/computeCharacter';
 
 export interface LearnSpellFormProps {
-  characterId: string;
-  spellcastingClasses: SpellInfoForClass[];
+  character: ComputedCharacter;
   values?: Record<string, string>;
   errors?: Record<string, string>;
-  availableSpells?: Spell[];
-  currentlyKnownSpellIds?: string[];
-  selectedSpell?: Spell;
-  isAtMaxSpells?: boolean;
 }
 
-export const LearnSpellForm = ({
-  characterId,
-  spellcastingClasses,
-  values,
-  errors,
-  availableSpells,
-  currentlyKnownSpellIds,
-  selectedSpell,
-  isAtMaxSpells,
-}: LearnSpellFormProps) => {
-  const selectedClass = values?.class as ClassNameType | undefined;
-  const selectedSpellId = values?.spell_id;
-  const forgetSpellId = values?.forget_spell_id;
+function LearnSpellFormBody({ character, values={}, errors={}, }: LearnSpellFormProps) {
+  const spellInfos = character.spells.filter(
+    sc => sc.spellcastingType !== 'none' && (sc.maxSpellsKnown > 0 || sc.class === 'wizard')
+  );
+  const onlyOneSI = spellInfos.length === 1;
+  const classOptions = spellInfos.map(si => ({
+    value: si.class,
+    label: toTitleCase(si.class),
+  }))
 
-  // Check if only one class
-  const onlyOneClass = spellcastingClasses.length === 1;
-  const defaultClass = onlyOneClass ? spellcastingClasses[0].class : undefined;
+  if (!(values.class && spellInfos.map(si => si.class).includes(values.class as ClassNameType))) {
+    values.class = spellInfos[0]!.class;
+  }
 
-  // Get class options
-  const classOptions = spellcastingClasses.map(sc => ({
-    value: sc.class,
-    label: toTitleCase(sc.class),
-  }));
+  const selectedClassName = values.class as ClassNameType;
+  const selectedSI = spellInfos.find(si => si.class === selectedClassName)!;
 
   // Show evict spell dropdown if at max spells
-  const showEvictDropdown = isAtMaxSpells && selectedClass;
-
-  // Get currently known spells for eviction dropdown
-  const knownSpellsForEviction = currentlyKnownSpellIds
-    ? currentlyKnownSpellIds
-        .map(id => spells.find(s => s.id === id))
-        .filter(Boolean) as Spell[]
-    : [];
-
-  const evictSpellOptions = knownSpellsForEviction.map(s => ({
+  const isAtMaxSpells = (
+    selectedSI.spellcastingType === 'known' && selectedSI.knownSpells.length >= selectedSI.maxSpellsKnown
+  );
+  const showEvictDropdown = isAtMaxSpells;
+  const knownSpells = selectedSI.knownSpells.map(
+    id => spells.find(s => s.id === id)
+  ).filter(Boolean) as Spell[];
+  const evictSpellOptions = knownSpells.map(s => ({
     value: s.id,
-    label: `${s.name} (Level ${s.level === 0 ? 'Cantrip' : s.level})`,
+    label: `${s.name} (Level ${s.level})`,
   }));
 
-  return (<>
-    <div class="modal-header">
-      <h5 class="modal-title">Learn Spell</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-    </div>
+  // figure out which spells are available to learn
+  const classLevelSpells = spells.filter(
+    s => s.classes.includes(selectedClassName) && s.level <= selectedSI.maxSpellLevel
+  );
+  const availableSpells = classLevelSpells.filter(
+    s => !selectedSI.knownSpells.includes(s.id)
+  ).sort((a, b) => {
+    if (a.level !== b.level) return a.level - b.level;
+    return a.name.localeCompare(b.name);
+  });
+  const selectedSpell = availableSpells.find(
+    s => s.id === values.spell_id
+  ) || null;
+
+  // helper text
+  const actionText = selectedClassName === 'wizard' ? 'Add to Spellbook' : 'Learn';
+
+  return (
     <div class="modal-body">
       <form
         id="learn-spell-form"
-        hx-post={`/characters/${characterId}/learn-spell/check`}
+        hx-post={`/characters/${character.id}/learn-spell/check`}
         hx-trigger="change delay:300ms"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
@@ -78,16 +78,17 @@ export const LearnSpellForm = ({
             id="class"
             options={classOptions}
             placeholder="Select a class"
-            required
-            error={errors?.class}
-            value={values?.class || defaultClass}
-            disabled={onlyOneClass}
+            required={true}
+            error={errors.class}
+            value={values.class}
+            disabled={onlyOneSI}
           />
-          {onlyOneClass && (
+          {onlyOneSI && (<>
+            <input type="hidden" name="class" value={values.class} />
             <small class="form-text text-muted">
               Only one spellcasting class available
             </small>
-          )}
+          </>)}
         </div>
 
         {/* Evict Spell (if at max) */}
@@ -101,7 +102,7 @@ export const LearnSpellForm = ({
               placeholder="Select a spell to forget"
               required
               error={errors?.forget_spell_id}
-              value={forgetSpellId}
+              value={values.forget_spell_id}
             />
             <small class="form-text text-muted">
               You are at maximum spells known. Select a spell to forget in order to learn a new one.
@@ -110,9 +111,9 @@ export const LearnSpellForm = ({
         )}
 
         {/* Spell Selection */}
-        {selectedClass && availableSpells && availableSpells.length > 0 && (
+        {availableSpells.length > 0 && (
           <div class="mb-3">
-            <label class="form-label">Select Spell to Learn</label>
+            <label class="form-label">Select Spell {actionText}</label>
             <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
               {availableSpells.map((spell) => (
                 <div class="form-check">
@@ -122,10 +123,12 @@ export const LearnSpellForm = ({
                     name="spell_id"
                     id={`spell-${spell.id}`}
                     value={spell.id}
-                    checked={selectedSpellId === spell.id}
+                    checked={values.spell_id === spell.id}
                   />
                   <label class="form-check-label" for={`spell-${spell.id}`}>
                     {spell.name} (Level {spell.level === 0 ? 'Cantrip' : spell.level})
+                    <br />
+                    <small class="text-muted">{spell.briefDescription}</small>
                   </label>
                 </div>
               ))}
@@ -134,8 +137,8 @@ export const LearnSpellForm = ({
           </div>
         )}
 
-        {selectedClass && availableSpells && availableSpells.length === 0 && (
-          <div class="alert alert-info">
+        {availableSpells.length === 0 && (
+          <div class="alert alert-warning">
             No spells available to learn for this class at your current level.
           </div>
         )}
@@ -185,15 +188,57 @@ export const LearnSpellForm = ({
           <button
             type="submit"
             class="btn btn-primary"
-            hx-post={`/characters/${characterId}/learn-spell`}
+            hx-post={`/characters/${character.id}/learn-spell`}
             hx-target="#editModalContent"
             hx-swap="innerHTML"
-            disabled={!selectedSpellId}
+            disabled={!selectedSpell}
           >
             {showEvictDropdown ? 'Replace Spell' : 'Learn Spell'}
           </button>
         </div>
       </form>
     </div>
+  );
+}
+
+export const LearnSpellForm = ({
+  character,
+  values = {},
+  errors = {},
+}: LearnSpellFormProps) => {
+  const spellcastingSIs = character.spells.filter(
+    si => (si.spellcastingType !== 'none')
+  );
+  const learnableSIs = spellcastingSIs.filter(
+    si => (si.maxSpellsKnown > 0 || si.class === 'wizard')
+  );
+
+  let body;
+  if (spellcastingSIs.length === 0) {
+    body = (
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          {character.name} has no spellcasting classes.
+        </div>
+      </div>
+    )
+  } else if (learnableSIs.length === 0) {
+    body = (
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          {character.name} cannot learn new spells.
+        </div>
+      </div>
+    )
+  } else {
+    body = <LearnSpellFormBody character={character} values={values} errors={errors} />;
+  }
+
+  return (<>
+    <div class="modal-header">
+      <h5 class="modal-title">Learn Spell</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    {body}
   </>);
 };

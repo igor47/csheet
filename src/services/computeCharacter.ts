@@ -273,6 +273,5 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     spells,
   };
 
-  console.dir(char);
   return char;
 }

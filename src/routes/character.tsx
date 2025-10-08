@@ -978,85 +978,9 @@ characterRoutes.post('/characters/:id/learn-spell/check', async (c) => {
     return c.body(null, 204);
   }
 
-  const spellcastingClasses = char.spells;
-  const errors: Record<string, string> = {};
-
-  // Get selected class
-  const selectedClass = body.class as ClassNameType | undefined;
-
-  // Validate class selection
-  if (!selectedClass) {
-    return c.html(<LearnSpellForm
-      characterId={characterId}
-      spellcastingClasses={spellcastingClasses}
-      values={body}
-      errors={{ class: 'Please select a class' }}
-    />);
-  }
-
-  const classInfo = spellcastingClasses.find(sc => sc.class === selectedClass);
-  if (!classInfo) {
-    return c.html(<LearnSpellForm
-      characterId={characterId}
-      spellcastingClasses={spellcastingClasses}
-      values={body}
-      errors={{ class: 'Invalid class' }}
-    />);
-  }
-
-  // Check if this is a prepared caster (non-wizard)
-  const classDef = Classes[selectedClass];
-  if (classDef.spellcasting.enabled &&
-      classDef.spellcasting.spellcastingType === 'prepared' &&
-      selectedClass !== 'wizard') {
-    return c.html(<LearnSpellForm
-      characterId={characterId}
-      spellcastingClasses={spellcastingClasses}
-      values={body}
-      errors={{ class: 'This class already knows all spells from its spell list and doesn\'t need to learn individual spells.' }}
-    />);
-  }
-
-  // Get currently learned spells
-  const currentlyKnownSpellIds = await getCurrentLearnedSpells(db, characterId);
-
-  // Filter available spells
-  const maxSpellLevel = getMaxSpellLevel(classDef, classInfo.level);
-  const availableSpells = spells.filter(spell => {
-    // Must be available to this class
-    if (!spell.classes.includes(selectedClass)) return false;
-
-    // Must be within level range
-    if (spell.level > maxSpellLevel) return false;
-
-    // Must not already be known
-    if (currentlyKnownSpellIds.includes(spell.id)) return false;
-
-    return true;
-  });
-
-  // Check if at max spells known
-  let isAtMaxSpells = false;
-  if (classDef.spellcasting.spellcastingType === 'known') {
-    const knownSpells = classInfo.knownSpells || [];
-    const maxSpells = classInfo.maxSpellsKnown || 0;
-    isAtMaxSpells = knownSpells.length >= maxSpells;
-  }
-
-  // Get selected spell if any
-  const selectedSpell = body.spell_id
-    ? spells.find(s => s.id === body.spell_id)
-    : undefined;
-
   return c.html(<LearnSpellForm
-    characterId={characterId}
-    spellcastingClasses={spellcastingClasses}
+    character={char}
     values={body}
-    errors={Object.keys(errors).length > 0 ? errors : undefined}
-    availableSpells={availableSpells}
-    currentlyKnownSpellIds={currentlyKnownSpellIds}
-    selectedSpell={selectedSpell}
-    isAtMaxSpells={isAtMaxSpells}
   />);
 })
 

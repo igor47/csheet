@@ -113,10 +113,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
           });
         }
 
-        // Sort: empty slots first, then filled
+        // Sort: filled slots first, then empty
         allSlots.sort((a, b) => {
-          if (a.spell_id === null && b.spell_id !== null) return -1;
-          if (a.spell_id !== null && b.spell_id === null) return 1;
+          if (a.spell_id === null && b.spell_id !== null) return 1;
+          if (a.spell_id !== null && b.spell_id === null) return -1;
           // Within same empty/filled status, sort by class then type
           if (a.className !== b.className) return a.className.localeCompare(b.className);
           if (a.type !== b.type) return a.type === 'Cantrip' ? -1 : 1;
@@ -191,7 +191,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                                 aria-label="Edit slot"
                                 title="Edit slot"
                                 disabled={row.alwaysPrepared}
-                                hx-get={`/characters/${character.id}/edit/spell-slot?class=${row.className}&type=${row.type.toLowerCase()}&slot=${row.slotIndex}`}
+                                hx-get={`/characters/${character.id}/edit/prepspell?class=${row.className}&spell_type=${row.type.toLowerCase()}${row.spell_id ? `&current_spell_id=${row.spell_id}` : ''}`}
                                 hx-target="#editModalContent"
                                 hx-swap="innerHTML"
                                 data-bs-toggle="modal"
@@ -249,7 +249,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                 style="width: 24px; height: 24px; line-height: 1;"
                 aria-label="Add to spellbook"
                 title="Add to spellbook"
-                hx-get={`/characters/${character.id}/learn-spell`}
+                hx-get={`/characters/${character.id}/edit/spellbook`}
                 hx-target="#editModalContent"
                 hx-swap="innerHTML"
                 data-bs-toggle="modal"
@@ -273,7 +273,6 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                     // Check if in cantrip or prepared slots
                     const isInCantripSlot = wizardInfo.cantripSlots.some(slot => slot.spell_id === spell.id);
                     const isInPreparedSlot = wizardInfo.preparedSpells.some(slot => slot.spell_id === spell.id);
-                    const isPrepared = isInCantripSlot || isInPreparedSlot;
 
                     const preparedIcon = spell.level === 0
                       ? (isInCantripSlot

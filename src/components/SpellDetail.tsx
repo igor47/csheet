@@ -1,19 +1,20 @@
 import type { Spell, Components } from "@src/lib/dnd/spells";
 import { formatCastingTime, formatRange, formatDuration, formatDice, formatAreaOfEffect } from "@src/lib/spellFormatters";
+import type { Child } from "hono/jsx";
 
 export interface SpellDetailProps {
   spell: Spell;
 }
 
 const ComponentsDisplay = ({ components }: { components: Components }) => {
-  const parts: JSX.Element[] = [];
+  const parts: Child[] = [];
 
   if (components.verbal) {
     parts.push(
       <span
         data-bs-toggle="tooltip"
         data-bs-placement="top"
-        title="Verbal: The spell requires spoken words or incantations"
+        title="The spell requires spoken words or incantations"
       >
         Verbal
       </span>
@@ -25,7 +26,7 @@ const ComponentsDisplay = ({ components }: { components: Components }) => {
       <span
         data-bs-toggle="tooltip"
         data-bs-placement="top"
-        title="Somatic: The spell requires gestures or hand movements"
+        title="The spell requires gestures or hand movements"
       >
         Somatic
       </span>
@@ -49,7 +50,7 @@ const ComponentsDisplay = ({ components }: { components: Components }) => {
       <span
         data-bs-toggle="tooltip"
         data-bs-placement="top"
-        title="Material: The spell requires specific physical components"
+        title="The spell requires specific physical components"
       >
         Material{details.length > 0 ? ` (${details.join(", ")})` : ""}
       </span>

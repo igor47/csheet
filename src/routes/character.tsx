@@ -16,6 +16,7 @@ import { AbilityHistory } from '@src/components/AbilityHistory'
 import { SkillEditForm } from '@src/components/SkillEditForm'
 import { SkillHistory } from '@src/components/SkillHistory'
 import { LearnSpellForm } from '@src/components/LearnSpellForm'
+import { PrepareSpellForm } from '@src/components/PrepareSpellForm'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
 import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
@@ -34,6 +35,7 @@ import { updateAbility, UpdateAbilityApiSchema, prepareUpdateAbilityForm, valida
 import { updateSkill, UpdateSkillApiSchema, prepareUpdateSkillForm, validateUpdateSkill } from '@src/services/updateSkill'
 import { longRest, LongRestApiSchema } from '@src/services/longRest'
 import { learnSpell, LearnSpellApiSchema } from '@src/services/learnSpell'
+import { prepareSpell } from '@src/services/prepareSpell'
 import { getMaxSpellLevel } from '@src/services/computeSpells'
 import { Abilities, Skills, SkillAbilities, type AbilityType, type SkillType, Classes, type ClassNameType } from '@src/lib/dnd'
 import { spells } from '@src/lib/dnd/spells'
@@ -121,150 +123,6 @@ characterRoutes.get('/characters/:id', async (c) => {
   return c.render(<Character character={char} />, { title: "Character Sheet" })
 })
 
-characterRoutes.get('/characters/:id/edit/:field', async (c) => {
-  const characterId = c.req.param('id') as string;
-  const field = c.req.param('field') as string;
-
-  if (field === 'class') {
-    const currentLevels = await getCurrentLevels(db, characterId);
-    const maxLevel  = await maxClassLevel(db, characterId);
-    const { values } = prepareAddLevelForm({ class: maxLevel.class }, currentLevels);
-
-    return c.html(<ClassEditForm characterId={characterId} currentClassLevel={maxLevel} values={values} />);
-  }
-
-  if (field === 'hitpoints') {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      return c.html(<>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>);
-    }
-
-    const defaultAction = char.currentHP >= char.maxHitPoints ? 'lose' : 'restore';
-    const values = { action: defaultAction, amount: '' };
-    return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={values} />);
-  }
-
-  if (field === 'hitdice') {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      return c.html(<>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>);
-    }
-
-    const defaultAction = char.availableHitDice.length < char.hitDice.length ? 'restore' : 'spend';
-    const values = { action: defaultAction };
-    return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} />);
-  }
-
-  if (field === 'spellslots') {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      return c.html(<>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>);
-    }
-
-    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} />);
-  }
-
-  // Check if field is an ability
-  if (Abilities.includes(field as AbilityType)) {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      return c.html(<>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>);
-    }
-
-    const ability = field as AbilityType;
-    const abilityScore = char.abilityScores[ability];
-    const values = {
-      score: abilityScore.score.toString(),
-      proficiency_change: 'none',
-    };
-
-    return c.html(<AbilityEditForm
-      characterId={characterId}
-      ability={ability}
-      currentScore={abilityScore.score}
-      currentModifier={abilityScore.modifier}
-      isProficient={abilityScore.proficient}
-      proficiencyBonus={char.proficiencyBonus}
-      values={values}
-    />);
-  }
-
-  // Check if field is a skill
-  if (Skills.includes(field as SkillType)) {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      return c.html(<>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>);
-    }
-
-    const skill = field as SkillType;
-    const skillScore = char.skills[skill];
-    const ability = SkillAbilities[skill];
-    const abilityAbbr = ability.slice(0, 3).toUpperCase();
-    const values = {
-      proficiency: skillScore.proficiency,
-    };
-
-    return c.html(<SkillEditForm
-      characterId={characterId}
-      skill={skill}
-      abilityAbbr={abilityAbbr}
-      currentModifier={skillScore.modifier}
-      currentProficiency={skillScore.proficiency}
-      values={values}
-    />);
-  }
-
-  return c.html(<>
-    <div class="modal-header">
-      <h5 class="modal-title">Edit {field}</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-    </div>
-    <div class="modal-body">
-      Coming soon
-    </div>
-  </>)
-})
-
 characterRoutes.post('/characters/:id/edit/class/check', async (c) => {
   const characterId = c.req.param('id') as string;
   const body = await c.req.parseBody() as Record<string, string>;
@@ -341,109 +199,6 @@ characterRoutes.post('/characters/:id/edit/spellslots/check', async (c) => {
   return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />);
 })
 
-characterRoutes.post('/characters/:id/edit/:field/check', async (c) => {
-  const characterId = c.req.param('id') as string;
-  const field = c.req.param('field') as string;
-  const body = await c.req.parseBody() as Record<string, string>;
-
-  // Check if field is an ability
-  if (Abilities.includes(field as AbilityType)) {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      return c.html(<>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>);
-    }
-
-    const ability = field as AbilityType;
-    const abilityScore = char.abilityScores[ability];
-    const { values, errors } = prepareUpdateAbilityForm(body, abilityScore.score, abilityScore.proficient);
-
-    return c.html(<AbilityEditForm
-      characterId={characterId}
-      ability={ability}
-      currentScore={abilityScore.score}
-      currentModifier={abilityScore.modifier}
-      isProficient={abilityScore.proficient}
-      proficiencyBonus={char.proficiencyBonus}
-      values={values}
-      errors={Object.keys(errors).length > 0 ? errors : undefined}
-    />);
-  }
-
-  // Check if field is a skill
-  if (Skills.includes(field as SkillType)) {
-    const char = await computeCharacter(db, characterId);
-    if (!char) {
-      return c.html(<>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>);
-    }
-
-    const skill = field as SkillType;
-    const skillScore = char.skills[skill];
-    const ability = SkillAbilities[skill];
-    const abilityAbbr = ability.slice(0, 3).toUpperCase();
-    const { values, errors } = prepareUpdateSkillForm(body, skillScore.proficiency);
-
-    // Calculate new modifier for preview
-    const calculateModifier = (score: number) => Math.floor((score - 10) / 2);
-    const abilityModifier = char.abilityScores[ability].modifier;
-    let newModifier: number | undefined = undefined;
-
-    if (values.proficiency && values.proficiency !== skillScore.proficiency) {
-      const proficiency = values.proficiency as any;
-      switch (proficiency) {
-        case 'none':
-          newModifier = abilityModifier;
-          break;
-        case 'half':
-          newModifier = abilityModifier + Math.floor(char.proficiencyBonus / 2);
-          break;
-        case 'proficient':
-          newModifier = abilityModifier + char.proficiencyBonus;
-          break;
-        case 'expert':
-          newModifier = abilityModifier + (char.proficiencyBonus * 2);
-          break;
-      }
-    }
-
-    return c.html(<SkillEditForm
-      characterId={characterId}
-      skill={skill}
-      abilityAbbr={abilityAbbr}
-      currentModifier={skillScore.modifier}
-      currentProficiency={skillScore.proficiency}
-      newModifier={newModifier}
-      values={values}
-      errors={Object.keys(errors).length > 0 ? errors : undefined}
-    />);
-  }
-
-  // Not found
-  return c.html(<>
-    <div class="modal-header">
-      <h5 class="modal-title">Error</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-    </div>
-    <div class="modal-body">
-      <div class="alert alert-danger">Unknown field: {field}</div>
-    </div>
-  </>);
-})
 
 characterRoutes.post('/characters/:id/edit/class', async (c) => {
   const characterId = c.req.param('id') as string;
@@ -640,6 +395,398 @@ characterRoutes.post('/characters/:id/edit/spellslots', async (c) => {
   </>)
 })
 
+
+characterRoutes.post('/characters/:id/edit/prepspell', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  const result = await prepareSpell(db, char, body);
+
+  if (!result.complete) {
+    return c.html(<PrepareSpellForm
+      character={char}
+      values={result.values}
+      errors={result.errors}
+    />);
+  }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  c.header('HX-Trigger', 'closeEditModal');
+  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />);
+})
+
+characterRoutes.post('/characters/:id/edit/spellbook', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  const result = await learnSpell(db, char, body);
+
+  if (!result.complete) {
+    return c.html(<LearnSpellForm
+      character={char}
+      values={result.values}
+      errors={result.errors}
+    />);
+  }
+
+  await setFlashMsg(c, 'Spell learned successfully', 'success');
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  return c.html(<>
+    <CharacterInfo character={updatedChar} />
+    <SpellsPanel character={updatedChar} swapOob={true} />
+  </>)
+})
+
+characterRoutes.post('/characters/:id/longrest', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  // Parse with Zod
+  const result = LongRestApiSchema.safeParse({
+    character_id: characterId,
+    note: null,
+  });
+
+  if (!result.success) {
+    await setFlashMsg(c, 'Failed to take long rest', 'error');
+    return c.html(<CurrentStatus character={char} />);
+  }
+
+  try {
+    const summary = await longRest(
+      db,
+      result.data,
+      char.currentHP,
+      char.maxHitPoints,
+      char.hitDice,
+      char.availableHitDice,
+      char.spellSlots,
+      char.availableSpellSlots
+    );
+
+    // Build summary message
+    const summaryParts: string[] = [];
+    if (summary.hpRestored > 0) summaryParts.push(`${summary.hpRestored} HP`);
+    if (summary.hitDiceRestored > 0) summaryParts.push(`${summary.hitDiceRestored} hit dice`);
+    if (summary.spellSlotsRestored > 0) summaryParts.push(`${summary.spellSlotsRestored} spell slots`);
+
+    const message = summaryParts.length > 0
+      ? `Long rest complete! Restored: ${summaryParts.join(', ')}`
+      : 'Long rest complete!';
+
+    await setFlashMsg(c, message, 'success');
+  } catch (error) {
+    console.error("taking long rest", error);
+    await setFlashMsg(c, 'Failed to take long rest', 'error');
+    return c.html(<CurrentStatus character={char} />);
+  }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  return c.html(<>
+    <CurrentStatus character={updatedChar} />
+    <CharacterInfo character={updatedChar} swapOob={true} />
+    <SpellsPanel character={updatedChar} swapOob={true} />
+  </>);
+})
+
+characterRoutes.get('/characters/:id/edit/:field', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const field = c.req.param('field') as string;
+
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  if (char.user_id !== c.var.user!.id) {
+    await setFlashMsg(c, 'You do not have permission to edit this character')
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 403);
+  }
+
+
+  if (field === 'class') {
+    const currentLevels = await getCurrentLevels(db, characterId);
+    const maxLevel  = await maxClassLevel(db, characterId);
+    const { values } = prepareAddLevelForm({ class: maxLevel.class }, currentLevels);
+
+    return c.html(<ClassEditForm characterId={characterId} currentClassLevel={maxLevel} values={values} />);
+  }
+
+  if (field === 'hitpoints') {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const defaultAction = char.currentHP >= char.maxHitPoints ? 'lose' : 'restore';
+    const values = { action: defaultAction, amount: '' };
+    return c.html(<HitPointsEditForm characterId={characterId} currentHP={char.currentHP} maxHitPoints={char.maxHitPoints} values={values} />);
+  }
+
+  if (field === 'hitdice') {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const defaultAction = char.availableHitDice.length < char.hitDice.length ? 'restore' : 'spend';
+    const values = { action: defaultAction };
+    return c.html(<HitDiceEditForm characterId={characterId} allHitDice={char.hitDice} availableHitDice={char.availableHitDice} values={values} />);
+  }
+
+  if (field === 'spellslots') {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    return c.html(<SpellSlotsEditForm characterId={characterId} allSlots={char.spellSlots} availableSlots={char.availableSpellSlots} />);
+  }
+
+  if (field === 'prepspell') {
+    // Parse query params
+    const values: Record<string, string> = {};
+    for (const qField of ['class', 'spell_type', 'current_spell_id']) {
+      const val = c.req.query(qField);
+      if (val) {
+        values[qField] = val
+      }
+    }
+
+    return c.html(<PrepareSpellForm character={char} values={values} />);
+  }
+
+  if (field === 'spellbook') {
+    return c.html(<LearnSpellForm character={char}/>);
+  }
+
+  // Check if field is an ability
+  if (Abilities.includes(field as AbilityType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const ability = field as AbilityType;
+    const abilityScore = char.abilityScores[ability];
+    const values = {
+      score: abilityScore.score.toString(),
+      proficiency_change: 'none',
+    };
+
+    return c.html(<AbilityEditForm
+      characterId={characterId}
+      ability={ability}
+      currentScore={abilityScore.score}
+      currentModifier={abilityScore.modifier}
+      isProficient={abilityScore.proficient}
+      proficiencyBonus={char.proficiencyBonus}
+      values={values}
+    />);
+  }
+
+  // Check if field is a skill
+  if (Skills.includes(field as SkillType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const skill = field as SkillType;
+    const skillScore = char.skills[skill];
+    const ability = SkillAbilities[skill];
+    const abilityAbbr = ability.slice(0, 3).toUpperCase();
+    const values = {
+      proficiency: skillScore.proficiency,
+    };
+
+    return c.html(<SkillEditForm
+      characterId={characterId}
+      skill={skill}
+      abilityAbbr={abilityAbbr}
+      currentModifier={skillScore.modifier}
+      currentProficiency={skillScore.proficiency}
+      values={values}
+    />);
+  }
+
+  return c.html(<>
+    <div class="modal-header">
+      <h5 class="modal-title">Edit {field}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      Coming soon
+    </div>
+  </>)
+})
+
+characterRoutes.post('/characters/:id/edit/:field/check', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const field = c.req.param('field') as string;
+  const body = await c.req.parseBody() as Record<string, string>;
+
+  // Check if field is an ability
+  if (Abilities.includes(field as AbilityType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const ability = field as AbilityType;
+    const abilityScore = char.abilityScores[ability];
+    const { values, errors } = prepareUpdateAbilityForm(body, abilityScore.score, abilityScore.proficient);
+
+    return c.html(<AbilityEditForm
+      characterId={characterId}
+      ability={ability}
+      currentScore={abilityScore.score}
+      currentModifier={abilityScore.modifier}
+      isProficient={abilityScore.proficient}
+      proficiencyBonus={char.proficiencyBonus}
+      values={values}
+      errors={Object.keys(errors).length > 0 ? errors : undefined}
+    />);
+  }
+
+  // Check if field is a skill
+  if (Skills.includes(field as SkillType)) {
+    const char = await computeCharacter(db, characterId);
+    if (!char) {
+      return c.html(<>
+        <div class="modal-header">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">Character not found</div>
+        </div>
+      </>);
+    }
+
+    const skill = field as SkillType;
+    const skillScore = char.skills[skill];
+    const ability = SkillAbilities[skill];
+    const abilityAbbr = ability.slice(0, 3).toUpperCase();
+    const { values, errors } = prepareUpdateSkillForm(body, skillScore.proficiency);
+
+    // Calculate new modifier for preview
+    const calculateModifier = (score: number) => Math.floor((score - 10) / 2);
+    const abilityModifier = char.abilityScores[ability].modifier;
+    let newModifier: number | undefined = undefined;
+
+    if (values.proficiency && values.proficiency !== skillScore.proficiency) {
+      const proficiency = values.proficiency as any;
+      switch (proficiency) {
+        case 'none':
+          newModifier = abilityModifier;
+          break;
+        case 'half':
+          newModifier = abilityModifier + Math.floor(char.proficiencyBonus / 2);
+          break;
+        case 'proficient':
+          newModifier = abilityModifier + char.proficiencyBonus;
+          break;
+        case 'expert':
+          newModifier = abilityModifier + (char.proficiencyBonus * 2);
+          break;
+      }
+    }
+
+    return c.html(<SkillEditForm
+      characterId={characterId}
+      skill={skill}
+      abilityAbbr={abilityAbbr}
+      currentModifier={skillScore.modifier}
+      currentProficiency={skillScore.proficiency}
+      newModifier={newModifier}
+      values={values}
+      errors={Object.keys(errors).length > 0 ? errors : undefined}
+    />);
+  }
+
+  // Not found
+  return c.html(<>
+    <div class="modal-header">
+      <h5 class="modal-title">Error</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-danger">Unknown field: {field}</div>
+    </div>
+  </>);
+})
+
 characterRoutes.post('/characters/:id/edit/:field', async (c) => {
   const characterId = c.req.param('id') as string;
   const char = await computeCharacter(db, characterId);
@@ -802,63 +949,6 @@ characterRoutes.post('/characters/:id/edit/:field', async (c) => {
   </>);
 })
 
-characterRoutes.post('/characters/:id/longrest', async (c) => {
-  const characterId = c.req.param('id') as string;
-  const char = await computeCharacter(db, characterId);
-  if (!char) {
-    await setFlashMsg(c, 'Character not found', 'error');
-    c.header('HX-Redirect', `/characters`);
-    return c.body(null, 204);
-  }
-
-  // Parse with Zod
-  const result = LongRestApiSchema.safeParse({
-    character_id: characterId,
-    note: null,
-  });
-
-  if (!result.success) {
-    await setFlashMsg(c, 'Failed to take long rest', 'error');
-    return c.html(<CurrentStatus character={char} />);
-  }
-
-  try {
-    const summary = await longRest(
-      db,
-      result.data,
-      char.currentHP,
-      char.maxHitPoints,
-      char.hitDice,
-      char.availableHitDice,
-      char.spellSlots,
-      char.availableSpellSlots
-    );
-
-    // Build summary message
-    const summaryParts: string[] = [];
-    if (summary.hpRestored > 0) summaryParts.push(`${summary.hpRestored} HP`);
-    if (summary.hitDiceRestored > 0) summaryParts.push(`${summary.hitDiceRestored} hit dice`);
-    if (summary.spellSlotsRestored > 0) summaryParts.push(`${summary.spellSlotsRestored} spell slots`);
-
-    const message = summaryParts.length > 0
-      ? `Long rest complete! Restored: ${summaryParts.join(', ')}`
-      : 'Long rest complete!';
-
-    await setFlashMsg(c, message, 'success');
-  } catch (error) {
-    console.error("taking long rest", error);
-    await setFlashMsg(c, 'Failed to take long rest', 'error');
-    return c.html(<CurrentStatus character={char} />);
-  }
-
-  const updatedChar = (await computeCharacter(db, characterId))!;
-  return c.html(<>
-    <CurrentStatus character={updatedChar} />
-    <CharacterInfo character={updatedChar} swapOob={true} />
-    <SpellsPanel character={updatedChar} swapOob={true} />
-  </>);
-})
-
 characterRoutes.get('/characters/:id/history/:field', async (c) => {
   const characterId = c.req.param('id') as string;
   const field = c.req.param('field') as string;
@@ -948,50 +1038,5 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
     <div class="modal-body">
       Coming soon
     </div>
-  </>)
-})
-
-// Learn spell routes
-characterRoutes.get('/characters/:id/learn-spell', async (c) => {
-  const characterId = c.req.param('id') as string;
-
-  const char = await computeCharacter(db, characterId);
-  if (!char) {
-    await setFlashMsg(c, 'Character not found', 'error');
-    c.header('HX-Redirect', `/characters`);
-    return c.body(null, 204);
-  }
-
-  return c.html(<LearnSpellForm
-    character={char}
-  />);
-})
-
-characterRoutes.post('/characters/:id/learn-spell', async (c) => {
-  const characterId = c.req.param('id') as string;
-  const body = await c.req.parseBody() as Record<string, string>;
-
-  const char = await computeCharacter(db, characterId);
-  if (!char) {
-    await setFlashMsg(c, 'Character not found', 'error');
-    c.header('HX-Redirect', `/characters`);
-    return c.body(null, 204);
-  }
-
-  const result = await learnSpell(db, char, body);
-
-  if (!result.complete) {
-    return c.html(<LearnSpellForm
-      character={char}
-      values={result.values}
-      errors={result.errors}
-    />);
-  }
-
-  await setFlashMsg(c, 'Spell learned successfully', 'success');
-  const updatedChar = (await computeCharacter(db, characterId))!;
-  return c.html(<>
-    <CharacterInfo character={updatedChar} />
-    <SpellsPanel character={updatedChar} swapOob={true} />
   </>)
 })

@@ -87,46 +87,27 @@ async function computeSpellsForClass(
   const cantripSlots = createPreparedSlots(cantripRecords, maxCantrips);
 
   // Wizard: uses spellbook (char_spells_learned) for all spells
+  let knownSpells: string[] | null = null;
   if (charClass.class === "wizard") {
     const classSpells = wizardSpellbookSpells.filter(s => s.classes.includes(charClass.class));
-    const knownSpells = classSpells.map(s => s.id); // Includes both cantrips and leveled spells
-
-    // Wizard prepares leveled spells from spellbook
-    const maxPrepared = Math.max(1, abilityModifier + charClass.level);
-    const preparedSlots = createPreparedSlots(leveledSpellRecords, maxPrepared);
-
-    return {
-      class: charClass.class,
-      level: charClass.level,
-      ability,
-      spellAttackBonus,
-      spellSaveDC,
-      changePrepared,
-      maxSpellLevel,
-      cantripSlots,
-      knownSpells,
-      preparedSpells: preparedSlots,
-    };
+    knownSpells = classSpells.map(s => s.id); // Includes both cantrips and leveled spells
   }
-  // All other casters: use char_spells_prepared for everything
-  else {
-    // Create slots for known/prepared leveled spells
-    const maxKnown = maxSpellsPrepared(charClass.class, charClass.level) || 0;
-    const preparedSlots = createPreparedSlots(leveledSpellRecords, maxKnown);
 
-    return {
-      class: charClass.class,
-      level: charClass.level,
-      ability,
-      spellAttackBonus,
-      spellSaveDC,
-      changePrepared,
-      maxSpellLevel,
-      cantripSlots,
-      knownSpells: null,
-      preparedSpells: preparedSlots,
-    };
-  }
+  const maxPrepared = maxSpellsPrepared(charClass.class, charClass.level) || 0;
+  const preparedSlots = createPreparedSlots(leveledSpellRecords, maxPrepared);
+
+  return {
+    class: charClass.class,
+    level: charClass.level,
+    ability,
+    spellAttackBonus,
+    spellSaveDC,
+    changePrepared,
+    maxSpellLevel,
+    cantripSlots,
+    knownSpells,
+    preparedSpells: preparedSlots,
+  };
 }
 
 /**
@@ -139,6 +120,10 @@ function createPreparedSlots(
 ): PreparedSpellSlot[] {
   const slots: PreparedSpellSlot[] = [];
 
+  // always-preapred spells don't count against total slots
+  const alwaysPrepared = preparedRecords.filter(r => r.always_prepared);
+  const actualMax = totalSlots + alwaysPrepared.length;
+
   // Sort so always-prepared spells come first
   const sorted = [...preparedRecords].sort((a, b) => {
     if (a.always_prepared && !b.always_prepared) return -1;
@@ -148,16 +133,14 @@ function createPreparedSlots(
 
   // Fill slots with prepared spells
   for (const record of sorted) {
-    if (slots.length < totalSlots) {
-      slots.push({
-        spell_id: record.spell_id,
-        alwaysPrepared: record.always_prepared,
-      });
-    }
+    slots.push({
+      spell_id: record.spell_id,
+      alwaysPrepared: record.always_prepared,
+    });
   }
 
   // Fill remaining slots with empty slots
-  while (slots.length < totalSlots) {
+  while (slots.length < actualMax) {
     slots.push({
       spell_id: null,
       alwaysPrepared: false,

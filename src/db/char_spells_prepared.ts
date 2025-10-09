@@ -50,6 +50,7 @@ export async function create(db: SQL, spellPrepared: CreateCharSpellPrepared): P
   const row = result[0];
   return CharSpellPreparedSchema.parse({
     ...row,
+    always_prepared: Boolean(row.always_prepared),
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   });
@@ -92,7 +93,7 @@ export async function getCurrentlyPrepared(db: SQL, characterId: string): Promis
     );
 
     classSpellInfo.set(key, {
-      alwaysPrepared: event.always_prepared,
+      alwaysPrepared: Boolean(event.always_prepared),
       lastEvent: event,
     });
   }

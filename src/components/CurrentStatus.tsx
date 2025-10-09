@@ -1,5 +1,4 @@
 import type { ComputedCharacter } from '@src/services/computeCharacter';
-import type { SlotsBySpellLevel } from '@src/lib/dnd';
 
 export interface CurrentStatusProps {
   character: ComputedCharacter;
@@ -17,8 +16,8 @@ export const CurrentStatus = ({ character, swapOob }: CurrentStatusProps) => {
   let spellSlotsUsed = 0;
   if (character.spellSlots && character.availableSpellSlots) {
     for (let level = 1; level <= 9; level++) {
-      const total = character.spellSlots[level as keyof SlotsBySpellLevel] || 0;
-      const available = character.availableSpellSlots[level as keyof SlotsBySpellLevel] || 0;
+      const total = character.spellSlots.filter(s => s === level).length;
+      const available = character.availableSpellSlots.filter(s => s === level).length;
       spellSlotsUsed += (total - available);
     }
   }
@@ -38,7 +37,7 @@ export const CurrentStatus = ({ character, swapOob }: CurrentStatusProps) => {
   }
 
   if (spellSlotsUsed > 0) {
-    const totalSlots = Object.values(character.spellSlots || {}).reduce((sum, val) => sum + val, 0);
+    const totalSlots = character.spellSlots ? character.spellSlots.length : 0;
     statusParts.push(`${spellSlotsUsed} of ${totalSlots} spell slots used`);
   }
 

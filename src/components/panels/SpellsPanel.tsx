@@ -15,11 +15,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
     <div class="accordion-body" id="spells-panel" hx-swap-oob={swapOob && 'true'}>
       {/* Spellcasting stats per class */}
       {character.spells.map((spellInfo) => {
-        const spellCountText = spellInfo.spellcastingType === 'prepared'
-          ? `${spellInfo.preparedSpells?.length || 0}/${spellInfo.maxSpellsPrepared || 0} prepared`
-          : spellInfo.spellcastingType === 'known'
-          ? `${spellInfo.knownSpells?.length || 0}/${spellInfo.maxSpellsKnown || 0} known`
-          : '';
+        const spellCountText = `${spellInfo.cantripSlots.length} / ${spellInfo.preparedSpells.length}`;
 
         return (
           <div class="row g-2 h-auto mb-2">
@@ -33,7 +29,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
               <LabeledValue label="Spell Save DC" value={spellInfo.spellSaveDC} />
             </div>
             <div class="col-3">
-              <LabeledValue label="Spells" value={spellCountText} />
+              <LabeledValue label="Cantrips/Spells" value={spellCountText} />
             </div>
           </div>
         );
@@ -81,92 +77,168 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
         </div>
       )}
 
-      {/* Combined spell list */}
+      {/* Prepared Spells - unified table across all classes */}
       {character.spells.length > 0 && (() => {
-        // Collect all spells from all classes
-        type SpellRow = {
-          spellId: string;
+        type SlotRow = {
           className: string;
-          isPrepared: boolean | null; // null = N/A
+          type: 'Cantrip' | 'Spell';
+          spell_id: string | null;
+          alwaysPrepared: boolean;
+          slotIndex: number;
         };
 
-        const allSpellRows: SpellRow[] = [];
+        const allSlots: SlotRow[] = [];
 
         for (const spellInfo of character.spells) {
-          // Add cantrips
-          for (const spellId of spellInfo.cantrips) {
-            allSpellRows.push({
-              spellId,
+          // Add cantrip slots
+          spellInfo.cantripSlots.forEach((slot, idx) => {
+            allSlots.push({
               className: spellInfo.class,
-              isPrepared: null, // Cantrips don't need preparation
+              type: 'Cantrip',
+              spell_id: slot.spell_id,
+              alwaysPrepared: slot.alwaysPrepared,
+              slotIndex: idx,
             });
-          }
+          });
 
-          // Add known spells (for known casters)
-          if (spellInfo.knownSpells) {
-            for (const spellId of spellInfo.knownSpells) {
-              allSpellRows.push({
-                spellId,
-                className: spellInfo.class,
-                isPrepared: null, // Known spells don't need preparation
-              });
-            }
-          }
-
-          // Add spellbook spells (wizard only)
-          if (spellInfo.spellbookSpells) {
-            for (const spellId of spellInfo.spellbookSpells) {
-              const isPrepared = spellInfo.preparedSpells?.includes(spellId) || false;
-              allSpellRows.push({
-                spellId,
-                className: spellInfo.class,
-                isPrepared,
-              });
-            }
-          }
-
-          // Add prepared spells (for non-wizard prepared casters like cleric, druid, paladin)
-          // These casters can prepare from the full class list, so we only show what's prepared
-          if (spellInfo.preparedSpells && !spellInfo.spellbookSpells) {
-            for (const spellId of spellInfo.preparedSpells) {
-              allSpellRows.push({
-                spellId,
-                className: spellInfo.class,
-                isPrepared: true, // These are prepared
-              });
-            }
-          }
+          // Add prepared spell slots
+          spellInfo.preparedSpells.forEach((slot, idx) => {
+            allSlots.push({
+              className: spellInfo.class,
+              type: 'Spell',
+              spell_id: slot.spell_id,
+              alwaysPrepared: slot.alwaysPrepared,
+              slotIndex: idx,
+            });
+          });
         }
 
-        // Remove duplicates (same spell from different classes)
-        const uniqueSpells = new Map<string, SpellRow>();
-        for (const row of allSpellRows) {
-          const existingRow = uniqueSpells.get(row.spellId);
-          if (!existingRow) {
-            uniqueSpells.set(row.spellId, row);
-          } else {
-            // If spell exists, combine class names
-            existingRow.className = `${existingRow.className}, ${row.className}`;
-            // If either instance is prepared, mark as prepared
-            if (row.isPrepared === true) {
-              existingRow.isPrepared = true;
-            }
-          }
-        }
-
-        const spellRows = Array.from(uniqueSpells.values());
-
-        // Sort by level, then name
-        spellRows.sort((a, b) => {
-          const spellA = spells.find(s => s.id === a.spellId);
-          const spellB = spells.find(s => s.id === b.spellId);
-          if (!spellA || !spellB) return 0;
-
-          if (spellA.level !== spellB.level) {
-            return spellA.level - spellB.level;
-          }
-          return spellA.name.localeCompare(spellB.name);
+        // Sort: empty slots first, then filled
+        allSlots.sort((a, b) => {
+          if (a.spell_id === null && b.spell_id !== null) return -1;
+          if (a.spell_id !== null && b.spell_id === null) return 1;
+          // Within same empty/filled status, sort by class then type
+          if (a.className !== b.className) return a.className.localeCompare(b.className);
+          if (a.type !== b.type) return a.type === 'Cantrip' ? -1 : 1;
+          return a.slotIndex - b.slotIndex;
         });
+
+        return (
+          <div class="mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Prepared Spells</h6>
+              <button
+                class="btn btn-sm btn-outline-secondary border p-1"
+                style="width: 24px; height: 24px; line-height: 1;"
+                aria-label="Spell preparation history"
+                title="Spell preparation history"
+                hx-get={`/characters/${character.id}/history/prepared-spells`}
+                hx-target="#editModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#editModal">
+                <i class="bi bi-clock-history"></i>
+              </button>
+            </div>
+            {allSlots.length > 0 ? (
+              <div class="table-responsive">
+                <table class="table table-sm table-hover small">
+                  <thead>
+                    <tr>
+                      <th>Class</th>
+                      <th>Type</th>
+                      <th>Spell</th>
+                      <th style="width: 80px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allSlots.map((row) => {
+                      const spell = row.spell_id ? spells.find(s => s.id === row.spell_id) : null;
+
+                      return (
+                        <tr>
+                          <td class="text-capitalize">{row.className}</td>
+                          <td>{row.type}</td>
+                          <td>
+                            {spell ? (
+                              <>
+                                <a
+                                  href="#"
+                                  hx-get={`/spells/${spell.id}`}
+                                  hx-target="#editModalContent"
+                                  hx-swap="innerHTML"
+                                  data-bs-toggle="modal"
+                                  data-bs-target="#editModal"
+                                  class="text-decoration-none"
+                                >
+                                  {spell.name}
+                                </a>
+                                {row.alwaysPrepared && (
+                                  <span class="badge bg-secondary ms-1" title="Always prepared (e.g., domain spell)">
+                                    <i class="bi bi-lock-fill"></i>
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span class="text-muted fst-italic">empty</span>
+                            )}
+                          </td>
+                          <td>
+                            <div class="d-flex gap-1">
+                              <button
+                                class="btn btn-sm btn-outline-secondary border p-0"
+                                style="width: 24px; height: 24px; line-height: 1;"
+                                aria-label="Edit slot"
+                                title="Edit slot"
+                                disabled={row.alwaysPrepared}
+                                hx-get={`/characters/${character.id}/edit/spell-slot?class=${row.className}&type=${row.type.toLowerCase()}&slot=${row.slotIndex}`}
+                                hx-target="#editModalContent"
+                                hx-swap="innerHTML"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editModal">
+                                <i class="bi bi-pencil"></i>
+                              </button>
+                              {spell && (
+                                <button
+                                  class="btn btn-sm btn-outline-primary border p-0"
+                                  style="width: 24px; height: 24px; line-height: 1;"
+                                  aria-label="Cast spell"
+                                  title="Cast spell"
+                                  hx-post={`/characters/${character.id}/cast-spell`}
+                                  hx-vals={`{"spell_id": "${spell.id}", "class": "${row.className}"}`}
+                                  hx-target="#spells-panel"
+                                  hx-swap="outerHTML">
+                                  <i class="bi bi-lightning-fill"></i>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p class="text-muted small">No spell slots available.</p>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Wizard Spellbook */}
+      {character.spells.some(si => si.knownSpells !== null) && (() => {
+        const wizardInfo = character.spells.find(si => si.knownSpells !== null);
+        if (!wizardInfo || !wizardInfo.knownSpells) return null;
+
+        // Sort spells by level then name
+        const sortedSpells = [...wizardInfo.knownSpells]
+          .map(spellId => spells.find(s => s.id === spellId))
+          .filter(Boolean)
+          .sort((a, b) => {
+            if (a!.level !== b!.level) return a!.level - b!.level;
+            return a!.name.localeCompare(b!.name);
+          });
 
         return (
           <div class="mt-3">
@@ -175,65 +247,65 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
               <button
                 class="btn btn-sm btn-outline-secondary border p-1"
                 style="width: 24px; height: 24px; line-height: 1;"
-                aria-label="Learn spell"
-                title="Learn spell"
+                aria-label="Add to spellbook"
+                title="Add to spellbook"
                 hx-get={`/characters/${character.id}/learn-spell`}
                 hx-target="#editModalContent"
                 hx-swap="innerHTML"
                 data-bs-toggle="modal"
                 data-bs-target="#editModal">
-                <i class="bi bi-pencil"></i>
+                <i class="bi bi-plus"></i>
               </button>
             </div>
-            {spellRows.length > 0 ? (
-              <div class="table-responsive">
-                <table class="table table-sm table-hover small">
-                  <thead>
-                    <tr>
-                      <th>Spell</th>
-                      <th>Level</th>
-                      <th>Class</th>
-                      <th>Prepared</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {spellRows.map((row) => {
-                      const spell = spells.find(s => s.id === row.spellId);
-                      if (!spell) return null;
+            <div class="table-responsive">
+              <table class="table table-sm table-hover small">
+                <thead>
+                  <tr>
+                    <th>Spell</th>
+                    <th>Level</th>
+                    <th>Prepared</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedSpells.map((spell) => {
+                    if (!spell) return null;
 
-                      const preparedIcon = row.isPrepared === null
-                        ? <span class="text-muted" title="Does not require preparation">N/A</span>
-                        : row.isPrepared
-                        ? <i class="bi bi-check-circle-fill text-success" title="Prepared"></i>
-                        : <i class="bi bi-circle text-muted" title="Not prepared"></i>;
+                    // Check if in cantrip or prepared slots
+                    const isInCantripSlot = wizardInfo.cantripSlots.some(slot => slot.spell_id === spell.id);
+                    const isInPreparedSlot = wizardInfo.preparedSpells.some(slot => slot.spell_id === spell.id);
+                    const isPrepared = isInCantripSlot || isInPreparedSlot;
 
-                      return (
-                        <tr>
-                          <td>
-                            <a
-                              href="#"
-                              hx-get={`/spells/${spell.id}`}
-                              hx-target="#editModalContent"
-                              hx-swap="innerHTML"
-                              data-bs-toggle="modal"
-                              data-bs-target="#editModal"
-                              class="text-decoration-none"
-                            >
-                              {spell.name}
-                            </a>
-                          </td>
-                          <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
-                          <td class="text-capitalize">{row.className}</td>
-                          <td>{preparedIcon}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p class="text-muted small">No spells learned yet.</p>
-            )}
+                    const preparedIcon = spell.level === 0
+                      ? (isInCantripSlot
+                          ? <i class="bi bi-check-circle-fill text-success" title="In cantrip slot"></i>
+                          : <i class="bi bi-circle text-muted" title="Not in cantrip slot"></i>)
+                      : (isInPreparedSlot
+                          ? <i class="bi bi-check-circle-fill text-success" title="Prepared"></i>
+                          : <i class="bi bi-circle text-muted" title="Not prepared"></i>);
+
+                    return (
+                      <tr>
+                        <td>
+                          <a
+                            href="#"
+                            hx-get={`/spells/${spell.id}`}
+                            hx-target="#editModalContent"
+                            hx-swap="innerHTML"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editModal"
+                            class="text-decoration-none"
+                          >
+                            {spell.name}
+                          </a>
+                        </td>
+                        <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
+                        <td>{preparedIcon}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
       })()}

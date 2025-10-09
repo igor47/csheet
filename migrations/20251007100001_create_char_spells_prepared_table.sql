@@ -1,16 +1,19 @@
 -- migrate:up
+-- Prepared spells: event-sourced prepare/unprepare actions for all non-wizard casters
 CREATE TABLE char_spells_prepared (
   id TEXT PRIMARY KEY CHECK(length(id) = 26),
   character_id TEXT NOT NULL,
+  class TEXT NOT NULL,
   spell_id TEXT NOT NULL,
-  prepared_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  action TEXT NOT NULL CHECK(action IN ('prepare', 'unprepare')),
+  always_prepared BOOLEAN NOT NULL DEFAULT FALSE,
   note TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_char_spells_prepared_char_id_prepared_at ON char_spells_prepared(character_id, prepared_at);
+CREATE INDEX idx_char_spells_prepared_char_id_class ON char_spells_prepared(character_id, class);
 CREATE INDEX idx_char_spells_prepared_spell_id ON char_spells_prepared(spell_id);
 
 CREATE TRIGGER char_spells_prepared_updated_at
@@ -23,5 +26,5 @@ END;
 -- migrate:down
 DROP TRIGGER IF EXISTS char_spells_prepared_updated_at;
 DROP INDEX IF EXISTS idx_char_spells_prepared_spell_id;
-DROP INDEX IF EXISTS idx_char_spells_prepared_char_id_prepared_at;
+DROP INDEX IF EXISTS idx_char_spells_prepared_char_id_class;
 DROP TABLE IF EXISTS char_spells_prepared;

@@ -7,6 +7,10 @@ export type SizeType = z.infer<typeof SizeSchema>;
 export const HitDice = [6, 8, 10, 12] as const;
 export type HitDieType = typeof HitDice[number];
 
+export const SpellLevel = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+export type SpellLevelType = typeof SpellLevel[number];
+export type SpellSlotsType = SpellLevelType[];
+
 export const Abilities = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"] as const;
 export const AbilitySchema = z.enum(Abilities);
 export type AbilityType = z.infer<typeof AbilitySchema>;
@@ -222,15 +226,15 @@ export const CasterKind = ["full", "half", "third", "pact"] as const;
 export const CasterKindSchema = z.enum(CasterKind);
 export type CasterKindType = z.infer<typeof CasterKindSchema>;
 
-export const SpellcastingType = ["prepared", "known", "none"] as const;
-export const SpellcastingTypeSchema = z.enum(SpellcastingType);
-export type SpellcastingTypeType = z.infer<typeof SpellcastingTypeSchema>;
+export const SpellChangeEvent = ["levelup", "longrest"] as const;
+export const SpellChangeEventSchema = z.enum(SpellChangeEvent);
+export type SpellChangeEventType = z.infer<typeof SpellChangeEventSchema>;
 
-export type SpellcastingInfo = { notes?: string} & ({ enabled: false; spellcastingType: "none" } | {
+export type SpellcastingInfo = { notes?: string} & ({ enabled: false } | {
   enabled: true;
   kind: CasterKindType;
   ability: AbilityType;
-  spellcastingType: SpellcastingTypeType;
+  changePrepared: SpellChangeEventType;
   subclasses?: string[]; // Subclasses that grant/modify spellcasting
 })
 
@@ -270,7 +274,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     },
     subclasses: ["path of the berserker", "path of the totem warrior"],
     subclassLevel: 3,
-    spellcasting: { enabled: false, spellcastingType: "none" },
+    spellcasting: { enabled: false },
   },
   bard: {
     name: "bard",
@@ -291,7 +295,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     },
     subclasses: ["college of lore", "college of valor"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "full", ability: "charisma", spellcastingType: "known" },
+    spellcasting: { enabled: true, kind: "full", ability: "charisma", changePrepared: "levelup" },
   },
   cleric: {
     name: "cleric",
@@ -304,7 +308,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["history", "insight", "medicine", "persuasion", "religion"] },
     subclasses: ["knowledge", "life", "light", "nature", "tempest", "trickery", "war"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, kind: "full", ability: "wisdom", spellcastingType: "prepared" },
+    spellcasting: { enabled: true, kind: "full", ability: "wisdom", changePrepared: "longrest" },
   },
   druid: {
     name: "druid",
@@ -317,7 +321,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","animal handling","insight","medicine","nature","perception","religion","survival"] },
     subclasses: ["circle of the land", "circle of the moon"],
     subclassLevel: 2,
-    spellcasting: { enabled: true, kind: "full", ability: "wisdom", spellcastingType: "prepared" },
+    spellcasting: { enabled: true, kind: "full", ability: "wisdom", changePrepared: "longrest" },
   },
   fighter: {
     name: "fighter",
@@ -330,7 +334,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["acrobatics","animal handling","athletics","history","insight","intimidation","perception","survival"] },
     subclasses: ["champion", "battle master", "eldritch knight"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "third", subclasses: ["eldritch knight"], ability: "intelligence", spellcastingType: "known"},
+    spellcasting: { enabled: true, kind: "third", subclasses: ["eldritch knight"], ability: "intelligence", changePrepared: "levelup"},
   },
   monk: {
     name: "monk",
@@ -343,7 +347,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["acrobatics","athletics","history","insight","religion","stealth"] },
     subclasses: ["way of the open hand", "way of shadow", "way of the four elements"],
     subclassLevel: 3,
-    spellcasting: { enabled: false, spellcastingType: "none" },
+    spellcasting: { enabled: false },
   },
   paladin: {
     name: "paladin",
@@ -356,7 +360,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["athletics","insight","intimidation","medicine","persuasion","religion"] },
     subclasses: ["oath of devotion", "oath of the ancients", "oath of vengeance"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "half", ability: "charisma", spellcastingType: "prepared", notes: "half-caster progression" },
+    spellcasting: { enabled: true, kind: "half", ability: "charisma", changePrepared: "longrest", notes: "half-caster progression" },
   },
   ranger: {
     name: "ranger",
@@ -369,7 +373,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 3, from: ["animal handling","athletics","insight","investigation","nature","perception","stealth","survival"] },
     subclasses: ["hunter", "beast master"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "half", ability: "wisdom", spellcastingType: "known", notes: "half-caster progression" },
+    spellcasting: { enabled: true, kind: "half", ability: "wisdom", changePrepared: "levelup", notes: "half-caster progression" },
   },
   rogue: {
     name: "rogue",
@@ -382,7 +386,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 4, from: ["acrobatics","athletics","deception","insight","intimidation","investigation","perception","performance","persuasion","sleight of hand","stealth"] },
     subclasses: ["thief", "assassin", "arcane trickster"],
     subclassLevel: 3,
-    spellcasting: { enabled: true, kind: "third", subclasses: ["arcane trickster"], ability: "intelligence", spellcastingType: "known"},
+    spellcasting: { enabled: true, kind: "third", subclasses: ["arcane trickster"], ability: "intelligence", changePrepared: "levelup"},
   },
   sorcerer: {
     name: "sorcerer",
@@ -395,7 +399,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","deception","insight","intimidation","persuasion","religion"] },
     subclasses: ["draconic bloodline", "wild magic"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, kind: "full", ability: "charisma", spellcastingType: "known" },
+    spellcasting: { enabled: true, kind: "full", ability: "charisma", changePrepared: "levelup" },
   },
   warlock: {
     name: "warlock",
@@ -408,7 +412,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","deception","history","intimidation","investigation","nature","religion"] },
     subclasses: ["the archfey", "the fiend", "the great old one"],
     subclassLevel: 1,
-    spellcasting: { enabled: true, kind: "pact", ability: "charisma", spellcastingType: "known", notes: "pact magic progression" },
+    spellcasting: { enabled: true, kind: "pact", ability: "charisma", changePrepared: "levelup", notes: "pact magic progression" },
   },
   wizard: {
     name: "wizard",
@@ -421,7 +425,7 @@ export const Classes: Record<ClassNameType, ClassDef> = {
     skillChoices: { choose: 2, from: ["arcana","history","insight","investigation","medicine","religion"] },
     subclasses: ["school of abjuration","school of conjuration","school of divination","school of enchantment","school of evocation","school of illusion","school of necromancy","school of transmutation"],
     subclassLevel: 2,
-    spellcasting: { enabled: true, kind: "full", ability: "intelligence", spellcastingType: "prepared" },
+    spellcasting: { enabled: true, kind: "full", ability: "intelligence", changePrepared: "longrest" },
   }
 };
 
@@ -615,100 +619,218 @@ export const Backgrounds: Record<BackgroundNameType, Background> = {
 } as const;
 
 // =====================
-// Spells Known & Cantrips
+// Spell Progression Tables from SRD
 // =====================
 
-/** Number of cantrips known by class and level. Index 0 is unused. */
-export type CantripsKnownProgression = number[];
+type SpellProgressionTableRow = {
+  level: number;
+  cantrips: number;
+  prepared: number;
+  slots: number[]; // 1st to 9th level slots
+  arcanum?: Record<number, number>; // warlock-only
+}
 
-/** Number of spells known by class and level for "spells known" casters. Index 0 is unused. */
-export type SpellsKnownProgression = number[];
-
-/** Bard cantrips known by level */
-export const BARD_CANTRIPS_KNOWN: CantripsKnownProgression = [
-  0, // 0 (unused)
-  2, 2, 2, 3, 3, 3, 3, 3, 3, 4, // 1-10
-  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 11-20
-];
-
-/** Bard spells known by level */
-export const BARD_SPELLS_KNOWN: SpellsKnownProgression = [
-  0, // 0 (unused)
-  4, 5, 6, 7, 8, 9, 10, 11, 12, 14, // 1-10
-  15, 15, 16, 18, 19, 19, 20, 22, 22, 22, // 11-20
-];
-
-/** Sorcerer cantrips known by level */
-export const SORCERER_CANTRIPS_KNOWN: CantripsKnownProgression = [
-  0, // 0 (unused)
-  4, 4, 4, 5, 5, 5, 5, 5, 5, 6, // 1-10
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, // 11-20
-];
-
-/** Sorcerer spells known by level */
-export const SORCERER_SPELLS_KNOWN: SpellsKnownProgression = [
-  0, // 0 (unused)
-  2, 3, 4, 5, 6, 7, 8, 9, 10, 11, // 1-10
-  12, 12, 13, 13, 14, 14, 15, 15, 15, 15, // 11-20
-];
-
-/** Warlock cantrips known by level */
-export const WARLOCK_CANTRIPS_KNOWN: CantripsKnownProgression = [
-  0, // 0 (unused)
-  2, 2, 2, 3, 3, 3, 3, 3, 3, 4, // 1-10
-  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 11-20
-];
-
-/** Warlock spells known by level */
-export const WARLOCK_SPELLS_KNOWN: SpellsKnownProgression = [
-  0, // 0 (unused)
-  2, 3, 4, 5, 6, 7, 8, 9, 10, 10, // 1-10
-  11, 11, 12, 12, 13, 13, 14, 14, 15, 15, // 11-20
-];
-
-/** Ranger spells known by level (half-caster, starts at level 2) */
-export const RANGER_SPELLS_KNOWN: SpellsKnownProgression = [
-  0, // 0 (unused)
-  0, 2, 3, 3, 4, 4, 5, 5, 6, 6, // 1-10
-  7, 7, 8, 8, 9, 9, 10, 10, 11, 11, // 11-20
-];
+const SpellProgressionTables: Partial<Record<ClassNameType, SpellProgressionTableRow[]>> = {
+  "bard": [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 2, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 2, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 2, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 3, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 3, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 3, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 3, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 3, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 3, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 4, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 4, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 4, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 4, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 4, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 4, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 4, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 4, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 4, prepared: 20, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 4, prepared: 21, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 4, prepared: 22, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+  ],
+  'cleric': [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 3, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 3, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 3, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 4, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 4, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 4, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 4, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 4, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 4, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 5, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 5, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 5, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 5, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 5, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 5, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 5, prepared: 20, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 5, prepared: 21, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 5, prepared: 22, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+  ],
+  "druid": [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 2, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 2, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 2, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 3, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 3, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 3, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 3, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 3, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 3, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 4, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 4, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 4, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 4, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 4, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 4, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 4, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 4, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 4, prepared: 20, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 4, prepared: 21, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 4, prepared: 22, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+  ],
+  "paladin": [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 0, prepared: 2,   slots: [2, 0, 0, 0, 0]},
+    {level: 2, cantrips: 0, prepared: 3,   slots: [2, 0, 0, 0, 0]},
+    {level: 3, cantrips: 0, prepared: 4,   slots: [3, 0, 0, 0, 0]},
+    {level: 4, cantrips: 0, prepared: 5,   slots: [3, 0, 0, 0, 0]},
+    {level: 5, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
+    {level: 6, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
+    {level: 7, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
+    {level: 8, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
+    {level: 9, cantrips: 0, prepared: 9,   slots: [4, 3, 2, 0, 0]},
+    {level: 10, cantrips: 0, prepared: 9,  slots: [4, 3, 2, 0, 0]},
+    {level: 11, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
+    {level: 12, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
+    {level: 13, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
+    {level: 14, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
+    {level: 15, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
+    {level: 16, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
+    {level: 17, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
+    {level: 18, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
+    {level: 19, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
+    {level: 20, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
+  ],
+  "ranger": [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 0, prepared: 2,   slots: [2, 0, 0, 0, 0]},
+    {level: 2, cantrips: 0, prepared: 3,   slots: [2, 0, 0, 0, 0]},
+    {level: 3, cantrips: 0, prepared: 4,   slots: [3, 0, 0, 0, 0]},
+    {level: 4, cantrips: 0, prepared: 5,   slots: [3, 0, 0, 0, 0]},
+    {level: 5, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
+    {level: 6, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
+    {level: 7, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
+    {level: 8, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
+    {level: 9, cantrips: 0, prepared: 9,   slots: [4, 3, 2, 0, 0]},
+    {level: 10, cantrips: 0, prepared: 9,  slots: [4, 3, 2, 0, 0]},
+    {level: 11, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
+    {level: 12, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
+    {level: 13, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
+    {level: 14, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
+    {level: 15, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
+    {level: 16, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
+    {level: 17, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
+    {level: 18, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
+    {level: 19, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
+    {level: 20, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
+  ],
+  "sorcerer": [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 4, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 4, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 4, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 5, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 5, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 5, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 5, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 5, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 5, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 6, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 6, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 6, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 6, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 6, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 6, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 6, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 6, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 6, prepared: 20, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 6, prepared: 21, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 6, prepared: 22, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+  ],
+  "warlock": [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 2, prepared: 2,   slots: [1, 0, 0, 0, 0], arcanum: {}},
+    {level: 2, cantrips: 2, prepared: 3,   slots: [2, 0, 0, 0, 0], arcanum: {}},
+    {level: 3, cantrips: 2, prepared: 4,   slots: [0, 2, 0, 0, 0], arcanum: {}},
+    {level: 4, cantrips: 3, prepared: 5,   slots: [0, 2, 0, 0, 0], arcanum: {}},
+    {level: 5, cantrips: 3, prepared: 6,   slots: [0, 0, 2, 0, 0], arcanum: {}},
+    {level: 6, cantrips: 3, prepared: 7,   slots: [0, 0, 2, 0, 0], arcanum: {}},
+    {level: 7, cantrips: 3, prepared: 8,   slots: [0, 0, 0, 2, 0], arcanum: {}},
+    {level: 8, cantrips: 3, prepared: 9,   slots: [0, 0, 0, 2, 0], arcanum: {}},
+    {level: 9, cantrips: 3, prepared: 10,  slots: [0, 0, 0, 0, 2], arcanum: {}},
+    {level: 10, cantrips: 4, prepared: 10, slots: [0, 0, 0, 0, 2], arcanum: {}},
+    {level: 11, cantrips: 4, prepared: 11, slots: [0, 0, 0, 0, 3], arcanum: {6: 1}},
+    {level: 12, cantrips: 4, prepared: 11, slots: [0, 0, 0, 0, 3], arcanum: {6: 1}},
+    {level: 13, cantrips: 4, prepared: 12, slots: [0, 0, 0, 0, 3], arcanum: {6: 1, 7: 1}},
+    {level: 14, cantrips: 4, prepared: 12, slots: [0, 0, 0, 0, 3], arcanum: {6: 1, 7: 1}},
+    {level: 15, cantrips: 4, prepared: 13, slots: [0, 0, 0, 0, 3], arcanum: {6: 1, 7: 1, 8: 1}},
+    {level: 16, cantrips: 4, prepared: 13, slots: [0, 0, 0, 0, 3], arcanum: {6: 1, 7: 1, 8: 1}},
+    {level: 17, cantrips: 4, prepared: 14, slots: [0, 0, 0, 0, 4], arcanum: {6: 1, 7: 1, 8: 1, 9: 1}},
+    {level: 18, cantrips: 4, prepared: 14, slots: [0, 0, 0, 0, 4], arcanum: {6: 1, 7: 1, 8: 1, 9: 1}},
+    {level: 19, cantrips: 4, prepared: 15, slots: [0, 0, 0, 0, 4], arcanum: {6: 1, 7: 1, 8: 1, 9: 1}},
+    {level: 20, cantrips: 4, prepared: 15, slots: [0, 0, 0, 0, 4], arcanum: {6: 1, 7: 1, 8: 1, 9: 1}},
+  ],
+  "wizard": [
+    {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 1, cantrips: 3, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 3, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 3, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 4, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 4, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 4, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 4, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 4, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 4, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 5, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 5, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 5, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 5, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 5, prepared: 21, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 5, prepared: 22, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 5, prepared: 23, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 5, prepared: 24, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 5, prepared: 26, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+  ],
+}
 
 /** Eldritch Knight / Arcane Trickster cantrips known by level (third-caster, starts at level 3) */
-export const THIRD_CASTER_CANTRIPS_KNOWN: CantripsKnownProgression = [
+type SpellProgression = number[];
+export const THIRD_CASTER_CANTRIPS_KNOWN: SpellProgression = [
   0, 0, 0, // 0-2 (unused / not yet a caster)
   2, 2, 2, 2, 2, 2, 2, 3, // 3-10
   3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // 11-20
 ];
 
 /** Eldritch Knight / Arcane Trickster spells known by level (third-caster, starts at level 3) */
-export const THIRD_CASTER_SPELLS_KNOWN: SpellsKnownProgression = [
+export const THIRD_CASTER_SPELLS_PREPARED: SpellProgression = [
   0, 0, 0, // 0-2 (unused / not yet a caster)
   3, 4, 4, 5, 6, 6, 7, 8, // 3-10
   8, 9, 10, 10, 11, 11, 12, 13, 13, 13, // 11-20
 ];
-
-/** Cleric cantrips known by level */
-export const CLERIC_CANTRIPS_KNOWN: CantripsKnownProgression = [
-  0, // 0 (unused)
-  3, 3, 3, 4, 4, 4, 4, 4, 4, 5, // 1-10
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 11-20
-];
-
-/** Druid cantrips known by level */
-export const DRUID_CANTRIPS_KNOWN: CantripsKnownProgression = [
-  0, // 0 (unused)
-  2, 2, 2, 3, 3, 3, 3, 3, 3, 4, // 1-10
-  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 11-20
-];
-
-/** Wizard cantrips known by level */
-export const WIZARD_CANTRIPS_KNOWN: CantripsKnownProgression = [
-  0, // 0 (unused)
-  3, 3, 3, 4, 4, 4, 4, 4, 4, 5, // 1-10
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 11-20
-];
-
-/** Paladin doesn't get cantrips, but does get spells prepared (half-caster) */
 
 /** Helper function to get cantrips known for a class at a given level */
 export function maxCantripsKnown(className: ClassNameType, level: number): number {
@@ -716,12 +838,13 @@ export function maxCantripsKnown(className: ClassNameType, level: number): numbe
   if (!classDef.spellcasting.enabled) return 0;
 
   switch (className) {
-    case "bard": return BARD_CANTRIPS_KNOWN[level] || 0;
-    case "sorcerer": return SORCERER_CANTRIPS_KNOWN[level] || 0;
-    case "warlock": return WARLOCK_CANTRIPS_KNOWN[level] || 0;
-    case "cleric": return CLERIC_CANTRIPS_KNOWN[level] || 0;
-    case "druid": return DRUID_CANTRIPS_KNOWN[level] || 0;
-    case "wizard": return WIZARD_CANTRIPS_KNOWN[level] || 0;
+    case "bard":
+    case "sorcerer":
+    case "warlock":
+    case "cleric":
+    case "druid":
+    case "wizard":
+      return SpellProgressionTables[className]![level]?.cantrips || 0;
     case "fighter": // Eldritch Knight
     case "rogue":   // Arcane Trickster
       return THIRD_CASTER_CANTRIPS_KNOWN[level] || 0;
@@ -730,21 +853,26 @@ export function maxCantripsKnown(className: ClassNameType, level: number): numbe
 }
 
 /** Helper function to get spells known for "known caster" classes at a given level */
-export function maxSpellsKnown(className: ClassNameType, level: number): number | null {
+export function maxSpellsPrepared(className: ClassNameType, level: number): number | null {
   const classDef = Classes[className];
-  if (!classDef.spellcasting.enabled || classDef.spellcasting.spellcastingType !== "known") {
+  if (!classDef.spellcasting.enabled) {
     return null; // Not a "known" caster
   }
 
   switch (className) {
-    case "bard": return BARD_SPELLS_KNOWN[level] || 0;
-    case "sorcerer": return SORCERER_SPELLS_KNOWN[level] || 0;
-    case "warlock": return WARLOCK_SPELLS_KNOWN[level] || 0;
-    case "ranger": return RANGER_SPELLS_KNOWN[level] || 0;
+    case "bard":
+    case "sorcerer":
+    case "warlock":
+    case "cleric":
+    case "druid":
+    case "wizard":
+    case "paladin":
+    case "ranger":
+      return SpellProgressionTables[className]![level]?.prepared || 0;
     case "fighter": // Eldritch Knight
     case "rogue":   // Arcane Trickster
-      return THIRD_CASTER_SPELLS_KNOWN[level] || 0;
-    default: return null;
+      return THIRD_CASTER_CANTRIPS_KNOWN[level] || 0;
+    default: return 0;
   }
 }
 
@@ -752,131 +880,109 @@ export function maxSpellsKnown(className: ClassNameType, level: number): number 
 // Spell Slots
 // =====================
 
-/** Spell slot counts per spell level. Keys are 1..9 (no cantrips here). */
-export type SlotsBySpellLevel = Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
-
-/** Rows are indexed by character level (1..20). Index 0 is a dummy for convenience. */
-export type SlotProgression = SlotsBySpellLevel[];
+ // slots[0] = level 1 slots, slots[1] = level 2 slots, etc.
+export type SlotProgression = {level: number, slots: number[]}[];
 
 /** ---------- Full Caster Slots (Bard, Cleric, Druid, Sorcerer, Wizard) ---------- */
 export const FULL_CASTER_SLOTS: SlotProgression = [
-  {}, // 0 (unused)
-  { 1: 2 },                                    // 1
-  { 1: 3 },                                    // 2
-  { 1: 4, 2: 2 },                              // 3
-  { 1: 4, 2: 3 },                              // 4
-  { 1: 4, 2: 3, 3: 2 },                        // 5
-  { 1: 4, 2: 3, 3: 3 },                        // 6
-  { 1: 4, 2: 3, 3: 3, 4: 1 },                  // 7
-  { 1: 4, 2: 3, 3: 3, 4: 2 },                  // 8
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },            // 9
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },            // 10
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },      // 11
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },      // 12
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },// 13
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },// 14
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 }, // 15
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 }, // 16
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1, 9: 1 }, // 17
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 }, // 18
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 }, // 19
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 }, // 20
+  {level: 0, slots: []},
+  {level: 1, slots: [ 2 ]},
+  {level: 2, slots: [ 3 ]},
+  {level: 3, slots: [ 4, 2 ]},
+  {level: 4, slots: [ 4, 3 ]},
+  {level: 5, slots: [ 4, 3, 2 ]},
+  {level: 6, slots: [ 4, 3, 3 ]},
+  {level: 7, slots: [ 4, 3, 3, 1 ]},
+  {level: 8, slots: [ 4, 3, 3, 2 ]},
+  {level: 9, slots: [ 4, 3, 3, 3, 1 ]},
+  {level: 10, slots: [ 4, 3, 3, 3, 2 ]},
+  {level: 11, slots: [ 4, 3, 3, 3, 2, 1 ]},
+  {level: 12, slots: [ 4, 3, 3, 3, 2, 1 ]},
+  {level: 13, slots: [ 4, 3, 3, 3, 2, 1, 1 ]},
+  {level: 14, slots: [ 4, 3, 3, 3, 2, 1, 1 ]},
+  {level: 15, slots: [ 4, 3, 3, 3, 2, 1, 1, 1 ]},
+  {level: 16, slots: [ 4, 3, 3, 3, 2, 1, 1, 1 ]},
+  {level: 17, slots: [ 4, 3, 3, 3, 2, 1, 1, 1, 1 ]},
+  {level: 18, slots: [ 4, 3, 3, 3, 3, 1, 1, 1, 1 ]},
+  {level: 19, slots: [ 4, 3, 3, 3, 3, 2, 1, 1, 1 ]},
+  {level: 20, slots: [ 4, 3, 3, 3, 3, 2, 2, 1, 1 ]},
 ];
 
 /** ---------- Half Caster Slots (Paladin, Ranger) ---------- */
 export const HALF_CASTER_SLOTS: SlotProgression = [
-  {}, // 0
-  {}, // 1
-  { 1: 2 },                        // 2
-  { 1: 3 },                        // 3
-  { 1: 3 },                        // 4
-  { 1: 4, 2: 2 },                  // 5
-  { 1: 4, 2: 2 },                  // 6
-  { 1: 4, 2: 3 },                  // 7
-  { 1: 4, 2: 3 },                  // 8
-  { 1: 4, 2: 3, 3: 2 },            // 9
-  { 1: 4, 2: 3, 3: 2 },            // 10
-  { 1: 4, 2: 3, 3: 3 },            // 11
-  { 1: 4, 2: 3, 3: 3 },            // 12
-  { 1: 4, 2: 3, 3: 3, 4: 1 },      // 13
-  { 1: 4, 2: 3, 3: 3, 4: 1 },      // 14
-  { 1: 4, 2: 3, 3: 3, 4: 2 },      // 15
-  { 1: 4, 2: 3, 3: 3, 4: 2 },      // 16
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },// 17
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },// 18
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },// 19
-  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },// 20
+  {level: 0, slots: []},
+  {level: 1, slots: [ 2 ]},
+  {level: 2, slots: [ 2 ]},
+  {level: 3, slots: [ 3 ]},
+  {level: 4, slots: [ 3 ]},
+  {level: 5, slots: [ 4, 2 ]},
+  {level: 6, slots: [ 4, 2 ]},
+  {level: 7, slots: [ 4, 3 ]},
+  {level: 8, slots: [ 4, 3 ]},
+  {level: 9, slots: [ 4, 3, 2 ]},
+  {level: 10, slots: [ 4, 3, 2 ]},
+  {level: 11, slots: [ 4, 3, 3 ]},
+  {level: 12, slots: [ 4, 3, 3 ]},
+  {level: 13, slots: [ 4, 3, 3, 1 ]},
+  {level: 14, slots: [ 4, 3, 3, 1 ]},
+  {level: 15, slots: [ 4, 3, 3, 2 ]},
+  {level: 16, slots: [ 4, 3, 3, 2 ]},
+  {level: 17, slots: [ 4, 3, 3, 3, 1 ]},
+  {level: 18, slots: [ 4, 3, 3, 3, 1 ]},
+  {level: 19, slots: [ 4, 3, 3, 3, 2 ]},
+  {level: 20, slots: [ 4, 3, 3, 3, 2 ]},
 ];
 
 /** ---------- Third Caster Slots (Eldritch Knight / Arcane Trickster) ---------- */
 export const THIRD_CASTER_SLOTS: SlotProgression = [
-  {}, // 0
-  {}, // 1
-  {}, // 2
-  { 1: 2 },            // 3
-  { 1: 3 },            // 4
-  { 1: 3 },            // 5
-  { 1: 3, 2: 2 },      // 6
-  { 1: 4, 2: 2 },      // 7
-  { 1: 4, 2: 2 },      // 8
-  { 1: 4, 2: 2 },      // 9
-  { 1: 4, 2: 3 },      // 10
-  { 1: 4, 2: 3 },      // 11
-  { 1: 4, 2: 3 },      // 12
-  { 1: 4, 2: 3, 3: 2 },// 13
-  { 1: 4, 2: 3, 3: 2 },// 14
-  { 1: 4, 2: 3, 3: 2 },// 15
-  { 1: 4, 2: 3, 3: 3 },// 16
-  { 1: 4, 2: 3, 3: 3 },// 17
-  { 1: 4, 2: 3, 3: 3 },// 18
-  { 1: 4, 2: 3, 3: 3, 4: 1 }, // 19
-  { 1: 4, 2: 3, 3: 3, 4: 1 }, // 20
+  {level: 0, slots: []},
+  {level: 1, slots: []},
+  {level: 2, slots: []},
+  {level: 3, slots: [ 2 ]},
+  {level: 4, slots: [ 3 ]},
+  {level: 5, slots: [ 3 ]},
+  {level: 6, slots: [ 3, 2 ]},
+  {level: 7, slots: [ 4, 2 ]},
+  {level: 8, slots: [ 4, 2 ]},
+  {level: 9, slots: [ 4, 2 ]},
+  {level: 10, slots: [ 4, 3 ]},
+  {level: 11, slots: [ 4, 3 ]},
+  {level: 12, slots: [ 4, 3 ]},
+  {level: 13, slots: [ 4, 3, 2 ]},
+  {level: 14, slots: [ 4, 3, 2 ]},
+  {level: 15, slots: [ 4, 3, 2 ]},
+  {level: 16, slots: [ 4, 3, 3 ]},
+  {level: 17, slots: [ 4, 3, 3 ]},
+  {level: 18, slots: [ 4, 3, 3 ]},
+  {level: 19, slots: [ 4, 3, 3, 1 ]},
+  {level: 20, slots: [ 4, 3, 3, 1 ]},
 ];
 
-/** ---------- Warlock (Pact Magic) ---------- */
-export interface PactMagicRow {
-  /** Character level 1..20 */
-  level: number;
-  /** Number of Pact Magic slots available (refresh on short rest). */
-  slots: number;
-  /** The fixed level of those slots at this level. */
-  slotLevel: 1 | 2 | 3 | 4 | 5;
-  /** Mystic Arcanum: cumulative once-per-long-rest spell uses by level. */
-  arcanum?: Partial<Record<6 | 7 | 8 | 9, 1>>;
+function slotsFromProgression(progression: number[]): SpellSlotsType {
+  const slots: number[] = [];
+
+  for (let level = 1; level <= 9; level++) {
+    const slotsAtLevel = progression[level - 1] || 0;
+    for (let i = 0; i < slotsAtLevel; i++) {
+      slots.push(level);
+    }
+  }
+
+  return slots as SpellSlotsType;
 }
 
-/** Warlock’s slots + Arcanum (Arcanum are not slots). */
-export const WARLOCK_PACT_MAGIC: PactMagicRow[] = [
-  { level: 1, slots: 1, slotLevel: 1 },
-  { level: 2, slots: 2, slotLevel: 1 },
-  { level: 3, slots: 2, slotLevel: 2 },
-  { level: 4, slots: 2, slotLevel: 2 },
-  { level: 5, slots: 2, slotLevel: 3 },
-  { level: 6, slots: 2, slotLevel: 3 },
-  { level: 7, slots: 2, slotLevel: 4 },
-  { level: 8, slots: 2, slotLevel: 4 },
-  { level: 9, slots: 2, slotLevel: 5 },
-  { level: 10, slots: 2, slotLevel: 5 },
-  { level: 11, slots: 3, slotLevel: 5, arcanum: { 6: 1 } },
-  { level: 12, slots: 3, slotLevel: 5, arcanum: { 6: 1 } },
-  { level: 13, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1 } },
-  { level: 14, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1 } },
-  { level: 15, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1 } },
-  { level: 16, slots: 3, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1 } },
-  { level: 17, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
-  { level: 18, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
-  { level: 19, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
-  { level: 20, slots: 4, slotLevel: 5, arcanum: { 6: 1, 7: 1, 8: 1, 9: 1 } },
-];
-
-export const getSlotsFor = (kind: Exclude<CasterKindType, "warlock">, level: number): SlotsBySpellLevel => {
-  const table =
-    kind === "full" ? FULL_CASTER_SLOTS
-    : kind === "half" ? HALF_CASTER_SLOTS
-    : THIRD_CASTER_SLOTS;
-  return table[level]!
-};
-
-export const getWarlockPactAt = (level: number): PactMagicRow => (
-  WARLOCK_PACT_MAGIC.find(r => r.level === level)!
-)
+/** Helper function to get spell slots for a class at a given level */
+export function getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType {
+  if (casterKind === "full") {
+    return slotsFromProgression(FULL_CASTER_SLOTS[level]?.slots || []);
+  } else if (casterKind === "half") {
+    return slotsFromProgression(HALF_CASTER_SLOTS[level]?.slots || []);
+  } else if (casterKind === "third") {
+    return slotsFromProgression(THIRD_CASTER_SLOTS[level]?.slots || []);
+  } else if (casterKind === "pact") {
+    const progression = SpellProgressionTables["warlock"]!;
+    return slotsFromProgression(progression[level]?.slots || []);
+  } else {
+    return []
+  }
+}

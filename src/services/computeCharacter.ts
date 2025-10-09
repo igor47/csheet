@@ -6,7 +6,7 @@ import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills";
 import { getHpDelta } from "@src/db/char_hp";
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice";
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots";
-import { Races, Classes, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities, type SlotsBySpellLevel, type PactMagicRow, getSlotsFor, getWarlockPactAt, type ClassNameType } from "@src/lib/dnd";
+import { Races, Classes, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities, getSlotsFor, type ClassNameType, type SpellSlotsType, type SpellLevelType } from "@src/lib/dnd";
 import { computeSpells, type SpellInfoForClass } from "@src/services/computeSpells";
 
 export interface CharacterClass {
@@ -43,9 +43,9 @@ export interface ComputedCharacter extends Character {
   currentHP: number;
   hitDice: HitDieType[];
   availableHitDice: HitDieType[];
-  spellSlots: SlotsBySpellLevel | null;
-  availableSpellSlots: SlotsBySpellLevel | null;
-  pactMagic: PactMagicRow | null;
+  spellSlots: SpellSlotsType | null;
+  availableSpellSlots: SpellSlotsType | null
+  pactMagicSlots: SpellSlotsType | null;
   spells: SpellInfoForClass[];
 }
 
@@ -160,8 +160,8 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   const passivePerception = 10 + skills.perception.modifier;
 
   // Compute spell slots
-  let spellSlots: SlotsBySpellLevel | null = null;
-  let pactMagic: PactMagicRow | null = null;
+  let spellSlots: SpellSlotsType | null = null;
+  let pactMagicSlots: SpellSlotsType | null = null;
 
   // Calculate caster levels for multiclassing
   let fullCasterLevel = 0;
@@ -185,7 +185,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     // Add to appropriate caster level
     if (spellcasting.kind === 'pact') {
       // Warlock pact magic is separate
-      pactMagic = getWarlockPactAt(charClass.level);
+      pactMagicSlots = getSlotsFor('pact', charClass.level);
     } else if (spellcasting.kind === 'full') {
       fullCasterLevel += charClass.level;
     } else if (spellcasting.kind === 'half') {
@@ -226,26 +226,30 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   }
 
   // Compute available spell slots by applying uses and restores
-  let availableSpellSlots: SlotsBySpellLevel | null = null;
+  let availableSpellSlots: SpellSlotsType | null = null;
   if (spellSlots) {
     // Start with a copy of base spell slots
-    availableSpellSlots = { ...spellSlots };
+    availableSpellSlots = [ ...spellSlots ];
 
     // Apply each spell slot change
     for (const change of spellSlotChanges) {
-      const level = change.slot_level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-      const currentCount = availableSpellSlots[level] || 0;
+      const level = change.slot_level as SpellLevelType
 
+      // use a slot if available
       if (change.action === 'use') {
-        // Decrease slot count (don't go below 0)
-        availableSpellSlots[level] = Math.max(0, currentCount - 1);
+        const idx = availableSpellSlots.indexOf(level)
+        if (idx !== -1) {
+          availableSpellSlots.splice(idx, 1);
+        }
+
+      // restore a slot, up to the max for that level
       } else if (change.action === 'restore') {
-        // Increase slot count (don't exceed base slots)
-        const maxSlots = spellSlots[level] || 0;
-        availableSpellSlots[level] = Math.min(maxSlots, currentCount + 1);
+        const maxSlots = spellSlots.filter(s => s === level).length;
+        const currentCount = availableSpellSlots.filter(s => s === level).length;
+        if (currentCount < maxSlots)
+          availableSpellSlots.push(level);
       }
     }
-
   }
 
   // Compute spell information (includes spellcasting stats per class)
@@ -269,7 +273,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     availableHitDice,
     spellSlots,
     availableSpellSlots,
-    pactMagic,
+    pactMagicSlots,
     spells,
   };
 

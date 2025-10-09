@@ -1,13 +1,13 @@
 import clsx from 'clsx';
-import type { SlotsBySpellLevel } from '@src/lib/dnd';
+import type { SpellSlotsType } from '@src/lib/dnd';
 
 export interface SpellSlotsDisplayProps {
-  allSlots: SlotsBySpellLevel | null;
-  availableSlots: SlotsBySpellLevel | null;
+  allSlots: SpellSlotsType | null;
+  availableSlots: SpellSlotsType | null;
 }
 
 export const SpellSlotsDisplay = ({ allSlots, availableSlots }: SpellSlotsDisplayProps) => {
-  if (!allSlots) {
+  if (!allSlots || !availableSlots) {
     return <div class="text-muted small">No spell slots</div>;
   }
 
@@ -15,8 +15,8 @@ export const SpellSlotsDisplay = ({ allSlots, availableSlots }: SpellSlotsDispla
   const slots: { level: number, used: boolean }[] = [];
 
   for (let level = 1; level <= 9; level++) {
-    const total = allSlots[level as keyof SlotsBySpellLevel] || 0;
-    const available = availableSlots?.[level as keyof SlotsBySpellLevel] || 0;
+    const total = allSlots.filter(s => s === level).length;
+    const available = availableSlots.filter(s => s === level).length;
     const used = total - available;
 
     // Add available slots (not used)

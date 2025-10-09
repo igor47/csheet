@@ -2415,6 +2415,7 @@ export const spells: Spell[] = [
     range: { type: 'distance', feet: 60 },
     components: {
       verbal: true,
+      somatic: false,
       material: { description: 'a small feather or piece of down' },
     },
     duration: { type: 'timed', value: 1, unit: 'minute' },
@@ -2477,7 +2478,7 @@ export const spells: Spell[] = [
       somatic: true,
       material: { description: 'a set of divination tools—such as cards or runes—', costGP: 100 },
     },
-    duration: { type: 'concentration', max: { value: 1, unit: 'day' } },
+    duration: { type: 'concentration', max: { value: 24, unit: 'hour' } },
     target: { type: 'self' },
     resolution: { kind: 'none' },
     source: 'SRD',
@@ -3508,6 +3509,7 @@ export const spells: Spell[] = [
     range: { type: 'distance', feet: 120 },
     components: {
       somatic: true,
+      verbal: false,
       material: { description: 'a pinch of confetti' },
     },
     duration: { type: 'concentration', max: { value: 1, unit: 'minute' } },
@@ -3529,6 +3531,7 @@ export const spells: Spell[] = [
     range: { type: 'distance', feet: 60 },
     components: {
       somatic: true,
+      verbal: false,
       material: { description: 'a drop of water or a piece of ice' },
     },
     duration: { type: 'instantaneous' },
@@ -3599,6 +3602,7 @@ export const spells: Spell[] = [
     range: { type: 'touch' },
     components: {
       somatic: true,
+      verbal: false,
       material: { description: 'ink', costGP: 10, consumed: true },
     },
     duration: { type: 'timed', value: 10, unit: 'day' },
@@ -3847,6 +3851,7 @@ export const spells: Spell[] = [
     range: { type: 'touch' },
     components: {
       verbal: true,
+      somatic: false,
       material: { description: 'a firefly or phosphorescent moss' },
     },
     duration: { type: 'timed', value: 1, unit: 'hour' },
@@ -4195,7 +4200,7 @@ export const spells: Spell[] = [
     atHigherLevelsText: 'The duration is longer with a spell slot of level 7 (10 days), 8 (30 days), or 9 (366 days).',
     castingTime: { type: 'action' },
     range: { type: 'distance', feet: 60 },
-    components: { verbal: true, material: { description: 'a snake’s tongue' } },
+    components: { verbal: true, somatic: false, material: { description: 'a snake’s tongue' } },
     duration: { type: 'timed', value: 24, unit: 'hour' },
     target: { type: 'creature', count: 12 },
     resolution: { kind: 'save', ability: 'wisdom', onSuccess: 'negates' },
@@ -4265,7 +4270,7 @@ export const spells: Spell[] = [
     description: 'You point toward a creature within range and whisper a message. The target (and only the target) hears the message and can reply in a whisper that only you can hear.\nYou can cast this spell through solid objects if you are familiar with the target and know it is beyond the barrier. Magical silence; 1 foot of stone, metal, or wood; or a thin sheet of lead blocks the spell.',
     castingTime: { type: 'action' },
     range: { type: 'distance', feet: 120 },
-    components: { somatic: true, material: { description: 'a copper wire' } },
+    components: { somatic: true, verbal: false, material: { description: 'a copper wire' } },
     duration: { type: 'timed', value: 1, unit: 'round' },
     target: { type: 'creature', count: 1 },
     resolution: { kind: 'none' },
@@ -4318,7 +4323,7 @@ export const spells: Spell[] = [
     atHigherLevelsText: 'The damage increases by 1d8 for each spell slot level above 2.',
     castingTime: { type: 'action' },
     range: { type: 'distance', feet: 120 },
-    components: { somatic: true },
+    components: { somatic: true, verbal: false },
     duration: { type: 'concentration', max: { value: 1, unit: 'hour' } },
     target: { type: 'creature', count: 1 },
     resolution: { kind: 'save', ability: 'wisdom', onSuccess: 'half' },
@@ -4337,6 +4342,7 @@ export const spells: Spell[] = [
     range: { type: 'distance', feet: 30 },
     components: {
       somatic: true,
+      verbal: false,
       material: { description: 'a bit of fleece' },
     },
     duration: { type: 'timed', value: 1, unit: 'minute' },
@@ -4386,7 +4392,7 @@ export const spells: Spell[] = [
     description: 'You gain the Invisible condition at the same time that an illusory double of you appears where you are standing. The double lasts for the duration, but the invisibility ends immediately after you make an attack roll, deal damage, or cast a spell.\nAs a Magic action, you can move the illusory double up to twice your Speed and make it gesture, speak, and behave in whatever way you choose. It is intangible and invulnerable.\nYou can see through its eyes and hear through its ears as if you were located where it is.',
     castingTime: { type: 'action' },
     range: { type: 'self' },
-    components: { somatic: true },
+    components: { somatic: true, verbal: false},
     duration: { type: 'concentration', max: { value: 1, unit: 'hour' } },
     target: { type: 'self' },
     resolution: { kind: 'none' },
@@ -4911,7 +4917,7 @@ export const spells: Spell[] = [
       somatic: true,
       material: { description: 'a statuette of yourself worth 5+ GP', costGP: 5 },
     },
-    duration: { type: 'concentration', max: { value: 1, unit: 'day' } },
+    duration: { type: 'concentration', max: { value: 24, unit: 'hour' } },
     target: { type: 'special', text: 'Illusory copy' },
     resolution: { kind: 'none' },
     source: 'SRD',
@@ -6147,6 +6153,7 @@ export const spells: Spell[] = [
     range: { type: 'distance', feet: 10 },
     components: {
       verbal: true,
+      somatic: false,
       material: { description: 'rare inks', costGP: 50, consumed: true },
     },
     duration: { type: 'timed', value: 1, unit: 'round' },
@@ -6237,6 +6244,7 @@ export const spells: Spell[] = [
     range: { type: 'touch' },
     components: {
       verbal: true,
+      somatic: false,
       material: { description: 'a miniature ziggurat' },
     },
     duration: { type: 'timed', value: 1, unit: 'hour' },
@@ -6351,6 +6359,7 @@ export const spells: Spell[] = [
     range: { type: 'self' },
     components: {
       somatic: true,
+      verbal: false,
       material: {
         description: 'a weapon with which you have proficiency and that is worth 1+ CP',
       },

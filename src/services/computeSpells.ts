@@ -1,35 +1,34 @@
 import type { SQL } from "bun";
 import { getCurrentLearnedSpells } from "@src/db/char_spells_learned";
-import { getCurrentlyPrepared as getPreparedSpells } from "@src/db/char_spells_prepared";
-import { Classes, maxCantripsKnown, maxSpellsKnown, getSlotsFor, getWarlockPactAt, type ClassNameType, type AbilityType, type ClassDef } from "@src/lib/dnd";
+import { getCurrentlyPrepared as getPreparedSpells, type CharSpellPrepared } from "@src/db/char_spells_prepared";
+import { Classes, maxCantripsKnown, maxSpellsPrepared, getSlotsFor, type ClassNameType, type AbilityType, type ClassDef, type SpellChangeEventType } from "@src/lib/dnd";
 import { spells, type Spell } from "@src/lib/dnd/spells";
 import type { CharacterClass, AbilityScore } from "@src/services/computeCharacter";
+
+export interface PreparedSpellSlot {
+  spell_id: string | null;  // null = empty slot
+  alwaysPrepared: boolean;  // true = cannot be changed (e.g., domain spells)
+}
 
 export interface SpellInfoForClass {
   class: ClassNameType;
   level: number;
 
-  // Spellcasting stats (merged from SpellcastingStats)
+  // Spellcasting stats
   ability: AbilityType;
   spellAttackBonus: number;
   spellSaveDC: number;
-  spellcastingType: "known" | "prepared" | "none";
+  changePrepared: SpellChangeEventType;
   maxSpellLevel: number;  // Highest spell level this class can cast
 
-  // Cantrips (both known and prepared casters have these)
-  cantrips: string[];  // Spell IDs
-  maxCantrips: number;
+  // Cantrip slots (all casters)
+  cantripSlots: PreparedSpellSlot[];
 
-  // For "known" casters (Bard, Sorcerer, Warlock, Ranger, EK, AT)
-  knownSpells: string[];
-  maxSpellsKnown: number;
+  // Wizard only: spellbook from char_spells_learned
+  knownSpells: string[] | null;
 
-  // For "prepared" casters (Cleric, Druid, Paladin, Wizard)
-  preparedSpells: string[];
-  maxSpellsPrepared: number;
-
-  // Wizard special case: has both spellbook (known) AND prepared
-  spellbookSpells: string[];  // Only for wizards
+  // Prepared/known spell slots for leveled spells
+  preparedSpells: PreparedSpellSlot[];
 }
 
 /**
@@ -39,8 +38,8 @@ async function computeSpellsForClass(
   charClass: CharacterClass,
   abilityScores: Record<AbilityType, AbilityScore>,
   proficiencyBonus: number,
-  allLearnedSpells: Spell[],
-  allPreparedSpells: Spell[]
+  wizardSpellbookSpells: Spell[],
+  allPreparedRecords: CharSpellPrepared[]
 ): Promise<SpellInfoForClass | null> {
   const classDef = Classes[charClass.class];
 
@@ -58,7 +57,7 @@ async function computeSpellsForClass(
 
   const ability = classDef.spellcasting.ability;
   const abilityModifier = abilityScores[ability].modifier;
-  const spellcastingType = classDef.spellcasting.spellcastingType;
+  const changePrepared = classDef.spellcasting.changePrepared;
 
   // Calculate spell attack bonus and save DC
   const spellAttackBonus = proficiencyBonus + abilityModifier;
@@ -67,56 +66,105 @@ async function computeSpellsForClass(
   // Calculate max spell level this class can cast
   const maxSpellLevel = getMaxSpellLevel(classDef, charClass.level);
 
-  // Filter learned spells to those available to this class
-  const classLearnedSpells = allLearnedSpells.filter(
-    ls => ls.classes.includes(charClass.class));
-
-  // Separate cantrips from leveled spells
-  const cantrips = classLearnedSpells.filter(
-    ls => ls.level === 0)
-  const knownSpells = classLearnedSpells.filter(
-    ls => ls.level > 0);
-
   // Calculate maximums
   const maxCantrips = maxCantripsKnown(charClass.class, charClass.level);
 
-  const result: SpellInfoForClass = {
-    class: charClass.class,
-    level: charClass.level,
-    ability,
-    spellAttackBonus,
-    spellSaveDC,
-    spellcastingType,
-    maxSpellLevel,
-    cantrips: cantrips.map(s => s.id),
-    maxCantrips,
+  // Filter prepared records for this class
+  const classPreparedRecords = allPreparedRecords.filter(r => r.class === charClass.class);
 
-    knownSpells: [],
-    maxSpellsKnown: 0,
-    preparedSpells: [],
-    maxSpellsPrepared: 0,
-    spellbookSpells: [],
-  };
+  // Separate cantrip and leveled spell records
+  const cantripRecords = classPreparedRecords.filter(r => {
+    const spell = spells.find(s => s.id === r.spell_id);
+    return spell && spell.level === 0;
+  });
 
-  // Handle based on spellcasting type
-  if (spellcastingType === "known") {
-    result.knownSpells = knownSpells.map(s => s.id);
-    result.maxSpellsKnown = maxSpellsKnown(charClass.class, charClass.level) || 0;
+  const leveledSpellRecords = classPreparedRecords.filter(r => {
+    const spell = spells.find(s => s.id === r.spell_id);
+    return spell && spell.level > 0;
+  });
 
-  // For prepared casters
-  } else if (spellcastingType === "prepared") {
-    result.preparedSpells = allPreparedSpells.filter(
-      s => s.classes.includes(charClass.class)).map(s => s.id);
+  // Create cantrip slots (all classes)
+  const cantripSlots = createPreparedSlots(cantripRecords, maxCantrips);
 
-    result.maxSpellsPrepared = Math.max(1, abilityModifier + charClass.level);
+  // Wizard: uses spellbook (char_spells_learned) for all spells
+  if (charClass.class === "wizard") {
+    const classSpells = wizardSpellbookSpells.filter(s => s.classes.includes(charClass.class));
+    const knownSpells = classSpells.map(s => s.id); // Includes both cantrips and leveled spells
 
-    // Wizard special case: has spellbook
-    if (charClass.class === "wizard") {
-      result.spellbookSpells = knownSpells.map(s => s.id);
+    // Wizard prepares leveled spells from spellbook
+    const maxPrepared = Math.max(1, abilityModifier + charClass.level);
+    const preparedSlots = createPreparedSlots(leveledSpellRecords, maxPrepared);
+
+    return {
+      class: charClass.class,
+      level: charClass.level,
+      ability,
+      spellAttackBonus,
+      spellSaveDC,
+      changePrepared,
+      maxSpellLevel,
+      cantripSlots,
+      knownSpells,
+      preparedSpells: preparedSlots,
+    };
+  }
+  // All other casters: use char_spells_prepared for everything
+  else {
+    // Create slots for known/prepared leveled spells
+    const maxKnown = maxSpellsPrepared(charClass.class, charClass.level) || 0;
+    const preparedSlots = createPreparedSlots(leveledSpellRecords, maxKnown);
+
+    return {
+      class: charClass.class,
+      level: charClass.level,
+      ability,
+      spellAttackBonus,
+      spellSaveDC,
+      changePrepared,
+      maxSpellLevel,
+      cantripSlots,
+      knownSpells: null,
+      preparedSpells: preparedSlots,
+    };
+  }
+}
+
+/**
+ * Create prepared spell slots from a list of prepared spell records
+ * Always-prepared spells are placed first, then other spells, then empty slots
+ */
+function createPreparedSlots(
+  preparedRecords: CharSpellPrepared[],
+  totalSlots: number
+): PreparedSpellSlot[] {
+  const slots: PreparedSpellSlot[] = [];
+
+  // Sort so always-prepared spells come first
+  const sorted = [...preparedRecords].sort((a, b) => {
+    if (a.always_prepared && !b.always_prepared) return -1;
+    if (!a.always_prepared && b.always_prepared) return 1;
+    return 0;
+  });
+
+  // Fill slots with prepared spells
+  for (const record of sorted) {
+    if (slots.length < totalSlots) {
+      slots.push({
+        spell_id: record.spell_id,
+        alwaysPrepared: record.always_prepared,
+      });
     }
   }
 
-  return result;
+  // Fill remaining slots with empty slots
+  while (slots.length < totalSlots) {
+    slots.push({
+      spell_id: null,
+      alwaysPrepared: false,
+    });
+  }
+
+  return slots;
 }
 
 /**
@@ -129,16 +177,14 @@ export async function computeSpells(
   abilityScores: Record<AbilityType, AbilityScore>,
   proficiencyBonus: number
 ): Promise<SpellInfoForClass[]> {
-  // Fetch all spells once for efficiency
+  // Fetch wizard spellbook (char_spells_learned)
   const learnedSpellIds = await getCurrentLearnedSpells(db, characterId);
-  const allLearnedSpellObjs = learnedSpellIds
+  const wizardSpellbookSpells = learnedSpellIds
     .map(spellId => spells.find(s => s.id === spellId))
     .filter(Boolean) as Spell[];
 
-  const allPreparedSpells = await getPreparedSpells(db, characterId);
-  const allPreparedSpellObjs = allPreparedSpells
-    .map(ps => spells.find(s => s.id === ps.spell_id))
-    .filter(Boolean) as Spell[];
+  // Fetch all prepared spell records (char_spells_prepared)
+  const allPreparedRecords = await getPreparedSpells(db, characterId);
 
   // Compute spell info for each class
   const results: SpellInfoForClass[] = [];
@@ -148,8 +194,8 @@ export async function computeSpells(
       charClass,
       abilityScores,
       proficiencyBonus,
-      allLearnedSpellObjs,
-      allPreparedSpellObjs
+      wizardSpellbookSpells,
+      allPreparedRecords
     );
 
     if (classSpellInfo) {
@@ -169,23 +215,7 @@ export function getMaxSpellLevel(classDef: ClassDef, classLevel: number): number
     return 0;
   }
 
-  const kind = classDef.spellcasting.kind;
-
-  // For pact magic (warlock), use pact magic table
-  if (kind === "pact") {
-    const pactRow = getWarlockPactAt(classLevel);
-    return pactRow.slotLevel;
-  }
-
   // For other casters, get slots and find highest level with slots > 0
-  const slots = getSlotsFor(kind, classLevel);
-
-  // Check from level 9 down to 1
-  for (let level = 9; level >= 1; level--) {
-    if (slots[level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9]) {
-      return level;
-    }
-  }
-
-  return 0;
+  const slots = getSlotsFor(classDef.spellcasting.kind, classLevel);
+  return Math.max(...slots)
 }

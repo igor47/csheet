@@ -1,9 +1,9 @@
 -- migrate:up
+-- Wizard spellbook: purely additive (wizards never forget spells)
 CREATE TABLE char_spells_learned (
   id TEXT PRIMARY KEY CHECK(length(id) = 26),
   character_id TEXT NOT NULL,
   spell_id TEXT NOT NULL,
-  action TEXT NOT NULL CHECK(action IN ('learn', 'forget')),
   note TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

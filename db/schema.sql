@@ -133,6 +133,43 @@ FOR EACH ROW
 BEGIN
     UPDATE char_spell_slots SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
+CREATE TABLE char_spells_learned (
+  id TEXT PRIMARY KEY CHECK(length(id) = 26),
+  character_id TEXT NOT NULL,
+  spell_id TEXT NOT NULL,
+  note TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_char_spells_learned_char_id ON char_spells_learned(character_id);
+CREATE INDEX idx_char_spells_learned_spell_id ON char_spells_learned(spell_id);
+CREATE TRIGGER char_spells_learned_updated_at
+AFTER UPDATE ON char_spells_learned
+FOR EACH ROW
+BEGIN
+    UPDATE char_spells_learned SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+CREATE TABLE char_spells_prepared (
+  id TEXT PRIMARY KEY CHECK(length(id) = 26),
+  character_id TEXT NOT NULL,
+  class TEXT NOT NULL,
+  spell_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK(action IN ('prepare', 'unprepare')),
+  always_prepared BOOLEAN NOT NULL DEFAULT FALSE,
+  note TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_char_spells_prepared_char_id_class ON char_spells_prepared(character_id, class);
+CREATE INDEX idx_char_spells_prepared_spell_id ON char_spells_prepared(spell_id);
+CREATE TRIGGER char_spells_prepared_updated_at
+AFTER UPDATE ON char_spells_prepared
+FOR EACH ROW
+BEGIN
+    UPDATE char_spells_prepared SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 -- Dbmate schema migrations
 INSERT INTO "schema_migrations" (version) VALUES
   ('20250924190507'),
@@ -144,4 +181,6 @@ INSERT INTO "schema_migrations" (version) VALUES
   ('20251003131932'),
   ('20251003140146'),
   ('20251003140147'),
-  ('20251004105657');
+  ('20251004105657'),
+  ('20251007100000'),
+  ('20251007100001');

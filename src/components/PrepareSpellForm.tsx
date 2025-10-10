@@ -2,7 +2,7 @@ import { clsx } from 'clsx';
 
 import { Select } from '@src/components/ui/Select';
 import { SpellPicker } from '@src/components/ui/SpellPicker';
-import { SpellDetail } from '@src/components/ui/SpellDetail';
+import { SpellDetail } from '@src/components/SpellDetail';
 import { spells, type Spell } from '@src/lib/dnd/spells';
 import { type ClassNameType } from '@src/lib/dnd';
 import { toTitleCase } from '@src/lib/strings';
@@ -213,7 +213,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
         />
 
         {/* Spell Detail */}
-        {selectedSpell && <SpellDetail spell={selectedSpell} />}
+        {selectedSpell && <SpellDetail spell={selectedSpell} compact={true} class="mb-3" />}
 
         {/* Note */}
         <div class="mb-3">

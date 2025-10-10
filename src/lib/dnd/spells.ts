@@ -388,7 +388,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
-    id: 'srd_antipathy/sympathy',
+    id: 'srd_antipathy_sympathy',
     name: 'Antipathy/Sympathy',
     level: 8,
     school: 'enchantment',
@@ -795,7 +795,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
-    id: 'srd_blindness/deafness',
+    id: 'srd_blindness_deafness',
     name: 'Blindness/Deafness',
     level: 2,
     school: 'transmutation',
@@ -2187,7 +2187,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
-    id: 'srd_enlarge/reduce',
+    id: 'srd_enlarge_reduce',
     name: 'Enlarge/Reduce',
     level: 2,
     school: 'transmutation',

@@ -17,6 +17,8 @@ import { SkillEditForm } from '@src/components/SkillEditForm'
 import { SkillHistory } from '@src/components/SkillHistory'
 import { LearnSpellForm } from '@src/components/LearnSpellForm'
 import { PrepareSpellForm } from '@src/components/PrepareSpellForm'
+import { CastSpellForm } from '@src/components/CastSpellForm'
+import { SpellCastResult } from '@src/components/SpellCastResult'
 import { PreparedSpellsHistory } from '@src/components/PreparedSpellsHistory'
 import { SpellbookHistory } from '@src/components/SpellbookHistory'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
@@ -39,6 +41,7 @@ import { updateSkill, UpdateSkillApiSchema, prepareUpdateSkillForm, validateUpda
 import { longRest, LongRestApiSchema } from '@src/services/longRest'
 import { learnSpell, LearnSpellApiSchema } from '@src/services/learnSpell'
 import { prepareSpell } from '@src/services/prepareSpell'
+import { castSpell } from '@src/services/castSpell'
 import { getMaxSpellLevel } from '@src/services/computeSpells'
 import { Abilities, Skills, SkillAbilities, type AbilityType, type SkillType, Classes, type ClassNameType } from '@src/lib/dnd'
 import { spells } from '@src/lib/dnd/spells'
@@ -453,6 +456,61 @@ characterRoutes.post('/characters/:id/edit/spellbook', async (c) => {
   </>)
 })
 
+characterRoutes.get('/characters/:id/castspell', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  if (char.user_id !== c.var.user!.id) {
+    await setFlashMsg(c, 'You do not have permission to edit this character')
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 403);
+  }
+
+  const values: Record<string, string> = {};
+  for (const qField of ['spell_id', 'as_ritual']) {
+    const val = c.req.query(qField);
+    if (val) {
+      values[qField] = val
+    }
+  }
+
+  return c.html(<CastSpellForm character={char} values={values} />);
+})
+
+characterRoutes.post('/characters/:id/castspell', async (c) => {
+  const characterId = c.req.param('id') as string;
+  const char = await computeCharacter(db, characterId);
+  if (!char) {
+    await setFlashMsg(c, 'Character not found', 'error');
+    c.header('HX-Redirect', `/characters`);
+    return c.body(null, 204);
+  }
+
+  const body = await c.req.parseBody() as Record<string, string>;
+  const result = await castSpell(db, char, body);
+  console.dir(result);
+
+  if (!result.complete) {
+    return c.html(<CastSpellForm
+      character={char}
+      values={result.values}
+      errors={result.errors}
+    />);
+  }
+
+  const updatedChar = (await computeCharacter(db, characterId))!;
+  return c.html(<>
+    <SpellCastResult message={result.note} spellId={result.spellId} />
+    <SpellsPanel character={updatedChar} swapOob={true} />
+    <CurrentStatus character={updatedChar} swapOob={true} />
+  </>);
+})
+
 characterRoutes.post('/characters/:id/longrest', async (c) => {
   const characterId = c.req.param('id') as string;
   const char = await computeCharacter(db, characterId);
@@ -594,7 +652,7 @@ characterRoutes.get('/characters/:id/edit/:field', async (c) => {
   if (field === 'prepspell') {
     // Parse query params
     const values: Record<string, string> = {};
-    for (const qField of ['class', 'spell_type', 'current_spell_id']) {
+    for (const qField of ['class', 'spell_type', 'current_spell_id', 'spell_id']) {
       const val = c.req.query(qField);
       if (val) {
         values[qField] = val

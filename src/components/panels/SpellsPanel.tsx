@@ -1,3 +1,5 @@
+import { clsx } from 'clsx';
+
 import type { ComputedCharacter } from '@src/services/computeCharacter';
 import { LabeledValue } from '@src/components/ui/LabeledValue';
 import { SpellSlotsDisplay } from '@src/components/ui/SpellSlotsDisplay';
@@ -204,10 +206,11 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                                   style="width: 24px; height: 24px; line-height: 1;"
                                   aria-label="Cast spell"
                                   title="Cast spell"
-                                  hx-post={`/characters/${character.id}/cast-spell`}
-                                  hx-vals={`{"spell_id": "${spell.id}", "class": "${row.className}"}`}
-                                  hx-target="#spells-panel"
-                                  hx-swap="outerHTML">
+                                  hx-get={`/characters/${character.id}/castspell?spell_id=${spell.id}`}
+                                  hx-target="#editModalContent"
+                                  hx-swap="innerHTML"
+                                  data-bs-toggle="modal"
+                                  data-bs-target="#editModal">
                                   <i class="bi bi-lightning-fill"></i>
                                 </button>
                               )}
@@ -278,6 +281,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                     <th>Spell</th>
                     <th>Level</th>
                     <th>Prepared</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -296,6 +300,37 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                           ? <i class="bi bi-check-circle-fill text-success" title="Prepared"></i>
                           : <i class="bi bi-circle text-muted" title="Not prepared"></i>);
 
+                    const prepIcon = (
+                      <button
+                        class={clsx("btn btn-sm butn-outline-info border p-0", { 'text-muted text-opacity-50': isInPreparedSlot || isInCantripSlot })}
+                        style="width: 24px; height: 24px; line-height: 1;"
+                        aria-label="Add to prepared spells"
+                        title="Add to prepared spells"
+                        hx-get={`/characters/${character.id}/edit/prepspell?class=${wizardInfo.class}&spell_type=${spell.level === 0 ? 'cantrip' : 'spell'}&spell_id=${spell.id}`}
+                        hx-target="#editModalContent"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editModal"
+                        disabled={isInPreparedSlot || isInCantripSlot}
+                      >
+                        <i class="bi bi-plus-circle" />
+                      </button>
+                    );
+                    const ritualCastIcon = spell.ritual && (
+                      <button
+                        class="btn btn-sm btn-outline-primary border p-0"
+                        style="width: 24px; height: 24px; line-height: 1;"
+                        aria-label="Cast spell as ritual"
+                        title="Cast spell as ritual"
+                        hx-get={`/characters/${character.id}/castspell?spell_id=${spell.id}&as_ritual=true`}
+                        hx-target="#editModalContent"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editModal">
+                        <i class="bi bi-lightning-fill"></i>
+                      </button>
+                    );
+
                     return (
                       <tr>
                         <td>
@@ -313,6 +348,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                         </td>
                         <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
                         <td>{preparedIcon}</td>
+                        <td>
+                          {prepIcon}
+                          {ritualCastIcon}
+                        </td>
                       </tr>
                     );
                   })}

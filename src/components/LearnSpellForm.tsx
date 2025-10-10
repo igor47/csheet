@@ -1,5 +1,5 @@
 import { SpellPicker } from '@src/components/ui/SpellPicker';
-import { SpellDetail } from '@src/components/ui/SpellDetail';
+import { SpellDetail } from '@src/components/SpellDetail';
 import { spells, type Spell } from '@src/lib/dnd/spells';
 import type { ComputedCharacter } from '@src/services/computeCharacter';
 import { ModalContent } from './ui/ModalContent';
@@ -71,7 +71,7 @@ function LearnSpellFormBody({ character, values={}, errors={} }: LearnSpellFormP
         />
 
         {/* Spell Detail */}
-        {selectedSpell && <SpellDetail spell={selectedSpell} />}
+        {selectedSpell && <SpellDetail spell={selectedSpell} compact={true} class="mb-3" />}
 
         {/* Note */}
         <div class="mb-3">

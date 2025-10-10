@@ -70,7 +70,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
               hx-swap="innerHTML"
               data-bs-toggle="modal"
               data-bs-target="#editModal">
-              <i class="bi bi-journals"></i>
+              <i class="bi bi-clock-history"></i>
             </button>
           </div>
 
@@ -244,18 +244,32 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
           <div class="mt-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h6 class="mb-0">Spellbook</h6>
-              <button
-                class="btn btn-sm btn-outline-secondary border p-1"
-                style="width: 24px; height: 24px; line-height: 1;"
-                aria-label="Add to spellbook"
-                title="Add to spellbook"
-                hx-get={`/characters/${character.id}/edit/spellbook`}
-                hx-target="#editModalContent"
-                hx-swap="innerHTML"
-                data-bs-toggle="modal"
-                data-bs-target="#editModal">
-                <i class="bi bi-plus"></i>
-              </button>
+              <div class="d-flex gap-1">
+                <button
+                  class="btn btn-sm btn-outline-secondary border p-1"
+                  style="width: 24px; height: 24px; line-height: 1;"
+                  aria-label="Add to spellbook"
+                  title="Add to spellbook"
+                  hx-get={`/characters/${character.id}/edit/spellbook`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
+                  <i class="bi bi-plus"></i>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary border p-1"
+                  style="width: 24px; height: 24px; line-height: 1;"
+                  aria-label="Spellbook history"
+                  title="Spellbook history"
+                  hx-get={`/characters/${character.id}/history/spellbook`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+              </div>
             </div>
             <div class="table-responsive">
               <table class="table table-sm table-hover small">

@@ -17,6 +17,8 @@ import { SkillEditForm } from '@src/components/SkillEditForm'
 import { SkillHistory } from '@src/components/SkillHistory'
 import { LearnSpellForm } from '@src/components/LearnSpellForm'
 import { PrepareSpellForm } from '@src/components/PrepareSpellForm'
+import { PreparedSpellsHistory } from '@src/components/PreparedSpellsHistory'
+import { SpellbookHistory } from '@src/components/SpellbookHistory'
 import { findByUserId, nameExistsForUser } from '@src/db/characters'
 import { getCurrentLevels, maxClassLevel, findByCharacterId } from '@src/db/char_levels'
 import { findByCharacterId as findHPChanges } from '@src/db/char_hp'
@@ -24,7 +26,8 @@ import { findByCharacterId as findHitDiceChanges } from '@src/db/char_hit_dice'
 import { findByCharacterId as findSpellSlotChanges } from '@src/db/char_spell_slots'
 import { findByCharacterId as findAbilityChanges } from '@src/db/char_abilities'
 import { findByCharacterId as findSkillChanges } from '@src/db/char_skills'
-import { getCurrentLearnedSpells } from '@src/db/char_spells_learned'
+import { findByCharacterId as findPreparedSpellChanges } from '@src/db/char_spells_prepared'
+import { getCurrentLearnedSpells, findByCharacterId as findLearnedSpellChanges } from '@src/db/char_spells_learned'
 import { createCharacter, CreateCharacterApiSchema } from '@src/services/createCharacter'
 import { computeCharacter } from '@src/services/computeCharacter'
 import { addLevel, AddLevelApiSchema, prepareAddLevelForm, validateAddLevel } from '@src/services/addLevel'
@@ -443,10 +446,9 @@ characterRoutes.post('/characters/:id/edit/spellbook', async (c) => {
     />);
   }
 
-  await setFlashMsg(c, 'Spell learned successfully', 'success');
   const updatedChar = (await computeCharacter(db, characterId))!;
+  c.header('HX-Trigger', 'closeEditModal');
   return c.html(<>
-    <CharacterInfo character={updatedChar} />
     <SpellsPanel character={updatedChar} swapOob={true} />
   </>)
 })
@@ -1008,6 +1010,20 @@ characterRoutes.get('/characters/:id/history/:field', async (c) => {
     // Reverse to show most recent first
     spellSlotEvents.reverse();
     return c.html(<SpellSlotsHistory events={spellSlotEvents} />);
+  }
+
+  if (field === 'prepared-spells') {
+    const preparedSpellEvents = await findPreparedSpellChanges(db, characterId);
+    // Reverse to show most recent first
+    preparedSpellEvents.reverse();
+    return c.html(<PreparedSpellsHistory events={preparedSpellEvents} />);
+  }
+
+  if (field === 'spellbook') {
+    const spellbookEvents = await findLearnedSpellChanges(db, characterId);
+    // Reverse to show most recent first
+    spellbookEvents.reverse();
+    return c.html(<SpellbookHistory events={spellbookEvents} />);
   }
 
   // Check if field is an ability

@@ -67,7 +67,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
                   data-bs-target="#editModal">
-                  <i class="bi bi-journals"></i>
+                  <i class="bi bi-clock-history"></i>
                 </button>
               </div>
             </div>
@@ -148,7 +148,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
                   data-bs-target="#editModal">
-                  <i class="bi bi-journals"></i>
+                  <i class="bi bi-clock-history"></i>
                 </button>
               </div>
             </div>
@@ -184,7 +184,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
                   data-bs-target="#editModal">
-                  <i class="bi bi-journals"></i>
+                  <i class="bi bi-clock-history"></i>
                 </button>
               </div>
             </div>

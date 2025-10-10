@@ -919,7 +919,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
-    id: 'srd_charm_person',
+    id: 'srd_charm_monster',
     name: 'Charm Monster',
     level: 4,
     school: 'enchantment',
@@ -955,7 +955,7 @@ export const spells: Spell[] = [
     source: 'SRD',
   },
   {
-    id: 'srd_chromatic_orb',
+    id: 'srd_chill_touch',
     name: 'Chill Touch',
     level: 0,
     school: 'necromancy',

@@ -5,22 +5,7 @@ import { findByCharacterId as getAllLevels, getCurrentLevels } from "@src/db/cha
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { type Character, findById } from "@src/db/characters"
-import {
-  Abilities,
-  type AbilityType,
-  Classes,
-  type ClassNameType,
-  getSlotsFor,
-  type HitDieType,
-  type ProficiencyLevel,
-  Races,
-  type SizeType,
-  SkillAbilities,
-  Skills,
-  type SkillType,
-  type SpellLevelType,
-  type SpellSlotsType,
-} from "@src/lib/dnd"
+import { getRuleset, Skills, SkillAbilities, type SizeType, type AbilityType, type SkillType, type ProficiencyLevel, type HitDieType, Abilities, type ClassNameType, type SpellSlotsType, type SpellLevelType } from "@src/lib/dnd";
 import { computeSpells, type SpellInfoForClass } from "@src/services/computeSpells"
 import type { SQL } from "bun"
 
@@ -88,7 +73,8 @@ export async function computeCharacter(
   const totalLevel = classes.reduce((sum, c) => sum + c.level, 0)
   const proficiencyBonus = Math.floor((totalLevel - 1) / 4) + 2
 
-  const race = Races.find((r) => r.name === character.race)!
+  const ruleset = getRuleset(character.ruleset);
+  const species = ruleset.Races.find(r => r.name === character.race)!;
 
   // Calculate modifier and saving throw for each ability
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
@@ -147,9 +133,9 @@ export async function computeCharacter(
 
   const allLevels = await getAllLevels(db, characterId)
   for (const level of allLevels) {
-    const classDef = Classes[level.class]
-    hitDice.push(classDef.hitDie)
-    maxHitPoints += level.hit_die_roll
+    const classDef = ruleset.Classes[level.class];
+    hitDice.push(classDef.hitDie);
+    maxHitPoints += level.hit_die_roll;
   }
 
   // Add CON modifier per total level
@@ -193,8 +179,8 @@ export async function computeCharacter(
   let thirdCasterLevel = 0
 
   for (const charClass of classes) {
-    const classDef = Classes[charClass.class]
-    if (!classDef.spellcasting.enabled) continue
+    const classDef = ruleset.Classes[charClass.class];
+    if (!classDef.spellcasting.enabled) continue;
 
     const spellcasting = classDef.spellcasting
 
@@ -209,13 +195,13 @@ export async function computeCharacter(
     // Add to appropriate caster level
     if (spellcasting.kind === "pact") {
       // Warlock pact magic is separate
-      pactMagicSlots = getSlotsFor("pact", charClass.level)
-    } else if (spellcasting.kind === "full") {
-      fullCasterLevel += charClass.level
-    } else if (spellcasting.kind === "half") {
-      halfCasterLevel += charClass.level
-    } else if (spellcasting.kind === "third") {
-      thirdCasterLevel += charClass.level
+       pactMagicSlots = ruleset.getSlotsFor('pact', charClass.level);
+     } else if (spellcasting.kind === 'full') {
+       fullCasterLevel += charClass.level;
+     } else if (spellcasting.kind === 'half') {
+       halfCasterLevel += charClass.level;
+     } else if (spellcasting.kind === 'third') {
+       thirdCasterLevel += charClass.level;
     }
   }
 
@@ -228,11 +214,11 @@ export async function computeCharacter(
   if (casterTypeCount === 1) {
     // Single caster type - use actual class level
     if (fullCasterLevel > 0) {
-      spellSlots = getSlotsFor("full", fullCasterLevel)
+      spellSlots = ruleset.getSlotsFor('full', fullCasterLevel);
     } else if (halfCasterLevel > 0) {
-      spellSlots = getSlotsFor("half", halfCasterLevel)
+      spellSlots = ruleset.getSlotsFor('half', halfCasterLevel);
     } else if (thirdCasterLevel > 0) {
-      spellSlots = getSlotsFor("third", thirdCasterLevel)
+      spellSlots = ruleset.getSlotsFor('third', thirdCasterLevel);
     }
   } else if (casterTypeCount > 1) {
     // Multiclassing - use effective caster level with highest tier progression
@@ -240,11 +226,11 @@ export async function computeCharacter(
       fullCasterLevel + Math.floor(halfCasterLevel / 2) + Math.floor(thirdCasterLevel / 3)
 
     if (fullCasterLevel > 0) {
-      spellSlots = getSlotsFor("full", effectiveCasterLevel)
+      spellSlots = ruleset.getSlotsFor('full', effectiveCasterLevel);
     } else if (halfCasterLevel > 0) {
-      spellSlots = getSlotsFor("half", effectiveCasterLevel)
+      spellSlots = ruleset.getSlotsFor('half', effectiveCasterLevel);
     } else if (thirdCasterLevel > 0) {
-      spellSlots = getSlotsFor("third", effectiveCasterLevel)
+      spellSlots = ruleset.getSlotsFor('third', effectiveCasterLevel);
     }
   }
 
@@ -275,14 +261,14 @@ export async function computeCharacter(
   }
 
   // Compute spell information (includes spellcasting stats per class)
-  const spells = await computeSpells(db, characterId, classes, abilityScores, proficiencyBonus)
+  const spells = await computeSpells(db, ruleset, characterId, classes, abilityScores, proficiencyBonus);
 
   const char = {
     ...character,
     classes,
     totalLevel,
-    size: race.size,
-    speed: race.speed,
+    size: species.size,
+    speed: species.speed,
     proficiencyBonus,
     abilityScores,
     skills,

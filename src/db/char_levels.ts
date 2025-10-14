@@ -1,4 +1,4 @@
-import { ClassNamesSchema, type ClassNameType } from "@src/lib/dnd"
+import { ClassNamesSchema } from "@src/lib/dnd"
 import type { SQL } from "bun"
 import { ulid } from "ulid"
 import { z } from "zod"

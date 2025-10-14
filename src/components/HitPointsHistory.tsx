@@ -37,7 +37,7 @@ export const HitPointsHistory = ({ events }: HitPointsHistoryProps) => {
                 </tr>
               </thead>
               <tbody>
-                {events.map((event, idx) => {
+                {events.map((event) => {
                   let eventDescription = ""
                   if (event.type === "delta") {
                     const delta = event.delta || 0
@@ -51,7 +51,7 @@ export const HitPointsHistory = ({ events }: HitPointsHistoryProps) => {
                   }
 
                   return (
-                    <tr key={idx}>
+                    <tr>
                       <td>
                         <small class="text-muted">
                           {new Date(event.date).toLocaleDateString()}

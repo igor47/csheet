@@ -107,8 +107,8 @@ export async function computeCharacter(
     Abilities.map((ability) => [
       ability,
       computeAbilityScore(
-        currentAbilityScores[ability]!.score,
-        currentAbilityScores[ability]!.proficient
+        currentAbilityScores[ability]?.score,
+        currentAbilityScores[ability]?.proficient
       ),
     ])
   ) as Record<AbilityType, AbilityScore>

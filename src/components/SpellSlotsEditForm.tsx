@@ -35,7 +35,7 @@ export const SpellSlotsEditForm = ({
   }
 
   const action = values?.action || defaultAction
-  const slotLevel = values?.slot_level ? parseInt(values.slot_level) : null
+  const slotLevel = values?.slot_level ? parseInt(values.slot_level, 10) : null
 
   // Calculate preview slots
   const previewAvailable = availableSlots ? { ...availableSlots } : {}

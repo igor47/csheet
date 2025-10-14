@@ -4,7 +4,6 @@ import { create as createClassLevelDb } from "@src/db/char_levels"
 import { create as createSkillDb } from "@src/db/char_skills"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
 import {
-  Abilities,
   type AbilityType,
   BackgroundNames,
   Backgrounds,
@@ -12,7 +11,6 @@ import {
   ClassNames,
   RaceNames,
   Races,
-  Skills,
   type SkillType,
   SubclassNames,
   SubraceNames,
@@ -167,7 +165,7 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
         character_id: character.id,
         skill,
         proficiency: "proficient",
-        note: `Proficiency as ${background!.name}`,
+        note: `Proficiency as ${background?.name}`,
       })
     }
 

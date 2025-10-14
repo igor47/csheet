@@ -1,10 +1,5 @@
 import { create as createSkillDb } from "@src/db/char_skills"
-import {
-  type ProficiencyLevel,
-  ProficiencyLevelSchema,
-  SkillSchema,
-  type SkillType,
-} from "@src/lib/dnd"
+import { type ProficiencyLevel, ProficiencyLevelSchema, SkillSchema } from "@src/lib/dnd"
 import type { SQL } from "bun"
 import { z } from "zod"
 

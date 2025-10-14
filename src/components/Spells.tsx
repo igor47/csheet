@@ -26,7 +26,7 @@ export const Spells = ({
   openSpell,
 }: SpellsProps) => {
   // Build query params for current filter state
-  const buildQueryString = () => {
+  const _buildQueryString = () => {
     const params = new URLSearchParams()
     if (selectedClass) params.set("class", selectedClass)
     if (selectedMaxLevel) params.set("maxLevel", selectedMaxLevel)

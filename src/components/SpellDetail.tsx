@@ -114,15 +114,12 @@ const SpellDetailInner = ({ spell, className }: { spell: Spell; className: strin
                 {spell.target.friendlyOnly && " (friendly only)"}
               </>
             )}
-            {spell.target.type === "object" && (
-              <>
-                {spell.target.count === "any"
-                  ? "Any number of objects"
-                  : spell.target.count
-                    ? `${spell.target.count} object${spell.target.count > 1 ? "s" : ""}`
-                    : "One object"}
-              </>
-            )}
+            {spell.target.type === "object" &&
+              (spell.target.count === "any"
+                ? "Any number of objects"
+                : spell.target.count
+                  ? `${spell.target.count} object${spell.target.count > 1 ? "s" : ""}`
+                  : "One object")}
             {spell.target.type === "area" && formatAreaOfEffect(spell.target.area)}
             {spell.target.type === "point" && "A point you choose"}
             {spell.target.type === "special" && spell.target.text}
@@ -204,7 +201,7 @@ const SpellDetailInner = ({ spell, className }: { spell: Spell; className: strin
             {spell.conditionsInflicted.map((cond, idx) => (
               <>
                 <span class="text-capitalize">{cond}</span>
-                {idx < spell.conditionsInflicted!.length - 1 ? ", " : ""}
+                {idx < spell.conditionsInflicted?.length - 1 ? ", " : ""}
               </>
             ))}
           </li>
@@ -231,45 +228,43 @@ const SpellDetailInner = ({ spell, className }: { spell: Spell; className: strin
 export const SpellDetail = ({ spell, compact, class: className }: SpellDetailProps) => {
   if (compact) {
     return (
-      <>
-        <div class={clsx("accordion", className)}>
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button
-                class="accordion-button"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#spell-brief"
-                aria-expanded="true"
-                aria-controls="spell-brief"
-              >
-                {spell.name}
-                {spell.ritual && <span class="badge bg-secondary ms-2">Ritual</span>}
-              </button>
-            </h2>
-            <div id="spell-brief" class="accordion-collapse collapse show">
-              <div class="accordion-body">{spell.briefDescription}</div>
-            </div>
-          </div>
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button
-                class="accordion-button collapsed"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#spell-full"
-                aria-expanded="false"
-                aria-controls="spell-full"
-              >
-                Full Spell Details
-              </button>
-            </h2>
-            <div id="spell-full" class="accordion-collapse collapse">
-              <SpellDetailInner spell={spell} className="accordion-body" />
-            </div>
+      <div class={clsx("accordion", className)}>
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button
+              class="accordion-button"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#spell-brief"
+              aria-expanded="true"
+              aria-controls="spell-brief"
+            >
+              {spell.name}
+              {spell.ritual && <span class="badge bg-secondary ms-2">Ritual</span>}
+            </button>
+          </h2>
+          <div id="spell-brief" class="accordion-collapse collapse show">
+            <div class="accordion-body">{spell.briefDescription}</div>
           </div>
         </div>
-      </>
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button
+              class="accordion-button collapsed"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#spell-full"
+              aria-expanded="false"
+              aria-controls="spell-full"
+            >
+              Full Spell Details
+            </button>
+          </h2>
+          <div id="spell-full" class="accordion-collapse collapse">
+            <SpellDetailInner spell={spell} className="accordion-body" />
+          </div>
+        </div>
+      </div>
     )
   } else {
     return (

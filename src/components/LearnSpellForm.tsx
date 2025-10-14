@@ -1,6 +1,6 @@
 import { SpellDetail } from "@src/components/SpellDetail"
 import { SpellPicker } from "@src/components/ui/SpellPicker"
-import { type Spell, spells } from "@src/lib/dnd/spells"
+import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalContent } from "./ui/ModalContent"
 

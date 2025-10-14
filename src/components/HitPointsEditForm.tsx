@@ -17,7 +17,7 @@ export const HitPointsEditForm = ({
   errors,
 }: HitPointsEditFormProps) => {
   const action = values?.action || (currentHP >= maxHitPoints ? "lose" : "restore")
-  const amount = values?.amount ? parseInt(values.amount) : 0
+  const amount = values?.amount ? parseInt(values.amount, 10) : 0
 
   // Calculate preview HP
   let previewHP = currentHP

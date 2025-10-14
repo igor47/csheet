@@ -65,8 +65,8 @@ export function prepareAddLevelForm(
 
   // Validate hit die roll
   if (preparedValues.hit_die_roll) {
-    const hitDieRoll = parseInt(preparedValues.hit_die_roll)
-    if (isNaN(hitDieRoll) || hitDieRoll < 1 || hitDieRoll > classDef.hitDie) {
+    const hitDieRoll = parseInt(preparedValues.hit_die_roll, 10)
+    if (Number.isNaN(hitDieRoll) || hitDieRoll < 1 || hitDieRoll > classDef.hitDie) {
       errors.hit_die_roll = `Hit die roll must be between 1 and ${classDef.hitDie}`
     }
   }
@@ -97,8 +97,8 @@ export function validateAddLevel(
   }
 
   // Validate level
-  const level = parseInt(values.level || "")
-  if (isNaN(level)) {
+  const level = parseInt(values.level || "", 10)
+  if (Number.isNaN(level)) {
     errors.level = "Level must be a number"
     return { valid: false, errors }
   }
@@ -124,8 +124,8 @@ export function validateAddLevel(
   if (!values.hit_die_roll) {
     errors.hit_die_roll = "Hit die roll is required"
   } else {
-    const hitDieRoll = parseInt(values.hit_die_roll)
-    if (isNaN(hitDieRoll) || hitDieRoll < 1 || hitDieRoll > classDef.hitDie) {
+    const hitDieRoll = parseInt(values.hit_die_roll, 10)
+    if (Number.isNaN(hitDieRoll) || hitDieRoll < 1 || hitDieRoll > classDef.hitDie) {
       errors.hit_die_roll = `Hit die roll must be between 1 and ${classDef.hitDie}`
     }
   }
@@ -180,7 +180,7 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
       throw new Error(`Invalid subclass ${data.subclass} for ${data.class}`)
     }
   } else if (data.level > classDef.subclassLevel) {
-    data.subclass = currentClassLevel!.subclass
+    data.subclass = currentClassLevel?.subclass
   }
 
   // Create the level

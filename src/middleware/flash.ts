@@ -33,7 +33,7 @@ export const flashMiddleware = createMiddleware<{ Variables: FlashVariables }>(a
     if (flashData) {
       c.set("flash", flashData)
     }
-  } catch (error) {}
+  } catch (_error) {}
 
   deleteCookie(c, FLASH_COOKIE_NAME, COOKIE_OPTS)
   await next()

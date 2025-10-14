@@ -20,13 +20,13 @@ export const ClassEditForm = ({
   const selectedClass = Classes[values?.class as ClassNameType] || null
   const subclasses = selectedClass?.subclasses || []
 
-  const level = values?.level ? parseInt(values.level) : 1
+  const level = values?.level ? parseInt(values.level, 10) : 1
 
   // Check if this class already has levels (continuing) or is new (multiclassing)
   const isFirstLevelInClass = currentClassLevel === null
 
   // Show subclass dropdown if we're at the subclass selection level
-  const showSubclass = subclasses.length > 0 && level === selectedClass!.subclassLevel
+  const showSubclass = subclasses.length > 0 && level === selectedClass?.subclassLevel
   let subclassPlh
   if (showSubclass) {
     subclassPlh = "Select a subclass"

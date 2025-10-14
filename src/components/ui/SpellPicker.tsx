@@ -1,4 +1,4 @@
-import { type Spell, spells } from "@src/lib/dnd/spells"
+import type { Spell } from "@src/lib/dnd/spells"
 
 export interface SpellPickerProps {
   spells: Spell[]

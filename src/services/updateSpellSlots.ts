@@ -69,8 +69,8 @@ export function prepareUpdateSpellSlotsForm(
 
     // Validate slot_level
     if (preparedValues.slot_level) {
-      const slotLevel = parseInt(preparedValues.slot_level)
-      if (isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
+      const slotLevel = parseInt(preparedValues.slot_level, 10)
+      if (Number.isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
         errors.slot_level = "Invalid slot level"
       } else {
         const available = availableSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
@@ -103,8 +103,8 @@ export function prepareUpdateSpellSlotsForm(
 
     // Validate slot_level
     if (preparedValues.slot_level) {
-      const slotLevel = parseInt(preparedValues.slot_level)
-      if (isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
+      const slotLevel = parseInt(preparedValues.slot_level, 10)
+      if (Number.isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
         errors.slot_level = "Invalid slot level"
       } else {
         const total = allSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
@@ -149,8 +149,8 @@ export function validateUpdateSpellSlots(
       return { valid: false, errors }
     }
 
-    const slotLevel = parseInt(values.slot_level)
-    if (isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
+    const slotLevel = parseInt(values.slot_level, 10)
+    if (Number.isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
       errors.slot_level = "Invalid slot level"
       return { valid: false, errors }
     }
@@ -169,8 +169,8 @@ export function validateUpdateSpellSlots(
       return { valid: false, errors }
     }
 
-    const slotLevel = parseInt(values.slot_level)
-    if (isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
+    const slotLevel = parseInt(values.slot_level, 10)
+    if (Number.isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
       errors.slot_level = "Invalid slot level"
       return { valid: false, errors }
     }
@@ -195,8 +195,8 @@ export function validateUpdateSpellSlots(
 export async function updateSpellSlots(
   db: SQL,
   data: UpdateSpellSlotsApi,
-  allSlots: SlotsBySpellLevel | null,
-  availableSlots: SlotsBySpellLevel | null
+  _allSlots: SlotsBySpellLevel | null,
+  _availableSlots: SlotsBySpellLevel | null
 ): Promise<void> {
   if (data.action === "use") {
     // Use: create use record for one slot

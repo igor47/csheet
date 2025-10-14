@@ -19,8 +19,8 @@ export const HitDiceEditForm = ({
 }: HitDiceEditFormProps) => {
   const action =
     values?.action || (availableHitDice.length < allHitDice.length ? "restore" : "spend")
-  const dieValue = values?.die_value ? parseInt(values.die_value) : null
-  const hpRolled = values?.hp_rolled ? parseInt(values.hp_rolled) : null
+  const dieValue = values?.die_value ? parseInt(values.die_value, 10) : null
+  const hpRolled = values?.hp_rolled ? parseInt(values.hp_rolled, 10) : null
 
   // Calculate preview dice
   const previewAvailable = [...availableHitDice]

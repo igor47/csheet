@@ -28,9 +28,7 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
       s.preparedSpells.some((ps) => ps.spell_id === spell.id) ||
       s.cantripSlots.some((cs) => cs.spell_id === spell.id)
   )
-  const hasSpellSlots =
-    character.availableSpellSlots &&
-    character.availableSpellSlots.some((slot) => slot >= spell.level)
+  const hasSpellSlots = character.availableSpellSlots?.some((slot) => slot >= spell.level)
   const isCantrip = spell.level === 0
   const asRitual = values.as_ritual === "true"
 
@@ -66,7 +64,7 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
   // Default slot_level to spell level if not set
   if (!values.slot_level && !isCantrip && !asRitual) {
     for (let level = spell.level; level <= 9; level++) {
-      if (slotLevelCounts[level]!.available > 0) {
+      if (slotLevelCounts[level]?.available > 0) {
         values.slot_level = level.toString()
         break
       }

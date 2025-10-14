@@ -249,8 +249,8 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
             .map((spellId) => spells.find((s) => s.id === spellId))
             .filter(Boolean)
             .sort((a, b) => {
-              if (a!.level !== b!.level) return a!.level - b!.level
-              return a!.name.localeCompare(b!.name)
+              if (a?.level !== b?.level) return a?.level - b?.level
+              return a?.name.localeCompare(b?.name)
             })
 
           return (

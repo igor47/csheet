@@ -96,7 +96,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
 
   const selectedClass = Classes[values?.class as ClassNameType] || null
   const subclasses =
-    selectedClass && selectedClass.subclassLevel == 1 ? selectedClass.subclasses : []
+    selectedClass && selectedClass.subclassLevel === 1 ? selectedClass.subclasses : []
   const subclassPlh = selectedClass
     ? selectedClass.subclassLevel === 1
       ? "Select a subclass"

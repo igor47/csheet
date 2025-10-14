@@ -52,8 +52,8 @@ export function prepareUpdateHitDiceForm(
 
     // Validate die_value for restore
     if (preparedValues.die_value) {
-      const dieValue = parseInt(preparedValues.die_value)
-      if (isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
+      const dieValue = parseInt(preparedValues.die_value, 10)
+      if (Number.isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
         errors.die_value = "Invalid die value"
       } else {
         // Check if this die type is actually used
@@ -80,8 +80,8 @@ export function prepareUpdateHitDiceForm(
 
     // Validate die_value
     if (preparedValues.die_value) {
-      const dieValue = parseInt(preparedValues.die_value)
-      if (isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
+      const dieValue = parseInt(preparedValues.die_value, 10)
+      if (Number.isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
         errors.die_value = "Invalid die value"
       } else if (!availableHitDice.includes(dieValue as HitDieType)) {
         errors.die_value = `You don't have a D${dieValue} available`
@@ -89,8 +89,8 @@ export function prepareUpdateHitDiceForm(
 
       // Validate hp_rolled
       if (preparedValues.hp_rolled) {
-        const hpRolled = parseInt(preparedValues.hp_rolled)
-        if (isNaN(hpRolled) || hpRolled < 1 || hpRolled > dieValue) {
+        const hpRolled = parseInt(preparedValues.hp_rolled, 10)
+        if (Number.isNaN(hpRolled) || hpRolled < 1 || hpRolled > dieValue) {
           errors.hp_rolled = `HP rolled must be between 1 and ${dieValue}`
         }
       }
@@ -135,8 +135,8 @@ export function validateUpdateHitDice(
       return { valid: false, errors }
     }
 
-    const dieValue = parseInt(values.die_value)
-    if (isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
+    const dieValue = parseInt(values.die_value, 10)
+    if (Number.isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
       errors.die_value = "Invalid die value"
       return { valid: false, errors }
     }
@@ -167,8 +167,8 @@ export function validateUpdateHitDice(
       return { valid: false, errors }
     }
 
-    const dieValue = parseInt(values.die_value)
-    if (isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
+    const dieValue = parseInt(values.die_value, 10)
+    if (Number.isNaN(dieValue) || ![6, 8, 10, 12].includes(dieValue)) {
       errors.die_value = "Invalid die value"
       return { valid: false, errors }
     }
@@ -183,8 +183,8 @@ export function validateUpdateHitDice(
       return { valid: false, errors }
     }
 
-    const hpRolled = parseInt(values.hp_rolled)
-    if (isNaN(hpRolled) || hpRolled < 1 || hpRolled > dieValue) {
+    const hpRolled = parseInt(values.hp_rolled, 10)
+    if (Number.isNaN(hpRolled) || hpRolled < 1 || hpRolled > dieValue) {
       errors.hp_rolled = `HP rolled must be between 1 and ${dieValue}`
       return { valid: false, errors }
     }
@@ -202,8 +202,8 @@ export function validateUpdateHitDice(
 export async function updateHitDice(
   db: SQL,
   data: UpdateHitDiceApi,
-  allHitDice: HitDieType[],
-  availableHitDice: HitDieType[],
+  _allHitDice: HitDieType[],
+  _availableHitDice: HitDieType[],
   currentHP: number,
   maxHitPoints: number
 ): Promise<void> {

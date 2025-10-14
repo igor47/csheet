@@ -1188,7 +1188,7 @@ export function maxCantripsKnown(className: ClassNameType, level: number): numbe
     case "cleric":
     case "druid":
     case "wizard":
-      return SpellProgressionTables[className]![level]?.cantrips || 0
+      return SpellProgressionTables[className]?.[level]?.cantrips || 0
     case "fighter": // Eldritch Knight
     case "rogue": // Arcane Trickster
       return THIRD_CASTER_CANTRIPS_KNOWN[level] || 0
@@ -1213,7 +1213,7 @@ export function maxSpellsPrepared(className: ClassNameType, level: number): numb
     case "wizard":
     case "paladin":
     case "ranger":
-      return SpellProgressionTables[className]![level]?.prepared || 0
+      return SpellProgressionTables[className]?.[level]?.prepared || 0
     case "fighter": // Eldritch Knight
     case "rogue": // Arcane Trickster
       return THIRD_CASTER_CANTRIPS_KNOWN[level] || 0
@@ -1326,7 +1326,7 @@ export function getSlotsFor(casterKind: CasterKindType, level: number): SpellSlo
   } else if (casterKind === "third") {
     return slotsFromProgression(THIRD_CASTER_SLOTS[level]?.slots || [])
   } else if (casterKind === "pact") {
-    const progression = SpellProgressionTables["warlock"]!
+    const progression = SpellProgressionTables.warlock!
     return slotsFromProgression(progression[level]?.slots || [])
   } else {
     return []

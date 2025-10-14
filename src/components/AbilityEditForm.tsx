@@ -22,7 +22,7 @@ export const AbilityEditForm = ({
   values,
   errors,
 }: AbilityEditFormProps) => {
-  const newScore = values?.score ? parseInt(values.score) : currentScore
+  const newScore = values?.score ? parseInt(values.score, 10) : currentScore
   const proficiencyChange = values?.proficiency_change || "none"
 
   // Calculate new modifier
@@ -40,7 +40,7 @@ export const AbilityEditForm = ({
   const currentSavingThrow = isProficient ? currentModifier + proficiencyBonus : currentModifier
 
   const showPreview =
-    (values?.score && parseInt(values.score) !== currentScore) || proficiencyChange !== "none"
+    (values?.score && parseInt(values.score, 10) !== currentScore) || proficiencyChange !== "none"
 
   return (
     <>

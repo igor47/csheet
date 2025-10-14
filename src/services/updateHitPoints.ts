@@ -37,8 +37,8 @@ export function prepareUpdateHitPointsForm(
 
   // Validate amount
   if (preparedValues.amount) {
-    const amount = parseInt(preparedValues.amount)
-    if (isNaN(amount) || amount < 1) {
+    const amount = parseInt(preparedValues.amount, 10)
+    if (Number.isNaN(amount) || amount < 1) {
       errors.amount = "Amount must be a positive number"
     } else {
       // Check bounds
@@ -88,8 +88,8 @@ export function validateUpdateHitPoints(
     return { valid: false, errors }
   }
 
-  const amount = parseInt(values.amount)
-  if (isNaN(amount) || amount < 1) {
+  const amount = parseInt(values.amount, 10)
+  if (Number.isNaN(amount) || amount < 1) {
     errors.amount = "Amount must be a positive number"
     return { valid: false, errors }
   }

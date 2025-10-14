@@ -26,7 +26,7 @@ spellsRoutes.get("/spells", async (c) => {
     filteredSpells = filteredSpells.filter((spell) => spell.classes.includes(classFilter))
   }
 
-  if (maxLevel !== undefined && !isNaN(maxLevel)) {
+  if (maxLevel !== undefined && !Number.isNaN(maxLevel)) {
     filteredSpells = filteredSpells.filter((spell) => spell.level <= maxLevel)
   }
 

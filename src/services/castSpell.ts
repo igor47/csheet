@@ -90,8 +90,13 @@ export async function castSpell(
       return { complete: false, values: data, errors }
     }
 
-    const slotLevel = parseInt(data.slot_level || "")
-    if (typeof slotLevel !== "number" || isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
+    const slotLevel = parseInt(data.slot_level || "", 10)
+    if (
+      typeof slotLevel !== "number" ||
+      Number.isNaN(slotLevel) ||
+      slotLevel < 1 ||
+      slotLevel > 9
+    ) {
       errors.slot_level = "Invalid slot level"
       return { complete: false, errors, values: data }
     }

@@ -3,7 +3,7 @@ import { join } from "node:path/posix"
 import type { Env, MiddlewareHandler } from "hono"
 import { getMimeType } from "hono/utils/mime"
 
-export type ServeStaticOptions<E extends Env = Env> = {
+export type ServeStaticOptions<_E extends Env = Env> = {
   root?: string
   path?: string
 }
@@ -60,7 +60,7 @@ export const cachingServeStatic = <E extends Env = Env>(
       const ifModifiedSinceTime = new Date(ifModifiedSince).getTime()
       const modifiedTime = Math.floor(lastModified / 1000) * 1000 // Round down to the nearest second
 
-      if (!isNaN(ifModifiedSinceTime) && modifiedTime <= ifModifiedSinceTime) {
+      if (!Number.isNaN(ifModifiedSinceTime) && modifiedTime <= ifModifiedSinceTime) {
         c.status(304)
         return c.body(null)
       }

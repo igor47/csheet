@@ -1,5 +1,4 @@
 import type { ProficiencyLevel, SkillType } from "@src/lib/dnd"
-import clsx from "clsx"
 
 export interface SkillEditFormProps {
   characterId: string

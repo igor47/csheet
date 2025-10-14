@@ -1,5 +1,5 @@
 import { create as createAbilityDb } from "@src/db/char_abilities"
-import { AbilitySchema, type AbilityType } from "@src/lib/dnd"
+import { AbilitySchema } from "@src/lib/dnd"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -20,7 +20,7 @@ export type UpdateAbilityApi = z.infer<typeof UpdateAbilityApiSchema>
  */
 export function prepareUpdateAbilityForm(
   values: Record<string, string>,
-  currentScore: number,
+  _currentScore: number,
   isProficient: boolean
 ): { values: Record<string, string>; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
@@ -33,8 +33,8 @@ export function prepareUpdateAbilityForm(
 
   // Validate score
   if (preparedValues.score) {
-    const score = parseInt(preparedValues.score)
-    if (isNaN(score) || score < 1 || score > 30) {
+    const score = parseInt(preparedValues.score, 10)
+    if (Number.isNaN(score) || score < 1 || score > 30) {
       errors.score = "Ability score must be between 1 and 30"
     }
   }
@@ -70,8 +70,8 @@ export function validateUpdateAbility(
     return { valid: false, errors }
   }
 
-  const score = parseInt(values.score)
-  if (isNaN(score) || score < 1 || score > 30) {
+  const score = parseInt(values.score, 10)
+  if (Number.isNaN(score) || score < 1 || score > 30) {
     errors.score = "Ability score must be between 1 and 30"
     return { valid: false, errors }
   }

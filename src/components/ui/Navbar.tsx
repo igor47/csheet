@@ -67,8 +67,8 @@ export const Navbar = ({ currentPage, user }: NavbarProps) => {
           class="navbar-toggler"
           type="button"
           data-bs-toggle="collapse"
-          data-bs-target={"#" + collapseId}
-          aria-controls={"#" + collapseId}
+          data-bs-target={`#${collapseId}`}
+          aria-controls={`#${collapseId}`}
           aria-expanded="false"
           aria-label="Toggle navigation"
         >

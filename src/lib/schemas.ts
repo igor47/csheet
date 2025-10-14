@@ -8,4 +8,4 @@ export const OptionalNullStringSchema = z.string().nullable().optional().default
 
 export const NumberFormFieldSchema = z.coerce
   .number()
-  .refine((n) => !isNaN(n), { message: "must be a number" })
+  .refine((n) => !Number.isNaN(n), { message: "must be a number" })

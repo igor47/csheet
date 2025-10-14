@@ -31,22 +31,10 @@ import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
 import { findByCharacterId, getCurrentLevels, maxClassLevel } from "@src/db/char_levels"
 import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
-import {
-  findByCharacterId as findLearnedSpellChanges,
-  getCurrentLearnedSpells,
-} from "@src/db/char_spells_learned"
+import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByUserId, nameExistsForUser } from "@src/db/characters"
-import {
-  Abilities,
-  type AbilityType,
-  Classes,
-  type ClassNameType,
-  SkillAbilities,
-  Skills,
-  type SkillType,
-} from "@src/lib/dnd"
-import { spells } from "@src/lib/dnd/spells"
+import { Abilities, type AbilityType, SkillAbilities, Skills, type SkillType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { setFlashMsg } from "@src/middleware/flash"
 import {
@@ -57,9 +45,8 @@ import {
 } from "@src/services/addLevel"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
-import { getMaxSpellLevel } from "@src/services/computeSpells"
 import { CreateCharacterApiSchema, createCharacter } from "@src/services/createCharacter"
-import { LearnSpellApiSchema, learnSpell } from "@src/services/learnSpell"
+import { learnSpell } from "@src/services/learnSpell"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
 import {
@@ -330,9 +317,9 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
   const result = AddLevelApiSchema.safeParse({
     character_id: characterId,
     class: body.class,
-    level: parseInt(body.level || ""),
+    level: parseInt(body.level || "", 10),
     subclass: body.subclass || null,
-    hit_die_roll: parseInt(body.hit_die_roll || ""),
+    hit_die_roll: parseInt(body.hit_die_roll || "", 10),
     note: body.note || null,
   })
 
@@ -407,7 +394,7 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
   const result = UpdateHitPointsApiSchema.safeParse({
     character_id: characterId,
     action: body.action,
-    amount: parseInt(body.amount || ""),
+    amount: parseInt(body.amount || "", 10),
     note: body.note || null,
   })
 
@@ -483,8 +470,8 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
   const result = UpdateHitDiceApiSchema.safeParse({
     character_id: characterId,
     action: body.action,
-    die_value: body.die_value ? parseInt(body.die_value) : null,
-    hp_rolled: body.hp_rolled ? parseInt(body.hp_rolled) : null,
+    die_value: body.die_value ? parseInt(body.die_value, 10) : null,
+    hp_rolled: body.hp_rolled ? parseInt(body.hp_rolled, 10) : null,
     note: body.note || null,
   })
 
@@ -562,7 +549,7 @@ characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
   const result = UpdateSpellSlotsApiSchema.safeParse({
     character_id: characterId,
     action: body.action,
-    slot_level: body.slot_level ? parseInt(body.slot_level) : null,
+    slot_level: body.slot_level ? parseInt(body.slot_level, 10) : null,
     note: body.note || null,
   })
 
@@ -647,11 +634,7 @@ characterRoutes.post("/characters/:id/edit/spellbook", async (c) => {
 
   const updatedChar = (await computeCharacter(db, characterId))!
   c.header("HX-Trigger", "closeEditModal")
-  return c.html(
-    <>
-      <SpellsPanel character={updatedChar} swapOob={true} />
-    </>
-  )
+  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.get("/characters/:id/castspell", async (c) => {
@@ -663,7 +646,7 @@ characterRoutes.get("/characters/:id/castspell", async (c) => {
     return c.body(null, 204)
   }
 
-  if (char.user_id !== c.var.user!.id) {
+  if (char.user_id !== c.var.user?.id) {
     await setFlashMsg(c, "You do not have permission to edit this character")
     c.header("HX-Redirect", `/characters`)
     return c.body(null, 403)
@@ -779,7 +762,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
     return c.body(null, 204)
   }
 
-  if (char.user_id !== c.var.user!.id) {
+  if (char.user_id !== c.var.user?.id) {
     await setFlashMsg(c, "You do not have permission to edit this character")
     c.header("HX-Redirect", `/characters`)
     return c.body(null, 403)
@@ -1081,7 +1064,7 @@ characterRoutes.post("/characters/:id/edit/:field/check", async (c) => {
     const { values, errors } = prepareUpdateSkillForm(body, skillScore.proficiency)
 
     // Calculate new modifier for preview
-    const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
+    const _calculateModifier = (score: number) => Math.floor((score - 10) / 2)
     const abilityModifier = char.abilityScores[ability].modifier
     let newModifier: number | undefined
 
@@ -1170,7 +1153,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
     const result = UpdateAbilityApiSchema.safeParse({
       character_id: characterId,
       ability: ability,
-      score: parseInt(body.score || ""),
+      score: parseInt(body.score || "", 10),
       proficiency_change: body.proficiency_change,
       note: body.note || null,
     })

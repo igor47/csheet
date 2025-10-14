@@ -1,7 +1,7 @@
 import type { SQL } from "bun";
 import { getCurrentLearnedSpells } from "@src/db/char_spells_learned";
 import { getCurrentlyPrepared as getPreparedSpells, type CharSpellPrepared } from "@src/db/char_spells_prepared";
-import { Classes, maxCantripsKnown, maxSpellsPrepared, getSlotsFor, type ClassNameType, type AbilityType, type ClassDef, type SpellChangeEventType } from "@src/lib/dnd";
+import { getRuleset, type ClassNameType, type AbilityType, type ClassDef, type SpellChangeEventType } from "@src/lib/dnd";
 import { spells, type Spell } from "@src/lib/dnd/spells";
 import type { CharacterClass, AbilityScore } from "@src/services/computeCharacter";
 
@@ -35,13 +35,14 @@ export interface SpellInfoForClass {
  * Compute spell information for a single class
  */
 async function computeSpellsForClass(
+  ruleset: any,
   charClass: CharacterClass,
   abilityScores: Record<AbilityType, AbilityScore>,
   proficiencyBonus: number,
   wizardSpellbookSpells: Spell[],
   allPreparedRecords: CharSpellPrepared[]
 ): Promise<SpellInfoForClass | null> {
-  const classDef = Classes[charClass.class];
+  const classDef = ruleset.Classes[charClass.class];
 
   // Skip non-spellcasting classes
   if (!classDef.spellcasting.enabled) {
@@ -64,10 +65,10 @@ async function computeSpellsForClass(
   const spellSaveDC = 8 + proficiencyBonus + abilityModifier;
 
   // Calculate max spell level this class can cast
-  const maxSpellLevel = getMaxSpellLevel(classDef, charClass.level);
+  const maxSpellLevel = getMaxSpellLevel(ruleset, classDef, charClass.level);
 
   // Calculate maximums
-  const maxCantrips = maxCantripsKnown(charClass.class, charClass.level);
+  const maxCantrips = ruleset.maxCantripsKnown(charClass.class, charClass.level);
 
   // Filter prepared records for this class
   const classPreparedRecords = allPreparedRecords.filter(r => r.class === charClass.class);
@@ -93,7 +94,7 @@ async function computeSpellsForClass(
     knownSpells = classSpells.map(s => s.id); // Includes both cantrips and leveled spells
   }
 
-  const maxPrepared = maxSpellsPrepared(charClass.class, charClass.level) || 0;
+  const maxPrepared = ruleset.maxSpellsPrepared(charClass.class, charClass.level) || 0;
   const preparedSlots = createPreparedSlots(leveledSpellRecords, maxPrepared);
 
   return {
@@ -155,6 +156,7 @@ function createPreparedSlots(
  */
 export async function computeSpells(
   db: SQL,
+  ruleset: any,
   characterId: string,
   classes: CharacterClass[],
   abilityScores: Record<AbilityType, AbilityScore>,
@@ -174,6 +176,7 @@ export async function computeSpells(
 
   for (const charClass of classes) {
     const classSpellInfo = await computeSpellsForClass(
+      ruleset,
       charClass,
       abilityScores,
       proficiencyBonus,
@@ -193,12 +196,12 @@ export async function computeSpells(
  * Get the highest spell level a character can cast based on their class and level
  * Uses the slot progression tables from dnd.ts
  */
-export function getMaxSpellLevel(classDef: ClassDef, classLevel: number): number {
+export function getMaxSpellLevel(ruleset: any, classDef: ClassDef, classLevel: number): number {
   if (!classDef.spellcasting.enabled) {
     return 0;
   }
 
   // For other casters, get slots and find highest level with slots > 0
-  const slots = getSlotsFor(classDef.spellcasting.kind, classLevel);
+  const slots = ruleset.getSlotsFor(classDef.spellcasting.kind, classLevel);
   return Math.max(...slots)
 }

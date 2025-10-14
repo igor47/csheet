@@ -12,6 +12,7 @@ export const CharacterSchema = z.object({
   subrace: z.enum(SubraceNames).nullable().default(null),
   background: BackgroundNamesSchema,
   alignment: z.nullish(z.string()),
+  ruleset: z.enum(["srd51", "srd52"]).default("srd51"),
   created_at: z.date(),
   updated_at: z.date(),
 });
@@ -29,7 +30,7 @@ export async function create(db: SQL, character: CreateCharacter): Promise<Chara
   const id = ulid();
 
   const result = await db`
-    INSERT INTO characters (id, user_id, name, race, subrace, background, alignment)
+    INSERT INTO characters (id, user_id, name, race, subrace, background, alignment, ruleset)
     VALUES (
       ${id},
       ${character.user_id},
@@ -37,7 +38,8 @@ export async function create(db: SQL, character: CreateCharacter): Promise<Chara
       ${character.race},
       ${character.subrace},
       ${character.background},
-      ${character.alignment}
+      ${character.alignment},
+      ${character.ruleset}
     )
     RETURNING *
   `;

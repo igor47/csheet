@@ -1,34 +1,39 @@
-import type { ComputedCharacter, SkillScore } from '@src/services/computeCharacter';
-import { Skills, type SkillType, type ProficiencyLevel } from '@src/lib/dnd';
+import { type ProficiencyLevel, Skills, type SkillType } from "@src/lib/dnd"
+import type { ComputedCharacter, SkillScore } from "@src/services/computeCharacter"
 
 interface SkillRowProps {
-  skill: SkillType;
-  skillScore: SkillScore;
-  characterId: string;
+  skill: SkillType
+  skillScore: SkillScore
+  characterId: string
 }
 
 const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
-  const formatModifier = (value: number) => value >= 0 ? `+${value}` : `${value}`;
+  const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
 
   const getProficiencyIcon = (proficiency: ProficiencyLevel): string => {
     switch (proficiency) {
-      case 'none':
-        return 'bi-circle';
-      case 'half':
-        return 'bi-circle-half';
-      case 'proficient':
-        return 'bi-circle-fill';
-      case 'expert':
-        return 'bi-brightness-high-fill';
+      case "none":
+        return "bi-circle"
+      case "half":
+        return "bi-circle-half"
+      case "proficient":
+        return "bi-circle-fill"
+      case "expert":
+        return "bi-brightness-high-fill"
     }
-  };
+  }
 
-  const abilityAbbr = skillScore.ability.slice(0, 3).toUpperCase();
+  const abilityAbbr = skillScore.ability.slice(0, 3).toUpperCase()
 
   return (
     <div class="list-group-item d-flex align-items-center gap-2 py-1 px-2">
-      <i class={`bi ${getProficiencyIcon(skillScore.proficiency)} text-muted`} style="width: 16px;"></i>
-      <span class="badge bg-secondary text-uppercase" style="width: 40px; font-size: 0.7rem;">{abilityAbbr}</span>
+      <i
+        class={`bi ${getProficiencyIcon(skillScore.proficiency)} text-muted`}
+        style="width: 16px;"
+      ></i>
+      <span class="badge bg-secondary text-uppercase" style="width: 40px; font-size: 0.7rem;">
+        {abilityAbbr}
+      </span>
       <span class="flex-grow-1 text-capitalize">{skill}</span>
       <span class="badge text-bg-info">{formatModifier(skillScore.modifier)}</span>
       <div class="d-flex gap-1">
@@ -41,7 +46,8 @@ const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
           hx-target="#editModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal">
+          data-bs-target="#editModal"
+        >
           <i class="bi bi-pencil"></i>
         </button>
         <button
@@ -53,35 +59,42 @@ const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
           hx-target="#editModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal">
+          data-bs-target="#editModal"
+        >
           <i class="bi bi-journals"></i>
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
 interface SkillsPanelProps {
-  character: ComputedCharacter;
-  swapOob?: boolean;
+  character: ComputedCharacter
+  swapOob?: boolean
 }
 
 export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
   return (
-    <div class="accordion-body" hx-swap-oob={swapOob && 'true'}>
+    <div class="accordion-body" hx-swap-oob={swapOob && "true"}>
       <div class="row g-2">
         <div class="col-12 col-md-6">
           <div class="list-group small">
-            {Skills.map(skill => (
-              <SkillRow skill={skill} skillScore={character.skills[skill]} characterId={character.id} />
+            {Skills.map((skill) => (
+              <SkillRow
+                skill={skill}
+                skillScore={character.skills[skill]}
+                characterId={character.id}
+              />
             ))}
           </div>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label small text-muted">Tool & Weapon Proficiencies</label>
-          <textarea class="form-control form-control-sm" rows={6}>Longswords, Shortbows, Thieves' Tools, Herbalism Kit</textarea>
+          <textarea class="form-control form-control-sm" rows={6}>
+            Longswords, Shortbows, Thieves' Tools, Herbalism Kit
+          </textarea>
         </div>
       </div>
     </div>
-  );
+  )
 }

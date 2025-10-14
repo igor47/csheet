@@ -1,10 +1,23 @@
-import { z } from "zod";
-import { RaceNames, SubraceNames, ClassNames, BackgroundNames, SubclassNames, Abilities, Races, Classes, Skills, Backgrounds, type AbilityType, type SkillType } from "@src/lib/dnd";
-import { create as createCharacterDb, nameExistsForUser, type Character } from "@src/db/characters";
-import { create as createClassLevelDb } from "@src/db/char_levels";
-import { create as createAbilityDb } from "@src/db/char_abilities";
-import { create as createSkillDb } from "@src/db/char_skills";
-import { db } from "@src/db";
+import { db } from "@src/db"
+import { create as createAbilityDb } from "@src/db/char_abilities"
+import { create as createClassLevelDb } from "@src/db/char_levels"
+import { create as createSkillDb } from "@src/db/char_skills"
+import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
+import {
+  Abilities,
+  type AbilityType,
+  BackgroundNames,
+  Backgrounds,
+  Classes,
+  ClassNames,
+  RaceNames,
+  Races,
+  Skills,
+  type SkillType,
+  SubclassNames,
+  SubraceNames,
+} from "@src/lib/dnd"
+import { z } from "zod"
 
 /**
  * API Schema for creating a new character
@@ -20,32 +33,35 @@ export const CreateCharacterApiSchema = z.object({
   subclass: z.enum(SubclassNames, "Pick a valid subclass!").nullable().default(null),
   background: z.enum(BackgroundNames, "Pick a valid background!"),
   alignment: z.nullable(z.string().optional()),
-});
+})
 
-export type CreateCharacterApi = z.infer<typeof CreateCharacterApiSchema>;
+export type CreateCharacterApi = z.infer<typeof CreateCharacterApiSchema>
 
 /**
  * Calculate initial ability scores based on race and subrace modifiers
  */
 type AbilityScore = {
-  score: number;
-  note: string;
+  score: number
+  note: string
 }
 
-function calculateInitialAbilityScores(raceName: string, subraceName: string | null): Record<AbilityType, AbilityScore> {
-  const baseScore: AbilityScore = { score: 10, note: "Base score" };
+function calculateInitialAbilityScores(
+  raceName: string,
+  subraceName: string | null
+): Record<AbilityType, AbilityScore> {
+  const baseScore: AbilityScore = { score: 10, note: "Base score" }
   const scores: Record<AbilityType, AbilityScore> = {
-    strength: {...baseScore},
-    dexterity: {...baseScore},
-    constitution: {...baseScore},
-    intelligence: {...baseScore},
-    wisdom: {...baseScore},
-    charisma: {...baseScore},
-  };
+    strength: { ...baseScore },
+    dexterity: { ...baseScore },
+    constitution: { ...baseScore },
+    intelligence: { ...baseScore },
+    wisdom: { ...baseScore },
+    charisma: { ...baseScore },
+  }
 
   // Find race
-  const race = Races.find(r => r.name === raceName);
-  if (!race) return scores;
+  const race = Races.find((r) => r.name === raceName)
+  if (!race) return scores
 
   // Apply race modifiers
   if (race.ability_score_modifiers) {
@@ -59,7 +75,7 @@ function calculateInitialAbilityScores(raceName: string, subraceName: string | n
 
   // Apply subrace modifiers
   if (subraceName) {
-    const subrace = race.subraces?.find(sr => sr.name === subraceName);
+    const subrace = race.subraces?.find((sr) => sr.name === subraceName)
     if (subrace?.ability_score_modifiers) {
       for (const [ability, modifier] of Object.entries(subrace.ability_score_modifiers)) {
         scores[ability as AbilityType] = {
@@ -70,7 +86,7 @@ function calculateInitialAbilityScores(raceName: string, subraceName: string | n
     }
   }
 
-  return scores;
+  return scores
 }
 
 /**
@@ -79,9 +95,9 @@ function calculateInitialAbilityScores(raceName: string, subraceName: string | n
  */
 export async function createCharacter(data: CreateCharacterApi): Promise<Character> {
   return db.begin(async (tx) => {
-    const exists = await nameExistsForUser(tx, data.user_id, data.name);
+    const exists = await nameExistsForUser(tx, data.user_id, data.name)
     if (exists) {
-      throw new Error("You already have a character with this name");
+      throw new Error("You already have a character with this name")
     }
 
     // Create the character in the database
@@ -92,11 +108,11 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
       subrace: data.subrace,
       background: data.background,
       alignment: data.alignment,
-    });
+    })
 
     // set initial level in the class
     // At first level, characters get the maximum value of their hit die
-    const classDef = Classes[data.class];
+    const classDef = Classes[data.class]
     await createClassLevelDb(tx, {
       character_id: character.id,
       class: classDef.name,
@@ -107,8 +123,8 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
     })
 
     // populate initial ability scores with race/subrace modifiers
-    const initialScores = calculateInitialAbilityScores(data.race, data.subrace);
-    const promises = Object.entries(initialScores).map(([ability, score]) => (
+    const initialScores = calculateInitialAbilityScores(data.race, data.subrace)
+    const promises = Object.entries(initialScores).map(([ability, score]) =>
       createAbilityDb(tx, {
         character_id: character.id,
         ability: ability as AbilityType,
@@ -116,31 +132,31 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
         proficiency: false,
         note: score.note,
       })
-    ));
-    const scores = await Promise.all(promises);
+    )
+    const scores = await Promise.all(promises)
 
     // Get saving throw proficiencies from class
-    const savingThrowProficiencies = new Set(classDef.savingThrows);
+    const savingThrowProficiencies = new Set(classDef.savingThrows)
     for (const prof of savingThrowProficiencies) {
-      const existing = scores.find(s => s.ability === prof)!;
+      const existing = scores.find((s) => s.ability === prof)!
       await createAbilityDb(tx, {
         character_id: character.id,
         ability: prof,
         score: existing.score,
         proficiency: true,
         note: `Proficiency from ${classDef.name}`,
-      });
+      })
     }
 
     // Get skill proficiencies from background
-    const background = Backgrounds[data.background];
-    const backgroundSkillProficiencies = new Set<SkillType>();
+    const background = Backgrounds[data.background]
+    const backgroundSkillProficiencies = new Set<SkillType>()
 
     if (background) {
       for (const skill of background.skillProficiencies) {
         // Only handle fixed skills (not Choice objects)
-        if (typeof skill === 'string') {
-          backgroundSkillProficiencies.add(skill as SkillType);
+        if (typeof skill === "string") {
+          backgroundSkillProficiencies.add(skill as SkillType)
         }
       }
     }
@@ -150,11 +166,11 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
       await createSkillDb(tx, {
         character_id: character.id,
         skill,
-        proficiency: 'proficient',
+        proficiency: "proficient",
         note: `Proficiency as ${background!.name}`,
-      });
+      })
     }
 
-    return character;
-  });
+    return character
+  })
 }

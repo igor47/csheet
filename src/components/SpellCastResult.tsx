@@ -1,14 +1,14 @@
-import { spells } from '@src/lib/dnd/spells';
-import { ModalContent } from './ui/ModalContent';
-import { SpellDetail } from './SpellDetail';
+import { spells } from "@src/lib/dnd/spells"
+import { SpellDetail } from "./SpellDetail"
+import { ModalContent } from "./ui/ModalContent"
 
 export interface SpellCastResultProps {
-  message: string;
-  spellId: string;
+  message: string
+  spellId: string
 }
 
 export const SpellCastResult = ({ message, spellId }: SpellCastResultProps) => {
-  const spell = spells.find(s => s.id === spellId);
+  const spell = spells.find((s) => s.id === spellId)
 
   if (!spell) {
     return (
@@ -20,10 +20,12 @@ export const SpellCastResult = ({ message, spellId }: SpellCastResultProps) => {
           <p>{message}</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+            Close
+          </button>
         </div>
       </ModalContent>
-    );
+    )
   }
 
   return (
@@ -46,5 +48,5 @@ export const SpellCastResult = ({ message, spellId }: SpellCastResultProps) => {
         </button>
       </div>
     </ModalContent>
-  );
-};
+  )
+}

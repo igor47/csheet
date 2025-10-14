@@ -1,12 +1,11 @@
-import { z } from 'zod';
+import type { ZodError } from "zod"
+import { z } from "zod"
 
-import type { ZodError } from 'zod';
-
-type FormErrors = Record<string, string>;
+type FormErrors = Record<string, string>
 
 export function zodToFormErrors(zodError: ZodError): FormErrors {
-  const fieldErrors = (z.flattenError(zodError)).fieldErrors as Record<string, string[]>;
+  const fieldErrors = z.flattenError(zodError).fieldErrors as Record<string, string[]>
   return Object.fromEntries(
-    Object.entries(fieldErrors).map(([field, errors]) => [field, errors.join(';')])
-  );
+    Object.entries(fieldErrors).map(([field, errors]) => [field, errors.join(";")])
+  )
 }

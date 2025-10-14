@@ -1,11 +1,11 @@
-import { ulid } from "ulid";
-import { z } from "zod";
-import type { SQL } from "bun";
-import { ClassNamesSchema } from "@src/lib/dnd";
+import { ClassNamesSchema } from "@src/lib/dnd"
+import type { SQL } from "bun"
+import { ulid } from "ulid"
+import { z } from "zod"
 
-export const SpellPrepareActions = ["prepare", "unprepare"] as const;
-export const SpellPrepareActionSchema = z.enum(SpellPrepareActions);
-export type SpellPrepareAction = z.infer<typeof SpellPrepareActionSchema>;
+export const SpellPrepareActions = ["prepare", "unprepare"] as const
+export const SpellPrepareActionSchema = z.enum(SpellPrepareActions)
+export type SpellPrepareAction = z.infer<typeof SpellPrepareActionSchema>
 
 // Event-sourced prepare/unprepare actions for all non-wizard casters
 export const CharSpellPreparedSchema = z.object({
@@ -18,19 +18,22 @@ export const CharSpellPreparedSchema = z.object({
   note: z.string().nullable().default(null),
   created_at: z.date(),
   updated_at: z.date(),
-});
+})
 
 export const CreateCharSpellPreparedSchema = CharSpellPreparedSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
-});
+})
 
-export type CharSpellPrepared = z.infer<typeof CharSpellPreparedSchema>;
-export type CreateCharSpellPrepared = z.infer<typeof CreateCharSpellPreparedSchema>;
+export type CharSpellPrepared = z.infer<typeof CharSpellPreparedSchema>
+export type CreateCharSpellPrepared = z.infer<typeof CreateCharSpellPreparedSchema>
 
-export async function create(db: SQL, spellPrepared: CreateCharSpellPrepared): Promise<CharSpellPrepared> {
-  const id = ulid();
+export async function create(
+  db: SQL,
+  spellPrepared: CreateCharSpellPrepared
+): Promise<CharSpellPrepared> {
+  const id = ulid()
 
   const result = await db`
     INSERT INTO char_spells_prepared (id, character_id, class, spell_id, action, always_prepared, note, created_at)
@@ -45,30 +48,35 @@ export async function create(db: SQL, spellPrepared: CreateCharSpellPrepared): P
       CURRENT_TIMESTAMP
     )
     RETURNING *
-  `;
+  `
 
-  const row = result[0];
+  const row = result[0]
   return CharSpellPreparedSchema.parse({
     ...row,
     always_prepared: Boolean(row.always_prepared),
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
-  });
+  })
 }
 
-export async function findByCharacterId(db: SQL, characterId: string): Promise<CharSpellPrepared[]> {
+export async function findByCharacterId(
+  db: SQL,
+  characterId: string
+): Promise<CharSpellPrepared[]> {
   const result = await db`
     SELECT * FROM char_spells_prepared
     WHERE character_id = ${characterId}
     ORDER BY created_at ASC
-  `;
+  `
 
-  return result.map((row: any) => CharSpellPreparedSchema.parse({
-    ...row,
-    always_prepared: Boolean(row.always_prepared),
-    created_at: new Date(row.created_at),
-    updated_at: new Date(row.updated_at),
-  }));
+  return result.map((row: any) =>
+    CharSpellPreparedSchema.parse({
+      ...row,
+      always_prepared: Boolean(row.always_prepared),
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    })
+  )
 }
 
 /**
@@ -77,35 +85,38 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
  * OR spells marked as always_prepared
  * Groups by class+spell to handle multiclassing correctly
  */
-export async function getCurrentlyPrepared(db: SQL, characterId: string): Promise<CharSpellPrepared[]> {
-  const allEvents = await findByCharacterId(db, characterId);
+export async function getCurrentlyPrepared(
+  db: SQL,
+  characterId: string
+): Promise<CharSpellPrepared[]> {
+  const allEvents = await findByCharacterId(db, characterId)
 
   // Track counts per class+spell combination
-  const classSpellCounts = new Map<string, number>(); // key: "class:spell_id"
-  const classSpellInfo = new Map<string, { alwaysPrepared: boolean; lastEvent: CharSpellPrepared }>();
+  const classSpellCounts = new Map<string, number>() // key: "class:spell_id"
+  const classSpellInfo = new Map<
+    string,
+    { alwaysPrepared: boolean; lastEvent: CharSpellPrepared }
+  >()
 
   for (const event of allEvents) {
-    const key = `${event.class}:${event.spell_id}`;
-    const current = classSpellCounts.get(key) || 0;
-    classSpellCounts.set(
-      key,
-      event.action === 'prepare' ? current + 1 : current - 1
-    );
+    const key = `${event.class}:${event.spell_id}`
+    const current = classSpellCounts.get(key) || 0
+    classSpellCounts.set(key, event.action === "prepare" ? current + 1 : current - 1)
 
     classSpellInfo.set(key, {
       alwaysPrepared: Boolean(event.always_prepared),
       lastEvent: event,
-    });
+    })
   }
 
   // Return spells that are currently prepared (positive count OR always_prepared)
-  const prepared: CharSpellPrepared[] = [];
+  const prepared: CharSpellPrepared[] = []
   for (const [key, info] of classSpellInfo.entries()) {
-    const count = classSpellCounts.get(key) || 0;
+    const count = classSpellCounts.get(key) || 0
     if (count > 0 || info.alwaysPrepared) {
-      prepared.push(info.lastEvent);
+      prepared.push(info.lastEvent)
     }
   }
 
-  return prepared;
+  return prepared
 }

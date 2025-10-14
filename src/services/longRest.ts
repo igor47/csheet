@@ -1,21 +1,21 @@
-import { z } from "zod";
-import type { SQL } from "bun";
-import type { SlotsBySpellLevel, HitDieType } from "@src/lib/dnd";
-import { create as createSpellSlotDb } from "@src/db/char_spell_slots";
-import { create as createHitDiceDb } from "@src/db/char_hit_dice";
-import { create as createHPDb } from "@src/db/char_hp";
+import { create as createHitDiceDb } from "@src/db/char_hit_dice"
+import { create as createHPDb } from "@src/db/char_hp"
+import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
+import type { HitDieType, SlotsBySpellLevel } from "@src/lib/dnd"
+import type { SQL } from "bun"
+import { z } from "zod"
 
 export const LongRestApiSchema = z.object({
   character_id: z.string(),
   note: z.string().nullable().optional(),
-});
+})
 
-export type LongRestApi = z.infer<typeof LongRestApiSchema>;
+export type LongRestApi = z.infer<typeof LongRestApiSchema>
 
 export interface LongRestSummary {
-  hpRestored: number;
-  hitDiceRestored: number;
-  spellSlotsRestored: number;
+  hpRestored: number
+  hitDiceRestored: number
+  spellSlotsRestored: number
 }
 
 /**
@@ -38,38 +38,38 @@ export async function longRest(
     hpRestored: 0,
     hitDiceRestored: 0,
     spellSlotsRestored: 0,
-  };
+  }
 
-  const note = data.note || "Took a long rest";
+  const note = data.note || "Took a long rest"
 
   // Restore HP to max
-  const hpToRestore = maxHitPoints - currentHP;
+  const hpToRestore = maxHitPoints - currentHP
   if (hpToRestore > 0) {
     await createHPDb(db, {
       character_id: data.character_id,
       delta: hpToRestore,
       note,
-    });
-    summary.hpRestored = hpToRestore;
+    })
+    summary.hpRestored = hpToRestore
   }
 
   // Restore half of spent hit dice (rounded down, largest first)
-  const maxRestoration = Math.floor(allHitDice.length / 2);
-  const currentlyUsed = allHitDice.length - availableHitDice.length;
-  const toRestore = Math.min(maxRestoration, currentlyUsed);
+  const maxRestoration = Math.floor(allHitDice.length / 2)
+  const currentlyUsed = allHitDice.length - availableHitDice.length
+  const toRestore = Math.min(maxRestoration, currentlyUsed)
 
   if (toRestore > 0) {
     // Find used dice to restore
-    const usedDice = [...allHitDice];
+    const usedDice = [...allHitDice]
     for (const die of availableHitDice) {
-      const index = usedDice.indexOf(die);
+      const index = usedDice.indexOf(die)
       if (index !== -1) {
-        usedDice.splice(index, 1);
+        usedDice.splice(index, 1)
       }
     }
 
     // Sort largest-first
-    usedDice.sort((a, b) => b - a);
+    usedDice.sort((a, b) => b - a)
 
     // Create restore records
     for (let i = 0; i < toRestore; i++) {
@@ -77,10 +77,10 @@ export async function longRest(
         await createHitDiceDb(db, {
           character_id: data.character_id,
           die_value: usedDice[i]!,
-          action: 'restore',
+          action: "restore",
           note,
-        });
-        summary.hitDiceRestored++;
+        })
+        summary.hitDiceRestored++
       }
     }
   }
@@ -88,22 +88,22 @@ export async function longRest(
   // Restore all spell slots
   if (allSlots && availableSlots) {
     for (let level = 1; level <= 9; level++) {
-      const total = allSlots[level as keyof SlotsBySpellLevel] || 0;
-      const available = availableSlots[level as keyof SlotsBySpellLevel] || 0;
-      const toRestoreSlots = total - available;
+      const total = allSlots[level as keyof SlotsBySpellLevel] || 0
+      const available = availableSlots[level as keyof SlotsBySpellLevel] || 0
+      const toRestoreSlots = total - available
 
       // Create restore records for each used slot
       for (let i = 0; i < toRestoreSlots; i++) {
         await createSpellSlotDb(db, {
           character_id: data.character_id,
           slot_level: level,
-          action: 'restore',
+          action: "restore",
           note,
-        });
-        summary.spellSlotsRestored++;
+        })
+        summary.spellSlotsRestored++
       }
     }
   }
 
-  return summary;
+  return summary
 }

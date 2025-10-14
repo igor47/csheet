@@ -1,26 +1,31 @@
-import { clsx } from 'clsx';
-import type { ComputedCharacter } from '@src/services/computeCharacter';
-import { Abilities, type AbilityType } from '@src/lib/dnd';
+import { Abilities, type AbilityType } from "@src/lib/dnd"
+import type { ComputedCharacter } from "@src/services/computeCharacter"
+import { clsx } from "clsx"
 
 interface AbilityBoxProps {
-  ability: AbilityType;
-  score: number;
-  savingThrow: number;
-  proficient: boolean;
-  characterId: string;
+  ability: AbilityType
+  score: number
+  savingThrow: number
+  proficient: boolean
+  characterId: string
 }
 
 const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: AbilityBoxProps) => {
-  const formatModifier = (value: number) => value >= 0 ? `+${value}` : `${value}`;
-  const abilityNameClass = clsx('fw-medium text-uppercase border', {
-    'bg-primary-subtle': proficient,
-    'bg-dark-subtle': !proficient,
-  });
+  const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
+  const abilityNameClass = clsx("fw-medium text-uppercase border", {
+    "bg-primary-subtle": proficient,
+    "bg-dark-subtle": !proficient,
+  })
 
   return (
     <div class="col">
-      <div class="border rounded p-2 text-center position-relative" style="padding-bottom: 35px !important;">
-        <div class={abilityNameClass} style="font-size: 0.7rem;">{ability}</div>
+      <div
+        class="border rounded p-2 text-center position-relative"
+        style="padding-bottom: 35px !important;"
+      >
+        <div class={abilityNameClass} style="font-size: 0.7rem;">
+          {ability}
+        </div>
         <div class="fw-bold p-2 d-flex align-items-center justify-content-center">
           <span class="fs-3 pe-1">{formatModifier(savingThrow)}</span>
         </div>
@@ -42,7 +47,8 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
             hx-target="#editModalContent"
             hx-swap="innerHTML"
             data-bs-toggle="modal"
-            data-bs-target="#editModal">
+            data-bs-target="#editModal"
+          >
             <i class="bi bi-pencil"></i>
           </button>
           <button
@@ -54,26 +60,27 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
             hx-target="#editModalContent"
             hx-swap="innerHTML"
             data-bs-toggle="modal"
-            data-bs-target="#editModal">
+            data-bs-target="#editModal"
+          >
             <i class="bi bi-journals"></i>
           </button>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 interface AbilitiesPanelProps {
-  character: ComputedCharacter;
-  swapOob?: boolean;
+  character: ComputedCharacter
+  swapOob?: boolean
 }
 
 export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
   return (
-    <div class="accordion-body" id="abilities-panel" hx-swap-oob={swapOob && 'true'}>
+    <div class="accordion-body" id="abilities-panel" hx-swap-oob={swapOob && "true"}>
       <div class="row row-cols-3 g-2">
-        {Abilities.map(ability => {
-          const abilityScore = character.abilityScores[ability];
+        {Abilities.map((ability) => {
+          const abilityScore = character.abilityScores[ability]
           return (
             <AbilityBox
               ability={ability}
@@ -82,9 +89,9 @@ export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
               proficient={abilityScore.proficient}
               characterId={character.id}
             />
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }

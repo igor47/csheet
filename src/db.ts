@@ -1,6 +1,6 @@
-import { SQL } from "bun";
-import { join } from "path";
-import { config } from "./config";
+import { SQL } from "bun"
+import { join } from "path"
+import { config } from "./config"
 
 export const db = new SQL(`sqlite:${config.sqliteDbPath}`)
 

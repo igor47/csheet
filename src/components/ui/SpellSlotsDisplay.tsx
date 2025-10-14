@@ -1,37 +1,37 @@
-import clsx from 'clsx';
-import type { SpellSlotsType } from '@src/lib/dnd';
+import type { SpellSlotsType } from "@src/lib/dnd"
+import clsx from "clsx"
 
 export interface SpellSlotsDisplayProps {
-  allSlots: SpellSlotsType | null;
-  availableSlots: SpellSlotsType | null;
+  allSlots: SpellSlotsType | null
+  availableSlots: SpellSlotsType | null
 }
 
 export const SpellSlotsDisplay = ({ allSlots, availableSlots }: SpellSlotsDisplayProps) => {
   if (!allSlots || !availableSlots) {
-    return <div class="text-muted small">No spell slots</div>;
+    return <div class="text-muted small">No spell slots</div>
   }
 
   // Build array of slots with their level and availability
-  const slots: { level: number, used: boolean }[] = [];
+  const slots: { level: number; used: boolean }[] = []
 
   for (let level = 1; level <= 9; level++) {
-    const total = allSlots.filter(s => s === level).length;
-    const available = availableSlots.filter(s => s === level).length;
-    const used = total - available;
+    const total = allSlots.filter((s) => s === level).length
+    const available = availableSlots.filter((s) => s === level).length
+    const used = total - available
 
     // Add available slots (not used)
     for (let i = 0; i < available; i++) {
-      slots.push({ level, used: false });
+      slots.push({ level, used: false })
     }
 
     // Add used slots
     for (let i = 0; i < used; i++) {
-      slots.push({ level, used: true });
+      slots.push({ level, used: true })
     }
   }
 
   if (slots.length === 0) {
-    return <div class="text-muted small">No spell slots</div>;
+    return <div class="text-muted small">No spell slots</div>
   }
 
   return (
@@ -39,26 +39,28 @@ export const SpellSlotsDisplay = ({ allSlots, availableSlots }: SpellSlotsDispla
       {slots.map(({ level, used }, idx) => (
         <div
           key={idx}
-          class={clsx(
-            'position-relative',
-            'border',
-            'rounded',
-            'px-2',
-            'py-1',
-            'small',
-            { 'bg-success-subtle': !used, 'bg-danger-subtle': used }
-          )}
+          class={clsx("position-relative", "border", "rounded", "px-2", "py-1", "small", {
+            "bg-success-subtle": !used,
+            "bg-danger-subtle": used,
+          })}
           style="min-width: 50px; text-align: center;"
         >
           L{level}
           {used && (
             <i
-              class={clsx('bi', 'bi-x-lg', 'position-absolute', 'top-50', 'start-50', 'translate-middle')}
+              class={clsx(
+                "bi",
+                "bi-x-lg",
+                "position-absolute",
+                "top-50",
+                "start-50",
+                "translate-middle"
+              )}
               style="font-size: 1.5rem; opacity: 0.7; z-index: 1; pointer-events: none;"
             ></i>
           )}
         </div>
       ))}
     </div>
-  );
-};
+  )
+}

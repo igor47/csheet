@@ -1,8 +1,7 @@
-import { ulid } from "ulid";
-import { z } from "zod";
-import type { SQL } from "bun";
-
-import { ClassNamesSchema, type ClassNameType } from "@src/lib/dnd";
+import { ClassNamesSchema, type ClassNameType } from "@src/lib/dnd"
+import type { SQL } from "bun"
+import { ulid } from "ulid"
+import { z } from "zod"
 
 export const CharLevelSchema = z.object({
   id: z.string(),
@@ -14,19 +13,19 @@ export const CharLevelSchema = z.object({
   note: z.string().nullable().default(null),
   created_at: z.date(),
   updated_at: z.date(),
-});
+})
 
 export const CreateCharLevelSchema = CharLevelSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
-});
+})
 
-export type CharLevel = z.infer<typeof CharLevelSchema>;
-export type CreateCharLevel = z.infer<typeof CreateCharLevelSchema>;
+export type CharLevel = z.infer<typeof CharLevelSchema>
+export type CreateCharLevel = z.infer<typeof CreateCharLevelSchema>
 
 export async function create(db: SQL, charLevel: CreateCharLevel): Promise<CharLevel> {
-  const id = ulid();
+  const id = ulid()
 
   const result = await db`
     INSERT INTO char_levels (id, character_id, class, level, subclass, hit_die_roll, note, created_at)
@@ -41,14 +40,14 @@ export async function create(db: SQL, charLevel: CreateCharLevel): Promise<CharL
       CURRENT_TIMESTAMP
     )
     RETURNING *
-  `;
+  `
 
-  const row = result[0];
+  const row = result[0]
   return CharLevelSchema.parse({
     ...row,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
-  });
+  })
 }
 
 export async function findByCharacterId(db: SQL, characterId: string): Promise<CharLevel[]> {
@@ -56,13 +55,15 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     SELECT * FROM char_levels
     WHERE character_id = ${characterId}
     ORDER BY created_at ASC
-  `;
+  `
 
-  return result.map((row: any) => CharLevelSchema.parse({
-    ...row,
-    created_at: new Date(row.created_at),
-    updated_at: new Date(row.updated_at),
-  }));
+  return result.map((row: any) =>
+    CharLevelSchema.parse({
+      ...row,
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    })
+  )
 }
 
 export async function getCurrentLevels(db: SQL, characterId: string): Promise<CharLevel[]> {
@@ -77,13 +78,15 @@ export async function getCurrentLevels(db: SQL, characterId: string): Promise<Ch
     SELECT *
     FROM ranked
     WHERE rn = 1
-  `;
+  `
 
-  return result.map((row: any) => CharLevelSchema.parse({
-    ...row,
-    created_at: new Date(row.created_at),
-    updated_at: new Date(row.updated_at),
-  }));
+  return result.map((row: any) =>
+    CharLevelSchema.parse({
+      ...row,
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    })
+  )
 }
 
 export async function maxClassLevel(db: SQL, characterId: string): Promise<CharLevel> {
@@ -93,21 +96,21 @@ export async function maxClassLevel(db: SQL, characterId: string): Promise<CharL
     WHERE character_id = ${characterId}
     ORDER BY level DESC
     LIMIT 1
-  `;
+  `
   if (result.length === 0) {
-    throw new Error("Character has no levels");
+    throw new Error("Character has no levels")
   }
-  const row = result[0];
+  const row = result[0]
   return CharLevelSchema.parse({
     ...row,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
-  });
+  })
 }
 
 export async function deleteById(db: SQL, id: string): Promise<void> {
   await db`
     DELETE FROM char_levels
     WHERE id = ${id}
-  `;
+  `
 }

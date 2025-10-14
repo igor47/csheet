@@ -1,8 +1,7 @@
-import { ulid } from "ulid";
-import { z } from "zod";
-import type { SQL } from "bun";
-
 import { BackgroundNamesSchema, RaceNamesSchema, SubraceNames } from "@src/lib/dnd"
+import type { SQL } from "bun"
+import { ulid } from "ulid"
+import { z } from "zod"
 
 export const CharacterSchema = z.object({
   id: z.string(),
@@ -14,19 +13,19 @@ export const CharacterSchema = z.object({
   alignment: z.nullish(z.string()),
   created_at: z.date(),
   updated_at: z.date(),
-});
+})
 
 export const CreateCharacterSchema = CharacterSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
-});
+})
 
-export type Character = z.infer<typeof CharacterSchema>;
-export type CreateCharacter = z.infer<typeof CreateCharacterSchema>;
+export type Character = z.infer<typeof CharacterSchema>
+export type CreateCharacter = z.infer<typeof CreateCharacterSchema>
 
 export async function create(db: SQL, character: CreateCharacter): Promise<Character> {
-  const id = ulid();
+  const id = ulid()
 
   const result = await db`
     INSERT INTO characters (id, user_id, name, race, subrace, background, alignment)
@@ -40,14 +39,14 @@ export async function create(db: SQL, character: CreateCharacter): Promise<Chara
       ${character.alignment}
     )
     RETURNING *
-  `;
+  `
 
-  const row = result[0];
+  const row = result[0]
   return CharacterSchema.parse({
     ...row,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
-  });
+  })
 }
 
 export async function findById(db: SQL, id: string): Promise<Character | null> {
@@ -55,16 +54,16 @@ export async function findById(db: SQL, id: string): Promise<Character | null> {
     SELECT * FROM characters
     WHERE id = ${id}
     LIMIT 1
-  `;
+  `
 
-  if (!result[0]) return null;
+  if (!result[0]) return null
 
-  const row = result[0];
+  const row = result[0]
   return CharacterSchema.parse({
     ...row,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
-  });
+  })
 }
 
 export async function findByUserId(db: SQL, userId: string): Promise<Character[]> {
@@ -72,13 +71,15 @@ export async function findByUserId(db: SQL, userId: string): Promise<Character[]
     SELECT * FROM characters
     WHERE user_id = ${userId}
     ORDER BY created_at DESC
-  `;
+  `
 
-  return result.map((row: any) => CharacterSchema.parse({
-    ...row,
-    created_at: new Date(row.created_at),
-    updated_at: new Date(row.updated_at),
-  }));
+  return result.map((row: any) =>
+    CharacterSchema.parse({
+      ...row,
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    })
+  )
 }
 
 export async function nameExistsForUser(db: SQL, userId: string, name: string): Promise<boolean> {
@@ -86,7 +87,7 @@ export async function nameExistsForUser(db: SQL, userId: string, name: string): 
     SELECT COUNT(*) as count FROM characters
     WHERE user_id = ${userId} AND LOWER(name) = LOWER(${name})
     LIMIT 1
-  `;
+  `
 
-  return result[0].count > 0;
+  return result[0].count > 0
 }

@@ -1,7 +1,7 @@
-import type { Character } from "@src/db/characters";
+import type { Character } from "@src/db/characters"
 
 export interface CharactersProps {
-  characters: Character[];
+  characters: Character[]
 }
 
 export const Characters = ({ characters }: CharactersProps) => (
@@ -20,7 +20,9 @@ export const Characters = ({ characters }: CharactersProps) => (
             {characters.length === 0 ? (
               <div class="text-center py-5">
                 <p class="text-muted">You haven't created any characters yet.</p>
-                <a href="/characters/new" class="btn btn-primary mt-3">Create Your First Character</a>
+                <a href="/characters/new" class="btn btn-primary mt-3">
+                  Create Your First Character
+                </a>
               </div>
             ) : (
               <div class="table-responsive">
@@ -40,12 +42,14 @@ export const Characters = ({ characters }: CharactersProps) => (
                   <tbody>
                     {characters.map((char) => (
                       <tr key={char.id}>
-                        <td><strong>{char.name}</strong></td>
+                        <td>
+                          <strong>{char.name}</strong>
+                        </td>
                         <td>{char.race}</td>
                         <td>{char.class}</td>
                         <td>{char.background}</td>
                         <td>{char.size}</td>
-                        <td>{char.alignment || '-'}</td>
+                        <td>{char.alignment || "-"}</td>
                         <td>{new Date(char.created_at).toLocaleDateString()}</td>
                         <td>
                           <a href={`/characters/${char.id}`} class="btn btn-sm btn-outline-primary">

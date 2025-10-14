@@ -1,28 +1,24 @@
-import { spells, type Spell } from '@src/lib/dnd/spells';
+import { type Spell, spells } from "@src/lib/dnd/spells"
 
 export interface SpellPickerProps {
-  spells: Spell[];
-  selectedSpellId?: string;
-  name?: string;
-  label?: string;
-  error?: string;
-  emptyMessage?: string;
+  spells: Spell[]
+  selectedSpellId?: string
+  name?: string
+  label?: string
+  error?: string
+  emptyMessage?: string
 }
 
 export const SpellPicker = ({
   spells: availableSpells,
   selectedSpellId,
-  name = 'spell_id',
+  name = "spell_id",
   label,
   error,
-  emptyMessage = 'No spells available.'
+  emptyMessage = "No spells available.",
 }: SpellPickerProps) => {
   if (availableSpells.length === 0) {
-    return (
-      <div class="alert alert-warning">
-        {emptyMessage}
-      </div>
-    );
+    return <div class="alert alert-warning">{emptyMessage}</div>
   }
 
   return (
@@ -40,7 +36,7 @@ export const SpellPicker = ({
               checked={selectedSpellId === spell.id}
             />
             <label class="form-check-label" for={`spell-${spell.id}`}>
-              {spell.name} (Level {spell.level === 0 ? 'Cantrip' : spell.level})
+              {spell.name} (Level {spell.level === 0 ? "Cantrip" : spell.level})
               <br />
               <small class="text-muted">{spell.briefDescription}</small>
             </label>
@@ -49,5 +45,5 @@ export const SpellPicker = ({
       </div>
       {error && <div class="invalid-feedback d-block">{error}</div>}
     </div>
-  );
-};
+  )
+}

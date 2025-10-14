@@ -71,7 +71,7 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
   const proficiencyBonus = Math.floor((totalLevel - 1) / 4) + 2;
 
   const ruleset = getRuleset(character.ruleset);
-  const race = ruleset.Races.find(r => r.name === character.race)!;
+  const species = ruleset.Races.find(r => r.name === character.race)!;
 
   // Calculate modifier and saving throw for each ability
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2);
@@ -260,8 +260,8 @@ export async function computeCharacter(db: SQL, characterId: string): Promise<Co
     ...character,
     classes,
     totalLevel,
-    size: race.size,
-    speed: race.speed,
+    size: species.size,
+    speed: species.speed,
     proficiencyBonus,
     abilityScores,
     skills,

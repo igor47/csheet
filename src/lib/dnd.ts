@@ -48,18 +48,18 @@ export type AbilityScoreModifiers = {
   [key in AbilityType]?: number;
 }
 
-export interface Subrace {
+export interface Lineage {
   name: string;
   ability_score_modifiers?: AbilityScoreModifiers;
 }
 
-export interface Race {
+export interface Species {
   name: string;
   size: SizeType;
   speed: number;
   ability_score_modifiers?: AbilityScoreModifiers;
-  subraces?: Subrace[];
-  variants?: Subrace[];
+  lineages?: Lineage[];
+  variants?: Lineage[];
 }
 
 
@@ -107,11 +107,7 @@ export interface ClassDef {
   notes?: string;
 }
 
-export const BackgroundNames = [
-  "acolyte", "charlatan", "criminal", "entertainer", "folk hero", "guild artisan", "hermit", "noble", "outlander", "sage", "sailor", "soldier", "urchin", "pirate",
-] as const;
-export const BackgroundNamesSchema = z.enum(BackgroundNames);
-export type BackgroundNameType = z.infer<typeof BackgroundNamesSchema>;
+export type BackgroundNameType = string;
 
 export interface BackgroundFeature {
   name: string;

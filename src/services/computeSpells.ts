@@ -94,7 +94,7 @@ async function computeSpellsForClass(
     knownSpells = classSpells.map(s => s.id); // Includes both cantrips and leveled spells
   }
 
-  const maxPrepared = ruleset.maxSpellsPrepared(charClass.class, charClass.level) || 0;
+  const maxPrepared = ruleset.maxSpellsPrepared(charClass.class, charClass.level, abilityScores[ability].modifier) || 0;
   const preparedSlots = createPreparedSlots(leveledSpellRecords, maxPrepared);
 
   return {

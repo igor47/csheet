@@ -1,72 +1,31 @@
-import { z } from "zod";
 import type {
   AbilityScoreModifiers,
   AbilityType,
   Background,
-  BackgroundFeature,
-  BackgroundNameType,
   CasterKindType,
   Choice,
   ClassDef,
   ClassNameType,
   HitDieType,
-  Race,
+  Species,
   SizeType,
   SkillType,
   SlotProgression,
   SpellSlotsType,
-  Subrace,
+  Lineage,
   SpellcastingInfo,
-  SpellChangeEventType
+  SpellChangeEventType,
+  BackgroundNameType as CoreBackgroundNameType,
 } from "../dnd";
 
 
-const GamingSets = [
-  "dice set",
-  "playing card set",
-] as const;
-
-const ArtisanTools = [
-  "alchemist’s supplies",
-  "brewer’s supplies",
-  "calligrapher’s supplies",
-  "carpenter’s tools",
-  "cartographer’s tools",
-  "cobbler’s tools",
-  "cook’s utensils",
-  "glassblower’s tools",
-  "jeweler’s tools",
-  "leatherworker’s tools",
-  "mason’s tools",
-  "painter’s supplies",
-  "potter’s tools",
-  "smith’s tools",
-  "tinker’s tools",
-  "weaver’s tools",
-  "woodcarver’s tools",
-] as const;
-
-const Instruments = [
-  "bagpipes",
-  "drum",
-  "dulcimer",
-  "flute",
-  "lute",
-  "lyre",
-  "horn",
-  "pan flute",
-  "shawm",
-  "viol",
-] as const;
-
-
-const Races: Race[] = [
+const SpeciesData: Species[] = [
   {
     name: "dwarf",
     size: "medium",
     speed: 25,
     ability_score_modifiers: { constitution: 2 },
-    subraces: [
+    lineages: [
       { name: "hill dwarf", ability_score_modifiers: { wisdom: 1 } },
       { name: "mountain dwarf", ability_score_modifiers: { strength: 2 } }
     ]
@@ -76,7 +35,7 @@ const Races: Race[] = [
     size: "medium",
     speed: 30,
     ability_score_modifiers: { dexterity: 2 },
-    subraces: [
+    lineages: [
       { name: "high elf", ability_score_modifiers: { intelligence: 1 } },
       { name: "wood elf", ability_score_modifiers: { wisdom: 1 } },
       { name: "drow", ability_score_modifiers: { charisma: 1 } }
@@ -87,7 +46,7 @@ const Races: Race[] = [
     size: "small",
     speed: 25,
     ability_score_modifiers: { dexterity: 2 },
-    subraces: [
+    lineages: [
       { name: "lightfoot", ability_score_modifiers: { charisma: 1 } },
       { name: "stout", ability_score_modifiers: { constitution: 1 } }
     ]
@@ -126,7 +85,7 @@ const Races: Race[] = [
     size: "small",
     speed: 25,
     ability_score_modifiers: { intelligence: 2 },
-    subraces: [
+    lineages: [
       { name: "forest gnome", ability_score_modifiers: { dexterity: 1 } },
       { name: "rock gnome", ability_score_modifiers: { constitution: 1 } },
       { name: "deep gnome", ability_score_modifiers: { dexterity: 1 } },
@@ -154,8 +113,8 @@ const Races: Race[] = [
     ability_score_modifiers: { charisma: 2, intelligence: 1 }
   }
 ] as const;
-const RaceNames = Races.map(c => c.name);
-const SubraceNames = Races.flatMap(r => r.subraces ? r.subraces.map(sr => sr.name) : []);
+const RaceNames = SpeciesData.map(c => c.name);
+const SubraceNames = SpeciesData.flatMap(r => r.lineages ? r.lineages.map(sr => sr.name) : []);
 
 const ClassNames = ["barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard"] as const;
 
@@ -333,6 +292,8 @@ const SubclassNames = Object.values(Classes).flatMap(c => c.subclasses ? c.subcl
 const BackgroundNames = [
   "acolyte", "charlatan", "criminal", "entertainer", "folk hero", "guild artisan", "hermit", "noble", "outlander", "sage", "sailor", "soldier", "urchin", "pirate",
 ] as const;
+export type BackgroundNameType = typeof BackgroundNames[number];
+
 
 const Backgrounds: Record<BackgroundNameType, Background> = {
   acolyte: {
@@ -359,7 +320,7 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
     name: "criminal",
     skillProficiencies: ["deception", "stealth"],
     toolProficiencies: [
-      { choose: 1, from: [...GamingSets] as unknown as string[] },
+      { choose: 1, from: ["dice set", "playing card set"] },
       "thieves’ tools",
     ],
     equipment: ["crowbar", "dark common clothes with hood", "15 gp"],
@@ -372,7 +333,7 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
     name: "entertainer",
     skillProficiencies: ["acrobatics", "performance"],
     toolProficiencies: [
-      { choose: 1, from: [...Instruments] as unknown as string[] },
+      { choose: 1, from: ["bagpipes", "drum", "dulcimer", "flute", "lute", "lyre", "horn", "pan flute", "shawm", "viol"] },
       "disguise kit",
     ],
     equipment: ["musical instrument (one of your choice)", "favor of an admirer", "costume", "15 gp"],
@@ -385,7 +346,7 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
     name: "folk hero",
     skillProficiencies: ["animal handling", "survival"],
     toolProficiencies: [
-      { choose: 1, from: [...ArtisanTools] as unknown as string[] },
+      { choose: 1, from: ["alchemist’s supplies", "brewer’s supplies", "calligrapher’s supplies", "carpenter’s tools", "cartographer’s tools", "cobbler’s tools", "cook’s utensils", "glassblower’s tools", "jeweler’s tools", "leatherworker’s tools", "mason’s tools", "painter’s supplies", "potter’s tools", "smith’s tools", "tinker’s tools", "weaver’s tools", "woodcarver’s tools"] },
       "vehicles (land)",
     ],
     equipment: ["artisan’s tools (one of your choice)", "shovel", "iron pot", "common clothes", "10 gp"],
@@ -397,7 +358,7 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
   "guild artisan": {
     name: "guild artisan",
     skillProficiencies: ["insight", "persuasion"],
-    toolProficiencies: [{ choose: 1, from: [...ArtisanTools] as unknown as string[] }],
+    toolProficiencies: [{ choose: 1, from: ["alchemist’s supplies", "brewer’s supplies", "calligrapher’s supplies", "carpenter’s tools", "cartographer’s tools", "cobbler’s tools", "cook’s utensils", "glassblower’s tools", "jeweler’s tools", "leatherworker’s tools", "mason’s tools", "painter’s supplies", "potter’s tools", "smith’s tools", "tinker’s tools", "weaver’s tools", "woodcarver’s tools"] }],
     languageProficiencies: 1,
     equipment: ["artisan’s tools (one of your choice)", "letter of introduction from your guild", "traveler’s clothes", "15 gp"],
     feature: {
@@ -419,7 +380,7 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
   noble: {
     name: "noble",
     skillProficiencies: ["history", "persuasion"],
-    toolProficiencies: [{ choose: 1, from: [...GamingSets] as unknown as string[] }],
+    toolProficiencies: [{ choose: 1, from: ["dice set", "playing card set"] }],
     languageProficiencies: 1,
     equipment: ["fine clothes", "signet ring", "scroll of pedigree", "25 gp"],
     feature: {
@@ -430,7 +391,7 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
   outlander: {
     name: "outlander",
     skillProficiencies: ["athletics", "survival"],
-    toolProficiencies: [{ choose: 1, from: [...Instruments] as unknown as string[] }],
+    toolProficiencies: [{ choose: 1, from: ["bagpipes", "drum", "dulcimer", "flute", "lute", "lyre", "horn", "pan flute", "shawm", "viol"] }],
     languageProficiencies: 1,
     equipment: ["staff", "hunting trap", "trophy from an animal", "traveler’s clothes", "10 gp"],
     feature: {
@@ -471,7 +432,7 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
   soldier: {
     name: "soldier",
     skillProficiencies: ["athletics", "intimidation"],
-    toolProficiencies: [{ choose: 1, from: [...GamingSets] as unknown as string[] }, "vehicles (land)"],
+    toolProficiencies: [{ choose: 1, from: ["dice set", "playing card set"] }, "vehicles (land)"],
     equipment: ["insignia of rank", "trophy from a fallen enemy", "bone dice or deck of cards", "common clothes", "10 gp"],
     feature: {
       name: "military rank",
@@ -493,7 +454,8 @@ const Backgrounds: Record<BackgroundNameType, Background> = {
 type SpellProgressionTableRow = {
   level: number;
   cantrips: number;
-  prepared: number;
+  prepared?: number; // Spells known for "known" casters
+  prepared_fn?: (level: number, ability_modifier: number) => number;
   slots: number[]; // 1st to 9th level slots
   arcanum?: Record<number, number>; // warlock-only
 }
@@ -524,95 +486,95 @@ const SpellProgressionTables: Partial<Record<ClassNameType, SpellProgressionTabl
   ],
   'cleric': [
     {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 1, cantrips: 3, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 2, cantrips: 3, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 3, cantrips: 3, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 4, cantrips: 4, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 5, cantrips: 4, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
-    {level: 6, cantrips: 4, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
-    {level: 7, cantrips: 4, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
-    {level: 8, cantrips: 4, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
-    {level: 9, cantrips: 4, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
-    {level: 10, cantrips: 5, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
-    {level: 11, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
-    {level: 12, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
-    {level: 13, cantrips: 5, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
-    {level: 14, cantrips: 5, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
-    {level: 15, cantrips: 5, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
-    {level: 16, cantrips: 5, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
-    {level: 17, cantrips: 5, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
-    {level: 18, cantrips: 5, prepared: 20, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
-    {level: 19, cantrips: 5, prepared: 21, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
-    {level: 20, cantrips: 5, prepared: 22, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+    {level: 1, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 4, prepared_fn: (level, mod) => mod + level,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 4, prepared_fn: (level, mod) => mod + level,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
   ],
   "druid": [
     {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 1, cantrips: 2, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 2, cantrips: 2, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 3, cantrips: 2, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 4, cantrips: 3, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 5, cantrips: 3, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
-    {level: 6, cantrips: 3, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
-    {level: 7, cantrips: 3, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
-    {level: 8, cantrips: 3, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
-    {level: 9, cantrips: 3, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
-    {level: 10, cantrips: 4, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
-    {level: 11, cantrips: 4, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
-    {level: 12, cantrips: 4, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
-    {level: 13, cantrips: 4, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
-    {level: 14, cantrips: 4, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
-    {level: 15, cantrips: 4, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
-    {level: 16, cantrips: 4, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
-    {level: 17, cantrips: 4, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
-    {level: 18, cantrips: 4, prepared: 20, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
-    {level: 19, cantrips: 4, prepared: 21, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
-    {level: 20, cantrips: 4, prepared: 22, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+    {level: 1, cantrips: 2, prepared_fn: (level, mod) => mod + level,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 2, prepared_fn: (level, mod) => mod + level,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 2, prepared_fn: (level, mod) => mod + level,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 3, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 3, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 3, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 3, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 4, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
   ],
   "paladin": [
     {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 1, cantrips: 0, prepared: 2,   slots: [2, 0, 0, 0, 0]},
-    {level: 2, cantrips: 0, prepared: 3,   slots: [2, 0, 0, 0, 0]},
-    {level: 3, cantrips: 0, prepared: 4,   slots: [3, 0, 0, 0, 0]},
-    {level: 4, cantrips: 0, prepared: 5,   slots: [3, 0, 0, 0, 0]},
-    {level: 5, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
-    {level: 6, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
-    {level: 7, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
-    {level: 8, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
-    {level: 9, cantrips: 0, prepared: 9,   slots: [4, 3, 2, 0, 0]},
-    {level: 10, cantrips: 0, prepared: 9,  slots: [4, 3, 2, 0, 0]},
-    {level: 11, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
-    {level: 12, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
-    {level: 13, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
-    {level: 14, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
-    {level: 15, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
-    {level: 16, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
-    {level: 17, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
-    {level: 18, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
-    {level: 19, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
-    {level: 20, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
+    {level: 1, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [2, 0, 0, 0, 0]},
+    {level: 2, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [2, 0, 0, 0, 0]},
+    {level: 3, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [3, 0, 0, 0, 0]},
+    {level: 4, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [3, 0, 0, 0, 0]},
+    {level: 5, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 2, 0, 0, 0]},
+    {level: 6, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 2, 0, 0, 0]},
+    {level: 7, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 3, 0, 0, 0]},
+    {level: 8, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 3, 0, 0, 0]},
+    {level: 9, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 3, 2, 0, 0]},
+    {level: 10, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),  slots: [4, 3, 2, 0, 0]},
+    {level: 11, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 0, 0]},
+    {level: 12, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 0, 0]},
+    {level: 13, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 1, 0]},
+    {level: 14, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 1, 0]},
+    {level: 15, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 2, 0]},
+    {level: 16, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 2, 0]},
+    {level: 17, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 1]},
+    {level: 18, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 1]},
+    {level: 19, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 2]},
+    {level: 20, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 2]},
   ],
   "ranger": [
     {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 1, cantrips: 0, prepared: 2,   slots: [2, 0, 0, 0, 0]},
-    {level: 2, cantrips: 0, prepared: 3,   slots: [2, 0, 0, 0, 0]},
-    {level: 3, cantrips: 0, prepared: 4,   slots: [3, 0, 0, 0, 0]},
-    {level: 4, cantrips: 0, prepared: 5,   slots: [3, 0, 0, 0, 0]},
-    {level: 5, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
-    {level: 6, cantrips: 0, prepared: 6,   slots: [4, 2, 0, 0, 0]},
-    {level: 7, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
-    {level: 8, cantrips: 0, prepared: 7,   slots: [4, 3, 0, 0, 0]},
-    {level: 9, cantrips: 0, prepared: 9,   slots: [4, 3, 2, 0, 0]},
-    {level: 10, cantrips: 0, prepared: 9,  slots: [4, 3, 2, 0, 0]},
-    {level: 11, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
-    {level: 12, cantrips: 0, prepared: 10, slots: [4, 3, 3, 0, 0]},
-    {level: 13, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
-    {level: 14, cantrips: 0, prepared: 11, slots: [4, 3, 3, 1, 0]},
-    {level: 15, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
-    {level: 16, cantrips: 0, prepared: 12, slots: [4, 3, 3, 2, 0]},
-    {level: 17, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
-    {level: 18, cantrips: 0, prepared: 14, slots: [4, 3, 3, 3, 1]},
-    {level: 19, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
-    {level: 20, cantrips: 0, prepared: 15, slots: [4, 3, 3, 3, 2]},
+    {level: 1, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [2, 0, 0, 0, 0]},
+    {level: 2, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [2, 0, 0, 0, 0]},
+    {level: 3, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [3, 0, 0, 0, 0]},
+    {level: 4, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [3, 0, 0, 0, 0]},
+    {level: 5, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 2, 0, 0, 0]},
+    {level: 6, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 2, 0, 0, 0]},
+    {level: 7, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 3, 0, 0, 0]},
+    {level: 8, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 3, 0, 0, 0]},
+    {level: 9, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),   slots: [4, 3, 2, 0, 0]},
+    {level: 10, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2),  slots: [4, 3, 2, 0, 0]},
+    {level: 11, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 0, 0]},
+    {level: 12, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 0, 0]},
+    {level: 13, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 1, 0]},
+    {level: 14, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 1, 0]},
+    {level: 15, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 2, 0]},
+    {level: 16, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 2, 0]},
+    {level: 17, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 1]},
+    {level: 18, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 1]},
+    {level: 19, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 2]},
+    {level: 20, cantrips: 0, prepared_fn: (level, mod) => mod + Math.floor(level / 2), slots: [4, 3, 3, 3, 2]},
   ],
   "sorcerer": [
     {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
@@ -662,26 +624,26 @@ const SpellProgressionTables: Partial<Record<ClassNameType, SpellProgressionTabl
   ],
   "wizard": [
     {level: 0, cantrips: 0, prepared: 0,   slots: [0, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 1, cantrips: 3, prepared: 4,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 2, cantrips: 3, prepared: 5,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 3, cantrips: 3, prepared: 6,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 4, cantrips: 4, prepared: 7,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
-    {level: 5, cantrips: 4, prepared: 9,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
-    {level: 6, cantrips: 4, prepared: 10,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
-    {level: 7, cantrips: 4, prepared: 11,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
-    {level: 8, cantrips: 4, prepared: 12,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
-    {level: 9, cantrips: 4, prepared: 14,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
-    {level: 10, cantrips: 5, prepared: 15, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
-    {level: 11, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
-    {level: 12, cantrips: 5, prepared: 16, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
-    {level: 13, cantrips: 5, prepared: 17, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
-    {level: 14, cantrips: 5, prepared: 18, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
-    {level: 15, cantrips: 5, prepared: 19, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
-    {level: 16, cantrips: 5, prepared: 21, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
-    {level: 17, cantrips: 5, prepared: 22, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
-    {level: 18, cantrips: 5, prepared: 23, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
-    {level: 19, cantrips: 5, prepared: 24, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
-    {level: 20, cantrips: 5, prepared: 26, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
+    {level: 1, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [2, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 2, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [3, 0, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 3, cantrips: 3, prepared_fn: (level, mod) => mod + level,   slots: [4, 2, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 4, cantrips: 4, prepared_fn: (level, mod) => mod + level,   slots: [4, 3, 0, 0, 0, 0, 0, 0, 0]},
+    {level: 5, cantrips: 4, prepared_fn: (level, mod) => mod + level,   slots: [4, 3, 2, 0, 0, 0, 0, 0, 0]},
+    {level: 6, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 0, 0, 0, 0, 0, 0]},
+    {level: 7, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 1, 0, 0, 0, 0, 0]},
+    {level: 8, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 2, 0, 0, 0, 0, 0]},
+    {level: 9, cantrips: 4, prepared_fn: (level, mod) => mod + level,  slots: [4, 3, 3, 3, 1, 0, 0, 0, 0]},
+    {level: 10, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 0, 0, 0, 0]},
+    {level: 11, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 12, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 0, 0, 0]},
+    {level: 13, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 14, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 0, 0]},
+    {level: 15, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 16, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 0]},
+    {level: 17, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+    {level: 18, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+    {level: 19, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+    {level: 20, cantrips: 5, prepared_fn: (level, mod) => mod + level, slots: [4, 3, 3, 3, 3, 2, 2, 1, 1]},
   ],
 }
 
@@ -784,7 +746,7 @@ function slotsFromProgression(progression: number[]): SpellSlotsType {
 }
 
 const srd51 = {
-  Races,
+  Races: SpeciesData,
   RaceNames,
   SubraceNames,
   Classes,
@@ -818,27 +780,25 @@ const srd51 = {
     }
   },
 
-  maxSpellsPrepared(className: ClassNameType, level: number): number | null {
+  maxSpellsPrepared(className: ClassNameType, level: number, abilityModifier: number): number | null {
     const classDef = this.Classes[className];
     if (!classDef.spellcasting.enabled) {
       return null; // Not a "known" caster
     }
 
-    switch (className) {
-      case "bard":
-      case "sorcerer":
-      case "warlock":
-      case "cleric":
-      case "druid":
-      case "wizard":
-      case "paladin":
-      case "ranger":
-        return this.SpellProgressionTables[className]![level]?.prepared || 0;
-      case "fighter": // Eldritch Knight
-      case "rogue":   // Arcane Trickster
-        return this.THIRD_CASTER_CANTRIPS_KNOWN[level] || 0;
-      default: return 0;
+    const progression = this.SpellProgressionTables[className];
+    if (!progression || !progression[level]) {
+      return 0;
     }
+
+    const entry = progression[level];
+    if (entry.prepared) {
+      return entry.prepared;
+    } else if (entry.prepared_fn) {
+      return entry.prepared_fn(level, abilityModifier);
+    }
+
+    return 0;
   },
 
   getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType {

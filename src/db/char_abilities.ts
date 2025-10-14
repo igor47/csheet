@@ -1,8 +1,7 @@
-import { ulid } from "ulid";
-import { z } from "zod";
-import type { SQL } from "bun";
-
-import { AbilitySchema, type AbilityType } from "@src/lib/dnd";
+import { AbilitySchema, type AbilityType } from "@src/lib/dnd"
+import type { SQL } from "bun"
+import { ulid } from "ulid"
+import { z } from "zod"
 
 export const CharAbilitySchema = z.object({
   id: z.string(),
@@ -13,19 +12,19 @@ export const CharAbilitySchema = z.object({
   note: z.string().nullable().default(null),
   created_at: z.date(),
   updated_at: z.date(),
-});
+})
 
 export const CreateCharAbilitySchema = CharAbilitySchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
-});
+})
 
-export type CharAbility = z.infer<typeof CharAbilitySchema>;
-export type CreateCharAbility = z.infer<typeof CreateCharAbilitySchema>;
+export type CharAbility = z.infer<typeof CharAbilitySchema>
+export type CreateCharAbility = z.infer<typeof CreateCharAbilitySchema>
 
 export async function create(db: SQL, charAbility: CreateCharAbility): Promise<CharAbility> {
-  const id = ulid();
+  const id = ulid()
 
   const result = await db`
     INSERT INTO char_abilities (id, character_id, ability, score, proficiency, note, created_at)
@@ -39,15 +38,15 @@ export async function create(db: SQL, charAbility: CreateCharAbility): Promise<C
       CURRENT_TIMESTAMP
     )
     RETURNING *
-  `;
+  `
 
-  const row = result[0];
+  const row = result[0]
   return CharAbilitySchema.parse({
     ...row,
     proficiency: Boolean(row.proficiency),
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
-  });
+  })
 }
 
 export async function findByCharacterId(db: SQL, characterId: string): Promise<CharAbility[]> {
@@ -55,22 +54,27 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     SELECT * FROM char_abilities
     WHERE character_id = ${characterId}
     ORDER BY created_at ASC
-  `;
+  `
 
-  return result.map((row: any) => CharAbilitySchema.parse({
-    ...row,
-    proficiency: Boolean(row.proficiency),
-    created_at: new Date(row.created_at),
-    updated_at: new Date(row.updated_at),
-  }));
+  return result.map((row: any) =>
+    CharAbilitySchema.parse({
+      ...row,
+      proficiency: Boolean(row.proficiency),
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    })
+  )
 }
 
 export interface CurrentAbility {
-  score: number;
-  proficient: boolean;
+  score: number
+  proficient: boolean
 }
 
-export async function currentByCharacterId(db: SQL, characterId: string): Promise<Record<AbilityType, CurrentAbility>> {
+export async function currentByCharacterId(
+  db: SQL,
+  characterId: string
+): Promise<Record<AbilityType, CurrentAbility>> {
   const result = await db`
     WITH ranked AS (
       SELECT
@@ -84,20 +88,23 @@ export async function currentByCharacterId(db: SQL, characterId: string): Promis
     SELECT ability, score, proficiency
     FROM ranked
     WHERE rn = 1
-  `;
+  `
 
-  return result.reduce((acc: Record<AbilityType, CurrentAbility>, row: any) => {
-    acc[row.ability as AbilityType] = {
-      score: row.score,
-      proficient: Boolean(row.proficiency),
-    };
-    return acc;
-  }, {} as Record<AbilityType, CurrentAbility>);
+  return result.reduce(
+    (acc: Record<AbilityType, CurrentAbility>, row: any) => {
+      acc[row.ability as AbilityType] = {
+        score: row.score,
+        proficient: Boolean(row.proficiency),
+      }
+      return acc
+    },
+    {} as Record<AbilityType, CurrentAbility>
+  )
 }
 
 export async function deleteById(db: SQL, id: string): Promise<void> {
   await db`
     DELETE FROM char_abilities
     WHERE id = ${id}
-  `;
+  `
 }

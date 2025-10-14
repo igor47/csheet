@@ -1,24 +1,24 @@
-import { z } from "zod";
-import type { SQL } from "bun";
-import { create as createSpellPrepared } from "@src/db/char_spells_prepared";
-import { ClassNames, ClassNamesSchema } from "@src/lib/dnd";
-import { spells } from "@src/lib/dnd/spells";
-import type { ComputedCharacter } from "./computeCharacter";
-import { zodToFormErrors } from "@src/lib/formErrors";
+import { create as createSpellPrepared } from "@src/db/char_spells_prepared"
+import { ClassNames, ClassNamesSchema } from "@src/lib/dnd"
+import { spells } from "@src/lib/dnd/spells"
+import { zodToFormErrors } from "@src/lib/formErrors"
+import type { SQL } from "bun"
+import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 
 export const PrepareSpellApiSchema = z.object({
   class: ClassNamesSchema,
-  spell_type: z.enum(['cantrip', 'spell']),
+  spell_type: z.enum(["cantrip", "spell"]),
   spell_id: z.string(),
   current_spell_id: z.string().optional(),
   note: z.string().nullable().optional().default(null),
-});
+})
 
 type PrepareSpellData = Partial<z.infer<typeof PrepareSpellApiSchema>>
 
 export type PrepareSpellResult =
   | { complete: true }
-  | { complete: false, values: Record<string, string>, errors: Record<string, string> }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
  * Prepare a spell in a slot (or replace an existing spell)
@@ -27,11 +27,11 @@ export type PrepareSpellResult =
 export async function prepareSpell(
   db: SQL,
   char: ComputedCharacter,
-  data: Record<string, string>,
+  data: Record<string, string>
 ): Promise<PrepareSpellResult> {
   const errors: Record<string, string> = {}
   const values = data as PrepareSpellData
-  const isCheck = data.is_check === 'true'
+  const isCheck = data.is_check === "true"
 
   // Validate class
   if (!values.class) {
@@ -49,7 +49,7 @@ export async function prepareSpell(
   }
 
   // Find spell info for this class
-  const si = values.class ? char.spells.find(s => s.class === values.class) : null
+  const si = values.class ? char.spells.find((s) => s.class === values.class) : null
   if (values.class && !si) {
     errors.class = `${char.name} does not have class ${values.class}`
     if (isCheck) {
@@ -58,8 +58,8 @@ export async function prepareSpell(
   }
 
   // Validate type
-  const isCantrip = values.spell_type === 'cantrip'
-  if (values.spell_type && values.spell_type !== 'cantrip' && values.spell_type !== 'spell') {
+  const isCantrip = values.spell_type === "cantrip"
+  if (values.spell_type && values.spell_type !== "cantrip" && values.spell_type !== "spell") {
     errors.type = `Invalid type ${values.spell_type}`
     if (isCheck) {
       return { complete: false, errors, values: data }
@@ -68,9 +68,9 @@ export async function prepareSpell(
 
   // Validate spell
   if (values.spell_id) {
-    const spell = spells.find(s => s.id === values.spell_id);
+    const spell = spells.find((s) => s.id === values.spell_id)
     if (!spell) {
-      errors.spell_id = `Spell with ID ${values.spell_id} not found`;
+      errors.spell_id = `Spell with ID ${values.spell_id} not found`
     } else if (si) {
       // Check if spell belongs to class
       if (!spell.classes.includes(si.class)) {
@@ -79,8 +79,7 @@ export async function prepareSpell(
       // Check spell level matches type
       else if (isCantrip && spell.level !== 0) {
         errors.spell_id = `${spell.name} is not a cantrip`
-      }
-      else if (!isCantrip && spell.level === 0) {
+      } else if (!isCantrip && spell.level === 0) {
         errors.spell_id = `${spell.name} is a cantrip, not a leveled spell`
       }
       // Check spell level doesn't exceed max
@@ -98,13 +97,13 @@ export async function prepareSpell(
       // Check if spell is already prepared in ANY class (across all spellcasting classes)
       else {
         for (const spellInfo of char.spells) {
-          const slots = isCantrip ? spellInfo.cantripSlots : spellInfo.preparedSpells;
-          const alreadyPrepared = slots.some(slot =>
-            slot.spell_id === spell.id && slot.spell_id !== values.current_spell_id
-          );
+          const slots = isCantrip ? spellInfo.cantripSlots : spellInfo.preparedSpells
+          const alreadyPrepared = slots.some(
+            (slot) => slot.spell_id === spell.id && slot.spell_id !== values.current_spell_id
+          )
           if (alreadyPrepared) {
-            errors.spell_id = `${spell.name} is already prepared as a ${spellInfo.class} ${isCantrip ? 'cantrip' : 'spell'}`;
-            break;
+            errors.spell_id = `${spell.name} is already prepared as a ${spellInfo.class} ${isCantrip ? "cantrip" : "spell"}`
+            break
           }
         }
       }
@@ -117,9 +116,9 @@ export async function prepareSpell(
 
   // Validate current_spell_id if provided
   if (values.current_spell_id) {
-    const currentSpell = spells.find(s => s.id === values.current_spell_id);
+    const currentSpell = spells.find((s) => s.id === values.current_spell_id)
     if (!currentSpell) {
-      errors.current_spell_id = `Current spell with ID ${values.current_spell_id} not found`;
+      errors.current_spell_id = `Current spell with ID ${values.current_spell_id} not found`
     }
   }
 
@@ -136,7 +135,7 @@ export async function prepareSpell(
     return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
-  const newSpell = spells.find(sp => sp.id === result.data.spell_id)!
+  const newSpell = spells.find((sp) => sp.id === result.data.spell_id)!
 
   await db.begin(async (tx) => {
     // If replacing, unprepare old spell first
@@ -148,7 +147,7 @@ export async function prepareSpell(
         action: "unprepare",
         always_prepared: false,
         note: `Replaced with ${newSpell.name}`,
-      });
+      })
     }
 
     // Prepare new spell
@@ -159,7 +158,7 @@ export async function prepareSpell(
       action: "prepare",
       always_prepared: false,
       note: result.data.note,
-    });
+    })
   })
 
   return { complete: true }

@@ -1,14 +1,14 @@
-import { join, dirname } from "path";
+import { dirname, join } from "node:path"
 
-const repoRoot = dirname(import.meta.dir);
+const repoRoot = dirname(import.meta.dir)
 
 export const config = {
   repoRoot,
   sqliteDbPath: process.env.SQLITE_DB_PATH || join(repoRoot, "database.db"),
   cookieSecret: process.env.COOKIE_SECRET || "your-secret-key-should-be-in-env",
-} as const;
+} as const
 
 // Print config as JSON when run directly
 if (import.meta.main) {
-  console.log(JSON.stringify(config, null, 2));
+  console.log(JSON.stringify(config, null, 2))
 }

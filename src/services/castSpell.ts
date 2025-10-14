@@ -1,12 +1,15 @@
-import { z } from "zod";
-import type { SQL } from "bun";
-
-import type { SpellLevelType } from "@src/lib/dnd";
-import { spells } from "@src/lib/dnd/spells";
-import type { ComputedCharacter } from "./computeCharacter";
-import { updateSpellSlots } from "./updateSpellSlots";
-import { zodToFormErrors } from "@src/lib/formErrors";
-import { BooleanFormFieldSchema, NumberFormFieldSchema, OptionalNullStringSchema } from "@src/lib/schemas";
+import type { SpellLevelType } from "@src/lib/dnd"
+import { spells } from "@src/lib/dnd/spells"
+import { zodToFormErrors } from "@src/lib/formErrors"
+import {
+  BooleanFormFieldSchema,
+  NumberFormFieldSchema,
+  OptionalNullStringSchema,
+} from "@src/lib/schemas"
+import type { SQL } from "bun"
+import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
+import { updateSpellSlots } from "./updateSpellSlots"
 
 export const CastSpellApiSchema = z.object({
   spell_id: z.string(),
@@ -14,11 +17,11 @@ export const CastSpellApiSchema = z.object({
   slot_level: NumberFormFieldSchema.int().min(1).max(9).optional(),
   note: OptionalNullStringSchema,
   is_check: BooleanFormFieldSchema.optional().default(false),
-});
+})
 
 export type CastSpellResult =
-  | { complete: true, note: string, spellId: string}
-  | { complete: false, values: Record<string, string>, errors: Record<string, string> }
+  | { complete: true; note: string; spellId: string }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
  * Cast a spell, consuming a spell slot if not cast as a ritual
@@ -26,91 +29,102 @@ export type CastSpellResult =
 export async function castSpell(
   db: SQL,
   char: ComputedCharacter,
-  data: Record<string, string>,
+  data: Record<string, string>
 ): Promise<CastSpellResult> {
   const checkD = CastSpellApiSchema.partial().safeParse(data)
   if (!checkD.success) {
-    return { complete: false, values: data, errors: zodToFormErrors(checkD.error) };
+    return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
   }
 
   // container for errors we find here
   const errors: Record<string, string> = {}
 
   // Validate spell exists
-  const spell = spells.find(s => s.id === checkD.data.spell_id);
+  const spell = spells.find((s) => s.id === checkD.data.spell_id)
   if (!spell) {
-    errors.spell_id = "Spell not found";
-    return { complete: false, errors, values: data };
+    errors.spell_id = "Spell not found"
+    return { complete: false, errors, values: data }
   }
 
-  const isKnown = char.spells.some(s => s.knownSpells?.some(ks => ks === spell.id));
-  const isPrepared = char.spells.some(s => s.preparedSpells.some(ps => ps.spell_id === spell.id) || s.cantripSlots.some(cs => cs.spell_id === spell.id));
-  const isWizard = char.classes.some(c => c.class === 'wizard');
-  const isCantrip = spell.level === 0;
-  const asRitual = checkD.data.as_ritual === true || data.as_ritual === 'true'
+  const isKnown = char.spells.some((s) => s.knownSpells?.some((ks) => ks === spell.id))
+  const isPrepared = char.spells.some(
+    (s) =>
+      s.preparedSpells.some((ps) => ps.spell_id === spell.id) ||
+      s.cantripSlots.some((cs) => cs.spell_id === spell.id)
+  )
+  const isWizard = char.classes.some((c) => c.class === "wizard")
+  const isCantrip = spell.level === 0
+  const asRitual = checkD.data.as_ritual === true || data.as_ritual === "true"
 
   // Wizards can cast ritual spells from their spellbook without preparing them
   if (!isPrepared) {
     if (spell.ritual && isWizard && isKnown) {
       // ok
     } else if (asRitual) {
-      errors.spell_id = `${spell.name} is not prepared and cannot be cast as a ritual`;
-      return { complete: false, errors, values: data };
+      errors.spell_id = `${spell.name} is not prepared and cannot be cast as a ritual`
+      return { complete: false, errors, values: data }
     } else {
-      errors.spell_id = `${spell.name} is not prepared!`;
-      return { complete: false, errors, values: data };
+      errors.spell_id = `${spell.name} is not prepared!`
+      return { complete: false, errors, values: data }
     }
   }
 
   if (asRitual && !spell.ritual) {
-    errors.as_ritual = `${spell.name} cannot be cast as a ritual`;
-    return { complete: false, errors, values: data };
+    errors.as_ritual = `${spell.name} cannot be cast as a ritual`
+    return { complete: false, errors, values: data }
   }
 
   // rituals/cantrips cannot use spell slots
   if (isCantrip || asRitual) {
     if (checkD.data.slot_level) {
-      errors.slot_level = `Cannot use spell slots when casting ${isCantrip ? 'a cantrip' : 'as a ritual'}`;
-      return { complete: false, errors, values: data };
+      errors.slot_level = `Cannot use spell slots when casting ${isCantrip ? "a cantrip" : "as a ritual"}`
+      return { complete: false, errors, values: data }
     }
 
-  // Non-ritual, non-cantrip: validate slot level
+    // Non-ritual, non-cantrip: validate slot level
   } else {
     if (!checkD.data.slot_level && !data.slot_level) {
       if (!checkD.data.is_check) {
-        errors.slot_level = "Spell slot level is required";
+        errors.slot_level = "Spell slot level is required"
       }
-      return { complete: false, values: data, errors };
+      return { complete: false, values: data, errors }
     }
 
-    const slotLevel = parseInt(data.slot_level || '');
-    if (typeof slotLevel !== 'number' || isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
-      errors.slot_level = "Invalid slot level";
-      return { complete: false, errors, values: data };
+    const slotLevel = parseInt(data.slot_level || "", 10)
+    if (
+      typeof slotLevel !== "number" ||
+      Number.isNaN(slotLevel) ||
+      slotLevel < 1 ||
+      slotLevel > 9
+    ) {
+      errors.slot_level = "Invalid slot level"
+      return { complete: false, errors, values: data }
     }
 
     // Validate slot level is at least spell level
     if (slotLevel < spell.level) {
-      errors.slot_level = `Cannot cast level ${spell.level} spell using level ${slotLevel} slot`;
-      return { complete: false, errors, values: data };
+      errors.slot_level = `Cannot cast level ${spell.level} spell using level ${slotLevel} slot`
+      return { complete: false, errors, values: data }
     }
 
     // Check if slot is available
-    const slotAvailable = char.availableSpellSlots ? char.availableSpellSlots.includes(slotLevel as SpellLevelType) : false;
+    const slotAvailable = char.availableSpellSlots
+      ? char.availableSpellSlots.includes(slotLevel as SpellLevelType)
+      : false
     if (!slotAvailable) {
-      errors.slot_level = `No level ${slotLevel} spell slots available`;
-      return { complete: false, errors, values: data };
+      errors.slot_level = `No level ${slotLevel} spell slots available`
+      return { complete: false, errors, values: data }
     }
   }
 
   if (checkD.data.is_check || Object.keys(errors).length > 0) {
-    return { complete: false, values: data, errors };
+    return { complete: false, values: data, errors }
   }
 
   // Parse and validate with Zod
   const result = CastSpellApiSchema.safeParse(data)
   if (!result.success) {
-    return { complete: false, values: data, errors: zodToFormErrors(result.error) };
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
   //////////////////////////
@@ -118,19 +132,23 @@ export async function castSpell(
 
   // No spell slot used
   if (isCantrip || result.data.as_ritual) {
-    return { complete: true, note: `You cast ${spell.name}${asRitual ? ' as a ritual' : ''}. No spell slot was used.`, spellId: spell.id };
+    return {
+      complete: true,
+      note: `You cast ${spell.name}${asRitual ? " as a ritual" : ""}. No spell slot was used.`,
+      spellId: spell.id,
+    }
   } else if (!result.data.slot_level) {
-    errors.slot_level = "Splot spell level is required";
+    errors.slot_level = "Splot spell level is required"
     return { complete: false, values: data, errors }
   }
 
   // Generate note
-  let generatedNote = `Cast ${spell.name}`;
+  let generatedNote = `Cast ${spell.name}`
   if (result.data.slot_level > spell.level) {
-    generatedNote += ` (at level ${result.data.slot_level})`;
+    generatedNote += ` (at level ${result.data.slot_level})`
   }
   if (result.data.note) {
-    generatedNote += `. ${result.data.note}`;
+    generatedNote += `. ${result.data.note}`
   }
 
   // Use the spell slot
@@ -138,13 +156,17 @@ export async function castSpell(
     db,
     {
       character_id: char.id,
-      action: 'use',
+      action: "use",
       slot_level: result.data.slot_level,
       note: generatedNote,
     },
     char.spellSlots,
     char.availableSpellSlots
-  );
+  )
 
-  return { complete: true, note: `You cast ${spell.name} using a level ${result.data.slot_level} spell slot.`, spellId: spell.id }
+  return {
+    complete: true,
+    note: `You cast ${spell.name} using a level ${result.data.slot_level} spell slot.`,
+    spellId: spell.id,
+  }
 }

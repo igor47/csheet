@@ -34,3 +34,21 @@ run = """
   sqlite3 "$DB_PATH" -init db/init.sql
 """
 description = "Open SQLite shell for the database"
+
+[tasks.check]
+run = """
+  echo "Running Biome checks..."
+  bun biome check src/
+  echo "Running TypeScript checks..."
+  bun tsc --noEmit
+"""
+description = "Check code formatting, linting, and types"
+
+[tasks.check-fix]
+run = """
+  echo "Running Biome fixes..."
+  bun biome check --write src/
+  echo "Running TypeScript checks..."
+  bun tsc --noEmit
+"""
+description = "Auto-fix formatting and linting issues, then check types"

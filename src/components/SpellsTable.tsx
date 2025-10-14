@@ -1,13 +1,13 @@
-import type { Spell } from "@src/lib/dnd/spells";
+import type { Spell } from "@src/lib/dnd/spells"
 
 export interface SpellsTableProps {
-  spells: Spell[];
-  sortBy?: string;
-  sortOrder?: string;
-  selectedClass?: string;
-  selectedMaxLevel?: string;
-  selectedSchool?: string;
-  searchQuery?: string;
+  spells: Spell[]
+  sortBy?: string
+  sortOrder?: string
+  selectedClass?: string
+  selectedMaxLevel?: string
+  selectedSchool?: string
+  searchQuery?: string
 }
 
 const SortableHeader = ({
@@ -18,28 +18,28 @@ const SortableHeader = ({
   selectedClass,
   selectedMaxLevel,
   selectedSchool,
-  searchQuery
+  searchQuery,
 }: {
-  column: string;
-  label: string;
-  currentSort?: string;
-  currentOrder?: string;
-  selectedClass?: string;
-  selectedMaxLevel?: string;
-  selectedSchool?: string;
-  searchQuery?: string;
+  column: string
+  label: string
+  currentSort?: string
+  currentOrder?: string
+  selectedClass?: string
+  selectedMaxLevel?: string
+  selectedSchool?: string
+  searchQuery?: string
 }) => {
-  const isActive = currentSort === column;
-  const newOrder = isActive && currentOrder === 'asc' ? 'desc' : 'asc';
+  const isActive = currentSort === column
+  const newOrder = isActive && currentOrder === "asc" ? "desc" : "asc"
 
   // Build URL with sort params, preserving current filters
-  const params = new URLSearchParams();
-  if (selectedClass) params.set('class', selectedClass);
-  if (selectedMaxLevel) params.set('maxLevel', selectedMaxLevel);
-  if (selectedSchool) params.set('school', selectedSchool);
-  if (searchQuery) params.set('search', searchQuery);
-  params.set('sortBy', column);
-  params.set('sortOrder', newOrder);
+  const params = new URLSearchParams()
+  if (selectedClass) params.set("class", selectedClass)
+  if (selectedMaxLevel) params.set("maxLevel", selectedMaxLevel)
+  if (selectedSchool) params.set("school", selectedSchool)
+  if (searchQuery) params.set("search", searchQuery)
+  params.set("sortBy", column)
+  params.set("sortOrder", newOrder)
 
   return (
     <th>
@@ -52,22 +52,20 @@ const SortableHeader = ({
         hx-push-url="true"
       >
         {label}
-        {isActive && (
-          <i class={`bi bi-caret-${currentOrder === 'asc' ? 'up' : 'down'}-fill`}></i>
-        )}
+        {isActive && <i class={`bi bi-caret-${currentOrder === "asc" ? "up" : "down"}-fill`}></i>}
       </button>
     </th>
-  );
-};
+  )
+}
 
 export const SpellsTable = ({
   spells,
-  sortBy = 'level',
-  sortOrder = 'asc',
+  sortBy = "level",
+  sortOrder = "asc",
   selectedClass,
   selectedMaxLevel,
   selectedSchool,
-  searchQuery
+  searchQuery,
 }: SpellsTableProps) => (
   <div id="spells-table">
     <table class="table table-striped table-hover">
@@ -115,21 +113,22 @@ export const SpellsTable = ({
             </td>
           </tr>
         ) : (
-          spells.map(spell => {
+          spells.map((spell) => {
             // Build URL with openSpell param, preserving current filters
-            const params = new URLSearchParams();
-            if (selectedClass) params.set('class', selectedClass);
-            if (selectedMaxLevel) params.set('maxLevel', selectedMaxLevel);
-            if (selectedSchool) params.set('school', selectedSchool);
-            if (searchQuery) params.set('search', searchQuery);
-            params.set('sortBy', sortBy);
-            params.set('sortOrder', sortOrder);
-            params.set('openSpell', spell.id);
+            const params = new URLSearchParams()
+            if (selectedClass) params.set("class", selectedClass)
+            if (selectedMaxLevel) params.set("maxLevel", selectedMaxLevel)
+            if (selectedSchool) params.set("school", selectedSchool)
+            if (searchQuery) params.set("search", searchQuery)
+            params.set("sortBy", sortBy)
+            params.set("sortOrder", sortOrder)
+            params.set("openSpell", spell.id)
 
             return (
               <tr>
                 <td>
                   <button
+                    type="button"
                     class="btn btn-link p-0 text-start"
                     data-bs-toggle="modal"
                     data-bs-target="#spellModal"
@@ -141,22 +140,22 @@ export const SpellsTable = ({
                     {spell.name}
                   </button>
                 </td>
-                <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
+                <td>{spell.level === 0 ? "Cantrip" : spell.level}</td>
                 <td class="text-capitalize">{spell.school}</td>
                 <td>
                   {spell.classes.map((cls, idx) => (
                     <>
                       <span class="text-capitalize">{cls}</span>
-                      {idx < spell.classes.length - 1 ? ', ' : ''}
+                      {idx < spell.classes.length - 1 ? ", " : ""}
                     </>
                   ))}
                 </td>
                 <td>{spell.briefDescription}</td>
               </tr>
-            );
+            )
           })
         )}
       </tbody>
     </table>
   </div>
-);
+)

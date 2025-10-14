@@ -1,20 +1,20 @@
-import { z } from "zod";
-import type { SQL } from "bun";
-import { create as createSpellLearned } from "@src/db/char_spells_learned";
-import { spells } from "@src/lib/dnd/spells";
-import type { ComputedCharacter } from "./computeCharacter";
-import { zodToFormErrors } from "@src/lib/formErrors";
+import { create as createSpellLearned } from "@src/db/char_spells_learned"
+import { spells } from "@src/lib/dnd/spells"
+import { zodToFormErrors } from "@src/lib/formErrors"
+import type { SQL } from "bun"
+import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 
 export const LearnSpellApiSchema = z.object({
   spell_id: z.string(),
   note: z.string().nullable().optional().default(null),
-});
+})
 
 type LearnSpellData = Partial<z.infer<typeof LearnSpellApiSchema>>
 
 export type LearnSpellResult =
   | { complete: true }
-  | { complete: false, values: Record<string, string>, errors: Record<string, string> }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
  * Add a spell to a wizard's spellbook
@@ -23,15 +23,15 @@ export type LearnSpellResult =
 export async function learnSpell(
   db: SQL,
   char: ComputedCharacter,
-  data: Record<string, string>,
+  data: Record<string, string>
 ): Promise<LearnSpellResult> {
   const errors: Record<string, string> = {}
   const values = data as LearnSpellData
-  const isCheck = data.is_check === 'true'
-  const allowHighLevel = data.allowHighLevel === 'true'
+  const isCheck = data.is_check === "true"
+  const allowHighLevel = data.allowHighLevel === "true"
 
   // Find wizard spellcasting info
-  const wizardSI = char.spells.find(s => s.class === 'wizard');
+  const wizardSI = char.spells.find((s) => s.class === "wizard")
   if (!wizardSI) {
     errors.class = `${char.name} is not a wizard`
     return { complete: false, errors, values: data }
@@ -39,12 +39,12 @@ export async function learnSpell(
 
   // Validate spell
   if (values.spell_id) {
-    const spell = spells.find(s => s.id === values.spell_id);
+    const spell = spells.find((s) => s.id === values.spell_id)
     if (!spell) {
-      errors.spell_id = `Spell with ID ${values.spell_id} not found`;
+      errors.spell_id = `Spell with ID ${values.spell_id} not found`
     } else {
       // Check if spell is on wizard list
-      if (!spell.classes.includes('wizard')) {
+      if (!spell.classes.includes("wizard")) {
         errors.spell_id = `${spell.name} is not a wizard spell`
       }
       // Cantrips cannot be added to spellbook
@@ -87,9 +87,8 @@ export async function learnSpell(
   await createSpellLearned(db, {
     character_id: char.id,
     spell_id: result.data.spell_id,
-    action: "learn",
-    note: result.data.note
-  });
+    note: result.data.note,
+  })
 
   return { complete: true }
 }

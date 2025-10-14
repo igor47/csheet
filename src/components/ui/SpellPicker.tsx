@@ -1,33 +1,33 @@
-import { spells, type Spell } from '@src/lib/dnd/spells';
+import type { Spell } from "@src/lib/dnd/spells"
 
 export interface SpellPickerProps {
-  spells: Spell[];
-  selectedSpellId?: string;
-  name?: string;
-  label?: string;
-  error?: string;
-  emptyMessage?: string;
+  spells: Spell[]
+  selectedSpellId?: string
+  name?: string
+  label?: string
+  error?: string
+  emptyMessage?: string
 }
 
 export const SpellPicker = ({
   spells: availableSpells,
   selectedSpellId,
-  name = 'spell_id',
+  name = "spell_id",
   label,
   error,
-  emptyMessage = 'No spells available.'
+  emptyMessage = "No spells available.",
 }: SpellPickerProps) => {
   if (availableSpells.length === 0) {
-    return (
-      <div class="alert alert-warning">
-        {emptyMessage}
-      </div>
-    );
+    return <div class="alert alert-warning">{emptyMessage}</div>
   }
 
   return (
     <div class="mb-3">
-      {label && <label class="form-label">{label}</label>}
+      {label && (
+        <label class="form-label" for={name}>
+          {label}
+        </label>
+      )}
       <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
         {availableSpells.map((spell) => (
           <div class="form-check">
@@ -40,7 +40,7 @@ export const SpellPicker = ({
               checked={selectedSpellId === spell.id}
             />
             <label class="form-check-label" for={`spell-${spell.id}`}>
-              {spell.name} (Level {spell.level === 0 ? 'Cantrip' : spell.level})
+              {spell.name} (Level {spell.level === 0 ? "Cantrip" : spell.level})
               <br />
               <small class="text-muted">{spell.briefDescription}</small>
             </label>
@@ -49,5 +49,5 @@ export const SpellPicker = ({
       </div>
       {error && <div class="invalid-feedback d-block">{error}</div>}
     </div>
-  );
-};
+  )
+}

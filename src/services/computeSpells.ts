@@ -3,7 +3,7 @@ import {
   type CharSpellPrepared,
   getCurrentlyPrepared as getPreparedSpells,
 } from "@src/db/char_spells_prepared"
-import type { ClassNameType, AbilityType, ClassDef, SpellChangeEventType } from "@src/lib/dnd";
+import type { AbilityType, ClassDef, ClassNameType, SpellChangeEventType } from "@src/lib/dnd"
 import { type Spell, spells } from "@src/lib/dnd/spells"
 import type { AbilityScore, CharacterClass } from "@src/services/computeCharacter"
 import type { SQL } from "bun"
@@ -45,7 +45,7 @@ async function computeSpellsForClass(
   wizardSpellbookSpells: Spell[],
   allPreparedRecords: CharSpellPrepared[]
 ): Promise<SpellInfoForClass | null> {
-  const classDef = ruleset.Classes[charClass.class];
+  const classDef = ruleset.Classes[charClass.class]
 
   // Skip non-spellcasting classes
   if (!classDef.spellcasting.enabled) {
@@ -68,10 +68,10 @@ async function computeSpellsForClass(
   const spellSaveDC = 8 + proficiencyBonus + abilityModifier
 
   // Calculate max spell level this class can cast
-  const maxSpellLevel = getMaxSpellLevel(ruleset, classDef, charClass.level);
+  const maxSpellLevel = getMaxSpellLevel(ruleset, classDef, charClass.level)
 
   // Calculate maximums
-  const maxCantrips = ruleset.maxCantripsKnown(charClass.class, charClass.level);
+  const maxCantrips = ruleset.maxCantripsKnown(charClass.class, charClass.level)
 
   // Filter prepared records for this class
   const classPreparedRecords = allPreparedRecords.filter((r) => r.class === charClass.class)
@@ -97,8 +97,10 @@ async function computeSpellsForClass(
     knownSpells = classSpells.map((s) => s.id) // Includes both cantrips and leveled spells
   }
 
-  const maxPrepared = ruleset.maxSpellsPrepared(charClass.class, charClass.level, abilityScores[ability].modifier) || 0;
-  const preparedSlots = createPreparedSlots(leveledSpellRecords, maxPrepared);
+  const maxPrepared =
+    ruleset.maxSpellsPrepared(charClass.class, charClass.level, abilityScores[ability].modifier) ||
+    0
+  const preparedSlots = createPreparedSlots(leveledSpellRecords, maxPrepared)
 
   return {
     class: charClass.class,
@@ -205,6 +207,6 @@ export function getMaxSpellLevel(ruleset: any, classDef: ClassDef, classLevel: n
   }
 
   // For other casters, get slots and find highest level with slots > 0
-  const slots = ruleset.getSlotsFor(classDef.spellcasting.kind, classLevel);
+  const slots = ruleset.getSlotsFor(classDef.spellcasting.kind, classLevel)
   return Math.max(...slots)
 }

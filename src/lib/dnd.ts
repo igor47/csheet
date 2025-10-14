@@ -74,18 +74,37 @@ export type AbilityScoreModifiers = {
   [key in AbilityType]?: number
 }
 
+export interface Trait {
+  name: string
+  description: string
+  level?: number // Level at which trait is gained, if applicable
+}
+
 export interface Lineage {
-   name: string;
-   ability_score_modifiers?: AbilityScoreModifiers;
+  name: string
+  abilityScoreModifiers?: AbilityScoreModifiers
+  traits?: Trait[]
 }
 
 export interface Species {
-  name: string;
-  size: SizeType;
-  speed: number;
-  ability_score_modifiers?: AbilityScoreModifiers;
-  lineages?: Lineage[];
-  variants?: Lineage[];
+  name: string
+  size: SizeType
+  speed: number
+  abilityScoreModifiers?: AbilityScoreModifiers
+  skillProficiencies?: SkillType[]
+  lineages?: Lineage[]
+  variants?: Lineage[]
+  traits?: Trait[]
+}
+
+export interface Background {
+  name: string
+  skillProficiencies?: SkillType[]
+  abilityScoresModified?: AbilityType[]
+  additionalLanguages?: number,
+  toolProficiencies?: (string | Choice<string>)[]
+  equipment?: string[]
+  traits: Trait[]
 }
 
 export const ClassNames = [
@@ -126,8 +145,8 @@ export type SpellcastingInfo = { notes?: string } & (
 
 export interface Choice<T> {
   /** Choose `choose` items from `from` */
-  choose: number;
-  from: T[];
+  choose: number
+  from: T[]
 }
 
 export interface ClassDef {
@@ -148,27 +167,17 @@ export interface ClassDef {
   notes?: string
 }
 
-export type BackgroundNameType = string;
+export type SlotProgression = { level: number; slots: number[] }[]
 
-export interface BackgroundFeature {
-  name: string
-  summary: string // Short summary, no rules text
-}
+export interface Ruleset {
+  species: Species[],
+  classes: ClassDef[],
+  backgrounds: Background[],
 
-export interface Background {
-  name: BackgroundNameType;
-  feat?: string;
-  ability_scores?: AbilityType[];
-}
+  listLineages(speciesName?: string): Lineage[],
+  listSubclasses(className?: ClassNameType): string[],
 
-export type SlotProgression = {level: number, slots: number[]}[];
-
-import srd51 from "./dnd/srd51";
-import srd52 from "./dnd/srd52";
-
-export function getRuleset(ruleset: 'srd51' | 'srd52') {
-  if (ruleset === 'srd52') {
-    return srd52;
-  }
-  return srd51;
+  maxCantripsKnown(className: ClassNameType, level: number): number,
+  maxSpellsPrepared(className: ClassNameType, level: number, abilityModifier: number): number,
+  getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType,
 }

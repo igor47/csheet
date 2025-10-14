@@ -38,6 +38,7 @@ const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
       <span class="badge text-bg-info">{formatModifier(skillScore.modifier)}</span>
       <div class="d-flex gap-1">
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary border p-1"
           style="width: 24px; height: 24px; line-height: 1;"
           aria-label={`edit ${skill}`}
@@ -51,6 +52,7 @@ const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
           <i class="bi bi-pencil"></i>
         </button>
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary border p-1"
           style="width: 24px; height: 24px; line-height: 1;"
           aria-label={`${skill} history`}
@@ -61,7 +63,7 @@ const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
           data-bs-toggle="modal"
           data-bs-target="#editModal"
         >
-          <i class="bi bi-journals"></i>
+          <i class="bi bi-clock-history"></i>
         </button>
       </div>
     </div>
@@ -89,7 +91,7 @@ export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
           </div>
         </div>
         <div class="col-12 col-md-6">
-          <label class="form-label small text-muted">Tool & Weapon Proficiencies</label>
+          <div class="form-label small text-muted">Tool & Weapon Proficiencies</div>
           <textarea class="form-control form-control-sm" rows={6}>
             Longswords, Shortbows, Thieves' Tools, Herbalism Kit
           </textarea>

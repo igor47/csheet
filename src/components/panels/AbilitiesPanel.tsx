@@ -39,6 +39,7 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
 
         <div class="position-absolute d-flex flex-column gap-1" style="right: 8px; top: 30px;">
           <button
+            type="button"
             class="btn btn-sm btn-outline-secondary border p-1"
             style="width: 24px; height: 24px; line-height: 1;"
             aria-label={`edit ${ability}`}
@@ -52,6 +53,7 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
             <i class="bi bi-pencil"></i>
           </button>
           <button
+            type="button"
             class="btn btn-sm btn-outline-secondary border p-1"
             style="width: 24px; height: 24px; line-height: 1;"
             aria-label={`${ability} history`}
@@ -62,7 +64,7 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
             data-bs-toggle="modal"
             data-bs-target="#editModal"
           >
-            <i class="bi bi-journals"></i>
+            <i class="bi bi-clock-history"></i>
           </button>
         </div>
       </div>

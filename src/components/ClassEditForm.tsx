@@ -27,7 +27,7 @@ export const ClassEditForm = ({
 
   // Show subclass dropdown if we're at the subclass selection level
   const showSubclass = subclasses.length > 0 && level === selectedClass?.subclassLevel
-  let subclassPlh
+  let subclassPlh: string
   if (showSubclass) {
     subclassPlh = "Select a subclass"
   } else if (selectedClass) {

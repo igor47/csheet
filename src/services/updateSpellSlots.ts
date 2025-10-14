@@ -1,5 +1,5 @@
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
-import type { SlotsBySpellLevel } from "@src/lib/dnd"
+import type { SpellSlotsType } from "@src/lib/dnd"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -19,8 +19,8 @@ export type UpdateSpellSlotsApi = z.infer<typeof UpdateSpellSlotsApiSchema>
  */
 export function prepareUpdateSpellSlotsForm(
   values: Record<string, string>,
-  allSlots: SlotsBySpellLevel | null,
-  availableSlots: SlotsBySpellLevel | null
+  allSlots: SpellSlotsType,
+  availableSlots: SpellSlotsType
 ): { values: Record<string, string>; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
   const preparedValues = { ...values }
@@ -31,8 +31,8 @@ export function prepareUpdateSpellSlotsForm(
     let hasUsedSlots = false
     if (allSlots && availableSlots) {
       for (let level = 1; level <= 9; level++) {
-        const total = allSlots[level as keyof SlotsBySpellLevel] || 0
-        const available = availableSlots[level as keyof SlotsBySpellLevel] || 0
+        const total = allSlots[level as keyof SpellSlotsType] || 0
+        const available = availableSlots[level as keyof SpellSlotsType] || 0
         if (available < total) {
           hasUsedSlots = true
           break
@@ -54,7 +54,7 @@ export function prepareUpdateSpellSlotsForm(
     let hasAvailableSlots = false
     if (availableSlots) {
       for (let level = 1; level <= 9; level++) {
-        const available = availableSlots[level as keyof SlotsBySpellLevel] || 0
+        const available = availableSlots.filter((lvl) => lvl === level).length
         if (available > 0) {
           hasAvailableSlots = true
           break
@@ -73,7 +73,7 @@ export function prepareUpdateSpellSlotsForm(
       if (Number.isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
         errors.slot_level = "Invalid slot level"
       } else {
-        const available = availableSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
+        const available = availableSlots.filter((lvl) => lvl === slotLevel).length
         if (available <= 0) {
           errors.slot_level = `No Level ${slotLevel} slots available`
         }
@@ -87,8 +87,8 @@ export function prepareUpdateSpellSlotsForm(
     let hasUsedSlots = false
     if (allSlots && availableSlots) {
       for (let level = 1; level <= 9; level++) {
-        const total = allSlots[level as keyof SlotsBySpellLevel] || 0
-        const available = availableSlots[level as keyof SlotsBySpellLevel] || 0
+        const total = allSlots[level as keyof SpellSlotsType] || 0
+        const available = availableSlots[level as keyof SpellSlotsType] || 0
         if (available < total) {
           hasUsedSlots = true
           break
@@ -107,8 +107,8 @@ export function prepareUpdateSpellSlotsForm(
       if (Number.isNaN(slotLevel) || slotLevel < 1 || slotLevel > 9) {
         errors.slot_level = "Invalid slot level"
       } else {
-        const total = allSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
-        const available = availableSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
+        const total = allSlots?.[slotLevel as keyof SpellSlotsType] || 0
+        const available = availableSlots?.[slotLevel as keyof SpellSlotsType] || 0
         if (available >= total) {
           errors.slot_level = `All Level ${slotLevel} slots are already available`
         }
@@ -126,8 +126,8 @@ export function prepareUpdateSpellSlotsForm(
  */
 export function validateUpdateSpellSlots(
   values: Record<string, string>,
-  allSlots: SlotsBySpellLevel | null,
-  availableSlots: SlotsBySpellLevel | null
+  allSlots: SpellSlotsType,
+  availableSlots: SpellSlotsType
 ): { valid: boolean; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
 
@@ -155,7 +155,7 @@ export function validateUpdateSpellSlots(
       return { valid: false, errors }
     }
 
-    const available = availableSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
+    const available = availableSlots.filter((lvl) => lvl === slotLevel).length
     if (available <= 0) {
       errors.slot_level = `No Level ${slotLevel} slots available`
       return { valid: false, errors }
@@ -175,8 +175,8 @@ export function validateUpdateSpellSlots(
       return { valid: false, errors }
     }
 
-    const total = allSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
-    const available = availableSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
+    const total = allSlots?.[slotLevel as keyof SpellSlotsType] || 0
+    const available = availableSlots?.[slotLevel as keyof SpellSlotsType] || 0
     if (available >= total) {
       errors.slot_level = `All Level ${slotLevel} slots are already available`
       return { valid: false, errors }
@@ -195,8 +195,8 @@ export function validateUpdateSpellSlots(
 export async function updateSpellSlots(
   db: SQL,
   data: UpdateSpellSlotsApi,
-  _allSlots: SlotsBySpellLevel | null,
-  _availableSlots: SlotsBySpellLevel | null
+  _allSlots: SpellSlotsType | null,
+  _availableSlots: SpellSlotsType | null
 ): Promise<void> {
   if (data.action === "use") {
     // Use: create use record for one slot

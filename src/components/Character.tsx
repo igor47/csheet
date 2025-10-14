@@ -53,11 +53,7 @@ export const Character = ({ character }: CharacterProps) => {
                     Abilities & Saves
                   </button>
                 </h2>
-                <div
-                  id="col-abilities"
-                  class="accordion-collapse collapse"
-                  aria-labelledby="hdr-abilities"
-                >
+                <div id="col-abilities" class="accordion-collapse collapse">
                   <AbilitiesPanel character={character} />
                 </div>
               </div>
@@ -76,11 +72,7 @@ export const Character = ({ character }: CharacterProps) => {
                     Skills & Proficiencies
                   </button>
                 </h2>
-                <div
-                  id="col-skills"
-                  class="accordion-collapse collapse"
-                  aria-labelledby="hdr-skills"
-                >
+                <div id="col-skills" class="accordion-collapse collapse">
                   <SkillsPanel character={character} />
                 </div>
               </div>
@@ -99,11 +91,7 @@ export const Character = ({ character }: CharacterProps) => {
                     Traits & Features
                   </button>
                 </h2>
-                <div
-                  id="col-traits"
-                  class="accordion-collapse collapse"
-                  aria-labelledby="hdr-traits"
-                >
+                <div id="col-traits" class="accordion-collapse collapse">
                   <TraitsPanel />
                 </div>
               </div>
@@ -122,11 +110,7 @@ export const Character = ({ character }: CharacterProps) => {
                     Spells
                   </button>
                 </h2>
-                <div
-                  id="col-spells"
-                  class="accordion-collapse collapse"
-                  aria-labelledby="hdr-spells"
-                >
+                <div id="col-spells" class="accordion-collapse collapse">
                   <SpellsPanel character={character} />
                 </div>
               </div>
@@ -145,11 +129,7 @@ export const Character = ({ character }: CharacterProps) => {
                     Inventory
                   </button>
                 </h2>
-                <div
-                  id="col-inventory"
-                  class="accordion-collapse collapse"
-                  aria-labelledby="hdr-inventory"
-                >
+                <div id="col-inventory" class="accordion-collapse collapse">
                   <InventoryPanel />
                 </div>
               </div>
@@ -159,13 +139,7 @@ export const Character = ({ character }: CharacterProps) => {
       </div>
 
       {/* Edit/History Modal */}
-      <div
-        class="modal fade"
-        id="editModal"
-        tabindex={-1}
-        aria-labelledby="editModalLabel"
-        aria-hidden="true"
-      >
+      <div class="modal fade" id="editModal" tabindex={-1} aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content" id="editModalContent">
             {/* Content loaded via htmx */}

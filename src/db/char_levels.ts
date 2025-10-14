@@ -57,7 +57,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     ORDER BY created_at ASC
   `
 
-  return result.map((row: any) =>
+  return result.map((row: CharLevel) =>
     CharLevelSchema.parse({
       ...row,
       created_at: new Date(row.created_at),
@@ -80,7 +80,7 @@ export async function getCurrentLevels(db: SQL, characterId: string): Promise<Ch
     WHERE rn = 1
   `
 
-  return result.map((row: any) =>
+  return result.map((row: CharLevel) =>
     CharLevelSchema.parse({
       ...row,
       created_at: new Date(row.created_at),

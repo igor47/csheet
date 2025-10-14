@@ -7,7 +7,7 @@ export interface LabeledValueProps {
 export const LabeledValue = ({ label, value, className = "" }: LabeledValueProps) => {
   return (
     <div class={`position-relative border rounded p-2 pt-4 h-100 ${className}`}>
-      <label class="position-absolute top-0 start-0 ms-2 mt-1 small text-muted">{label}</label>
+      <div class="position-absolute top-0 start-0 ms-2 mt-1 small text-muted">{label}</div>
       <div class="text-end">{value}</div>
     </div>
   )

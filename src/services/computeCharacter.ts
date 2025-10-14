@@ -58,8 +58,8 @@ export interface ComputedCharacter extends Character {
   currentHP: number
   hitDice: HitDieType[]
   availableHitDice: HitDieType[]
-  spellSlots: SpellSlotsType | null
-  availableSpellSlots: SpellSlotsType | null
+  spellSlots: SpellSlotsType
+  availableSpellSlots: SpellSlotsType
   pactMagicSlots: SpellSlotsType | null
   spells: SpellInfoForClass[]
 }
@@ -184,8 +184,8 @@ export async function computeCharacter(
   const passivePerception = 10 + skills.perception.modifier
 
   // Compute spell slots
-  let spellSlots: SpellSlotsType | null = null
-  let pactMagicSlots: SpellSlotsType | null = null
+  let spellSlots: SpellSlotsType = []
+  let pactMagicSlots: SpellSlotsType = []
 
   // Calculate caster levels for multiclassing
   let fullCasterLevel = 0
@@ -249,7 +249,7 @@ export async function computeCharacter(
   }
 
   // Compute available spell slots by applying uses and restores
-  let availableSpellSlots: SpellSlotsType | null = null
+  let availableSpellSlots: SpellSlotsType = []
   if (spellSlots) {
     // Start with a copy of base spell slots
     availableSpellSlots = [...spellSlots]

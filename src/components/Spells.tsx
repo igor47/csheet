@@ -25,17 +25,6 @@ export const Spells = ({
   sortOrder,
   openSpell,
 }: SpellsProps) => {
-  // Build query params for current filter state
-  const _buildQueryString = () => {
-    const params = new URLSearchParams()
-    if (selectedClass) params.set("class", selectedClass)
-    if (selectedMaxLevel) params.set("maxLevel", selectedMaxLevel)
-    if (selectedSchool) params.set("school", selectedSchool)
-    if (sortBy) params.set("sortBy", sortBy)
-    if (sortOrder) params.set("sortOrder", sortOrder)
-    return params.toString() ? `?${params.toString()}` : ""
-  }
-
   return (
     <>
       <div class="container-fluid mt-4">
@@ -154,13 +143,7 @@ export const Spells = ({
       </div>
 
       {/* Spell Detail Modal */}
-      <div
-        class="modal fade"
-        id="spellModal"
-        tabindex={-1}
-        aria-labelledby="spellModalLabel"
-        aria-hidden="true"
-      >
+      <div class="modal fade" id="spellModal" tabindex={-1} aria-hidden="true">
         <div class="modal-dialog modal-lg">
           <div class="modal-content" id="spellModalContent">
             {openSpell ? <SpellDetail spell={openSpell} /> : null}

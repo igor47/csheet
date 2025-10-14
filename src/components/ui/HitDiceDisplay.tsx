@@ -21,9 +21,8 @@ export const HitDiceDisplay = ({ allHitDice, availableHitDice }: HitDiceDisplayP
 
   return (
     <div class="d-flex justify-content-center flex-wrap gap-1">
-      {hitDice.map(({ value, used }, idx) => (
+      {hitDice.map(({ value, used }) => (
         <div
-          key={idx}
           class={clsx("position-relative", "border", "rounded", "px-2", "py-1", "small", {
             "bg-success-subtle": !used,
             "bg-danger-subtle": used,

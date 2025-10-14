@@ -1,7 +1,7 @@
 import { create as createHitDiceDb } from "@src/db/char_hit_dice"
 import { create as createHPDb } from "@src/db/char_hp"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
-import type { HitDieType, SlotsBySpellLevel } from "@src/lib/dnd"
+import type { HitDieType, SpellSlotsType } from "@src/lib/dnd"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -31,8 +31,8 @@ export async function longRest(
   maxHitPoints: number,
   allHitDice: HitDieType[],
   availableHitDice: HitDieType[],
-  allSlots: SlotsBySpellLevel | null,
-  availableSlots: SlotsBySpellLevel | null
+  allSlots: SpellSlotsType | null,
+  availableSlots: SpellSlotsType | null
 ): Promise<LongRestSummary> {
   const summary: LongRestSummary = {
     hpRestored: 0,
@@ -88,8 +88,8 @@ export async function longRest(
   // Restore all spell slots
   if (allSlots && availableSlots) {
     for (let level = 1; level <= 9; level++) {
-      const total = allSlots[level as keyof SlotsBySpellLevel] || 0
-      const available = availableSlots[level as keyof SlotsBySpellLevel] || 0
+      const total = allSlots.filter((lvl) => lvl === level).length
+      const available = availableSlots.filter((lvl) => lvl === level).length
       const toRestoreSlots = total - available
 
       // Create restore records for each used slot

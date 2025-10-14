@@ -1,11 +1,11 @@
 import { SpellSlotsDisplay } from "@src/components/ui/SpellSlotsDisplay"
-import type { SlotsBySpellLevel } from "@src/lib/dnd"
+import type { SpellLevelType, SpellSlotsType } from "@src/lib/dnd"
 import clsx from "clsx"
 
 export interface SpellSlotsEditFormProps {
   characterId: string
-  allSlots: SlotsBySpellLevel | null
-  availableSlots: SlotsBySpellLevel | null
+  allSlots: SpellSlotsType
+  availableSlots: SpellSlotsType
   values?: Record<string, string>
   errors?: Record<string, string>
 }
@@ -22,8 +22,8 @@ export const SpellSlotsEditForm = ({
   if (allSlots && availableSlots) {
     let hasUsedSlots = false
     for (let level = 1; level <= 9; level++) {
-      const total = allSlots[level as keyof SlotsBySpellLevel] || 0
-      const available = availableSlots[level as keyof SlotsBySpellLevel] || 0
+      const total = allSlots[level as keyof SpellSlotsType] || 0
+      const available = availableSlots[level as keyof SpellSlotsType] || 0
       if (available < total) {
         hasUsedSlots = true
         break
@@ -35,34 +35,43 @@ export const SpellSlotsEditForm = ({
   }
 
   const action = values?.action || defaultAction
-  const slotLevel = values?.slot_level ? parseInt(values.slot_level, 10) : null
+  const slotLevel = values?.slot_level ? (parseInt(values.slot_level, 10) as SpellLevelType) : null
 
   // Calculate preview slots
-  const previewAvailable = availableSlots ? { ...availableSlots } : {}
+  const previewAvailable = [...availableSlots]
 
+  // Preview: use one slot
   if (action === "use" && slotLevel) {
-    // Preview: use one slot
-    const currentCount = previewAvailable[slotLevel as keyof SlotsBySpellLevel] || 0
-    previewAvailable[slotLevel as keyof SlotsBySpellLevel] = Math.max(0, currentCount - 1)
-  } else if (action === "restore" && slotLevel) {
+    const idx = previewAvailable.indexOf(slotLevel)
+    if (idx !== -1) previewAvailable.splice(idx, 1)
+
     // Preview: restore one slot
-    const currentCount = previewAvailable[slotLevel as keyof SlotsBySpellLevel] || 0
-    const maxCount = allSlots?.[slotLevel as keyof SlotsBySpellLevel] || 0
-    previewAvailable[slotLevel as keyof SlotsBySpellLevel] = Math.min(maxCount, currentCount + 1)
+  } else if (action === "restore" && slotLevel) {
+    const currentCount = previewAvailable.filter((lvl) => lvl === slotLevel).length
+    const maxCount = allSlots.filter((lvl) => lvl === slotLevel).length
+    if (currentCount < maxCount) previewAvailable.push(slotLevel)
   }
 
   const showPreview = (action === "use" || action === "restore") && slotLevel
 
   // Get available slot levels for dropdowns
-  const availableLevels: number[] = []
-  const usedLevels: number[] = []
+  const availableLevels: { value: SpellLevelType; label: string }[] = []
+  const usedLevels: { value: SpellLevelType; label: string }[] = []
 
-  if (allSlots && availableSlots) {
-    for (let level = 1; level <= 9; level++) {
-      const total = allSlots[level as keyof SlotsBySpellLevel] || 0
-      const available = availableSlots[level as keyof SlotsBySpellLevel] || 0
-      if (available > 0) availableLevels.push(level)
-      if (available < total) usedLevels.push(level)
+  for (let level = 1; level <= 9; level++) {
+    const lvlMax = allSlots.filter((lvl) => lvl === level).length
+    const available = availableSlots.filter((lvl) => lvl === level).length
+    if (available > 0) {
+      availableLevels.push({
+        value: level as SpellLevelType,
+        label: `Level ${level} (${available} available)`,
+      })
+    }
+    if (available < lvlMax) {
+      usedLevels.push({
+        value: level as SpellLevelType,
+        label: `Level ${level} (${lvlMax - available} of ${lvlMax} used)`,
+      })
     }
   }
 
@@ -84,14 +93,16 @@ export const SpellSlotsEditForm = ({
         >
           {/* Current Spell Slots */}
           <div class="mb-3">
-            <label class="form-label">Current Spell Slots</label>
+            <div class="form-label">Current Spell Slots</div>
             <SpellSlotsDisplay allSlots={allSlots} availableSlots={availableSlots} />
           </div>
 
           {/* Action: Use or Restore */}
           <div class="mb-3">
-            <label class="form-label">Action</label>
-            <div class="btn-group w-100" role="group">
+            <label class="form-label" for="action">
+              Action
+            </label>
+            <fieldset class="btn-group w-100">
               <input
                 type="radio"
                 class="btn-check"
@@ -119,7 +130,7 @@ export const SpellSlotsEditForm = ({
               <label class="btn btn-outline-success" for="action-restore">
                 Restore Slot
               </label>
-            </div>
+            </fieldset>
           </div>
 
           {/* Use: Slot level selection */}
@@ -135,10 +146,9 @@ export const SpellSlotsEditForm = ({
                 required
               >
                 <option value="">Choose a slot level...</option>
-                {availableLevels.map((level) => (
-                  <option key={level} value={level} selected={slotLevel === level}>
-                    Level {level} ({availableSlots?.[level as keyof SlotsBySpellLevel] || 0}{" "}
-                    available)
+                {availableLevels.map(({ value, label }) => (
+                  <option key={value} value={value} selected={slotLevel === value}>
+                    {label}
                   </option>
                 ))}
               </select>
@@ -161,12 +171,9 @@ export const SpellSlotsEditForm = ({
                 required
               >
                 <option value="">Choose a slot level...</option>
-                {usedLevels.map((level) => (
-                  <option key={level} value={level} selected={slotLevel === level}>
-                    Level {level} (
-                    {(allSlots?.[level as keyof SlotsBySpellLevel] || 0) -
-                      (availableSlots?.[level as keyof SlotsBySpellLevel] || 0)}{" "}
-                    used)
+                {usedLevels.map(({ value, label }) => (
+                  <option key={value} value={value} selected={slotLevel === value}>
+                    {label}
                   </option>
                 ))}
               </select>
@@ -179,7 +186,7 @@ export const SpellSlotsEditForm = ({
           {/* Preview */}
           {showPreview && (
             <div class="mb-3">
-              <label class="form-label">Preview</label>
+              <div class="form-label">Preview</div>
               <SpellSlotsDisplay allSlots={allSlots} availableSlots={previewAvailable} />
               <small class="form-text text-muted">
                 {action === "use"

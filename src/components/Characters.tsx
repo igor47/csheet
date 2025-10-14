@@ -31,9 +31,7 @@ export const Characters = ({ characters }: CharactersProps) => (
                     <tr>
                       <th>Name</th>
                       <th>Race</th>
-                      <th>Class</th>
                       <th>Background</th>
-                      <th>Size</th>
                       <th>Alignment</th>
                       <th>Created</th>
                       <th>Actions</th>
@@ -46,9 +44,7 @@ export const Characters = ({ characters }: CharactersProps) => (
                           <strong>{char.name}</strong>
                         </td>
                         <td>{char.race}</td>
-                        <td>{char.class}</td>
                         <td>{char.background}</td>
-                        <td>{char.size}</td>
                         <td>{char.alignment || "-"}</td>
                         <td>{new Date(char.created_at).toLocaleDateString()}</td>
                         <td>

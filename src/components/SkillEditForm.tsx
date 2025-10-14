@@ -57,7 +57,7 @@ export const SkillEditForm = ({
         >
           {/* Current Skill Display */}
           <div class="mb-3">
-            <label class="form-label">Current</label>
+            <p class="form-label">Current</p>
             <div class="border rounded p-2">
               <div class="d-flex align-items-center gap-2">
                 <i
@@ -75,8 +75,10 @@ export const SkillEditForm = ({
 
           {/* Proficiency Level Radio Buttons */}
           <div class="mb-3">
-            <label class="form-label">Proficiency Level</label>
-            <div class="btn-group w-100" role="group">
+            <label class="form-label" for="proficiency">
+              Proficiency Level
+            </label>
+            <fieldset class="btn-group w-100">
               <input
                 type="radio"
                 class="btn-check"
@@ -128,7 +130,7 @@ export const SkillEditForm = ({
               <label class="btn btn-outline-success" for="prof-expert">
                 <i class="bi bi-brightness-high-fill"></i> Expert
               </label>
-            </div>
+            </fieldset>
             {errors?.proficiency && (
               <div class="invalid-feedback d-block">{errors.proficiency}</div>
             )}
@@ -137,7 +139,7 @@ export const SkillEditForm = ({
           {/* Preview */}
           {showPreview && newModifier !== undefined && (
             <div class="mb-3">
-              <label class="form-label">Preview</label>
+              <p class="form-label">Preview</p>
               <div class="border rounded p-2">
                 <div class="d-flex align-items-center gap-2">
                   <i

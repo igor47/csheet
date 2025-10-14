@@ -87,7 +87,6 @@ export async function learnSpell(
   await createSpellLearned(db, {
     character_id: char.id,
     spell_id: result.data.spell_id,
-    action: "learn",
     note: result.data.note,
   })
 

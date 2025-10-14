@@ -60,7 +60,7 @@ export const AbilityEditForm = ({
         >
           {/* Current Ability Display */}
           <div class="mb-3">
-            <label class="form-label">Current</label>
+            <div class="form-label">Current</div>
             <div class="border rounded p-2 text-center" style="max-width: 150px; margin: 0 auto;">
               <div
                 class={clsx("fw-medium text-uppercase border", {
@@ -103,8 +103,10 @@ export const AbilityEditForm = ({
 
           {/* Proficiency Change */}
           <div class="mb-3">
-            <label class="form-label">Saving Throw Proficiency</label>
-            <div class="btn-group w-100" role="group">
+            <label class="form-label" for="proficiency_change">
+              Saving Throw Proficiency
+            </label>
+            <fieldset class="btn-group w-100">
               <input
                 type="radio"
                 class="btn-check"
@@ -151,7 +153,7 @@ export const AbilityEditForm = ({
                   </label>
                 </>
               )}
-            </div>
+            </fieldset>
             {errors?.proficiency_change && (
               <div class="invalid-feedback d-block">{errors.proficiency_change}</div>
             )}
@@ -160,7 +162,7 @@ export const AbilityEditForm = ({
           {/* Preview */}
           {showPreview && (
             <div class="mb-3">
-              <label class="form-label">Preview</label>
+              <div class="form-label">Preview</div>
               <div class="border rounded p-2 text-center" style="max-width: 150px; margin: 0 auto;">
                 <div
                   class={clsx("fw-medium text-uppercase border", {

@@ -32,7 +32,7 @@
       },
       "style": {
         "useImportType": "error",
-        "noNonNullAssertion": "warn"
+        "noNonNullAssertion": "off"
       },
       "correctness": {
         "noUnusedVariables": "warn"

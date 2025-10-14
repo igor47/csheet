@@ -69,14 +69,16 @@ export const HitDiceEditForm = ({
         >
           {/* Current Hit Dice */}
           <div class="mb-3">
-            <label class="form-label">Current Hit Dice</label>
+            <p class="mb-2">Current Hit Dice</p>
             <HitDiceDisplay allHitDice={allHitDice} availableHitDice={availableHitDice} />
           </div>
 
           {/* Action: Restore or Spend */}
           <div class="mb-3">
-            <label class="form-label">Action</label>
-            <div class="btn-group w-100" role="group">
+            <label class="form-label" for="action">
+              Action
+            </label>
+            <fieldset class="btn-group w-100">
               <input
                 type="radio"
                 class="btn-check"
@@ -104,7 +106,7 @@ export const HitDiceEditForm = ({
               <label class="btn btn-outline-danger" for="action-spend">
                 Spend Hit Die
               </label>
-            </div>
+            </fieldset>
           </div>
 
           {/* Restore: Die selection */}
@@ -185,7 +187,7 @@ export const HitDiceEditForm = ({
           {/* Preview */}
           {showPreview && (
             <div class="mb-3">
-              <label class="form-label">Preview</label>
+              <p class="mb-2">Preview</p>
               <HitDiceDisplay allHitDice={allHitDice} availableHitDice={previewAvailable} />
               <small class="form-text text-muted">
                 {action === "restore"

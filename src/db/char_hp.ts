@@ -50,7 +50,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     ORDER BY created_at ASC
   `
 
-  return result.map((row: any) =>
+  return result.map((row: CharHP) =>
     CharHPSchema.parse({
       ...row,
       created_at: new Date(row.created_at),

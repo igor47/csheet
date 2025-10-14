@@ -26,7 +26,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
 
   // Default class to first available if not set
   if (!(values.class && spellInfos.map((si) => si.class).includes(values.class as ClassNameType))) {
-    values.class = spellInfos[0]?.class
+    values.class = spellInfos[0]?.class || ""
   }
 
   // Default type to 'spell' if not set
@@ -52,7 +52,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
   const replaceableIds = currentlyPrepared.filter((s) => !s.alwaysPrepared).map((s) => s.spell_id)
   const replaceOpts = replaceableIds.map((id) => ({
     value: id!,
-    label: spells.find((s) => s.id === id)?.name,
+    label: spells.find((s) => s.id === id)!.name,
   }))
 
   // Get all prepared spells across ALL classes to avoid duplicates
@@ -84,13 +84,13 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
     } else {
       // Wizards can only prepare leveled spells from their spellbook
       availableSpells = selectedSI.knownSpells
-        .map((spellId) => spells.find((s) => s.id === spellId))
+        .map((spellId) => spells.find((s) => s.id === spellId)!)
         .filter(Boolean)
-        .filter((s) => s?.level > 0)
-        .filter((s) => !alreadyPreppedIds.includes(s?.id))
+        .filter((s) => s.level > 0)
+        .filter((s) => !alreadyPreppedIds.includes(s.id))
         .sort((a, b) => {
-          if (a?.level !== b?.level) return a?.level - b?.level
-          return a?.name.localeCompare(b?.name)
+          if (a.level !== b.level) return a.level - b.level
+          return a.name.localeCompare(b.name)
         }) as Spell[]
     }
   } else {
@@ -159,7 +159,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
 
         {/* Spell Type Selection */}
         <div class="mb-3">
-          <div class="btn-group" role="group" aria-label="Spell Type">
+          <fieldset class="btn-group" aria-label="Spell Type">
             <input
               type="radio"
               class="btn-check"
@@ -183,7 +183,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
             <label class="btn btn-outline-primary" for="spell_type_spell">
               Spells
             </label>
-          </div>
+          </fieldset>
         </div>
 
         {/* Hidden field for current spell (if replacing) */}

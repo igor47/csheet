@@ -2,9 +2,10 @@ import { Navbar } from "@src/components/ui/Navbar"
 import type { User } from "@src/db/users"
 import type { Flash } from "@src/middleware/flash"
 import { clsx } from "clsx"
+import type { Child } from "hono/jsx"
 
 export interface LayoutProps {
-  children?: any
+  children?: Child[] | Child
   title?: string
   user?: User
   currentPage?: string
@@ -18,7 +19,7 @@ export const Layout = ({ children, title = "CSheet", user, currentPage, flash }:
   )
 
   return (
-    <html>
+    <html lang="en">
       <head>
         <title>{title}</title>
 

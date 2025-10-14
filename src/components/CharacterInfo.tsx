@@ -35,7 +35,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
             <img
               src="/static/placeholder.png"
               class="rounded mx-auto d-block ratio ratio-1x1"
-              alt={`${character.name}'s image`}
+              alt={`${character.name}'s avatar`}
             />
           </div>
           <div class="col-9 col-lg-10">
@@ -52,6 +52,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
               </div>
               <div class="col-1 d-flex flex-column gap-1 align-items-center">
                 <button
+                  type="button"
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="edit class"
@@ -65,6 +66,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   <i class="bi bi-pencil"></i>
                 </button>
                 <button
+                  type="button"
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="class history"
@@ -153,6 +155,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
               </div>
               <div class="col-2 d-flex gap-1 align-items-center">
                 <button
+                  type="button"
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="edit hit points"
@@ -166,6 +169,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   <i class="bi bi-pencil"></i>
                 </button>
                 <button
+                  type="button"
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="hit points history"
@@ -194,6 +198,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
               </div>
               <div class="col-2 d-flex gap-1 align-items-center">
                 <button
+                  type="button"
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="edit hit dice"
@@ -207,6 +212,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   <i class="bi bi-pencil"></i>
                 </button>
                 <button
+                  type="button"
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="hit dice history"

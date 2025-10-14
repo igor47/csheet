@@ -73,7 +73,7 @@ export async function findByUserId(db: SQL, userId: string): Promise<Character[]
     ORDER BY created_at DESC
   `
 
-  return result.map((row: any) =>
+  return result.map((row: Character) =>
     CharacterSchema.parse({
       ...row,
       created_at: new Date(row.created_at),

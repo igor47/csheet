@@ -201,7 +201,7 @@ const SpellDetailInner = ({ spell, className }: { spell: Spell; className: strin
             {spell.conditionsInflicted.map((cond, idx) => (
               <>
                 <span class="text-capitalize">{cond}</span>
-                {idx < spell.conditionsInflicted?.length - 1 ? ", " : ""}
+                {idx < (spell.conditionsInflicted?.length || 0) - 1 ? ", " : ""}
               </>
             ))}
           </li>

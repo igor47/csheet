@@ -128,6 +128,7 @@ export const SpellsTable = ({
               <tr>
                 <td>
                   <button
+                    type="button"
                     class="btn btn-link p-0 text-start"
                     data-bs-toggle="modal"
                     data-bs-target="#spellModal"

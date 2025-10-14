@@ -64,7 +64,7 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
   // Default slot_level to spell level if not set
   if (!values.slot_level && !isCantrip && !asRitual) {
     for (let level = spell.level; level <= 9; level++) {
-      if (slotLevelCounts[level]?.available > 0) {
+      if (slotLevelCounts[level]!.available > 0) {
         values.slot_level = level.toString()
         break
       }
@@ -128,7 +128,9 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
           {/* Spell Slot Selection */}
           {!isCantrip && !asRitual && (
             <div class="mb-3">
-              <label class="form-label d-block">Select Spell Slot Level</label>
+              <label class="form-label d-block" for="slot_level">
+                Select Spell Slot Level
+              </label>
 
               <Select
                 name="slot_level"

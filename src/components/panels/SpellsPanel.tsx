@@ -50,6 +50,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
           </div>
           <div class="col-2 d-flex gap-1 align-items-center">
             <button
+              type="button"
               class="btn btn-sm btn-outline-secondary border p-1"
               style="width: 24px; height: 24px; line-height: 1;"
               aria-label="Edit spell slots"
@@ -63,6 +64,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
               <i class="bi bi-pencil"></i>
             </button>
             <button
+              type="button"
               class="btn btn-sm btn-outline-secondary border p-1"
               style="width: 24px; height: 24px; line-height: 1;"
               aria-label="Spell splot history"
@@ -131,6 +133,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0">Prepared Spells</h6>
                 <button
+                  type="button"
                   class="btn btn-sm btn-outline-secondary border p-1"
                   style="width: 24px; height: 24px; line-height: 1;"
                   aria-label="Spell preparation history"
@@ -169,7 +172,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                               {spell ? (
                                 <>
                                   <a
-                                    href="#"
+                                    href="/spells/{spell.id}"
                                     hx-get={`/spells/${spell.id}`}
                                     hx-target="#editModalContent"
                                     hx-swap="innerHTML"
@@ -195,6 +198,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                             <td>
                               <div class="d-flex gap-1">
                                 <button
+                                  type="button"
                                   class="btn btn-sm btn-outline-secondary border p-0"
                                   style="width: 24px; height: 24px; line-height: 1;"
                                   aria-label="Edit slot"
@@ -210,6 +214,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                                 </button>
                                 {spell && (
                                   <button
+                                    type="button"
                                     class="btn btn-sm btn-outline-primary border p-0"
                                     style="width: 24px; height: 24px; line-height: 1;"
                                     aria-label="Cast spell"
@@ -246,7 +251,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
 
           // Sort spells by level then name
           const sortedSpells = [...wizardInfo.knownSpells]
-            .map((spellId) => spells.find((s) => s.id === spellId))
+            .map((spellId) => spells.find((s) => s.id === spellId)!)
             .filter(Boolean)
             .sort((a, b) => {
               if (a?.level !== b?.level) return a?.level - b?.level
@@ -259,6 +264,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                 <h6 class="mb-0">Spellbook</h6>
                 <div class="d-flex gap-1">
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-secondary border p-1"
                     style="width: 24px; height: 24px; line-height: 1;"
                     aria-label="Add to spellbook"
@@ -272,6 +278,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                     <i class="bi bi-plus"></i>
                   </button>
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-secondary border p-1"
                     style="width: 24px; height: 24px; line-height: 1;"
                     aria-label="Spellbook history"
@@ -326,6 +333,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
 
                       const prepIcon = (
                         <button
+                          type="button"
                           class={clsx("btn btn-sm butn-outline-info border p-0", {
                             "text-muted text-opacity-50": isInPreparedSlot || isInCantripSlot,
                           })}
@@ -344,6 +352,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                       )
                       const ritualCastIcon = spell.ritual && (
                         <button
+                          type="button"
                           class="btn btn-sm btn-outline-primary border p-0"
                           style="width: 24px; height: 24px; line-height: 1;"
                           aria-label="Cast spell as ritual"
@@ -362,7 +371,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                         <tr>
                           <td>
                             <a
-                              href="#"
+                              href="/spells/{spell.id}"
                               hx-get={`/spells/${spell.id}`}
                               hx-target="#editModalContent"
                               hx-swap="innerHTML"

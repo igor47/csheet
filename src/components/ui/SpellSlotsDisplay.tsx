@@ -36,9 +36,8 @@ export const SpellSlotsDisplay = ({ allSlots, availableSlots }: SpellSlotsDispla
 
   return (
     <div class="d-flex justify-content-center flex-wrap gap-1">
-      {slots.map(({ level, used }, idx) => (
+      {slots.map(({ level, used }) => (
         <div
-          key={idx}
           class={clsx("position-relative", "border", "rounded", "px-2", "py-1", "small", {
             "bg-success-subtle": !used,
             "bg-danger-subtle": used,

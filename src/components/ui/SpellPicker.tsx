@@ -23,7 +23,11 @@ export const SpellPicker = ({
 
   return (
     <div class="mb-3">
-      {label && <label class="form-label">{label}</label>}
+      {label && (
+        <label class="form-label" for={name}>
+          {label}
+        </label>
+      )}
       <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
         {availableSpells.map((spell) => (
           <div class="form-check">

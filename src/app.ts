@@ -24,12 +24,13 @@ app.use(
 
 // update typescript to indicate the title prop on the layout
 // see: https://hono.dev/docs/api/context#render-setrenderer
+// biome-ignore-start lint/style/useShorthandFunctionType: this is how the hono docs show it
 declare module "hono" {
-  type ContextRenderer = (
-    content: string | Promise<string>,
-    head: { title: string }
-  ) => Response | Promise<Response>
+  interface ContextRenderer {
+    (content: string | Promise<string>, props: { title: string }): Response
+  }
 }
+// biome-ignore-end lint/style/useShorthandFunctionType: this is how the hono docs show it
 
 // middleware
 applyMiddleware(app)

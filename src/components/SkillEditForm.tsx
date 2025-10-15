@@ -1,12 +1,13 @@
-import type { ProficiencyLevel, SkillType } from "@src/lib/dnd"
+import type { AbilityType, ProficiencyLevel, SkillType } from "@src/lib/dnd"
 
 export interface SkillEditFormProps {
   characterId: string
   skill: SkillType
   abilityAbbr: string
+  abilityModifier: number
+  proficiencyBonus: number
   currentModifier: number
   currentProficiency: ProficiencyLevel
-  newModifier?: number
   values?: Record<string, string>
   errors?: Record<string, string>
 }
@@ -15,9 +16,10 @@ export const SkillEditForm = ({
   characterId,
   skill,
   abilityAbbr,
+  abilityModifier,
+  proficiencyBonus,
   currentModifier,
   currentProficiency,
-  newModifier,
   values,
   errors,
 }: SkillEditFormProps) => {
@@ -37,6 +39,26 @@ export const SkillEditForm = ({
     }
   }
 
+  // Calculate new modifier for preview
+  let newModifier: number | undefined
+  if (values?.proficiency && values.proficiency !== currentProficiency) {
+    const proficiency = values.proficiency as any
+    switch (proficiency) {
+      case "none":
+        newModifier = abilityModifier
+        break
+      case "half":
+        newModifier = abilityModifier + Math.floor(proficiencyBonus / 2)
+        break
+      case "proficient":
+        newModifier = abilityModifier + proficiencyBonus
+        break
+      case "expert":
+        newModifier = abilityModifier + proficiencyBonus * 2
+        break
+    }
+  }
+
   const showPreview = newModifier !== undefined && proficiency !== currentProficiency
 
   return (
@@ -48,13 +70,16 @@ export const SkillEditForm = ({
       <div class="modal-body">
         <form
           id="skill-edit-form"
-          hx-post={`/characters/${characterId}/edit/${skill}/check`}
+          hx-post={`/characters/${characterId}/edit/${skill}`}
           hx-trigger="change delay:300ms"
           hx-target="#editModalContent"
           hx-swap="innerHTML"
           class="needs-validation"
           novalidate
         >
+          {/* is_check field */}
+          <input type="hidden" name="is_check" value="true" />
+
           {/* Current Skill Display */}
           <div class="mb-3">
             <p class="form-label">Current</p>

@@ -1,5 +1,5 @@
 import { create as createAbilityDb } from "@src/db/char_abilities"
-import { AbilitySchema, type AbilityType } from "@src/lib/dnd"
+import { AbilitySchema } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import {
   BooleanFormFieldSchema,
@@ -28,17 +28,23 @@ export type UpdateAbilityResult =
 export async function updateAbility(
   db: SQL,
   char: ComputedCharacter,
-  ability: AbilityType,
   data: Record<string, string>
 ): Promise<UpdateAbilityResult> {
-  const dataWithAbility = { ...data, ability }
-
-  const checkD = UpdateAbilityApiSchema.partial().safeParse(dataWithAbility)
+  const checkD = UpdateAbilityApiSchema.partial().safeParse(data)
   if (!checkD.success) {
     return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
   }
 
   const errors: Record<string, string> = {}
+  const { ability } = checkD.data
+
+  if (!ability) {
+    if (!checkD.data.is_check) {
+      errors.ability = "Ability is required."
+    }
+    return { complete: false, values: data, errors }
+  }
+
   const currentAbility = char.abilityScores[ability]
   const isProficient = currentAbility.proficient
   const currentScore = currentAbility.score
@@ -77,7 +83,7 @@ export async function updateAbility(
   }
 
   // Parse and validate with Zod
-  const result = UpdateAbilityApiSchema.safeParse(dataWithAbility)
+  const result = UpdateAbilityApiSchema.safeParse(data)
   if (!result.success) {
     return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }

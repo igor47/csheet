@@ -21,7 +21,7 @@ CREATE TABLE characters (
     background TEXT NOT NULL,
     alignment TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ruleset TEXT NOT NULL DEFAULT 'srd51',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_characters_user_id ON characters(user_id);
@@ -183,4 +183,5 @@ INSERT INTO "schema_migrations" (version) VALUES
   ('20251003140147'),
   ('20251004105657'),
   ('20251007100000'),
-  ('20251007100001');
+  ('20251007100001'),
+  ('20251014115526');

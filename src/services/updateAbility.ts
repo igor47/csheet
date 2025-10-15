@@ -1,137 +1,110 @@
 import { create as createAbilityDb } from "@src/db/char_abilities"
-import { AbilitySchema } from "@src/lib/dnd"
+import { AbilitySchema, type AbilityType } from "@src/lib/dnd"
+import { zodToFormErrors } from "@src/lib/formErrors"
+import {
+  BooleanFormFieldSchema,
+  NumberFormFieldSchema,
+  OptionalNullStringSchema,
+} from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 
 export const UpdateAbilityApiSchema = z.object({
-  character_id: z.string(),
   ability: AbilitySchema,
-  score: z.number().int().min(1).max(30),
-  proficiency_change: z.enum(["none", "add", "remove"]),
-  note: z.string().nullable().optional(),
+  score: NumberFormFieldSchema.int().min(1).max(30),
+  proficiency_change: z.enum(["none", "add", "remove"]).default("none"),
+  note: OptionalNullStringSchema,
+  is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
-export type UpdateAbilityApi = z.infer<typeof UpdateAbilityApiSchema>
+export type UpdateAbilityResult =
+  | { complete: true; score: number; proficiencyChange: string }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
- * Prepare form values for live validation (/check endpoint)
- * Mutates values to be helpful
- * Returns soft validation hints
- */
-export function prepareUpdateAbilityForm(
-  values: Record<string, string>,
-  _currentScore: number,
-  isProficient: boolean
-): { values: Record<string, string>; errors: Record<string, string> } {
-  const errors: Record<string, string> = {}
-  const preparedValues = { ...values }
-
-  // Default proficiency_change
-  if (!preparedValues.proficiency_change) {
-    preparedValues.proficiency_change = "none"
-  }
-
-  // Validate score
-  if (preparedValues.score) {
-    const score = parseInt(preparedValues.score, 10)
-    if (Number.isNaN(score) || score < 1 || score > 30) {
-      errors.score = "Ability score must be between 1 and 30"
-    }
-  }
-
-  // Validate proficiency change
-  if (preparedValues.proficiency_change) {
-    if (preparedValues.proficiency_change === "add" && isProficient) {
-      errors.proficiency_change = "Already proficient in this saving throw"
-    }
-    if (preparedValues.proficiency_change === "remove" && !isProficient) {
-      errors.proficiency_change = "Not proficient in this saving throw"
-    }
-  }
-
-  return { values: preparedValues, errors }
-}
-
-/**
- * Strict validation for form submission (POST endpoint)
- * Does NOT mutate values - validates as-is
- * Returns hard errors
- */
-export function validateUpdateAbility(
-  values: Record<string, string>,
-  currentScore: number,
-  isProficient: boolean
-): { valid: boolean; errors: Record<string, string> } {
-  const errors: Record<string, string> = {}
-
-  // Validate score
-  if (!values.score) {
-    errors.score = "Score is required"
-    return { valid: false, errors }
-  }
-
-  const score = parseInt(values.score, 10)
-  if (Number.isNaN(score) || score < 1 || score > 30) {
-    errors.score = "Ability score must be between 1 and 30"
-    return { valid: false, errors }
-  }
-
-  // Validate proficiency change
-  if (!values.proficiency_change) {
-    errors.proficiency_change = "Proficiency change is required"
-    return { valid: false, errors }
-  }
-
-  if (!["none", "add", "remove"].includes(values.proficiency_change)) {
-    errors.proficiency_change = "Invalid proficiency change"
-    return { valid: false, errors }
-  }
-
-  if (values.proficiency_change === "add" && isProficient) {
-    errors.proficiency_change = "Already proficient in this saving throw"
-    return { valid: false, errors }
-  }
-
-  if (values.proficiency_change === "remove" && !isProficient) {
-    errors.proficiency_change = "Not proficient in this saving throw"
-    return { valid: false, errors }
-  }
-
-  // Validate that something has changed
-  const scoreChanged = score !== currentScore
-  const proficiencyChanged = values.proficiency_change !== "none"
-
-  if (!scoreChanged && !proficiencyChanged) {
-    errors.score = "Must change score or proficiency"
-    return { valid: false, errors }
-  }
-
-  const valid = Object.keys(errors).length === 0
-  return { valid, errors }
-}
-
-/**
- * Update ability by creating a new ability record
+ * Update ability score and/or saving throw proficiency
  */
 export async function updateAbility(
   db: SQL,
-  data: UpdateAbilityApi,
-  isProficient: boolean
-): Promise<void> {
+  char: ComputedCharacter,
+  ability: AbilityType,
+  data: Record<string, string>
+): Promise<UpdateAbilityResult> {
+  const dataWithAbility = { ...data, ability }
+
+  const checkD = UpdateAbilityApiSchema.partial().safeParse(dataWithAbility)
+  if (!checkD.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
+  }
+
+  const errors: Record<string, string> = {}
+  const currentAbility = char.abilityScores[ability]
+  const isProficient = currentAbility.proficient
+  const currentScore = currentAbility.score
+
+  // Validate score
+  if (data.score) {
+    const score = parseInt(data.score, 10)
+    if (Number.isNaN(score) || score < 1 || score > 30) {
+      errors.score = "Ability score must be between 1 and 30"
+    }
+  } else if (!checkD.data.is_check) {
+    errors.score = "Score is required"
+  }
+
+  // Validate proficiency change
+  const proficiencyChange = data.proficiency_change || "none"
+  if (proficiencyChange === "add" && isProficient) {
+    errors.proficiency_change = "Already proficient in this saving throw"
+  }
+  if (proficiencyChange === "remove" && !isProficient) {
+    errors.proficiency_change = "Not proficient in this saving throw"
+  }
+
+  // Validate that something has changed
+  if (!checkD.data.is_check && data.score) {
+    const score = parseInt(data.score, 10)
+    const scoreChanged = !Number.isNaN(score) && score !== currentScore
+    const proficiencyChanged = proficiencyChange !== "none"
+    if (!scoreChanged && !proficiencyChanged) {
+      errors.score = "Must change score or proficiency"
+    }
+  }
+
+  if (checkD.data.is_check || Object.keys(errors).length > 0) {
+    return { complete: false, values: data, errors }
+  }
+
+  // Parse and validate with Zod
+  const result = UpdateAbilityApiSchema.safeParse(dataWithAbility)
+  if (!result.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
+  }
+
+  //////////////////////////
+  // actually update ability
+
   // Calculate new proficiency state
   let newProficient = isProficient
-  if (data.proficiency_change === "add") {
+  if (result.data.proficiency_change === "add") {
     newProficient = true
-  } else if (data.proficiency_change === "remove") {
+  } else if (result.data.proficiency_change === "remove") {
     newProficient = false
   }
 
   // Create new ability record
   await createAbilityDb(db, {
-    character_id: data.character_id,
-    ability: data.ability,
-    score: data.score,
+    character_id: char.id,
+    ability: result.data.ability,
+    score: result.data.score,
     proficiency: newProficient,
-    note: data.note || null,
+    note: result.data.note || null,
   })
+
+  return {
+    complete: true,
+    score: result.data.score,
+    proficiencyChange: result.data.proficiency_change,
+  }
 }

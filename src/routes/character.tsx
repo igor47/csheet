@@ -49,30 +49,10 @@ import { type CreateCharacterApi, createCharacter } from "@src/services/createCh
 import { learnSpell } from "@src/services/learnSpell"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
-import {
-  prepareUpdateAbilityForm,
-  UpdateAbilityApiSchema,
-  updateAbility,
-  validateUpdateAbility,
-} from "@src/services/updateAbility"
-import {
-  prepareUpdateHitDiceForm,
-  UpdateHitDiceApiSchema,
-  updateHitDice,
-  validateUpdateHitDice,
-} from "@src/services/updateHitDice"
-import {
-  prepareUpdateHitPointsForm,
-  UpdateHitPointsApiSchema,
-  updateHitPoints,
-  validateUpdateHitPoints,
-} from "@src/services/updateHitPoints"
-import {
-  prepareUpdateSkillForm,
-  UpdateSkillApiSchema,
-  updateSkill,
-  validateUpdateSkill,
-} from "@src/services/updateSkill"
+import { updateAbility } from "@src/services/updateAbility"
+import { updateHitDice } from "@src/services/updateHitDice"
+import { updateHitPoints } from "@src/services/updateHitPoints"
+import { updateSkill } from "@src/services/updateSkill"
 import {
   prepareUpdateSpellSlotsForm,
   UpdateSpellSlotsApiSchema,
@@ -173,77 +153,6 @@ characterRoutes.post("/characters/:id/edit/class/check", async (c) => {
   )
 })
 
-characterRoutes.post("/characters/:id/edit/hitpoints/check", async (c) => {
-  const characterId = c.req.param("id") as string
-  const body = (await c.req.parseBody()) as Record<string, string>
-
-  const char = await computeCharacter(db, characterId)
-  if (!char) {
-    return c.html(
-      <>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>
-    )
-  }
-
-  const { values, errors } = prepareUpdateHitPointsForm(body, char.currentHP, char.maxHitPoints)
-  return c.html(
-    <HitPointsEditForm
-      characterId={characterId}
-      currentHP={char.currentHP}
-      maxHitPoints={char.maxHitPoints}
-      values={values}
-      errors={Object.keys(errors).length > 0 ? errors : undefined}
-    />
-  )
-})
-
-characterRoutes.post("/characters/:id/edit/hitdice/check", async (c) => {
-  const characterId = c.req.param("id") as string
-  const body = (await c.req.parseBody()) as Record<string, string>
-
-  const char = await computeCharacter(db, characterId)
-  if (!char) {
-    return c.html(
-      <>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>
-    )
-  }
-
-  const { values, errors } = prepareUpdateHitDiceForm(body, char.hitDice, char.availableHitDice)
-  return c.html(
-    <HitDiceEditForm
-      characterId={characterId}
-      allHitDice={char.hitDice}
-      availableHitDice={char.availableHitDice}
-      values={values}
-      errors={Object.keys(errors).length > 0 ? errors : undefined}
-    />
-  )
-})
 
 characterRoutes.post("/characters/:id/edit/spellslots/check", async (c) => {
   const characterId = c.req.param("id") as string
@@ -369,57 +278,16 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
     return c.body(null, 204)
   }
 
-  // Strict validation (no mutation)
-  const validation = validateUpdateHitPoints(body, char.currentHP, char.maxHitPoints)
+  const result = await updateHitPoints(db, char, body)
 
-  if (!validation.valid) {
+  if (!result.complete) {
     return c.html(
       <HitPointsEditForm
         characterId={characterId}
         currentHP={char.currentHP}
         maxHitPoints={char.maxHitPoints}
         values={body}
-        errors={validation.errors}
-      />
-    )
-  }
-
-  // Parse with Zod
-  const result = UpdateHitPointsApiSchema.safeParse({
-    character_id: characterId,
-    action: body.action,
-    amount: parseInt(body.amount || "", 10),
-    note: body.note || null,
-  })
-
-  if (!result.success) {
-    const errors: Record<string, string> = {}
-    for (const issue of result.error.issues) {
-      const field = issue.path[0] as string
-      errors[field] = issue.message
-    }
-    return c.html(
-      <HitPointsEditForm
-        characterId={characterId}
-        currentHP={char.currentHP}
-        maxHitPoints={char.maxHitPoints}
-        values={body}
-        errors={errors}
-      />
-    )
-  }
-
-  try {
-    await updateHitPoints(db, result.data)
-  } catch (error) {
-    console.error("updating hit points", error)
-    return c.html(
-      <HitPointsEditForm
-        characterId={characterId}
-        currentHP={char.currentHP}
-        maxHitPoints={char.maxHitPoints}
-        values={body}
-        errors={{ amount: "Failed to update hit points" }}
+        errors={result.errors}
       />
     )
   }
@@ -444,62 +312,17 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
     return c.body(null, 204)
   }
 
-  // Strict validation (no mutation)
   const body = (await c.req.parseBody()) as Record<string, string>
-  const validation = validateUpdateHitDice(body, char.hitDice, char.availableHitDice)
+  const result = await updateHitDice(db, char, body)
 
-  if (!validation.valid) {
+  if (!result.complete) {
     return c.html(
       <HitDiceEditForm
         characterId={characterId}
         allHitDice={char.hitDice}
         availableHitDice={char.availableHitDice}
         values={body}
-        errors={validation.errors}
-      />
-    )
-  }
-
-  // Parse with Zod
-  const result = UpdateHitDiceApiSchema.safeParse({
-    character_id: characterId,
-    action: body.action,
-    die_value: body.die_value ? parseInt(body.die_value, 10) : null,
-    hp_rolled: body.hp_rolled ? parseInt(body.hp_rolled, 10) : null,
-    note: body.note || null,
-  })
-
-  if (!result.success) {
-    const errors = zodToFormErrors(result.error)
-    return c.html(
-      <HitDiceEditForm
-        characterId={characterId}
-        allHitDice={char.hitDice}
-        availableHitDice={char.availableHitDice}
-        values={body}
-        errors={errors}
-      />
-    )
-  }
-
-  try {
-    await updateHitDice(
-      db,
-      result.data,
-      char.hitDice,
-      char.availableHitDice,
-      char.currentHP,
-      char.maxHitPoints
-    )
-  } catch (error) {
-    console.error("updating hit dice", error)
-    return c.html(
-      <HitDiceEditForm
-        characterId={characterId}
-        allHitDice={char.hitDice}
-        availableHitDice={char.availableHitDice}
-        values={body}
-        errors={{ action: "Failed to update hit dice" }}
+        errors={result.errors}
       />
     )
   }
@@ -980,133 +803,6 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   )
 })
 
-characterRoutes.post("/characters/:id/edit/:field/check", async (c) => {
-  const characterId = c.req.param("id") as string
-  const field = c.req.param("field") as string
-  const body = (await c.req.parseBody()) as Record<string, string>
-
-  // Check if field is an ability
-  if (Abilities.includes(field as AbilityType)) {
-    const char = await computeCharacter(db, characterId)
-    if (!char) {
-      return c.html(
-        <>
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Character not found</div>
-          </div>
-        </>
-      )
-    }
-
-    const ability = field as AbilityType
-    const abilityScore = char.abilityScores[ability]
-    const { values, errors } = prepareUpdateAbilityForm(
-      body,
-      abilityScore.score,
-      abilityScore.proficient
-    )
-
-    return c.html(
-      <AbilityEditForm
-        characterId={characterId}
-        ability={ability}
-        currentScore={abilityScore.score}
-        currentModifier={abilityScore.modifier}
-        isProficient={abilityScore.proficient}
-        proficiencyBonus={char.proficiencyBonus}
-        values={values}
-        errors={Object.keys(errors).length > 0 ? errors : undefined}
-      />
-    )
-  }
-
-  // Check if field is a skill
-  if (Skills.includes(field as SkillType)) {
-    const char = await computeCharacter(db, characterId)
-    if (!char) {
-      return c.html(
-        <>
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Character not found</div>
-          </div>
-        </>
-      )
-    }
-
-    const skill = field as SkillType
-    const skillScore = char.skills[skill]
-    const ability = SkillAbilities[skill]
-    const abilityAbbr = ability.slice(0, 3).toUpperCase()
-    const { values, errors } = prepareUpdateSkillForm(body, skillScore.proficiency)
-
-    // Calculate new modifier for preview
-    const _calculateModifier = (score: number) => Math.floor((score - 10) / 2)
-    const abilityModifier = char.abilityScores[ability].modifier
-    let newModifier: number | undefined
-
-    if (values.proficiency && values.proficiency !== skillScore.proficiency) {
-      const proficiency = values.proficiency as any
-      switch (proficiency) {
-        case "none":
-          newModifier = abilityModifier
-          break
-        case "half":
-          newModifier = abilityModifier + Math.floor(char.proficiencyBonus / 2)
-          break
-        case "proficient":
-          newModifier = abilityModifier + char.proficiencyBonus
-          break
-        case "expert":
-          newModifier = abilityModifier + char.proficiencyBonus * 2
-          break
-      }
-    }
-
-    return c.html(
-      <SkillEditForm
-        characterId={characterId}
-        skill={skill}
-        abilityAbbr={abilityAbbr}
-        currentModifier={skillScore.modifier}
-        currentProficiency={skillScore.proficiency}
-        newModifier={newModifier}
-        values={values}
-        errors={Object.keys(errors).length > 0 ? errors : undefined}
-      />
-    )
-  }
-
-  // Not found
-  return c.html(
-    <>
-      <div class="modal-header">
-        <h5 class="modal-title">Error</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-danger">Unknown field: {field}</div>
-      </div>
-    </>
-  )
-})
 
 characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   const characterId = c.req.param("id") as string
@@ -1123,12 +819,10 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
     const ability = field as AbilityType
-    const abilityScore = char.abilityScores[ability]
+    const result = await updateAbility(db, char, ability, body)
 
-    // Strict validation (no mutation)
-    const validation = validateUpdateAbility(body, abilityScore.score, abilityScore.proficient)
-
-    if (!validation.valid) {
+    if (!result.complete) {
+      const abilityScore = char.abilityScores[ability]
       return c.html(
         <AbilityEditForm
           characterId={characterId}
@@ -1138,50 +832,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
           isProficient={abilityScore.proficient}
           proficiencyBonus={char.proficiencyBonus}
           values={body}
-          errors={validation.errors}
-        />
-      )
-    }
-
-    // Parse with Zod
-    const result = UpdateAbilityApiSchema.safeParse({
-      character_id: characterId,
-      ability: ability,
-      score: parseInt(body.score || "", 10),
-      proficiency_change: body.proficiency_change,
-      note: body.note || null,
-    })
-
-    if (!result.success) {
-      const errors = zodToFormErrors(result.error)
-      return c.html(
-        <AbilityEditForm
-          characterId={characterId}
-          ability={ability}
-          currentScore={abilityScore.score}
-          currentModifier={abilityScore.modifier}
-          isProficient={abilityScore.proficient}
-          proficiencyBonus={char.proficiencyBonus}
-          values={body}
-          errors={errors}
-        />
-      )
-    }
-
-    try {
-      await updateAbility(db, result.data, abilityScore.proficient)
-    } catch (error) {
-      console.error("updating ability", error)
-      return c.html(
-        <AbilityEditForm
-          characterId={characterId}
-          ability={ability}
-          currentScore={abilityScore.score}
-          currentModifier={abilityScore.modifier}
-          isProficient={abilityScore.proficient}
-          proficiencyBonus={char.proficiencyBonus}
-          values={body}
-          errors={{ score: "Failed to update ability" }}
+          errors={result.errors}
         />
       )
     }
@@ -1201,14 +852,35 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   // Check if field is a skill
   else if (Skills.includes(field as SkillType)) {
     const skill = field as SkillType
-    const skillScore = char.skills[skill]
-    const ability = SkillAbilities[skill]
-    const abilityAbbr = ability.slice(0, 3).toUpperCase()
+    const result = await updateSkill(db, char, skill, body)
 
-    // Strict validation (no mutation)
-    const validation = validateUpdateSkill(body, skillScore.proficiency)
+    if (!result.complete) {
+      const skillScore = char.skills[skill]
+      const ability = SkillAbilities[skill]
+      const abilityAbbr = ability.slice(0, 3).toUpperCase()
 
-    if (!validation.valid) {
+      // Calculate new modifier for preview
+      const abilityModifier = char.abilityScores[ability].modifier
+      let newModifier: number | undefined
+
+      if (body.proficiency && body.proficiency !== skillScore.proficiency) {
+        const proficiency = body.proficiency as any
+        switch (proficiency) {
+          case "none":
+            newModifier = abilityModifier
+            break
+          case "half":
+            newModifier = abilityModifier + Math.floor(char.proficiencyBonus / 2)
+            break
+          case "proficient":
+            newModifier = abilityModifier + char.proficiencyBonus
+            break
+          case "expert":
+            newModifier = abilityModifier + char.proficiencyBonus * 2
+            break
+        }
+      }
+
       return c.html(
         <SkillEditForm
           characterId={characterId}
@@ -1216,48 +888,9 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
           abilityAbbr={abilityAbbr}
           currentModifier={skillScore.modifier}
           currentProficiency={skillScore.proficiency}
+          newModifier={newModifier}
           values={body}
-          errors={validation.errors}
-        />
-      )
-    }
-
-    // Parse with Zod
-    const result = UpdateSkillApiSchema.safeParse({
-      character_id: characterId,
-      skill: skill,
-      proficiency: body.proficiency,
-      note: body.note || null,
-    })
-
-    if (!result.success) {
-      const errors = zodToFormErrors(result.error)
-      return c.html(
-        <SkillEditForm
-          characterId={characterId}
-          skill={skill}
-          abilityAbbr={abilityAbbr}
-          currentModifier={skillScore.modifier}
-          currentProficiency={skillScore.proficiency}
-          values={body}
-          errors={errors}
-        />
-      )
-    }
-
-    try {
-      await updateSkill(db, result.data)
-    } catch (error) {
-      console.error("updating skill", error)
-      return c.html(
-        <SkillEditForm
-          characterId={characterId}
-          skill={skill}
-          abilityAbbr={abilityAbbr}
-          currentModifier={skillScore.modifier}
-          currentProficiency={skillScore.proficiency}
-          values={body}
-          errors={{ proficiency: "Failed to update skill" }}
+          errors={result.errors}
         />
       )
     }

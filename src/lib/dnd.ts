@@ -101,7 +101,7 @@ export interface Background {
   name: string
   skillProficiencies?: SkillType[]
   abilityScoresModified?: AbilityType[]
-  additionalLanguages?: number,
+  additionalLanguages?: number
   toolProficiencies?: (string | Choice<string>)[]
   equipment?: string[]
   traits: Trait[]
@@ -149,6 +149,12 @@ export interface Choice<T> {
   from: T[]
 }
 
+export interface Subclass {
+  name: string
+  description: string
+  traits: Trait[]
+}
+
 export interface ClassDef {
   name: ClassNameType
   hitDie: HitDieType
@@ -161,7 +167,8 @@ export interface ClassDef {
 
   skillChoices: Choice<SkillType>
 
-  subclasses: string[]
+  traits?: Trait[] // Base class features (Rage, Sneak Attack, etc.)
+  subclasses: Subclass[]
   subclassLevel: number // Level at which subclass is chosen; default 3
   spellcasting: SpellcastingInfo
   notes?: string
@@ -170,14 +177,14 @@ export interface ClassDef {
 export type SlotProgression = { level: number; slots: number[] }[]
 
 export interface Ruleset {
-  species: Species[],
-  classes: ClassDef[],
-  backgrounds: Background[],
+  species: Species[]
+  classes: ClassDef[]
+  backgrounds: Background[]
 
-  listLineages(speciesName?: string): Lineage[],
-  listSubclasses(className?: ClassNameType): string[],
+  listLineages(speciesName?: string): Lineage[]
+  listSubclasses(className?: ClassNameType): string[]
 
-  maxCantripsKnown(className: ClassNameType, level: number): number,
-  maxSpellsPrepared(className: ClassNameType, level: number, abilityModifier: number): number,
-  getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType,
+  maxCantripsKnown(className: ClassNameType, level: number): number
+  maxSpellsPrepared(className: ClassNameType, level: number, abilityModifier: number): number
+  getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType
 }

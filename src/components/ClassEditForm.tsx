@@ -1,8 +1,12 @@
 import { Select } from "@src/components/ui/Select"
 import type { CharLevel } from "@src/db/char_levels"
-import { Classes, ClassNames, type ClassNameType } from "@src/lib/dnd"
+import { ClassNames, type ClassNameType } from "@src/lib/dnd"
+import srd51 from "@src/lib/dnd/srd51"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"
+
+// TODO: Make this dynamic based on character's ruleset
+const ruleset = srd51
 
 export interface ClassEditFormProps {
   characterId: string
@@ -17,7 +21,7 @@ export const ClassEditForm = ({
   values,
   errors,
 }: ClassEditFormProps) => {
-  const selectedClass = Classes[values?.class as ClassNameType] || null
+  const selectedClass = values?.class ? ruleset.classes[values.class as ClassNameType] : null
   const subclasses = selectedClass?.subclasses || []
 
   const level = values?.level ? parseInt(values.level, 10) : 1
@@ -110,7 +114,10 @@ export const ClassEditForm = ({
             <Select
               name="subclass"
               id="subclass"
-              options={subclasses.map((subcls) => ({ value: subcls, label: toTitleCase(subcls) }))}
+              options={subclasses.map((subcls) => ({
+                value: subcls.name,
+                label: toTitleCase(subcls.name),
+              }))}
               placeholder={subclassPlh}
               error={errors?.subclass}
               value={values?.subclass}

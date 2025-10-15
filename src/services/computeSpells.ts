@@ -3,7 +3,13 @@ import {
   type CharSpellPrepared,
   getCurrentlyPrepared as getPreparedSpells,
 } from "@src/db/char_spells_prepared"
-import type { AbilityType, ClassDef, ClassNameType, SpellChangeEventType } from "@src/lib/dnd"
+import type {
+  AbilityType,
+  ClassDef,
+  ClassNameType,
+  Ruleset,
+  SpellChangeEventType,
+} from "@src/lib/dnd"
 import { type Spell, spells } from "@src/lib/dnd/spells"
 import type { AbilityScore, CharacterClass } from "@src/services/computeCharacter"
 import type { SQL } from "bun"
@@ -38,14 +44,15 @@ export interface SpellInfoForClass {
  * Compute spell information for a single class
  */
 async function computeSpellsForClass(
-  ruleset: any,
+  ruleset: Ruleset,
   charClass: CharacterClass,
   abilityScores: Record<AbilityType, AbilityScore>,
   proficiencyBonus: number,
   wizardSpellbookSpells: Spell[],
   allPreparedRecords: CharSpellPrepared[]
 ): Promise<SpellInfoForClass | null> {
-  const classDef = ruleset.Classes[charClass.class]
+  const classDef = ruleset.classes[charClass.class]
+  if (!classDef) return null
 
   // Skip non-spellcasting classes
   if (!classDef.spellcasting.enabled) {
@@ -161,7 +168,7 @@ function createPreparedSlots(
  */
 export async function computeSpells(
   db: SQL,
-  ruleset: any,
+  ruleset: Ruleset,
   characterId: string,
   classes: CharacterClass[],
   abilityScores: Record<AbilityType, AbilityScore>,
@@ -201,7 +208,7 @@ export async function computeSpells(
  * Get the highest spell level a character can cast based on their class and level
  * Uses the slot progression tables from dnd.ts
  */
-export function getMaxSpellLevel(ruleset: any, classDef: ClassDef, classLevel: number): number {
+export function getMaxSpellLevel(ruleset: Ruleset, classDef: ClassDef, classLevel: number): number {
   if (!classDef.spellcasting.enabled) {
     return 0
   }

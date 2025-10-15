@@ -45,7 +45,7 @@ import {
 } from "@src/services/addLevel"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
-import { CreateCharacterApiSchema, createCharacter } from "@src/services/createCharacter"
+import { type CreateCharacterApi, createCharacter } from "@src/services/createCharacter"
 import { learnSpell } from "@src/services/learnSpell"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
@@ -126,17 +126,11 @@ characterRoutes.post("/characters/new/check", async (c) => {
 characterRoutes.post("/characters/new", async (c) => {
   const user = c.var.user!
 
-  const body = (await c.req.parseBody()) as Record<string, string>
+  const body = (await c.req.parseBody()) as CreateCharacterApi
   const values = { ...body, user_id: user.id }
 
-  const result = CreateCharacterApiSchema.safeParse(values)
-  if (!result.success) {
-    const errors = zodToFormErrors(result.error)
-    return c.html(<CharacterNew values={values} errors={errors} />)
-  }
-
   try {
-    const character = await createCharacter(result.data)
+    const character = await createCharacter(values as CreateCharacterApi)
     await setFlashMsg(c, "Character created successfully!", "success")
     c.header("HX-Redirect", `/characters/${character.id}`)
     return c.body(null, 204)
@@ -144,7 +138,7 @@ characterRoutes.post("/characters/new", async (c) => {
     console.error("creating character", error)
     const errorMsg = error instanceof Error ? error.message : "Failed to create character"
     await setFlashMsg(c, errorMsg, "error")
-    return c.html(<CharacterNew values={values} />)
+    return c.html(<CharacterNew values={values as Record<string, string>} />)
   }
 })
 

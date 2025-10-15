@@ -1,7 +1,11 @@
 import { type CharLevel, create as createCharLevelDb, getCurrentLevels } from "@src/db/char_levels"
-import { Classes, ClassNames, ClassNamesSchema, type ClassNameType } from "@src/lib/dnd"
+import { ClassNames, ClassNamesSchema, type ClassNameType } from "@src/lib/dnd"
+import srd51 from "@src/lib/dnd/srd51"
 import type { SQL } from "bun"
 import { z } from "zod"
+
+// TODO: Make this dynamic based on character's ruleset
+const ruleset = srd51
 
 export const AddLevelApiSchema = z.object({
   character_id: z.string(),
@@ -30,7 +34,7 @@ export function prepareAddLevelForm(
     return { values: preparedValues, errors }
   }
 
-  const classDef = Classes[preparedValues.class as ClassNameType]
+  const classDef = ruleset.classes[preparedValues.class as ClassNameType]
   if (!classDef) {
     errors.class = "Invalid class"
     return { values: preparedValues, errors }
@@ -50,7 +54,8 @@ export function prepareAddLevelForm(
   }
 
   // Reset subclass if it's invalid for the current class
-  if (preparedValues.subclass && !classDef.subclasses.includes(preparedValues.subclass)) {
+  const subclassNames = classDef.subclasses.map((s) => s.name)
+  if (preparedValues.subclass && !subclassNames.includes(preparedValues.subclass)) {
     preparedValues.subclass = ""
   }
 
@@ -58,7 +63,7 @@ export function prepareAddLevelForm(
   if (nextLevel === classDef.subclassLevel) {
     if (!preparedValues.subclass) {
       errors.subclass = `Subclass is required at level ${classDef.subclassLevel}`
-    } else if (!classDef.subclasses.includes(preparedValues.subclass)) {
+    } else if (!subclassNames.includes(preparedValues.subclass)) {
       errors.subclass = `Invalid subclass for ${preparedValues.class}`
     }
   }
@@ -90,7 +95,7 @@ export function validateAddLevel(
     return { valid: false, errors }
   }
 
-  const classDef = Classes[values.class as ClassNameType]
+  const classDef = ruleset.classes[values.class as ClassNameType]
   if (!classDef) {
     errors.class = "Invalid class"
     return { valid: false, errors }
@@ -112,10 +117,11 @@ export function validateAddLevel(
   }
 
   // Validate subclass if required
+  const subclassNames = classDef.subclasses.map((s) => s.name)
   if (level === classDef.subclassLevel) {
     if (!values.subclass) {
       errors.subclass = `Subclass is required at level ${classDef.subclassLevel}`
-    } else if (!classDef.subclasses.includes(values.subclass)) {
+    } else if (!subclassNames.includes(values.subclass)) {
       errors.subclass = `Invalid subclass for ${values.class}`
     }
   }
@@ -160,7 +166,7 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
   }
 
   // Validate hit die roll is within range for this class
-  const classDef = Classes[data.class]
+  const classDef = ruleset.classes[data.class]
   if (!classDef) {
     throw new Error(`Invalid class: ${data.class}`)
   }
@@ -170,13 +176,14 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
   }
 
   // Validate subclass if required
+  const subclassNames = classDef.subclasses.map((s) => s.name)
   if (data.level === classDef.subclassLevel) {
     if (!data.subclass) {
       throw new Error(
         `Subclass is required when reaching level ${classDef.subclassLevel} in ${data.class}`
       )
     }
-    if (!classDef.subclasses.includes(data.subclass)) {
+    if (!subclassNames.includes(data.subclass)) {
       throw new Error(`Invalid subclass ${data.subclass} for ${data.class}`)
     }
   } else if (data.level > classDef.subclassLevel) {

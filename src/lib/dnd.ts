@@ -178,8 +178,8 @@ export type SlotProgression = { level: number; slots: number[] }[]
 
 export interface Ruleset {
   species: Species[]
-  classes: ClassDef[]
-  backgrounds: Background[]
+  classes: Record<ClassNameType, ClassDef>
+  backgrounds: Record<string, Background>
 
   listLineages(speciesName?: string): Lineage[]
   listSubclasses(className?: ClassNameType): string[]
@@ -188,3 +188,5 @@ export interface Ruleset {
   maxSpellsPrepared(className: ClassNameType, level: number, abilityModifier: number): number
   getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType
 }
+
+export { getRuleset } from "./dnd/rulesets"

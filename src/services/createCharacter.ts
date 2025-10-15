@@ -5,35 +5,61 @@ import { create as createSkillDb } from "@src/db/char_skills"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
 import {
   type AbilityType,
-  BackgroundNames,
-  Backgrounds,
-  Classes,
   ClassNames,
-  RaceNames,
-  Races,
+  getRuleset,
+  type Ruleset,
   type SkillType,
-  SubclassNames,
-  SubraceNames,
 } from "@src/lib/dnd"
 import { z } from "zod"
 
 /**
- * API Schema for creating a new character
+ * Create API Schema for creating a new character based on a ruleset
  * This is separate from the DB schema to allow for different validation rules
  * and to include fields that may not be stored directly (like class)
  */
-export const CreateCharacterApiSchema = z.object({
-  user_id: z.string(),
-  name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
-  race: z.enum(RaceNames, "Pick a valid race!"),
-  subrace: z.enum(SubraceNames, "Pick a valid subrace!").nullable().default(null),
-  class: z.enum(ClassNames, "Pick a valid class!"),
-  subclass: z.enum(SubclassNames, "Pick a valid subclass!").nullable().default(null),
-  background: z.enum(BackgroundNames, "Pick a valid background!"),
-  alignment: z.nullable(z.string().optional()),
-})
+export function createCharacterApiSchema(ruleset: Ruleset) {
+  const speciesNames = ruleset.species.map((s) => s.name) as [string, ...string[]]
+  const backgroundNames = Object.keys(ruleset.backgrounds) as [string, ...string[]]
 
-export type CreateCharacterApi = z.infer<typeof CreateCharacterApiSchema>
+  // Get all lineage names across all species
+  const allLineageNames = ruleset.species.flatMap((s) => (s.lineages || []).map((l) => l.name)) as [
+    string,
+    ...string[],
+  ]
+
+  // Get all subclass names
+  const allSubclassNames = ruleset.listSubclasses() as [string, ...string[]]
+
+  return z.object({
+    user_id: z.string(),
+    name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
+    race: z.enum(speciesNames, "Pick a valid species!"),
+    subrace:
+      allLineageNames.length > 0
+        ? z.enum(allLineageNames, "Pick a valid lineage!").nullable().default(null)
+        : z.string().nullable().default(null),
+    class: z.enum(ClassNames, "Pick a valid class!"),
+    subclass:
+      allSubclassNames.length > 0
+        ? z.enum(allSubclassNames, "Pick a valid subclass!").nullable().default(null)
+        : z.string().nullable().default(null),
+    background: z.enum(backgroundNames, "Pick a valid background!"),
+    alignment: z.nullable(z.string().optional()),
+    ruleset: z.enum(["srd51", "srd52"]).default("srd51"),
+  })
+}
+
+export type CreateCharacterApi = {
+  user_id: string
+  name: string
+  race: string
+  subrace: string | null
+  class: (typeof ClassNames)[number]
+  subclass: string | null
+  background: string
+  alignment?: string | null
+  ruleset: "srd51" | "srd52"
+}
 
 /**
  * Calculate initial ability scores based on race and subrace modifiers
@@ -44,8 +70,9 @@ type AbilityScore = {
 }
 
 function calculateInitialAbilityScores(
-  raceName: string,
-  subraceName: string | null
+  ruleset: Ruleset,
+  speciesName: string,
+  lineageName: string | null
 ): Record<AbilityType, AbilityScore> {
   const baseScore: AbilityScore = { score: 10, note: "Base score" }
   const scores: Record<AbilityType, AbilityScore> = {
@@ -57,28 +84,28 @@ function calculateInitialAbilityScores(
     charisma: { ...baseScore },
   }
 
-  // Find race
-  const race = Races.find((r) => r.name === raceName)
-  if (!race) return scores
+  // Find species
+  const species = ruleset.species.find((s) => s.name === speciesName)
+  if (!species) return scores
 
-  // Apply race modifiers
-  if (race.ability_score_modifiers) {
-    for (const [ability, modifier] of Object.entries(race.ability_score_modifiers)) {
+  // Apply species modifiers
+  if (species.abilityScoreModifiers) {
+    for (const [ability, modifier] of Object.entries(species.abilityScoreModifiers)) {
       scores[ability as AbilityType] = {
         score: baseScore.score + modifier,
-        note: `Base score for ${race.name}`,
+        note: `Base score for ${species.name}`,
       }
     }
   }
 
-  // Apply subrace modifiers
-  if (subraceName) {
-    const subrace = race.subraces?.find((sr) => sr.name === subraceName)
-    if (subrace?.ability_score_modifiers) {
-      for (const [ability, modifier] of Object.entries(subrace.ability_score_modifiers)) {
+  // Apply lineage modifiers
+  if (lineageName) {
+    const lineage = species.lineages?.find((l) => l.name === lineageName)
+    if (lineage?.abilityScoreModifiers) {
+      for (const [ability, modifier] of Object.entries(lineage.abilityScoreModifiers)) {
         scores[ability as AbilityType] = {
           score: baseScore.score + modifier,
-          note: `Base score for ${subrace.name}`,
+          note: `Base score for ${lineage.name}`,
         }
       }
     }
@@ -92,36 +119,44 @@ function calculateInitialAbilityScores(
  * Handles validation and business logic before persisting to the database
  */
 export async function createCharacter(data: CreateCharacterApi): Promise<Character> {
+  // Get the ruleset for validation and data lookup
+  const ruleset = getRuleset(data.ruleset)
+
+  // Validate data against ruleset schema
+  const schema = createCharacterApiSchema(ruleset)
+  const validated = schema.parse(data)
+
   return db.begin(async (tx) => {
-    const exists = await nameExistsForUser(tx, data.user_id, data.name)
+    const exists = await nameExistsForUser(tx, validated.user_id, validated.name)
     if (exists) {
       throw new Error("You already have a character with this name")
     }
 
     // Create the character in the database
     const character = await createCharacterDb(tx, {
-      user_id: data.user_id,
-      name: data.name,
-      race: data.race,
-      subrace: data.subrace,
-      background: data.background,
-      alignment: data.alignment,
+      user_id: validated.user_id,
+      name: validated.name,
+      race: validated.race,
+      subrace: validated.subrace,
+      background: validated.background,
+      ruleset: validated.ruleset,
+      alignment: validated.alignment,
     })
 
     // set initial level in the class
     // At first level, characters get the maximum value of their hit die
-    const classDef = Classes[data.class]
+    const classDef = ruleset.classes[validated.class]
     await createClassLevelDb(tx, {
       character_id: character.id,
       class: classDef.name,
-      subclass: data.subclass,
+      subclass: validated.subclass,
       level: 1,
       hit_die_roll: classDef.hitDie,
       note: "Starting Level",
     })
 
-    // populate initial ability scores with race/subrace modifiers
-    const initialScores = calculateInitialAbilityScores(data.race, data.subrace)
+    // populate initial ability scores with species/lineage modifiers
+    const initialScores = calculateInitialAbilityScores(ruleset, validated.race, validated.subrace)
     const promises = Object.entries(initialScores).map(([ability, score]) =>
       createAbilityDb(tx, {
         character_id: character.id,
@@ -147,10 +182,10 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
     }
 
     // Get skill proficiencies from background
-    const background = Backgrounds[data.background]
+    const background = ruleset.backgrounds[validated.background]
     const backgroundSkillProficiencies = new Set<SkillType>()
 
-    if (background) {
+    if (background && background.skillProficiencies) {
       for (const skill of background.skillProficiencies) {
         // Only handle fixed skills (not Choice objects)
         if (typeof skill === "string") {

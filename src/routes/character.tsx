@@ -818,8 +818,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
 
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
-    const ability = field as AbilityType
-    const result = await updateAbility(db, char, ability, body)
+    const result = await updateAbility(db, char, { ...body, ability: field as AbilityType })
 
     if (!result.complete) {
       const abilityScore = char.abilityScores[ability]
@@ -851,8 +850,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
 
   // Check if field is a skill
   else if (Skills.includes(field as SkillType)) {
-    const skill = field as SkillType
-    const result = await updateSkill(db, char, skill, body)
+    const result = await updateSkill(db, char, { ...body, skill: field as SkillType })
 
     if (!result.complete) {
       const skillScore = char.skills[skill]
@@ -886,9 +884,10 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
           characterId={characterId}
           skill={skill}
           abilityAbbr={abilityAbbr}
+          abilityModifier={abilityModifier}
+          proficiencyBonus={char.proficiencyBonus}
           currentModifier={skillScore.modifier}
           currentProficiency={skillScore.proficiency}
-          newModifier={newModifier}
           values={body}
           errors={result.errors}
         />

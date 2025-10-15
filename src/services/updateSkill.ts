@@ -3,7 +3,6 @@ import {
   type ProficiencyLevel,
   ProficiencyLevelSchema,
   SkillSchema,
-  type SkillType,
 } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { BooleanFormFieldSchema, OptionalNullStringSchema } from "@src/lib/schemas"
@@ -28,17 +27,22 @@ export type UpdateSkillResult =
 export async function updateSkill(
   db: SQL,
   char: ComputedCharacter,
-  skill: SkillType,
   data: Record<string, string>
 ): Promise<UpdateSkillResult> {
-  const dataWithSkill = { ...data, skill }
-
-  const checkD = UpdateSkillApiSchema.partial().safeParse(dataWithSkill)
+  const checkD = UpdateSkillApiSchema.partial().safeParse(data)
   if (!checkD.success) {
     return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
   }
 
   const errors: Record<string, string> = {}
+  const { skill } = checkD.data
+
+  if (!skill) {
+    if (!checkD.data.is_check) {
+      errors.skill = "Skill is required."
+    }
+    return { complete: false, values: data, errors }
+  }
   const currentProficiency = char.skills[skill].proficiency
 
   // Validate proficiency
@@ -57,7 +61,7 @@ export async function updateSkill(
   }
 
   // Parse and validate with Zod
-  const result = UpdateSkillApiSchema.safeParse(dataWithSkill)
+  const result = UpdateSkillApiSchema.safeParse(data)
   if (!result.success) {
     return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }

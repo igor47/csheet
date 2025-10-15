@@ -1,9 +1,5 @@
 import { create as createSkillDb } from "@src/db/char_skills"
-import {
-  type ProficiencyLevel,
-  ProficiencyLevelSchema,
-  SkillSchema,
-} from "@src/lib/dnd"
+import { type ProficiencyLevel, ProficiencyLevelSchema, SkillSchema } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { BooleanFormFieldSchema, OptionalNullStringSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"

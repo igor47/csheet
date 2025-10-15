@@ -24,6 +24,7 @@ import { SpellbookHistory } from "@src/components/SpellbookHistory"
 import { SpellCastResult } from "@src/components/SpellCastResult"
 import { SpellSlotsEditForm } from "@src/components/SpellSlotsEditForm"
 import { SpellSlotsHistory } from "@src/components/SpellSlotsHistory"
+import { ModalContent } from "@src/components/ui/ModalContent"
 import { db } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
@@ -34,7 +35,7 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByUserId, nameExistsForUser } from "@src/db/characters"
-import { Abilities, type AbilityType, SkillAbilities, Skills, type SkillType } from "@src/lib/dnd"
+import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { setFlashMsg } from "@src/middleware/flash"
 import {
@@ -153,7 +154,6 @@ characterRoutes.post("/characters/:id/edit/class/check", async (c) => {
   )
 })
 
-
 characterRoutes.post("/characters/:id/edit/spellslots/check", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
@@ -161,20 +161,9 @@ characterRoutes.post("/characters/:id/edit/spellslots/check", async (c) => {
   const char = await computeCharacter(db, characterId)
   if (!char) {
     return c.html(
-      <>
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </>
+      <ModalContent title="error">
+        <div id="alert alert-danger">Character not found</div>
+      </ModalContent>
     )
   }
 
@@ -596,26 +585,6 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "hitpoints") {
-    const char = await computeCharacter(db, characterId)
-    if (!char) {
-      return c.html(
-        <>
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Character not found</div>
-          </div>
-        </>
-      )
-    }
-
     const defaultAction = char.currentHP >= char.maxHitPoints ? "lose" : "restore"
     const values = { action: defaultAction, amount: "" }
     return c.html(
@@ -629,26 +598,6 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "hitdice") {
-    const char = await computeCharacter(db, characterId)
-    if (!char) {
-      return c.html(
-        <>
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Character not found</div>
-          </div>
-        </>
-      )
-    }
-
     const defaultAction = char.availableHitDice.length < char.hitDice.length ? "restore" : "spend"
     const values = { action: defaultAction }
     return c.html(
@@ -662,26 +611,6 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "spellslots") {
-    const char = await computeCharacter(db, characterId)
-    if (!char) {
-      return c.html(
-        <>
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Character not found</div>
-          </div>
-        </>
-      )
-    }
-
     return c.html(
       <SpellSlotsEditForm
         characterId={characterId}
@@ -710,99 +639,35 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
 
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
-    const char = await computeCharacter(db, characterId)
-    if (!char) {
-      return c.html(
-        <>
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Character not found</div>
-          </div>
-        </>
-      )
-    }
-
     const ability = field as AbilityType
     const abilityScore = char.abilityScores[ability]
     const values = {
+      ability,
       score: abilityScore.score.toString(),
       proficiency_change: "none",
     }
 
-    return c.html(
-      <AbilityEditForm
-        characterId={characterId}
-        ability={ability}
-        currentScore={abilityScore.score}
-        currentModifier={abilityScore.modifier}
-        isProficient={abilityScore.proficient}
-        proficiencyBonus={char.proficiencyBonus}
-        values={values}
-      />
-    )
+    return c.html(<AbilityEditForm character={char} values={values} />)
   }
 
   // Check if field is a skill
   if (Skills.includes(field as SkillType)) {
-    const char = await computeCharacter(db, characterId)
-    if (!char) {
-      return c.html(
-        <>
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Character not found</div>
-          </div>
-        </>
-      )
-    }
-
     const skill = field as SkillType
     const skillScore = char.skills[skill]
-    const ability = SkillAbilities[skill]
-    const abilityAbbr = ability.slice(0, 3).toUpperCase()
     const values = {
+      skill,
       proficiency: skillScore.proficiency,
     }
 
-    return c.html(
-      <SkillEditForm
-        characterId={characterId}
-        skill={skill}
-        abilityAbbr={abilityAbbr}
-        currentModifier={skillScore.modifier}
-        currentProficiency={skillScore.proficiency}
-        values={values}
-      />
-    )
+    return c.html(<SkillEditForm character={char} values={values} />)
   }
 
   return c.html(
-    <>
-      <div class="modal-header">
-        <h5 class="modal-title">Edit {field}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">Coming soon</div>
-    </>
+    <ModalContent title={`${field} history`}>
+      <div id="alert alert-info">Coming soon</div>
+    </ModalContent>
   )
 })
-
 
 characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   const characterId = c.req.param("id") as string
@@ -818,21 +683,12 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
 
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
-    const result = await updateAbility(db, char, { ...body, ability: field as AbilityType })
+    const ability = field as AbilityType
+    const result = await updateAbility(db, char, { ...body, ability })
 
     if (!result.complete) {
-      const abilityScore = char.abilityScores[ability]
       return c.html(
-        <AbilityEditForm
-          characterId={characterId}
-          ability={ability}
-          currentScore={abilityScore.score}
-          currentModifier={abilityScore.modifier}
-          isProficient={abilityScore.proficient}
-          proficiencyBonus={char.proficiencyBonus}
-          values={body}
-          errors={result.errors}
-        />
+        <AbilityEditForm character={char} values={{ ...body, ability }} errors={result.errors} />
       )
     }
 
@@ -850,47 +706,12 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
 
   // Check if field is a skill
   else if (Skills.includes(field as SkillType)) {
-    const result = await updateSkill(db, char, { ...body, skill: field as SkillType })
+    const skill = field as SkillType
+    const result = await updateSkill(db, char, { ...body, skill })
 
     if (!result.complete) {
-      const skillScore = char.skills[skill]
-      const ability = SkillAbilities[skill]
-      const abilityAbbr = ability.slice(0, 3).toUpperCase()
-
-      // Calculate new modifier for preview
-      const abilityModifier = char.abilityScores[ability].modifier
-      let newModifier: number | undefined
-
-      if (body.proficiency && body.proficiency !== skillScore.proficiency) {
-        const proficiency = body.proficiency as any
-        switch (proficiency) {
-          case "none":
-            newModifier = abilityModifier
-            break
-          case "half":
-            newModifier = abilityModifier + Math.floor(char.proficiencyBonus / 2)
-            break
-          case "proficient":
-            newModifier = abilityModifier + char.proficiencyBonus
-            break
-          case "expert":
-            newModifier = abilityModifier + char.proficiencyBonus * 2
-            break
-        }
-      }
-
       return c.html(
-        <SkillEditForm
-          characterId={characterId}
-          skill={skill}
-          abilityAbbr={abilityAbbr}
-          abilityModifier={abilityModifier}
-          proficiencyBonus={char.proficiencyBonus}
-          currentModifier={skillScore.modifier}
-          currentProficiency={skillScore.proficiency}
-          values={body}
-          errors={result.errors}
-        />
+        <SkillEditForm character={char} values={{ ...body, skill }} errors={result.errors} />
       )
     }
 
@@ -906,15 +727,9 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
 
   // Not found
   return c.html(
-    <>
-      <div class="modal-header">
-        <h5 class="modal-title">Error</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-danger">Unknown field: {field}</div>
-      </div>
-    </>
+    <ModalContent title={`${field} history`}>
+      <div id="alert alert-danger">Unknown field: {field}</div>
+    </ModalContent>
   )
 })
 
@@ -1010,12 +825,8 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
   }
 
   return c.html(
-    <>
-      <div class="modal-header">
-        <h5 class="modal-title">{field} history</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">Coming soon</div>
-    </>
+    <ModalContent title={`${field} history`}>
+      <div id="alert alert-info">Coming soon</div>
+    </ModalContent>
   )
 })

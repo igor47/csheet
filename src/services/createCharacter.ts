@@ -185,7 +185,7 @@ export async function createCharacter(data: CreateCharacterApi): Promise<Charact
     const background = ruleset.backgrounds[validated.background]
     const backgroundSkillProficiencies = new Set<SkillType>()
 
-    if (background && background.skillProficiencies) {
+    if (background?.skillProficiencies) {
       for (const skill of background.skillProficiencies) {
         // Only handle fixed skills (not Choice objects)
         if (typeof skill === "string") {

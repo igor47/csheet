@@ -301,106 +301,437 @@ const SpeciesData: Species[] = [
   },
 ] as const
 
-const BackgroundNames = ["acolyte", "criminal", "sage", "soldier"] as const
+const BackgroundNames = [
+  "acolyte",
+  "charlatan",
+  "criminal",
+  "entertainer",
+  "folk hero",
+  "guild artisan",
+  "hermit",
+  "noble",
+  "outlander",
+  "pirate",
+  "sage",
+  "sailor",
+  "soldier",
+  "urchin",
+] as const
 export type BackgroundNameType = (typeof BackgroundNames)[number]
 
 const Backgrounds: Record<BackgroundNameType, Background> = {
   acolyte: {
     name: "acolyte",
     skillProficiencies: ["insight", "religion"],
-    feat: "Magic Initiate (Cleric)",
     abilityScoresModified: ["intelligence", "wisdom", "charisma"],
     equipment: [
-      "Calligrapher’s Supplies",
+      "Calligrapher's Supplies",
       "Book (prayers)",
       "Holy Symbol",
       "Parchment (10 sheets)",
       "Robe",
       "8 GP",
     ],
-    feature: {
-      name: "shelter of the faithful",
-      summary: "free support and lodging at a temple of your faith; connections to clergy.",
-    },
+    traits: [
+      {
+        name: "Magic Initiate (Cleric)",
+        description: "You learn two cantrips of your choice from the Cleric spell list. You also always have a level 1 spell from that list prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have. Intelligence, Wisdom, or Charisma is your spellcasting ability for these spells (choose when you gain this feat).",
+      },
+      {
+        name: "Shelter of the Faithful",
+        description: "As an acolyte, you command the respect of those who share your faith, and you can perform the religious ceremonies of your deity. You and your adventuring companions can expect to receive free healing and care at a temple, shrine, or other established presence of your faith, though you must provide any material components needed for spells. Those who share your religion will support you (but only you) at a modest lifestyle. You might also have ties to a specific temple dedicated to your chosen deity or pantheon, and you have a residence there. This could be the temple where you used to serve, if you remain on good terms with it, or a temple where you have found a new home. While near your temple, you can call upon the priests for assistance, provided the assistance you ask for is not hazardous and you remain in good standing with your temple.",
+      },
+    ],
+  },
+  charlatan: {
+    name: "charlatan",
+    skillProficiencies: ["deception", "sleight of hand"],
+    toolProficiencies: ["disguise kit", "forgery kit"],
+    abilityScoresModified: ["dexterity", "intelligence", "charisma"],
+    equipment: [
+      "Disguise Kit",
+      "Forgery Kit",
+      "Fine Clothes",
+      "Signet Ring (fake)",
+      "15 GP",
+    ],
+    traits: [
+      {
+        name: "Skilled",
+        description: "You gain proficiency in any combination of three skills or tools of your choice.",
+      },
+      {
+        name: "False Identity",
+        description: "You have created a second identity that includes documentation, established acquaintances, and disguises that allow you to assume that persona. Additionally, you can forge documents including official papers and personal letters, as long as you have seen an example of the kind of document or the handwriting you are trying to copy.",
+      },
+    ],
   },
   criminal: {
     name: "criminal",
-    skillProficiencies: ["deception", "stealth"],
-    toolProficiencies: ["thieves’ tools"],
-    feat: "Alert",
+    skillProficiencies: ["sleight of hand", "stealth"],
+    toolProficiencies: ["thieves' tools"],
     abilityScoresModified: ["dexterity", "constitution", "intelligence"],
     equipment: [
       "2 Daggers",
-      "Thieves’ Tools",
+      "Thieves' Tools",
       "Crowbar",
       "2 Pouches",
-      "Traveler’s Clothes",
+      "Traveler's Clothes",
       "16 GP",
     ],
-    feature: {
-      name: "criminal contact",
-      summary: "a reliable and trustworthy contact within the criminal underworld.",
-    },
+    traits: [
+      {
+        name: "Alert",
+        description: "You gain the following benefits. Initiative Proficiency: When you roll Initiative, you can add your Proficiency Bonus to the roll. Initiative Swap: Immediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat. You can't make this swap if you or the ally has the Incapacitated condition.",
+      },
+      {
+        name: "Criminal Contact",
+        description: "You have a reliable and trustworthy contact who acts as your liaison to a network of other criminals. You know how to get messages to and from your contact, even over great distances; specifically, you know the local messengers, corrupt caravan masters, and seedy sailors who can deliver messages for you.",
+      },
+    ],
+  },
+  entertainer: {
+    name: "entertainer",
+    skillProficiencies: ["acrobatics", "performance"],
+    toolProficiencies: [
+      {
+        choose: 1,
+        from: [
+          "bagpipes",
+          "drum",
+          "dulcimer",
+          "flute",
+          "lute",
+          "lyre",
+          "horn",
+          "pan flute",
+          "shawm",
+          "viol",
+        ],
+      },
+      "disguise kit",
+    ],
+    abilityScoresModified: ["dexterity", "intelligence", "charisma"],
+    equipment: [
+      "Musical Instrument",
+      "Disguise Kit",
+      "Costume",
+      "Token from an Admirer",
+      "15 GP",
+    ],
+    traits: [
+      {
+        name: "Musician",
+        description: "You gain proficiency with three musical instruments of your choice. You also gain Advantage on Charisma (Performance) checks to entertain an audience with music.",
+      },
+      {
+        name: "By Popular Demand",
+        description: "You can always find a place to perform, usually in an inn or tavern but possibly with a circus, at a theater, or even in a noble's court. At such a place, you receive free lodging and food of a modest or comfortable standard (depending on the quality of the establishment), as long as you perform each night. In addition, your performance makes you something of a local figure. When strangers recognize you in a town where you have performed, they typically take a liking to you.",
+      },
+    ],
+  },
+  "folk hero": {
+    name: "folk hero",
+    skillProficiencies: ["animal handling", "survival"],
+    toolProficiencies: [
+      {
+        choose: 1,
+        from: [
+          "alchemist's supplies",
+          "brewer's supplies",
+          "calligrapher's supplies",
+          "carpenter's tools",
+          "cartographer's tools",
+          "cobbler's tools",
+          "cook's utensils",
+          "glassblower's tools",
+          "jeweler's tools",
+          "leatherworker's tools",
+          "mason's tools",
+          "painter's supplies",
+          "potter's tools",
+          "smith's tools",
+          "tinker's tools",
+          "weaver's tools",
+          "woodcarver's tools",
+        ],
+      },
+      "vehicles (land)",
+    ],
+    abilityScoresModified: ["strength", "constitution", "wisdom"],
+    equipment: [
+      "Artisan's Tools",
+      "Shovel",
+      "Iron Pot",
+      "Common Clothes",
+      "10 GP",
+    ],
+    traits: [
+      {
+        name: "Tough",
+        description: "Your Hit Point maximum increases by an amount equal to twice your character level when you gain this feat. Whenever you gain a character level thereafter, your Hit Point maximum increases by an additional 2 Hit Points.",
+      },
+      {
+        name: "Rustic Hospitality",
+        description: "Since you come from the ranks of the common folk, you fit in among them with ease. You can find a place to hide, rest, or recuperate among other commoners, unless you have shown yourself to be a danger to them. They will shield you from the law or anyone else searching for you, though they will not risk their lives for you.",
+      },
+    ],
+  },
+  "guild artisan": {
+    name: "guild artisan",
+    skillProficiencies: ["insight", "persuasion"],
+    toolProficiencies: [
+      {
+        choose: 1,
+        from: [
+          "alchemist's supplies",
+          "brewer's supplies",
+          "calligrapher's supplies",
+          "carpenter's tools",
+          "cartographer's tools",
+          "cobbler's tools",
+          "cook's utensils",
+          "glassblower's tools",
+          "jeweler's tools",
+          "leatherworker's tools",
+          "mason's tools",
+          "painter's supplies",
+          "potter's tools",
+          "smith's tools",
+          "tinker's tools",
+          "weaver's tools",
+          "woodcarver's tools",
+        ],
+      },
+    ],
+    additionalLanguages: 1,
+    abilityScoresModified: ["intelligence", "wisdom", "charisma"],
+    equipment: [
+      "Artisan's Tools",
+      "Letter of Introduction from Guild",
+      "Traveler's Clothes",
+      "15 GP",
+    ],
+    traits: [
+      {
+        name: "Crafter",
+        description: "You gain proficiency with one type of artisan's tools of your choice. Additionally, whenever you purchase a nonmagical item, you receive a 20 percent discount on it.",
+      },
+      {
+        name: "Guild Membership",
+        description: "As an established and respected member of a guild, you can rely on certain benefits that membership provides. Your fellow guild members will provide you with lodging and food if necessary, and pay for your funeral if needed. In some cities and towns, a guildhall offers a central place to meet other members of your profession, which can be a good place to meet potential patrons, allies, or hirelings. Guilds often wield tremendous political power. If you are accused of a crime, your guild will support you if a good case can be made for your innocence or the crime is justifiable. You can also gain access to powerful political figures through the guild, if you are a member in good standing. Such connections might require the donation of money or magic items to the guild's coffers. You must pay dues of 5 gp per month to the guild. If you miss payments, you must make up back dues to remain in the guild's good graces.",
+      },
+    ],
+  },
+  hermit: {
+    name: "hermit",
+    skillProficiencies: ["medicine", "religion"],
+    toolProficiencies: ["herbalism kit"],
+    additionalLanguages: 1,
+    abilityScoresModified: ["constitution", "intelligence", "wisdom"],
+    equipment: [
+      "Herbalism Kit",
+      "Scroll Case with Notes",
+      "Winter Blanket",
+      "Common Clothes",
+      "5 GP",
+    ],
+    traits: [
+      {
+        name: "Healer",
+        description: "When you use a Healer's Kit to stabilize a dying creature, that creature also regains 1 Hit Point. As a Bonus Action, you can expend one use of a Healer's Kit to tend to a creature and restore 1d6 + 4 Hit Points to it, plus additional Hit Points equal to the creature's maximum number of Hit Dice. The creature can't regain Hit Points from this feat again until it finishes a Short or Long Rest.",
+      },
+      {
+        name: "Discovery",
+        description: "The quiet seclusion of your extended hermitage gave you access to a unique and powerful discovery. The exact nature of this revelation depends on the nature of your seclusion. It might be a great truth about the cosmos, the deities, the powerful beings of the outer planes, or the forces of nature. It could be a site that no one else has ever seen. You might have uncovered a fact that has long been forgotten, or unearthed some relic of the past that could rewrite history. It might be information that would be damaging to the people who or consigned you to exile, and hence the reason for your return to society. Work with your DM to determine the details of your discovery and its impact on the campaign.",
+      },
+    ],
+  },
+  noble: {
+    name: "noble",
+    skillProficiencies: ["history", "persuasion"],
+    toolProficiencies: [{ choose: 1, from: ["dice set", "playing card set"] }],
+    additionalLanguages: 1,
+    abilityScoresModified: ["intelligence", "wisdom", "charisma"],
+    equipment: [
+      "Fine Clothes",
+      "Signet Ring",
+      "Scroll of Pedigree",
+      "25 GP",
+    ],
+    traits: [
+      {
+        name: "Skilled",
+        description: "You gain proficiency in any combination of three skills or tools of your choice.",
+      },
+      {
+        name: "Position of Privilege",
+        description: "Thanks to your noble birth, people are inclined to think the best of you. You are welcome in high society, and people assume you have the right to be wherever you are. The common folk make every effort to accommodate you and avoid your displeasure, and other people of high birth treat you as a member of the same social sphere. You can secure an audience with a local noble if you need to.",
+      },
+    ],
+  },
+  outlander: {
+    name: "outlander",
+    skillProficiencies: ["athletics", "survival"],
+    toolProficiencies: [
+      {
+        choose: 1,
+        from: [
+          "bagpipes",
+          "drum",
+          "dulcimer",
+          "flute",
+          "lute",
+          "lyre",
+          "horn",
+          "pan flute",
+          "shawm",
+          "viol",
+        ],
+      },
+    ],
+    additionalLanguages: 1,
+    abilityScoresModified: ["strength", "dexterity", "wisdom"],
+    equipment: [
+      "Staff",
+      "Hunting Trap",
+      "Trophy from Animal",
+      "Traveler's Clothes",
+      "10 GP",
+    ],
+    traits: [
+      {
+        name: "Savage Attacker",
+        description: "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target.",
+      },
+      {
+        name: "Wanderer",
+        description: "You have an excellent memory for maps and geography, and you can always recall the general layout of terrain, settlements, and other features around you. In addition, you can find food and fresh water for yourself and up to five other people each day, provided that the land offers berries, small game, water, and so forth.",
+      },
+    ],
+  },
+  pirate: {
+    name: "pirate",
+    skillProficiencies: ["athletics", "perception"],
+    toolProficiencies: ["navigator's tools", "vehicles (water)"],
+    abilityScoresModified: ["strength", "dexterity", "wisdom"],
+    equipment: [
+      "Belaying Pin (Club)",
+      "50 feet of Silk Rope",
+      "Lucky Charm",
+      "Common Clothes",
+      "10 GP",
+    ],
+    traits: [
+      {
+        name: "Lucky",
+        description: "You have inexplicable luck that seems to kick in at just the right moment. You have a number of Luck Points equal to your Proficiency Bonus. You can spend a Luck Point to reroll any D20 Test you make, and you must use the new roll. You regain all expended Luck Points when you finish a Long Rest.",
+      },
+      {
+        name: "Bad Reputation",
+        description: "No matter where you go, people are afraid of you due to your reputation. When you are in a civilized settlement, you can get away with minor criminal offenses, such as refusing to pay for food at a tavern or breaking down doors at a local shop, since most people will not report your activity to the authorities.",
+      },
+    ],
   },
   sage: {
     name: "sage",
     skillProficiencies: ["arcana", "history"],
     toolProficiencies: ["calligrapher's supplies"],
-    feat: "Magic Initiate (Wizard)",
     abilityScoresModified: ["constitution", "intelligence", "wisdom"],
     equipment: [
       "Quarterstaff",
-      "Calligrapher’s Supplies",
+      "Calligrapher's Supplies",
       "Book (history)",
       "Parchment (8 sheets)",
       "Robe",
       "8 GP",
     ],
-    feature: {
-      name: "researcher",
-      summary: "you can usually find where to obtain lore; you know how to get answers.",
-    },
+    traits: [
+      {
+        name: "Magic Initiate (Wizard)",
+        description: "You learn two cantrips of your choice from the Wizard spell list. You also always have a level 1 spell from that list prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have. Intelligence, Wisdom, or Charisma is your spellcasting ability for these spells (choose when you gain this feat).",
+      },
+      {
+        name: "Researcher",
+        description: "When you attempt to learn or recall a piece of lore, if you do not know that information, you often know where and from whom you can obtain it. Usually, this information comes from a library, scriptorium, university, or a sage or other learned person or creature. Your DM might rule that the knowledge you seek is secreted away in an almost inaccessible place, or that it simply cannot be found. Unearthing the deepest secrets of the multiverse can require an adventure or even a whole campaign.",
+      },
+    ],
+  },
+  sailor: {
+    name: "sailor",
+    skillProficiencies: ["athletics", "perception"],
+    toolProficiencies: ["navigator's tools", "vehicles (water)"],
+    abilityScoresModified: ["strength", "dexterity", "wisdom"],
+    equipment: [
+      "Belaying Pin (Club)",
+      "50 feet of Silk Rope",
+      "Lucky Charm",
+      "Common Clothes",
+      "10 GP",
+    ],
+    traits: [
+      {
+        name: "Tavern Brawler",
+        description: "You gain proficiency with improvised weapons. Your unarmed strike uses a d4 for damage. When you hit a creature with an unarmed strike or an improvised weapon on your turn, you can use a Bonus Action to attempt to grapple the target.",
+      },
+      {
+        name: "Ship's Passage",
+        description: "When you need to, you can secure free passage on a sailing ship for yourself and your adventuring companions. You might sail on the ship you served on, or another ship you have good relations with (perhaps one captained by a former crewmate). Because you're calling in a favor, you can't be certain of a schedule or route that will meet your every need. Your Dungeon Master will determine how long it takes to get where you need to go. In return for your free passage, you and your companions are expected to assist the crew during the voyage.",
+      },
+    ],
   },
   soldier: {
     name: "soldier",
     skillProficiencies: ["athletics", "intimidation"],
     toolProficiencies: [{ choose: 1, from: ["dice set", "playing card set"] }],
-    feat: "Savage Attacker",
     abilityScoresModified: ["strength", "dexterity", "constitution"],
     equipment: [
       "Spear",
       "Shortbow",
       "20 Arrows",
       "Gaming Set",
-      "Healer’s Kit",
+      "Healer's Kit",
       "Quiver",
-      "Traveler’s Clothes",
+      "Traveler's Clothes",
       "14 GP",
     ],
-    feature: {
-      name: "military rank",
-      summary: "you have a rank; soldiers loyal to your former organization recognize authority.",
-    },
+    traits: [
+      {
+        name: "Savage Attacker",
+        description: "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target.",
+      },
+      {
+        name: "Military Rank",
+        description: "You have a military rank from your career as a soldier. Soldiers loyal to your former military organization still recognize your authority and influence, and they defer to you when you are in positions of authority. You can invoke your rank to exert influence over other soldiers and requisition simple equipment or horses for temporary use. You can also usually gain access to friendly military encampments and fortresses where your rank is recognized.",
+      },
+    ],
+  },
+  urchin: {
+    name: "urchin",
+    skillProficiencies: ["sleight of hand", "stealth"],
+    toolProficiencies: ["disguise kit", "thieves' tools"],
+    abilityScoresModified: ["dexterity", "constitution", "wisdom"],
+    equipment: [
+      "Small Knife",
+      "Map of City",
+      "Pet Mouse",
+      "Token from Parents",
+      "Common Clothes",
+      "10 GP",
+    ],
+    traits: [
+      {
+        name: "Skilled",
+        description: "You gain proficiency in any combination of three skills or tools of your choice.",
+      },
+      {
+        name: "City Secrets",
+        description: "You know the secret patterns and flow of cities and can find passages through the urban sprawl that others would miss. When you are not in combat, you (and companions you lead) can travel between any two locations in the city twice as fast as your speed would normally allow.",
+      },
+    ],
   },
 } as const
 
-
-
-
-const ClassNames = [
-  "barbarian",
-  "bard",
-  "cleric",
-  "druid",
-  "fighter",
-  "monk",
-  "paladin",
-  "ranger",
-  "rogue",
-  "sorcerer",
-  "warlock",
-  "wizard",
-] as const
 
 const Classes: Record<ClassNameType, ClassDef> = {
   barbarian: {

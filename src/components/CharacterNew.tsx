@@ -1,14 +1,14 @@
 import { Select } from "@src/components/ui/Select"
-import {
-  BackgroundNames,
-  Classes,
-  ClassNames,
-  type ClassNameType,
-  RaceNames,
-  Races,
-} from "@src/lib/dnd"
+import { ClassNames, type ClassNameType } from "@src/lib/dnd"
+import srd51 from "@src/lib/dnd/srd51"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"
+
+// For now, default to srd51 ruleset
+// TODO: Add ruleset selector
+const ruleset = srd51
+const speciesNames = ruleset.species.map((s) => s.name)
+const backgroundNames = Object.keys(ruleset.backgrounds)
 
 export interface CharacterNewProps {
   values?: Record<string, string>
@@ -39,8 +39,8 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       <Select
         name="race"
         id="race"
-        options={RaceNames.map((race) => ({ value: race, label: toTitleCase(race) }))}
-        placeholder="Select a race"
+        options={speciesNames.map((race) => ({ value: race, label: toTitleCase(race) }))}
+        placeholder="Select a species"
         required
         error={errors?.race}
         value={values?.race}
@@ -48,31 +48,31 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
     </div>,
   ]
 
-  const selectedRace = values?.race ? Races.find((r) => r.name === values.race) : null
-  const subraces = selectedRace?.subraces || []
+  const selectedSpecies = values?.race ? ruleset.species.find((r) => r.name === values.race) : null
+  const lineages = selectedSpecies?.lineages || []
   const subracePlh =
-    subraces.length > 0
-      ? "Select a subrace"
-      : selectedRace
-        ? "No subraces available"
-        : "Select a race first"
+    lineages.length > 0
+      ? "Select a lineage"
+      : selectedSpecies
+        ? "No lineages available"
+        : "Select a species first"
   fields.push(
     <div class="mb-3">
       <label for="subrace" class="form-label">
-        Subrace
+        Lineage
       </label>
       <Select
         name="subrace"
         id="subrace"
-        options={subraces.map((subrace) => ({
-          value: subrace.name,
-          label: toTitleCase(subrace.name),
+        options={lineages.map((lineage) => ({
+          value: lineage.name,
+          label: toTitleCase(lineage.name),
         }))}
         placeholder={subracePlh}
         required
         error={errors?.subrace}
         value={values?.subrace}
-        disabled={subraces.length === 0}
+        disabled={lineages.length === 0}
       />
     </div>
   )
@@ -94,7 +94,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
     </div>
   )
 
-  const selectedClass = Classes[values?.class as ClassNameType] || null
+  const selectedClass = values?.class ? ruleset.classes[values.class as ClassNameType] : null
   const subclasses =
     selectedClass && selectedClass.subclassLevel === 1 ? selectedClass.subclasses : []
   const subclassPlh = selectedClass
@@ -110,7 +110,10 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       <Select
         name="subclass"
         id="subclass"
-        options={subclasses.map((subcls) => ({ value: subcls, label: toTitleCase(subcls) }))}
+        options={subclasses.map((subcls) => ({
+          value: subcls.name,
+          label: toTitleCase(subcls.name),
+        }))}
         placeholder={subclassPlh}
         error={errors?.subclass}
         value={values?.subclass}
@@ -127,7 +130,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       <Select
         name="background"
         id="background"
-        options={BackgroundNames.map((bg) => ({ value: bg, label: toTitleCase(bg) }))}
+        options={backgroundNames.map((bg) => ({ value: bg, label: toTitleCase(bg) }))}
         placeholder="Select a background"
         required
         error={errors?.background}

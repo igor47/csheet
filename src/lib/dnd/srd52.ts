@@ -8,7 +8,6 @@ import type {
   SlotProgression,
   Species,
   SpellSlotsType,
-  Subclass,
 } from "../dnd"
 
 const SpeciesData: Species[] = [
@@ -2678,8 +2677,8 @@ function slotsFromProgression(progression: number[]): SpellSlotsType {
 
 const srd52: Ruleset = {
   species: SpeciesData,
-  classes: Object.values(Classes),
-  backgrounds: Object.values(Backgrounds),
+  classes: Classes,
+  backgrounds: Backgrounds,
 
   listLineages(speciesName?: string): Lineage[] {
     if (speciesName) {
@@ -2732,7 +2731,7 @@ const srd52: Ruleset = {
       return entry.prepared
     }
 
-    if (['fighter', 'rogue'].includes(className)) {
+    if (["fighter", "rogue"].includes(className)) {
       return THIRD_CASTER_SPELLS_PREPARED[level] || 0
     }
 

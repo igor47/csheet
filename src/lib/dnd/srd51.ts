@@ -8,7 +8,6 @@ import type {
   SlotProgression,
   Species,
   SpellSlotsType,
-  Subclass,
 } from "../dnd"
 
 const SpeciesData: Species[] = [
@@ -3477,8 +3476,8 @@ function slotsFromProgression(progression: number[]): SpellSlotsType {
 
 const srd51: Ruleset = {
   species: SpeciesData,
-  classes: Object.values(Classes),
-  backgrounds: Object.values(Backgrounds),
+  classes: Classes,
+  backgrounds: Backgrounds,
 
   listLineages(speciesName?: string): Lineage[] {
     if (speciesName) {

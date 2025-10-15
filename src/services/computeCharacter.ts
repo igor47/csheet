@@ -87,7 +87,7 @@ export async function computeCharacter(
   const proficiencyBonus = Math.floor((totalLevel - 1) / 4) + 2
 
   const ruleset = getRuleset(character.ruleset)
-  const species = ruleset.Races.find((r) => r.name === character.race)!
+  const species = ruleset.species.find((r) => r.name === character.race)!
 
   // Calculate modifier and saving throw for each ability
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
@@ -146,7 +146,7 @@ export async function computeCharacter(
 
   const allLevels = await getAllLevels(db, characterId)
   for (const level of allLevels) {
-    const classDef = ruleset.Classes[level.class]
+    const classDef = ruleset.classes[level.class]
     hitDice.push(classDef.hitDie)
     maxHitPoints += level.hit_die_roll
   }
@@ -192,7 +192,7 @@ export async function computeCharacter(
   let thirdCasterLevel = 0
 
   for (const charClass of classes) {
-    const classDef = ruleset.Classes[charClass.class]
+    const classDef = ruleset.classes[charClass.class]
     if (!classDef.spellcasting.enabled) continue
 
     const spellcasting = classDef.spellcasting

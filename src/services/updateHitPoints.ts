@@ -1,48 +1,50 @@
 import { create as createCharHPDb } from "@src/db/char_hp"
+import { zodToFormErrors } from "@src/lib/formErrors"
+import {
+  BooleanFormFieldSchema,
+  NumberFormFieldSchema,
+  OptionalNullStringSchema,
+} from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 
 export const UpdateHitPointsApiSchema = z.object({
-  character_id: z.string(),
   action: z.enum(["restore", "lose"]),
-  amount: z.number().int().min(1),
-  note: z.string().nullable().optional(),
+  amount: NumberFormFieldSchema.int().min(1),
+  note: OptionalNullStringSchema,
+  is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
-export type UpdateHitPointsApi = z.infer<typeof UpdateHitPointsApiSchema>
+export type UpdateHitPointsResult =
+  | { complete: true; newHP: number }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
- * Prepare form values for live validation (/check endpoint)
- * Mutates values to be helpful
- * Returns soft validation hints
+ * Update hit points by creating a new HP change record
  */
-export function prepareUpdateHitPointsForm(
-  values: Record<string, string>,
-  currentHP: number,
-  maxHitPoints: number
-): { values: Record<string, string>; errors: Record<string, string> } {
+export async function updateHitPoints(
+  db: SQL,
+  char: ComputedCharacter,
+  data: Record<string, string>
+): Promise<UpdateHitPointsResult> {
+  const checkD = UpdateHitPointsApiSchema.partial().safeParse(data)
+  if (!checkD.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
+  }
+
   const errors: Record<string, string> = {}
-  const preparedValues = { ...values }
-
-  // Default action to restore if not specified
-  if (!preparedValues.action) {
-    preparedValues.action = "restore"
-  }
-
-  // Validate action
-  if (preparedValues.action !== "restore" && preparedValues.action !== "lose") {
-    errors.action = "Action must be 'restore' or 'lose'"
-    return { values: preparedValues, errors }
-  }
+  const currentHP = char.currentHP
+  const maxHitPoints = char.maxHitPoints
 
   // Validate amount
-  if (preparedValues.amount) {
-    const amount = parseInt(preparedValues.amount, 10)
+  if (data.amount) {
+    const amount = parseInt(data.amount, 10)
     if (Number.isNaN(amount) || amount < 1) {
       errors.amount = "Amount must be a positive number"
     } else {
       // Check bounds
-      if (preparedValues.action === "restore") {
+      if (checkD.data.action === "restore") {
         const newHP = currentHP + amount
         if (newHP > maxHitPoints) {
           errors.amount = `Cannot restore more than ${maxHitPoints - currentHP} HP (would exceed max)`
@@ -54,76 +56,35 @@ export function prepareUpdateHitPointsForm(
         }
       }
     }
-  }
-
-  return { values: preparedValues, errors }
-}
-
-/**
- * Strict validation for form submission (POST endpoint)
- * Does NOT mutate values - validates as-is
- * Returns hard errors
- */
-export function validateUpdateHitPoints(
-  values: Record<string, string>,
-  currentHP: number,
-  maxHitPoints: number
-): { valid: boolean; errors: Record<string, string> } {
-  const errors: Record<string, string> = {}
-
-  // Validate action
-  if (!values.action) {
-    errors.action = "Action is required"
-    return { valid: false, errors }
-  }
-
-  if (values.action !== "restore" && values.action !== "lose") {
-    errors.action = "Invalid action"
-    return { valid: false, errors }
-  }
-
-  // Validate amount
-  if (!values.amount) {
+  } else if (!checkD.data.is_check) {
     errors.amount = "Amount is required"
-    return { valid: false, errors }
   }
 
-  const amount = parseInt(values.amount, 10)
-  if (Number.isNaN(amount) || amount < 1) {
-    errors.amount = "Amount must be a positive number"
-    return { valid: false, errors }
+  if (checkD.data.is_check || Object.keys(errors).length > 0) {
+    return { complete: false, values: data, errors }
   }
 
-  // Check bounds
-  if (values.action === "restore") {
-    const newHP = currentHP + amount
-    if (newHP > maxHitPoints) {
-      errors.amount = `Cannot restore more than ${maxHitPoints - currentHP} HP`
-      return { valid: false, errors }
-    }
-  } else {
-    const newHP = currentHP - amount
-    if (newHP < 0) {
-      errors.amount = `Cannot lose more than ${currentHP} HP`
-      return { valid: false, errors }
-    }
+  // Parse and validate with Zod
+  const result = UpdateHitPointsApiSchema.safeParse(data)
+  if (!result.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
-  const valid = Object.keys(errors).length === 0
-  return { valid, errors }
-}
+  //////////////////////////
+  // actually update hit points
 
-/**
- * Update hit points by creating a new HP change record
- */
-export async function updateHitPoints(db: SQL, data: UpdateHitPointsApi): Promise<void> {
   // Convert action to delta
-  const delta = data.action === "restore" ? data.amount : -data.amount
+  const delta = result.data.action === "restore" ? result.data.amount : -result.data.amount
 
   // Create HP change record
   await createCharHPDb(db, {
-    character_id: data.character_id,
+    character_id: char.id,
     delta,
-    note: data.note || null,
+    note: result.data.note || null,
   })
+
+  return {
+    complete: true,
+    newHP: currentHP + delta,
+  }
 }

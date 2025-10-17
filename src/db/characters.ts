@@ -1,3 +1,5 @@
+import { RulesetIdSchema } from "@src/lib/dnd/rulesets"
+import { SRD51_ID } from "@src/lib/dnd/srd51"
 import type { SQL } from "bun"
 import { ulid } from "ulid"
 import { z } from "zod"
@@ -6,11 +8,11 @@ export const CharacterSchema = z.object({
   id: z.string(),
   user_id: z.string(),
   name: z.string().min(3),
-  race: z.string(),
-  subrace: z.string().nullable().default(null),
+  species: z.string(),
+  lineage: z.string().nullable().default(null),
   background: z.string(),
   alignment: z.nullish(z.string()),
-  ruleset: z.enum(["srd51", "srd52"]).default("srd51"),
+  ruleset: RulesetIdSchema.default(SRD51_ID),
   created_at: z.date(),
   updated_at: z.date(),
 })
@@ -28,13 +30,13 @@ export async function create(db: SQL, character: CreateCharacter): Promise<Chara
   const id = ulid()
 
   const result = await db`
-    INSERT INTO characters (id, user_id, name, race, subrace, background, alignment, ruleset)
+    INSERT INTO characters (id, user_id, name, species, lineage, background, alignment, ruleset)
     VALUES (
       ${id},
       ${character.user_id},
       ${character.name},
-      ${character.race},
-      ${character.subrace},
+      ${character.species},
+      ${character.lineage},
       ${character.background},
       ${character.alignment},
       ${character.ruleset}

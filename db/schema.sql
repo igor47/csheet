@@ -170,8 +170,8 @@ CREATE TABLE public.characters (
     id character varying(26) NOT NULL,
     user_id character varying(26) NOT NULL,
     name text NOT NULL,
-    race text NOT NULL,
-    subrace text,
+    species text NOT NULL,
+    lineage text,
     background text NOT NULL,
     alignment text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -537,4 +537,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251004105657'),
     ('20251007100000'),
     ('20251007100001'),
-    ('20251014115526');
+    ('20251014115526'),
+    ('20251017232744');

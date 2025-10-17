@@ -86,7 +86,7 @@ describe("GET /characters", () => {
         expect(body).toContain(character.name)
       })
 
-      test("displays the character race", async () => {
+      test("displays the character species", async () => {
         const response = await makeRequest(testCtx.app, "/characters", {
           user,
         })
@@ -94,7 +94,7 @@ describe("GET /characters", () => {
         const document = await parseHtml(response)
         const body = document.body.textContent || ""
 
-        expect(body).toContain(character.race)
+        expect(body).toContain(character.species)
       })
 
       describe("with multiple characters", () => {

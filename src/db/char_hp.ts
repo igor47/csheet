@@ -66,7 +66,7 @@ export async function getHpDelta(db: SQL, characterId: string): Promise<number> 
     WHERE character_id = ${characterId}
   `
 
-  return result[0].total
+  return parseInt(result[0].total, 10)
 }
 
 export async function deleteById(db: SQL, id: string): Promise<void> {

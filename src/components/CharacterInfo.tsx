@@ -86,12 +86,12 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
 
         <div class="row mt-2">
           <div class="col">
-            {/* First row: Race, Background, Size */}
+            {/* First row: Species, Background, Size */}
             <div class="row g-2 h-auto">
               <div class="col-sm-4">
                 <LabeledValue
-                  label="Race"
-                  value={character.subrace || character.race}
+                  label="Species"
+                  value={character.lineage || character.species}
                   className="text-capitalize"
                 />
               </div>

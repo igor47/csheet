@@ -9,6 +9,7 @@ import {
   type Ruleset,
   type SkillType,
 } from "@src/lib/dnd"
+import { RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -33,8 +34,8 @@ export function createCharacterApiSchema(ruleset: Ruleset) {
   return z.object({
     user_id: z.string(),
     name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
-    race: z.enum(speciesNames, "Pick a valid species!"),
-    subrace:
+    species: z.enum(speciesNames, "Pick a valid species!"),
+    lineage:
       allLineageNames.length > 0
         ? z.enum(allLineageNames, "Pick a valid lineage!").nullable().default(null)
         : z.string().nullable().default(null),
@@ -45,24 +46,28 @@ export function createCharacterApiSchema(ruleset: Ruleset) {
         : z.string().nullable().default(null),
     background: z.enum(backgroundNames, "Pick a valid background!"),
     alignment: z.nullable(z.string().optional()),
-    ruleset: z.enum(["srd51", "srd52"]).default("srd51"),
+    ruleset: RulesetIdSchema,
   })
 }
 
 export type CreateCharacterApi = {
   user_id: string
   name: string
-  race: string
-  subrace: string | null
+  species: string
+  lineage: string | null
   class: (typeof ClassNames)[number]
   subclass: string | null
   background: string
   alignment?: string | null
-  ruleset: "srd51" | "srd52"
+  ruleset: RulesetId
 }
 
+export type CreateCharacterResult =
+  | { complete: true; character: Character }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+
 /**
- * Calculate initial ability scores based on race and subrace modifiers
+ * Calculate initial ability scores based on spiecies and lineage modifiers
  */
 type AbilityScore = {
   score: number
@@ -118,26 +123,75 @@ function calculateInitialAbilityScores(
  * Create a new character
  * Handles validation and business logic before persisting to the database
  */
-export async function createCharacter(db: SQL, data: CreateCharacterApi): Promise<Character> {
+export async function createCharacter(
+  db: SQL,
+  data: Record<string, string>
+): Promise<CreateCharacterResult> {
+  const errors: Record<string, string> = {}
+  const values = data
+  const isCheck = data.is_check === "true"
+
   // Get the ruleset for validation and data lookup
-  const ruleset = getRuleset(data.ruleset)
+  const rulesetId = (data.ruleset as RulesetId) || RULESETS[0]!.id
+  const ruleset = getRuleset(rulesetId)
 
-  // Validate data against ruleset schema
-  const schema = createCharacterApiSchema(ruleset)
-  const validated = schema.parse(data)
-
-  return db.begin(async (tx) => {
-    const exists = await nameExistsForUser(tx, validated.user_id, validated.name)
-    if (exists) {
-      throw new Error("You already have a character with this name")
+  // Soft validation for is_check
+  if (!data.name) {
+    if (!isCheck) {
+      errors.name = "Character name is required"
     }
+  } else if (data.name.trim().length === 0) {
+    errors.name = "Character name is required"
+  } else if (data.name.length < 3) {
+    errors.name = "Character name must be at least 3 characters"
+  } else if (data.name.length > 50) {
+    errors.name = "Character name must be less than 50 characters"
+  } else if (data.user_id) {
+    const exists = await nameExistsForUser(db, data.user_id, data.name)
+    if (exists) {
+      errors.name = "You already have a character with this name"
+    }
+  }
 
+  // Validate species exists in ruleset
+  if (data.species && !ruleset.species.find((s) => s.name === data.species)) {
+    errors.species = "Invalid species for this ruleset"
+  }
+
+  // Validate lineage exists for selected species
+  if (data.lineage && data.species) {
+    const species = ruleset.species.find((s) => s.name === data.species)
+    if (species && !species.lineages?.find((l) => l.name === data.lineage)) {
+      errors.lineage = "Invalid lineage for this species"
+    }
+  }
+
+  if (isCheck || Object.keys(errors).length > 0) {
+    return { complete: false, values, errors }
+  }
+
+  // Full validation with Zod
+  const schema = createCharacterApiSchema(ruleset)
+  const result = schema.safeParse(data)
+
+  if (!result.success) {
+    const zodErrors: Record<string, string> = {}
+    for (const issue of result.error.issues) {
+      const field = issue.path[0] as string
+      zodErrors[field] = issue.message
+    }
+    return { complete: false, values, errors: zodErrors }
+  }
+
+  const validated = result.data
+
+  const character = await db.begin(async (tx) => {
     // Create the character in the database
     const character = await createCharacterDb(tx, {
       user_id: validated.user_id,
       name: validated.name,
-      race: validated.race,
-      subrace: validated.subrace,
+      species: validated.species,
+      lineage: validated.lineage,
       background: validated.background,
       ruleset: validated.ruleset,
       alignment: validated.alignment,
@@ -156,7 +210,11 @@ export async function createCharacter(db: SQL, data: CreateCharacterApi): Promis
     })
 
     // populate initial ability scores with species/lineage modifiers
-    const initialScores = calculateInitialAbilityScores(ruleset, validated.race, validated.subrace)
+    const initialScores = calculateInitialAbilityScores(
+      ruleset,
+      validated.species,
+      validated.lineage
+    )
     const promises = Object.entries(initialScores).map(([ability, score]) =>
       createAbilityDb(tx, {
         character_id: character.id,
@@ -206,4 +264,6 @@ export async function createCharacter(db: SQL, data: CreateCharacterApi): Promis
 
     return character
   })
+
+  return { complete: true, character }
 }

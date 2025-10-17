@@ -25,7 +25,7 @@ import { SpellCastResult } from "@src/components/SpellCastResult"
 import { SpellSlotsEditForm } from "@src/components/SpellSlotsEditForm"
 import { SpellSlotsHistory } from "@src/components/SpellSlotsHistory"
 import { ModalContent } from "@src/components/ui/ModalContent"
-import { db } from "@src/db"
+import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
@@ -67,7 +67,7 @@ export const characterRoutes = new Hono()
 characterRoutes.get("/characters", async (c) => {
   const user = c.var.user!
 
-  const characters = await findByUserId(db, user.id)
+  const characters = await findByUserId(getDb(c), user.id)
   if (characters.length === 0) {
     await setFlashMsg(c, "Create a character to get started!", "info")
     return c.redirect("/characters/new")
@@ -92,7 +92,7 @@ characterRoutes.post("/characters/new/check", async (c) => {
     if (values.name.trim().length === 0) {
       errors.name = "Character name is required"
     } else {
-      const exists = await nameExistsForUser(db, user.id, values.name)
+      const exists = await nameExistsForUser(getDb(c), user.id, values.name)
       if (exists) {
         errors.name = "You already have a character with this name"
       }
@@ -111,7 +111,7 @@ characterRoutes.post("/characters/new", async (c) => {
   const values = { ...body, user_id: user.id }
 
   try {
-    const character = await createCharacter(values as CreateCharacterApi)
+    const character = await createCharacter(getDb(c), values as CreateCharacterApi)
     await setFlashMsg(c, "Character created successfully!", "success")
     c.header("HX-Redirect", `/characters/${character.id}`)
     return c.body(null, 204)
@@ -125,7 +125,7 @@ characterRoutes.post("/characters/new", async (c) => {
 
 characterRoutes.get("/characters/:id", async (c) => {
   const id = c.req.param("id") as string
-  const char = await computeCharacter(db, id)
+  const char = await computeCharacter(getDb(c), id)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     return c.redirect("/characters")
@@ -139,7 +139,7 @@ characterRoutes.post("/characters/:id/edit/class/check", async (c) => {
   const body = (await c.req.parseBody()) as Record<string, string>
 
   // Get current levels to calculate the correct level
-  const currentLevels = await getCurrentLevels(db, characterId)
+  const currentLevels = await getCurrentLevels(getDb(c), characterId)
   const currentClassLevel = currentLevels.find((cl) => cl.class === body.class) || null
 
   // Prepare form values and get soft validation hints
@@ -158,7 +158,7 @@ characterRoutes.post("/characters/:id/edit/spellslots/check", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     return c.html(
       <ModalContent title="error">
@@ -188,7 +188,7 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
   const body = (await c.req.parseBody()) as Record<string, string>
 
   // Get current levels for validation
-  const currentLevels = await getCurrentLevels(db, characterId)
+  const currentLevels = await getCurrentLevels(getDb(c), characterId)
   const currentClassLevel = currentLevels.find((cl) => cl.class === body.class) || null
 
   // Strict validation (no mutation)
@@ -232,7 +232,7 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
   }
 
   try {
-    await addLevel(db, result.data)
+    await addLevel(getDb(c), result.data)
   } catch (error) {
     console.error("adding level", error)
     await setFlashMsg(c, "Failed to add level", "error")
@@ -245,7 +245,7 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
     )
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   return c.html(
     <>
       <CharacterInfo character={updatedChar} />
@@ -260,14 +260,14 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
     return c.body(null, 204)
   }
 
-  const result = await updateHitPoints(db, char, body)
+  const result = await updateHitPoints(getDb(c), char, body)
 
   if (!result.complete) {
     return c.html(
@@ -281,7 +281,7 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
     )
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
 
   c.header("HX-Trigger", "closeEditModal")
   return c.html(
@@ -294,7 +294,7 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
 
 characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
@@ -302,7 +302,7 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
   }
 
   const body = (await c.req.parseBody()) as Record<string, string>
-  const result = await updateHitDice(db, char, body)
+  const result = await updateHitDice(getDb(c), char, body)
 
   if (!result.complete) {
     return c.html(
@@ -316,7 +316,7 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
     )
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
   return c.html(
     <>
@@ -328,7 +328,7 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
 
 characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
@@ -373,7 +373,7 @@ characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
   }
 
   try {
-    await updateSpellSlots(db, result.data, char.spellSlots, char.availableSpellSlots)
+    await updateSpellSlots(getDb(c), result.data, char.spellSlots, char.availableSpellSlots)
   } catch (error) {
     console.error("updating spell slots", error)
     return c.html(
@@ -387,7 +387,7 @@ characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
     )
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
   return c.html(
     <>
@@ -401,14 +401,14 @@ characterRoutes.post("/characters/:id/edit/prepspell", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
     return c.body(null, 204)
   }
 
-  const result = await prepareSpell(db, char, body)
+  const result = await prepareSpell(getDb(c), char, body)
 
   if (!result.complete) {
     return c.html(
@@ -416,7 +416,7 @@ characterRoutes.post("/characters/:id/edit/prepspell", async (c) => {
     )
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
   return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
@@ -425,27 +425,27 @@ characterRoutes.post("/characters/:id/edit/spellbook", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
     return c.body(null, 204)
   }
 
-  const result = await learnSpell(db, char, body)
+  const result = await learnSpell(getDb(c), char, body)
 
   if (!result.complete) {
     return c.html(<LearnSpellForm character={char} values={result.values} errors={result.errors} />)
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
   return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.get("/characters/:id/castspell", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
@@ -471,7 +471,7 @@ characterRoutes.get("/characters/:id/castspell", async (c) => {
 
 characterRoutes.post("/characters/:id/castspell", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
@@ -479,14 +479,14 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
   }
 
   const body = (await c.req.parseBody()) as Record<string, string>
-  const result = await castSpell(db, char, body)
+  const result = await castSpell(getDb(c), char, body)
   console.dir(result)
 
   if (!result.complete) {
     return c.html(<CastSpellForm character={char} values={result.values} errors={result.errors} />)
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   return c.html(
     <>
       <SpellCastResult message={result.note} spellId={result.spellId} />
@@ -498,7 +498,7 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
 
 characterRoutes.post("/characters/:id/longrest", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
@@ -518,7 +518,7 @@ characterRoutes.post("/characters/:id/longrest", async (c) => {
 
   try {
     const summary = await longRest(
-      db,
+      getDb(c),
       result.data,
       char.currentHP,
       char.maxHitPoints,
@@ -547,7 +547,7 @@ characterRoutes.post("/characters/:id/longrest", async (c) => {
     return c.html(<CurrentStatus character={char} />)
   }
 
-  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   return c.html(
     <>
       <CurrentStatus character={updatedChar} />
@@ -561,7 +561,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   const characterId = c.req.param("id") as string
   const field = c.req.param("field") as string
 
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
@@ -575,8 +575,8 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "class") {
-    const currentLevels = await getCurrentLevels(db, characterId)
-    const maxLevel = await maxClassLevel(db, characterId)
+    const currentLevels = await getCurrentLevels(getDb(c), characterId)
+    const maxLevel = await maxClassLevel(getDb(c), characterId)
     const { values } = prepareAddLevelForm({ class: maxLevel.class }, currentLevels)
 
     return c.html(
@@ -671,7 +671,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
 
 characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(db, characterId)
+  const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
     c.header("HX-Redirect", `/characters`)
@@ -684,7 +684,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
     const ability = field as AbilityType
-    const result = await updateAbility(db, char, { ...body, ability })
+    const result = await updateAbility(getDb(c), char, { ...body, ability })
 
     if (!result.complete) {
       return c.html(
@@ -692,7 +692,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
       )
     }
 
-    const updatedChar = (await computeCharacter(db, characterId))!
+    const updatedChar = (await computeCharacter(getDb(c), characterId))!
     c.header("HX-Trigger", "closeEditModal")
     return c.html(
       <>
@@ -707,7 +707,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   // Check if field is a skill
   else if (Skills.includes(field as SkillType)) {
     const skill = field as SkillType
-    const result = await updateSkill(db, char, { ...body, skill })
+    const result = await updateSkill(getDb(c), char, { ...body, skill })
 
     if (!result.complete) {
       return c.html(
@@ -715,7 +715,7 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
       )
     }
 
-    const updatedChar = (await computeCharacter(db, characterId))!
+    const updatedChar = (await computeCharacter(getDb(c), characterId))!
     c.header("HX-Trigger", "closeEditModal")
     return c.html(
       <>
@@ -738,7 +738,7 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
   const field = c.req.param("field") as string
 
   if (field === "class") {
-    const levels = await findByCharacterId(db, characterId)
+    const levels = await findByCharacterId(getDb(c), characterId)
     // Reverse to show most recent first
     levels.reverse()
     return c.html(<ClassHistory levels={levels} />)
@@ -746,8 +746,8 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
 
   if (field === "hitpoints") {
     // Fetch both HP changes and level-ups
-    const hpChanges = await findHPChanges(db, characterId)
-    const levels = await findByCharacterId(db, characterId)
+    const hpChanges = await findHPChanges(getDb(c), characterId)
+    const levels = await findByCharacterId(getDb(c), characterId)
 
     // Merge into unified events
     const events: HPHistoryEvent[] = []
@@ -781,28 +781,28 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
   }
 
   if (field === "hitdice") {
-    const hitDiceEvents = await findHitDiceChanges(db, characterId)
+    const hitDiceEvents = await findHitDiceChanges(getDb(c), characterId)
     // Reverse to show most recent first
     hitDiceEvents.reverse()
     return c.html(<HitDiceHistory events={hitDiceEvents} />)
   }
 
   if (field === "spellslots") {
-    const spellSlotEvents = await findSpellSlotChanges(db, characterId)
+    const spellSlotEvents = await findSpellSlotChanges(getDb(c), characterId)
     // Reverse to show most recent first
     spellSlotEvents.reverse()
     return c.html(<SpellSlotsHistory events={spellSlotEvents} />)
   }
 
   if (field === "prepared-spells") {
-    const preparedSpellEvents = await findPreparedSpellChanges(db, characterId)
+    const preparedSpellEvents = await findPreparedSpellChanges(getDb(c), characterId)
     // Reverse to show most recent first
     preparedSpellEvents.reverse()
     return c.html(<PreparedSpellsHistory events={preparedSpellEvents} />)
   }
 
   if (field === "spellbook") {
-    const spellbookEvents = await findLearnedSpellChanges(db, characterId)
+    const spellbookEvents = await findLearnedSpellChanges(getDb(c), characterId)
     // Reverse to show most recent first
     spellbookEvents.reverse()
     return c.html(<SpellbookHistory events={spellbookEvents} />)
@@ -810,7 +810,7 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
 
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
-    const abilityEvents = await findAbilityChanges(db, characterId)
+    const abilityEvents = await findAbilityChanges(getDb(c), characterId)
     // Filter to only this ability and reverse to show most recent first
     const filteredEvents = abilityEvents.filter((event) => event.ability === field).reverse()
     return c.html(<AbilityHistory ability={field} events={filteredEvents} />)
@@ -818,7 +818,7 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
 
   // Check if field is a skill
   if (Skills.includes(field as SkillType)) {
-    const skillEvents = await findSkillChanges(db, characterId)
+    const skillEvents = await findSkillChanges(getDb(c), characterId)
     // Filter to only this skill and reverse to show most recent first
     const filteredEvents = skillEvents.filter((event) => event.skill === field).reverse()
     return c.html(<SkillHistory skill={field} events={filteredEvents} />)

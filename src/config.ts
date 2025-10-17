@@ -9,6 +9,7 @@ export const config = {
   postgresUser: process.env.POSTGRES_USER || "csheet_user",
   postgresPassword: process.env.POSTGRES_PASSWORD || "csheet_pass",
   postgresDb: process.env.POSTGRES_DB || "csheet_dev",
+  postgresDbTest: process.env.POSTGRES_DB_TEST || "csheet_test",
   cookieSecret: process.env.COOKIE_SECRET || "your-secret-key-should-be-in-env",
 } as const
 

@@ -34,7 +34,7 @@ import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
-import { findByUserId, nameExistsForUser } from "@src/db/characters"
+import { findByUserId } from "@src/db/characters"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { setFlashMsg } from "@src/middleware/flash"
@@ -46,7 +46,7 @@ import {
 } from "@src/services/addLevel"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
-import { type CreateCharacterApi, createCharacter } from "@src/services/createCharacter"
+import { createCharacter } from "@src/services/createCharacter"
 import { learnSpell } from "@src/services/learnSpell"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
@@ -80,47 +80,19 @@ characterRoutes.get("/characters/new", (c) => {
   return c.render(<CharacterNew />, { title: "New Character" })
 })
 
-characterRoutes.post("/characters/new/check", async (c) => {
-  const user = c.var.user!
-
-  const body = (await c.req.parseBody()) as Record<string, string>
-  const values = body
-  const errors: Record<string, string> = {}
-
-  // Validate name if provided
-  if (values.name) {
-    if (values.name.trim().length === 0) {
-      errors.name = "Character name is required"
-    } else {
-      const exists = await nameExistsForUser(getDb(c), user.id, values.name)
-      if (exists) {
-        errors.name = "You already have a character with this name"
-      }
-    }
-  }
-
-  return c.html(
-    <CharacterNew values={values} errors={Object.keys(errors).length > 0 ? errors : undefined} />
-  )
-})
-
 characterRoutes.post("/characters/new", async (c) => {
   const user = c.var.user!
+  const body = (await c.req.parseBody()) as Record<string, string>
 
-  const body = (await c.req.parseBody()) as CreateCharacterApi
-  const values = { ...body, user_id: user.id }
+  const result = await createCharacter(getDb(c), { ...body, user_id: user.id })
 
-  try {
-    const character = await createCharacter(getDb(c), values as CreateCharacterApi)
-    await setFlashMsg(c, "Character created successfully!", "success")
-    c.header("HX-Redirect", `/characters/${character.id}`)
-    return c.body(null, 204)
-  } catch (error) {
-    console.error("creating character", error)
-    const errorMsg = error instanceof Error ? error.message : "Failed to create character"
-    await setFlashMsg(c, errorMsg, "error")
-    return c.html(<CharacterNew values={values as Record<string, string>} />)
+  if (!result.complete) {
+    return c.html(<CharacterNew values={result.values} errors={result.errors} />)
   }
+
+  await setFlashMsg(c, "Character created successfully!", "success")
+  c.header("HX-Redirect", `/characters/${result.character.id}`)
+  return c.body(null, 204)
 })
 
 characterRoutes.get("/characters/:id", async (c) => {

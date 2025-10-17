@@ -87,7 +87,7 @@ export async function computeCharacter(
   const proficiencyBonus = Math.floor((totalLevel - 1) / 4) + 2
 
   const ruleset = getRuleset(character.ruleset)
-  const species = ruleset.species.find((r) => r.name === character.race)!
+  const species = ruleset.species.find((r) => r.name === character.species)!
 
   // Calculate modifier and saving throw for each ability
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
@@ -157,6 +157,7 @@ export async function computeCharacter(
 
   // Compute current HP
   const currentHP = maxHitPoints + hpDelta
+  console.dir({ conModifier, hpDelta, maxHitPoints, currentHP })
 
   // Compute available hit dice by applying uses and restores
   const availableHitDice = [...hitDice]

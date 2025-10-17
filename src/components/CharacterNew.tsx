@@ -1,14 +1,8 @@
 import { Select } from "@src/components/ui/Select"
 import { ClassNames, type ClassNameType } from "@src/lib/dnd"
-import srd51 from "@src/lib/dnd/srd51"
+import { getRuleset, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"
-
-// For now, default to srd51 ruleset
-// TODO: Add ruleset selector
-const ruleset = srd51
-const speciesNames = ruleset.species.map((s) => s.name)
-const backgroundNames = Object.keys(ruleset.backgrounds)
 
 export interface CharacterNewProps {
   values?: Record<string, string>
@@ -16,7 +10,28 @@ export interface CharacterNewProps {
 }
 
 export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
+  // Get ruleset based on selection, default to first ruleset
+  const rulesetId = (values?.ruleset as RulesetId) || RULESETS[0]!.id
+  const ruleset = getRuleset(rulesetId)
+  const speciesNames = ruleset.species.map((s) => s.name)
+  const backgroundNames = Object.keys(ruleset.backgrounds)
+
   const fields = [
+    <div class="mb-3">
+      <label for="ruleset" class="form-label">
+        Ruleset
+      </label>
+      <Select
+        name="ruleset"
+        id="ruleset"
+        options={RULESETS.map((r) => ({ value: r.id, label: r.description }))}
+        placeholder="Select a ruleset"
+        required
+        error={errors?.ruleset}
+        value={values?.ruleset || RULESETS[0]!.id}
+      />
+      <div class="form-text">Choose the version of D&D 5e rules to use for this character</div>
+    </div>,
     <div class="mb-3">
       <label for="name" class="form-label">
         Character Name
@@ -33,24 +48,26 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       {errors?.name && <div class="invalid-feedback d-block">{errors.name}</div>}
     </div>,
     <div class="mb-3">
-      <label for="race" class="form-label">
-        Race
+      <label for="species" class="form-label">
+        Species
       </label>
       <Select
-        name="race"
-        id="race"
-        options={speciesNames.map((race) => ({ value: race, label: toTitleCase(race) }))}
+        name="species"
+        id="species"
+        options={speciesNames.map((species) => ({ value: species, label: toTitleCase(species) }))}
         placeholder="Select a species"
         required
-        error={errors?.race}
-        value={values?.race}
+        error={errors?.species}
+        value={values?.species}
       />
     </div>,
   ]
 
-  const selectedSpecies = values?.race ? ruleset.species.find((r) => r.name === values.race) : null
+  const selectedSpecies = values?.species
+    ? ruleset.species.find((r) => r.name === values.species)
+    : null
   const lineages = selectedSpecies?.lineages || []
-  const subracePlh =
+  const lineagePlh =
     lineages.length > 0
       ? "Select a lineage"
       : selectedSpecies
@@ -58,20 +75,20 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         : "Select a species first"
   fields.push(
     <div class="mb-3">
-      <label for="subrace" class="form-label">
+      <label for="lineage" class="form-label">
         Lineage
       </label>
       <Select
-        name="subrace"
-        id="subrace"
+        name="lineage"
+        id="lineage"
         options={lineages.map((lineage) => ({
           value: lineage.name,
           label: toTitleCase(lineage.name),
         }))}
-        placeholder={subracePlh}
+        placeholder={lineagePlh}
         required
-        error={errors?.subrace}
-        value={values?.subrace}
+        error={errors?.lineage}
+        value={values?.lineage}
         disabled={lineages.length === 0}
       />
     </div>
@@ -173,7 +190,8 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
             <div class="card-body">
               <h1 class="card-title mb-4">Create New Character</h1>
               <form
-                hx-post="/characters/new/check"
+                hx-post="/characters/new"
+                hx-vals='{"is_check": "true"}'
                 hx-trigger="change delay:300ms"
                 hx-target="#character-new"
                 hx-swap="outerHTML"
@@ -183,7 +201,12 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
                 {fields.map((field) => field)}
 
                 <div class="d-flex gap-2">
-                  <button type="submit" hx-post="/characters/new" class="btn btn-primary">
+                  <button
+                    type="submit"
+                    hx-post="/characters/new"
+                    hx-vals='{"is_check": "false"}'
+                    class="btn btn-primary"
+                  >
                     Create Character
                   </button>
                   <a href="/characters" class="btn btn-secondary">

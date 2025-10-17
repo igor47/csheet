@@ -82,7 +82,10 @@ export interface Trait {
 
 export interface Lineage {
   name: string
+
+  // in SRD 5.1, some lineages get an ability score increase
   abilityScoreModifiers?: AbilityScoreModifiers
+
   traits?: Trait[]
 }
 
@@ -90,8 +93,10 @@ export interface Species {
   name: string
   size: SizeType
   speed: number
+
+  // in SRD 5.1, some species get an ability score increase
   abilityScoreModifiers?: AbilityScoreModifiers
-  skillProficiencies?: SkillType[]
+
   lineages?: Lineage[]
   variants?: Lineage[]
   traits?: Trait[]
@@ -177,6 +182,8 @@ export interface ClassDef {
 export type SlotProgression = { level: number; slots: number[] }[]
 
 export interface Ruleset {
+  id: string
+  description: string
   species: Species[]
   classes: Record<ClassNameType, ClassDef>
   backgrounds: Record<string, Background>

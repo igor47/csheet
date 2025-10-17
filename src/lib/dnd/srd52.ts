@@ -10,6 +10,9 @@ import type {
   SpellSlotsType,
 } from "../dnd"
 
+export const SRD52_ID = "srd52" as const
+export const SRD52_DESCRIPTION = "D&D 5e (2024)"
+
 const SpeciesData: Species[] = [
   {
     name: "dragonborn",
@@ -2676,6 +2679,8 @@ function slotsFromProgression(progression: number[]): SpellSlotsType {
 }
 
 const srd52: Ruleset = {
+  id: SRD52_ID,
+  description: SRD52_DESCRIPTION,
   species: SpeciesData,
   classes: Classes,
   backgrounds: Backgrounds,

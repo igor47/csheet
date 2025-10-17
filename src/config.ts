@@ -1,10 +1,14 @@
-import { dirname, join } from "node:path"
+import { dirname } from "node:path"
 
 const repoRoot = dirname(import.meta.dir)
 
 export const config = {
   repoRoot,
-  sqliteDbPath: process.env.SQLITE_DB_PATH || join(repoRoot, "database.db"),
+  postgresHost: process.env.POSTGRES_HOST || "localhost",
+  postgresPort: process.env.POSTGRES_PORT || "5432",
+  postgresUser: process.env.POSTGRES_USER || "csheet_user",
+  postgresPassword: process.env.POSTGRES_PASSWORD || "csheet_pass",
+  postgresDb: process.env.POSTGRES_DB || "csheet_dev",
   cookieSecret: process.env.COOKIE_SECRET || "your-secret-key-should-be-in-env",
 } as const
 

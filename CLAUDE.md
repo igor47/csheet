@@ -134,15 +134,53 @@ The Navbar (`src/components/ui/Navbar.tsx`):
 
 ## Database
 
-- Using `bun:sqlite` for SQLite database
-- Models defined in `src/db/` (e.g., `users.ts`)
-- Database helpers: `findById`, `findByEmail`, `create`, etc.
+This project uses **PostgreSQL 16** running in Docker.
+
+### Setup
+
+1. Start the database: `mise run db:up`
+2. Run migrations: `mise run db:upgrade`
+3. Start dev server: `mise run dev` (automatically starts database)
+
+### Environment Variables
+
+Configure PostgreSQL connection in `.env` (optional, defaults provided):
+
+```env
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=csheet_user
+POSTGRES_PASSWORD=csheet_pass
+POSTGRES_DB=csheet_dev
+```
+
+### Database Tasks
+
+- `mise run db:up` - Start PostgreSQL container
+- `mise run db:down` - Stop PostgreSQL container
+- `mise run db:upgrade` - Run migrations (common task)
+- `mise run dbmate <command>` - Run specific dbmate commands (new, rollback, status, dump, etc.)
+- `mise run db:psql` - Open PostgreSQL shell
+- `mise run db:logs` - View PostgreSQL container logs
+
+### Migrations
+
+- Migrations are in `migrations/` directory
+- Managed by [dbmate](https://github.com/amacneil/dbmate)
+- Schema file auto-generated at `db/schema.sql`
+- Create new migration: `mise run dbmate new migration_name`
+
+### Database Layer
+
+- Using `Bun.sql` (native PostgreSQL client)
+- Models defined in `src/db/` (e.g., `users.ts`, `characters.ts`)
+- All models export functions like `findById`, `findByEmail`, `create`, etc.
+- Database instance exported from `src/db.ts`
 
 ## APIs
 
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
+- `Bun.sql` for PostgreSQL (native client). Don't use `pg` or `postgres.js`.
 - `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
 - `WebSocket` is built-in. Don't use `ws`.
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
 - Bun.$`ls` instead of execa.

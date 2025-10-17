@@ -1,8 +1,7 @@
-import { join } from "node:path"
 import { SQL } from "bun"
 import { config } from "./config"
 
-export const db = new SQL(`sqlite:${config.sqliteDbPath}`)
+// Construct PostgreSQL connection URL
+const connectionUrl = `postgres://${config.postgresUser}:${config.postgresPassword}@${config.postgresHost}:${config.postgresPort}/${config.postgresDb}`
 
-// Execute initialization PRAGMAs
-await db.file(join(config.repoRoot, "db/init.sql"))
+export const db = new SQL(connectionUrl)

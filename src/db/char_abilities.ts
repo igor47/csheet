@@ -33,7 +33,7 @@ export async function create(db: SQL, charAbility: CreateCharAbility): Promise<C
       ${charAbility.character_id},
       ${charAbility.ability},
       ${charAbility.score},
-      ${charAbility.proficiency ? 1 : 0},
+      ${charAbility.proficiency},
       ${charAbility.note},
       CURRENT_TIMESTAMP
     )
@@ -43,7 +43,6 @@ export async function create(db: SQL, charAbility: CreateCharAbility): Promise<C
   const row = result[0]
   return CharAbilitySchema.parse({
     ...row,
-    proficiency: Boolean(row.proficiency),
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   })
@@ -59,7 +58,6 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   return result.map((row: any) =>
     CharAbilitySchema.parse({
       ...row,
-      proficiency: Boolean(row.proficiency),
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),
     })
@@ -94,7 +92,7 @@ export async function currentByCharacterId(
     (acc: Record<AbilityType, CurrentAbility>, row: any) => {
       acc[row.ability as AbilityType] = {
         score: row.score,
-        proficient: Boolean(row.proficiency),
+        proficient: row.proficiency,
       }
       return acc
     },

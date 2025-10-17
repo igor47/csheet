@@ -1,21 +1,28 @@
 -- migrate:up
 CREATE TABLE users (
-    id TEXT PRIMARY KEY CHECK(length(id) = 26),
+    id VARCHAR(26) PRIMARY KEY,
     email TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE UNIQUE INDEX idx_users_email ON users(email);
 
-CREATE TRIGGER users_updated_at
-AFTER UPDATE ON users
-FOR EACH ROW
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
 BEGIN
-    UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
 END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 -- migrate:down
-DROP TRIGGER IF EXISTS users_updated_at;
+DROP TRIGGER IF EXISTS users_updated_at ON users;
+DROP FUNCTION IF EXISTS update_updated_at_column();
 DROP INDEX IF EXISTS idx_users_email;
 DROP TABLE IF EXISTS users;

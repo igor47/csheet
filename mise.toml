@@ -11,6 +11,7 @@ PORT = "3000"
 [tasks.dev]
 run = "bun run --watch main.ts"
 description = "Start development server with hot reload"
+depends = ["db:up"]
 
 [tasks.start]
 run = "bun run main.tsx"
@@ -20,20 +21,53 @@ description = "Start production server"
 run = "bun install"
 description = "Install dependencies"
 
+[tasks."db:up"]
+run = "docker compose up -d"
+description = "Start PostgreSQL database in Docker"
+
+[tasks."db:down"]
+run = "docker compose down"
+description = "Stop PostgreSQL database"
+
+[tasks."db:upgrade"]
+run = """
+  CONFIG=$(bun src/config.ts)
+  PG_HOST=$(echo "$CONFIG" | jq -r '.postgresHost')
+  PG_PORT=$(echo "$CONFIG" | jq -r '.postgresPort')
+  PG_USER=$(echo "$CONFIG" | jq -r '.postgresUser')
+  PG_PASSWORD=$(echo "$CONFIG" | jq -r '.postgresPassword')
+  PG_DB=$(echo "$CONFIG" | jq -r '.postgresDb')
+  DATABASE_URL="postgres://$PG_USER:$PG_PASSWORD@$PG_HOST:$PG_PORT/$PG_DB?sslmode=disable" DBMATE_MIGRATIONS_DIR="./migrations" DBMATE_SCHEMA_FILE="./db/schema.sql" dbmate migrate
+"""
+description = "Run database migrations (common task)"
+
 [tasks.dbmate]
 run = """
-  DB_PATH=$(bun src/config.ts | jq -r '.sqliteDbPath')
-  echo "Using database path: $DB_PATH"
-  DATABASE_URL="sqlite:$DB_PATH" DBMATE_MIGRATIONS_DIR="./migrations" dbmate "$@"
+  CONFIG=$(bun src/config.ts)
+  PG_HOST=$(echo "$CONFIG" | jq -r '.postgresHost')
+  PG_PORT=$(echo "$CONFIG" | jq -r '.postgresPort')
+  PG_USER=$(echo "$CONFIG" | jq -r '.postgresUser')
+  PG_PASSWORD=$(echo "$CONFIG" | jq -r '.postgresPassword')
+  PG_DB=$(echo "$CONFIG" | jq -r '.postgresDb')
+  DATABASE_URL="postgres://$PG_USER:$PG_PASSWORD@$PG_HOST:$PG_PORT/$PG_DB?sslmode=disable" DBMATE_MIGRATIONS_DIR="./migrations" DBMATE_SCHEMA_FILE="./db/schema.sql" dbmate "$@"
 """
-description = "Run dbmate with configured database path"
+description = "Run dbmate commands (new, rollback, status, dump, etc.)"
 
-[tasks.db]
+[tasks."db:psql"]
 run = """
-  DB_PATH=$(bun src/config.ts | jq -r '.sqliteDbPath')
-  sqlite3 "$DB_PATH" -init db/init.sql
+  CONFIG=$(bun src/config.ts)
+  PG_HOST=$(echo "$CONFIG" | jq -r '.postgresHost')
+  PG_PORT=$(echo "$CONFIG" | jq -r '.postgresPort')
+  PG_USER=$(echo "$CONFIG" | jq -r '.postgresUser')
+  PG_PASSWORD=$(echo "$CONFIG" | jq -r '.postgresPassword')
+  PG_DB=$(echo "$CONFIG" | jq -r '.postgresDb')
+  PGPASSWORD="$PG_PASSWORD" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB"
 """
-description = "Open SQLite shell for the database"
+description = "Open PostgreSQL shell"
+
+[tasks."db:logs"]
+run = "docker compose logs -f postgres"
+description = "View PostgreSQL container logs"
 
 [tasks.check]
 run = """

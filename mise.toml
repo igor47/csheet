@@ -22,7 +22,7 @@ run = "bun install"
 description = "Install dependencies"
 
 [tasks."db:up"]
-run = "docker compose up -d"
+run = "docker compose up --detach --wait"
 description = "Start PostgreSQL database in Docker"
 
 [tasks."db:down"]
@@ -93,9 +93,10 @@ run = """
   PG_HOST=$(echo "$CONFIG" | jq -r '.postgresHost')
   PG_PORT=$(echo "$CONFIG" | jq -r '.postgresPort')
   PG_USER=$(echo "$CONFIG" | jq -r '.postgresUser')
-  PG_PASSWORD=$(echo "$CONFIG" | jq -r '.postgresPassword')
   PG_DB_TEST=$(echo "$CONFIG" | jq -r '.postgresDbTest')
-  PGPASSWORD="$PG_PASSWORD" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$PG_DB_TEST'" | grep -q 1 || PGPASSWORD="$PG_PASSWORD" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d postgres -c "CREATE DATABASE $PG_DB_TEST"
+  export PGPASSWORD=$(echo "$CONFIG" | jq -r '.postgresPassword')
+  PSQL_CMD="psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d postgres"
+  $PSQL_CMD -tc "SELECT 1 FROM pg_database WHERE datname = '$PG_DB_TEST'" | grep -q 1 || $PSQL_CMD -c "CREATE DATABASE $PG_DB_TEST"
 """
 description = "Create test database if it doesn't exist"
 depends = ["db:up"]

@@ -1,5 +1,5 @@
 import { Login } from "@src/components/Login"
-import { db } from "@src/db"
+import { getDb } from "@src/db"
 import { create, findByEmail } from "@src/db/users"
 import { clearAuthCookie, setAuthCookie } from "@src/middleware/auth"
 import { setFlashMsg } from "@src/middleware/flash"
@@ -25,10 +25,10 @@ authRoutes.post("/login", async (c) => {
     return c.text("Invalid email", 400)
   }
 
-  let user = await findByEmail(db, email)
+  let user = await findByEmail(getDb(c), email)
 
   if (!user) {
-    user = await create(db, email)
+    user = await create(getDb(c), email)
     await setFlashMsg(c, "Account created. You are now logged in.", "info")
   } else {
     await setFlashMsg(c, "Logged in successfully.", "success")

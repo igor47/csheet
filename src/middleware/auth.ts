@@ -1,14 +1,16 @@
+import type { SQL } from "bun"
 import type { Context } from "hono"
-import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie"
+import { deleteCookie, generateSignedCookie, getSignedCookie } from "hono/cookie"
 import { createMiddleware } from "hono/factory"
 import { config } from "../config"
-import { db } from "../db"
+import { getDb } from "../db"
 import type { User } from "../db/users"
 import { findById } from "../db/users"
 import { setFlashMsg } from "./flash"
 
 export interface AuthVariables {
   user?: User
+  db?: SQL
 }
 
 const AUTH_COOKIE_NAME = "user_id" as const
@@ -22,7 +24,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
   }
 
   try {
-    const user = await findById(db, userId)
+    const user = await findById(getDb(c), userId)
     if (user && user.id === userId) {
       c.set("user", user)
     }
@@ -33,14 +35,19 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
   await next()
 })
 
-export async function setAuthCookie(c: Context, userId: string) {
-  await setSignedCookie(c, AUTH_COOKIE_NAME, userId, config.cookieSecret, {
+export async function genAuthCookieValue(userId: string): Promise<string> {
+  return await generateSignedCookie(AUTH_COOKIE_NAME, userId, config.cookieSecret, {
     httpOnly: true,
     sameSite: "Strict",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
     secure: process.env.NODE_ENV === "production",
   })
+}
+
+export async function setAuthCookie(c: Context, userId: string) {
+  const cookieValue = await genAuthCookieValue(userId)
+  c.res.headers.append("Set-Cookie", cookieValue)
 }
 
 export function clearAuthCookie(c: Context) {

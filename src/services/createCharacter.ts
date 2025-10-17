@@ -1,4 +1,3 @@
-import { db } from "@src/db"
 import { create as createAbilityDb } from "@src/db/char_abilities"
 import { create as createClassLevelDb } from "@src/db/char_levels"
 import { create as createSkillDb } from "@src/db/char_skills"
@@ -10,6 +9,7 @@ import {
   type Ruleset,
   type SkillType,
 } from "@src/lib/dnd"
+import type { SQL } from "bun"
 import { z } from "zod"
 
 /**
@@ -118,7 +118,7 @@ function calculateInitialAbilityScores(
  * Create a new character
  * Handles validation and business logic before persisting to the database
  */
-export async function createCharacter(data: CreateCharacterApi): Promise<Character> {
+export async function createCharacter(db: SQL, data: CreateCharacterApi): Promise<Character> {
   // Get the ruleset for validation and data lookup
   const ruleset = getRuleset(data.ruleset)
 

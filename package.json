@@ -5,7 +5,10 @@
   "private": true,
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",
-    "@types/bun": "latest"
+    "@faker-js/faker": "^10.1.0",
+    "@types/bun": "latest",
+    "fishery": "^2.3.1",
+    "linkedom": "^0.18.12"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"

@@ -185,15 +185,208 @@ POSTGRES_DB=csheet_dev
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
 - Bun.$`ls` instead of execa.
 
+## Code Quality
+
+This project uses **Biome** for linting and formatting:
+
+```bash
+# Run checks (linting, formatting, and TypeScript)
+mise run check
+
+# Auto-fix linting and formatting issues
+mise run check-fix
+```
+
+Biome is configured in `biome.json` and runs automatically on save in most editors.
+
 ## Testing
 
-Use `bun test` to run tests.
+Use **Bun's built-in test runner** for all tests. Run via `mise run test` to ensure the test database is properly configured.
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+```bash
+# Run all tests
+mise run test
 
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+# Run specific test file
+mise run test src/routes/character.test.ts
+
+# Run tests matching a pattern
+mise run test --test-name-pattern "when user is authenticated"
 ```
-- i don't like * imports, please import what you need only
+
+### Test Philosophy
+
+- Write **integration tests**, not unit tests
+- Test through HTTP requests to the full application stack
+- Use **RSpec-style nested describe blocks** with fixtures
+- Each test should be readable as a specification
+
+### Test Infrastructure
+
+#### useTestApp()
+
+The `useTestApp()` helper (from `@src/test/app`) sets up test isolation:
+
+```typescript
+import { useTestApp } from "@src/test/app"
+
+describe("GET /characters", () => {
+  const testCtx = useTestApp()  // Don't destructure!
+
+  test("example", async () => {
+    // Access via testCtx.app and testCtx.db
+    const response = await makeRequest(testCtx.app, "/path")
+  })
+})
+```
+
+**How it works:**
+- Creates a fresh app instance for each test
+- Reserves a database connection and starts a transaction with `BEGIN`
+- Injects the test database into the app via `createApp(db)`
+- Automatically rolls back the transaction after each test
+- Ensures clean database state between tests
+
+**Important:** Use `const testCtx = useTestApp()` and access via `testCtx.app` / `testCtx.db`. Don't destructure `const { app, db } = useTestApp()` as values are set in `beforeEach`.
+
+#### Database Fixtures with Factories
+
+Use [fishery](https://github.com/thoughtbot/fishery) factories to create test data:
+
+```typescript
+import { userFactory } from "@src/test/factories/user"
+import { characterFactory } from "@src/test/factories/character"
+
+describe("with a character", () => {
+  let user: User
+  let character: Character
+
+  beforeEach(async () => {
+    user = await userFactory.create({}, testCtx.db)
+    character = await characterFactory.create(
+      { user_id: user.id, name: "Custom Name" },
+      testCtx.db
+    )
+  })
+
+  test("displays the character", async () => {
+    // character is available in this scope
+  })
+})
+```
+
+Factories live in `src/test/factories/` and use [@faker-js/faker](https://fakerjs.dev/) for realistic data.
+
+#### HTTP Test Helpers
+
+Use helpers from `@src/test/http` for making requests and parsing responses:
+
+```typescript
+import { makeRequest, parseHtml, expectElement } from "@src/test/http"
+
+test("renders login page", async () => {
+  // Make request (optionally with authenticated user)
+  const response = await makeRequest(testCtx.app, "/login", { user })
+
+  // Parse HTML response
+  const document = await parseHtml(response)
+
+  // Assert elements exist
+  const title = expectElement(document, "title")
+  expect(title.textContent).toContain("Login")
+})
+```
+
+**makeRequest options:**
+- `user?: User` - Automatically creates signed auth cookie
+- `method?: string` - HTTP method (default: GET)
+- `headers?: Record<string, string>` - Custom headers
+- `body?: string | FormData` - Request body
+- `cookies?: string[]` - Additional cookies
+
+**HTML helpers:**
+- `parseHtml(response)` - Parse response into DOM Document
+- `expectElement(document, selector)` - Assert element exists and return it
+- `getElementText(document, selector)` - Get element text content
+- `elementExists(document, selector)` - Check if element exists
+- `getElements(document, selector)` - Get all matching elements
+
+### Test Structure Example
+
+```typescript
+import { describe, test, expect, beforeEach } from "bun:test"
+import { useTestApp } from "@src/test/app"
+import { userFactory } from "@src/test/factories/user"
+import { characterFactory } from "@src/test/factories/character"
+import { makeRequest, parseHtml, expectElement } from "@src/test/http"
+import type { User } from "@src/db/users"
+import type { Character } from "@src/db/characters"
+
+describe("GET /characters", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is not authenticated", () => {
+    test("redirects to login page", async () => {
+      const response = await makeRequest(testCtx.app, "/characters")
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toContain("/login")
+    })
+  })
+
+  describe("when user is authenticated", () => {
+    let user: User
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+    })
+
+    describe("with no characters", () => {
+      test("redirects to /characters/new", async () => {
+        const response = await makeRequest(testCtx.app, "/characters", { user })
+
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe("/characters/new")
+      })
+    })
+
+    describe("with a character", () => {
+      let character: Character
+
+      beforeEach(async () => {
+        character = await characterFactory.create({ user_id: user.id }, testCtx.db)
+      })
+
+      test("displays the character name", async () => {
+        const response = await makeRequest(testCtx.app, "/characters", { user })
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain(character.name)
+      })
+    })
+  })
+})
+```
+
+### Test Database
+
+Tests use a separate `csheet_test` database on the same PostgreSQL instance. The `mise run test` task:
+
+1. Automatically sets `POSTGRES_DB=csheet_test` environment variable
+2. Creates the test database if it doesn't exist
+3. Runs migrations on the test database
+4. Executes tests with proper database connection
+
+Each test runs inside a PostgreSQL transaction that rolls back after completion, ensuring isolation.
+
+### Guidelines
+
+- **Don't use `*` imports** - Import only what you need
+- **Use nested describe blocks** - Organize tests by behavior and context
+- **Use beforeEach for fixtures** - Set up data in the appropriate scope
+- **Test behavior, not implementation** - Focus on what the user sees
+- **Prefer full integration tests** - Test through HTTP, not individual functions
+- **Make tests readable** - Tests should read like specifications
+
+See `src/routes/character.test.ts` for a comprehensive example.

@@ -52,14 +52,15 @@ This project uses `mise run` for all common tasks:
 | `mise run dev` | Start development server with hot reload |
 | `mise run start` | Start production server |
 | `mise run install` | Install dependencies with bun |
+| `mise run test` | Run all tests with test database |
 | `mise run dbmate <command>` | Run dbmate commands (see Database section) |
-| `mise run db` | Open SQLite shell for the database |
+| `mise run db:psql` | Open PostgreSQL shell for the database |
 | `mise run check` | Run Biome linting/formatting checks and TypeScript validation |
 | `mise run check-fix` | Auto-fix linting/formatting issues and check types |
 
 ## Database
 
-CSheet uses **SQLite** for data storage with **dbmate** for schema migrations.
+CSheet uses **PostgreSQL 16** for data storage with **dbmate** for schema migrations.
 
 ### Migrations
 
@@ -69,7 +70,7 @@ Common dbmate commands:
 
 ```bash
 # Apply all pending migrations
-mise run dbmate up
+mise run db:upgrade
 
 # Create a new migration
 mise run dbmate new create_something
@@ -80,6 +81,18 @@ mise run dbmate down
 # Show migration status
 mise run dbmate status
 ```
+
+### Test Database
+
+Tests use a separate `csheet_test` database on the same PostgreSQL instance.
+
+The test database is automatically created and migrated when you run:
+
+```bash
+mise run test
+```
+
+Each test runs inside a PostgreSQL transaction that is rolled back after the test completes, ensuring a clean database state between tests.
 
 ### Database Schema
 
@@ -97,10 +110,10 @@ The database includes tables for:
 
 ### Database Shell
 
-Open an interactive SQLite shell:
+Open an interactive PostgreSQL shell:
 
 ```bash
-mise run db
+mise run db:psql
 ```
 
 ## Architecture
@@ -202,6 +215,63 @@ Each character is associated with a ruleset, allowing players to use either the 
 
 ## Development
 
+### Testing
+
+CSheet uses **Bun's built-in test runner** for testing with a comprehensive integration testing setup.
+
+Run all tests:
+
+```bash
+mise run test
+```
+
+Run specific test file:
+
+```bash
+mise run test src/routes/character.test.ts
+```
+
+#### Test Infrastructure
+
+- **Test Database**: Uses separate `csheet_test` database
+- **Transaction Isolation**: Each test runs in a transaction that auto-rolls back
+- **Factory Pattern**: Test fixtures created with [fishery](https://github.com/thoughtbot/fishery) and [@faker-js/faker](https://fakerjs.dev/)
+- **HTML Testing**: Server-rendered HTML validated with [linkedom](https://github.com/WebReflection/linkedom)
+- **Integration Tests**: Full-stack tests through HTTP requests (not unit tests)
+
+#### Writing Tests
+
+Tests use RSpec-style nested describe blocks with fixtures:
+
+```typescript
+import { describe, test, expect, beforeEach } from "bun:test"
+import { useTestApp } from "@src/test/app"
+import { userFactory } from "@src/test/factories/user"
+import { makeRequest, parseHtml, expectElement } from "@src/test/http"
+
+describe("GET /characters", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is authenticated", () => {
+    let user: User
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+    })
+
+    test("displays the character list", async () => {
+      const response = await makeRequest(testCtx.app, "/characters", { user })
+      const document = await parseHtml(response)
+
+      const title = expectElement(document, "title")
+      expect(title.textContent).toContain("My Characters")
+    })
+  })
+})
+```
+
+See `src/routes/character.test.ts` for a complete example.
+
 ### Code Quality
 
 The project uses **Biome** for linting and formatting, and **TypeScript** for type checking.
@@ -226,3 +296,4 @@ See [CLAUDE.md](./CLAUDE.md) for detailed development guidelines including:
 - Component structure
 - Authentication patterns
 - Database conventions
+- Testing patterns

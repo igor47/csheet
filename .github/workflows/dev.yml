@@ -23,3 +23,20 @@ jobs:
 
       - name: Run checks
         run: mise run check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: mise run test

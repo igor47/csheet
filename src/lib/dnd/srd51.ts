@@ -20,7 +20,7 @@ const SpeciesData: Species[] = [
       "Dragonborn look very much like dragons standing erect in humanoid form, though they lack wings or a tail. They are tall and strongly built, often standing close to 6½ feet tall and weighing 300 pounds or more. Their draconic heritage manifests in a variety of traits they share with true dragons.",
     size: "medium",
     speed: 30,
-    traits: [ ],
+    traits: [],
     lineages: [
       {
         name: "black",

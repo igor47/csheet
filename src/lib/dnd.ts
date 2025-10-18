@@ -202,4 +202,60 @@ export interface Ruleset {
   getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType
 }
 
+export type ForWhom =
+  | { species: string; lineage?: string; level?: number }
+  | { background: string, level?: number }
+  | { className: ClassNameType; level?: number; subclass?: string }
+
+export function getTraits(ruleset: Ruleset, forWhom: ForWhom): Trait[] {
+  let traits: Trait[] = []
+
+  // Species + Lineage
+  if ("species" in forWhom) {
+    const species = ruleset.species.find(
+      (s) => s.name.toLowerCase() === forWhom.species.toLowerCase()
+    )
+    if (species) {
+      traits = traits.concat(species.traits || [])
+
+      if (forWhom.lineage) {
+        const lineage = species.lineages?.find(
+          (l) => l.name.toLowerCase() === forWhom.lineage!.toLowerCase()
+        )
+
+        traits = traits.concat(lineage?.traits || [])
+      }
+    }
+  }
+
+  // Background
+  if ("background" in forWhom) {
+    const background = ruleset.backgrounds[forWhom.background.toLowerCase()]
+    traits = background?.traits || []
+  }
+
+  // Class (+ optional level + optional subclass)
+  if ("className" in forWhom) {
+    const classDef = ruleset.classes[forWhom.className]
+    if (classDef) {
+      traits = classDef.traits || []
+
+      if (forWhom.subclass) {
+        const subclass = classDef.subclasses.find(
+          (sc) => sc.name.toLowerCase() === forWhom.subclass!.toLowerCase()
+        )
+
+        traits = traits.concat(subclass?.traits || [])
+      }
+    }
+  }
+
+  const level = forWhom.level
+  if (level) {
+    return traits.filter((t) => !t.level || t.level <= level)
+  } else {
+    return traits
+  }
+}
+
 export { getRuleset } from "./dnd/rulesets"

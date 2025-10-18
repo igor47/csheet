@@ -1,5 +1,5 @@
 import { Select } from "@src/components/ui/Select"
-import { ClassNames, type ClassNameType } from "@src/lib/dnd"
+import { ClassNames, getTraits, type ClassNameType, type Trait } from "@src/lib/dnd"
 import { getRuleset, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"
@@ -9,12 +9,57 @@ export interface CharacterNewProps {
   errors?: Record<string, string>
 }
 
+interface TraitListProps {
+  traits: Trait[]
+  title: string
+}
+
+const TraitList = ({ traits, title }: TraitListProps) => {
+  if (traits.length === 0) {
+    return null
+  }
+
+  return (
+    <div class="alert alert-light mx-1 mt-1">
+      <h6 class="mb-2">{title}</h6>
+      <ul class="list-group">
+        {traits.map((trait) => (
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <h6 class="mb-0">{trait.name}</h6>
+              {trait.level && <span class="badge bg-primary">Level {trait.level}</span>}
+            </div>
+            <p class="mb-0 text-muted">{trait.description}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
   // Get ruleset based on selection, default to first ruleset
   const rulesetId = (values?.ruleset as RulesetId) || RULESETS[0]!.id
   const ruleset = getRuleset(rulesetId)
   const speciesNames = ruleset.species.map((s) => s.name)
   const backgroundNames = Object.keys(ruleset.backgrounds)
+
+  // build separate trait lists for display
+  const speciesTraits: Trait[] =
+    values?.species
+      ? getTraits(ruleset, { species: values.species, lineage: values?.lineage })
+      : []
+  const backgroundTraits: Trait[] =
+    values?.background
+      ? getTraits(ruleset, { background: values.background })
+      : []
+  const classTraits: Trait[] =
+    values?.class
+      ? getTraits(ruleset, {
+          className: values.class as ClassNameType,
+          subclass: values?.subclass,
+        })
+      : []
 
   const fields = [
     <div class="mb-3">
@@ -63,10 +108,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       />
       {values?.species && (
         <div class="alert alert-light mx-1 mt-1">
-          {
-            ruleset.species.find((s) => s.name === values.species)
-              ?.description
-          }
+          {ruleset.species.find((s) => s.name === values.species)?.description}
         </div>
       )}
     </div>,
@@ -105,11 +147,11 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
           {
             ruleset.species
               .find((s) => s.name === values.species)
-              ?.lineages?.find((l) => l.name === values.lineage)
-              ?.description
+              ?.lineages?.find((l) => l.name === values.lineage)?.description
           }
         </div>
       )}
+      <TraitList traits={speciesTraits} title="Species Traits" />
     </div>
   )
 
@@ -129,12 +171,10 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       />
       {values?.background && (
         <div class="alert alert-light mx-1 mt-1">
-          {
-            ruleset.backgrounds[values.background]
-              ?.description
-          }
+          {ruleset.backgrounds[values.background]?.description}
         </div>
       )}
+      <TraitList traits={backgroundTraits} title="Background Traits" />
     </div>
   )
 
@@ -154,10 +194,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       />
       {values?.class && (
         <div class="alert alert-light mx-1 mt-1">
-          {
-            ruleset.classes[values.class as ClassNameType]
-              ?.description
-          }
+          {ruleset.classes[values.class as ClassNameType]?.description}
         </div>
       )}
     </div>
@@ -191,12 +228,13 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
       {values?.class && values?.subclass && (
         <div class="alert alert-light mx-1 mt-1">
           {
-            ruleset.classes[values.class as ClassNameType]
-              ?.subclasses.find((sc) => sc.name === values.subclass)
-              ?.description
+            ruleset.classes[values.class as ClassNameType]?.subclasses.find(
+              (sc) => sc.name === values.subclass
+            )?.description
           }
         </div>
       )}
+      <TraitList traits={classTraits} title="Class Traits" />
     </div>
   )
 

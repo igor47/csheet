@@ -379,11 +379,6 @@ const SpeciesData: Species[] = [
     speed: 35,
     traits: [
       {
-        name: "Giant Ancestry",
-        description:
-          "You are descended from Giants. Choose one of the following benefits—a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest: Cloud's Jaunt (Cloud Giant) - As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see. Fire's Burn (Fire Giant) - When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target. Frost's Chill (Frost Giant) - When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn. Hill's Tumble (Hill Giant) - When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition. Stone's Endurance (Stone Giant) - When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total. Storm's Thunder (Storm Giant) - When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature.",
-      },
-      {
         name: "Large Form",
         description:
           "You can change your size to Large as a Bonus Action if you're in a big enough space. This transformation lasts for 10 minutes or until you end it (no action required). For that duration, you have Advantage on Strength checks, and your Speed increases by 10 feet. Once you use this trait, you can't use it again until you finish a Long Rest.",
@@ -393,6 +388,73 @@ const SpeciesData: Species[] = [
         name: "Powerful Build",
         description:
           "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity.",
+      },
+    ],
+    lineages: [
+      {
+        name: "cloud giant",
+        description:
+          "Your giant ancestry is tied to the Cloud Giants, granting you abilities associated with air and flight.",
+        traits: [
+        {
+          name: "Cloud's Jaunt",
+          description:
+            "As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+        },
+                ],
+      },
+      {
+        name: "fire giant",
+        description:
+          "Your giant ancestry is tied to the Fire Giants, granting you abilities associated with fire and heat.",
+        traits: [
+        {
+          name: "fire's burn",
+          description: "When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 fire damage to that target. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+          },
+          ],
+      },
+      {
+        name: "frost giant",
+        description:
+          "Your giant ancestry is tied to the Frost Giants, granting you abilities associated with cold and ice.",
+        traits: [
+          {
+            name: "frost's chill",
+            description:
+              "When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 cold damage to that target and reduce its Speed by 10 feet until the start of your next turn. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+          },
+        ],
+      },
+      {
+        name: "hill giant",
+        description: "Your giant ancestry is tied to the Hill Giants, granting you abilities associated with strength and endurance.",
+        traits: [
+          {
+            name: "hill's tumble",
+            description: "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+          },
+        ],
+      },
+      {
+        name: "stone giant",
+        description: "Your giant ancestry is tied to the Stone Giants, granting you abilities associated with earth and resilience.",
+        traits: [
+          {
+            name: "stone's endurance",
+            description: "When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+          },
+        ]
+      },
+      {
+        name: "storm giant",
+        description: "Your giant ancestry is tied to the Storm Giants, granting you abilities associated with storms and thunder.",
+        traits: [
+          {
+            name: "storm’s thunder",
+            description: "When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+          }
+        ],
       },
     ],
   },
@@ -489,6 +551,89 @@ const SpeciesData: Species[] = [
         name: "Otherworldly Presence",
         description:
           "You know the Thaumaturgy cantrip. When you cast it with this trait, the spell uses the same spellcasting ability you use for your Fiendish Legacy trait.",
+      },
+    ],
+    lineages: [
+      {
+        name: "abyssal",
+        description:
+          "Your infernal heritage is tainted by the chaotic energies of the Abyss. You have a connection to demonic forces and can tap into their power.",
+        traits: [
+          {
+            name: "Resistance to Poison",
+            description: "You have Resistance to Poison damage.",
+          },
+          {
+            name: "Poison Spray",
+            description: "You learn the Poison Spray cantrip. Intelligence, Wisdom, or Charisma is your spellcasting ability for this cantrip (choose when you select this lineage).",
+          },
+          {
+            name: "Ray of Sickness",
+            description:
+            "You learn the Ray of Sickness spell and always have it prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level. Your spellcasting ability for this spell is the same one you choose for your Fiendish Legacy trait.",
+            level: 3,
+          },
+          {
+            name: "Hold Person",
+            description:
+            "You learn the Hold Person spell and always have it prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+            level: 5,
+          },
+        ],
+      },
+      {
+        name: "chthonic",
+        description:
+          "Your infernal heritage is influenced by the dark powers of the underworld. You have a connection to shadowy forces and can tap into their power.",
+        traits: [
+          {
+            name: "Resistance to Necrotic",
+            description: "You have Resistance to Necrotic damage.",
+          },
+          {
+            name: "Chill Touch",
+            description: "You learn the Chill Touch cantrip. Intelligence, Wisdom, or Charisma is your spellcasting ability for this cantrip (choose when you select this lineage).",
+          },
+          {
+            name: "False Life",
+            description:
+            "You learn the False Life spell and always have it prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level. Your spellcasting ability for this spell is the same one you choose for your Fiendish Legacy trait.",
+            level: 3,
+          },
+          {
+            name: "Ray of Enfeeblement",
+            description:
+            "You learn the Ray of Enfeeblement spell and always have it prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+            level: 5,
+          },
+        ],
+      },
+      {
+        name: "infernal",
+        description:
+          "Your infernal heritage is closely tied to the Nine Hells. You have a connection to devilish forces and can tap into their power.",
+        traits: [
+          {
+            name: "Resistance to Fire",
+            description: "You have Resistance to Fire damage.",
+          },
+          {
+            name: "Fire Bolt",
+            description: "You know the Fire Bolt cantrip. Intelligence, Wisdom, or Charisma is your spellcasting ability for this cantrip (choose when you select this lineage).",
+          },
+          {
+            name: "Hellish Rebuke",
+            description:
+            "You learn the Hellish Rebuke spell and always have it prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level. Your spellcasting ability for this spell is the same one you choose for your Fiendish Legacy trait.",
+            level: 3,
+          },
+          {
+            name: "Darkness",
+            description:
+            "You learn the Darkness spell and always have it prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+            level: 5,
+          },
+        ],
       },
     ],
   },

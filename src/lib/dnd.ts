@@ -202,13 +202,18 @@ export interface Ruleset {
   getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType
 }
 
-export type ForWhom =
-  | { species: string; lineage?: string; level?: number }
-  | { background: string, level?: number }
-  | { className: ClassNameType; level?: number; subclass?: string }
+export type ForWhom = {level?: number | null} &
+(
+  | { species: string; lineage?: string | null; }
+  | { background: string }
+  | { className: ClassNameType; subclass?: string | null }
+)
 
-export function getTraits(ruleset: Ruleset, forWhom: ForWhom): Trait[] {
-  let traits: Trait[] = []
+type TraitSource = "species" | "lineage" | "background" | "class" | "subclass"
+type TraitWithSource = Trait & { source: TraitSource }
+
+export function getTraits(ruleset: Ruleset, forWhom: ForWhom): TraitWithSource[] {
+  let traits: TraitWithSource[] = []
 
   // Species + Lineage
   if ("species" in forWhom) {
@@ -216,14 +221,14 @@ export function getTraits(ruleset: Ruleset, forWhom: ForWhom): Trait[] {
       (s) => s.name.toLowerCase() === forWhom.species.toLowerCase()
     )
     if (species) {
-      traits = traits.concat(species.traits || [])
+      traits = species.traits?.map((t) => ({ ...t, source: "species" })) || []
 
       if (forWhom.lineage) {
         const lineage = species.lineages?.find(
           (l) => l.name.toLowerCase() === forWhom.lineage!.toLowerCase()
         )
 
-        traits = traits.concat(lineage?.traits || [])
+        traits = traits.concat(lineage?.traits?.map((t) => ({ ...t, source: "lineage" })) || [])
       }
     }
   }
@@ -231,21 +236,21 @@ export function getTraits(ruleset: Ruleset, forWhom: ForWhom): Trait[] {
   // Background
   if ("background" in forWhom) {
     const background = ruleset.backgrounds[forWhom.background.toLowerCase()]
-    traits = background?.traits || []
+    traits = background?.traits?.map((t) => ({ ...t, source: "background" })) || []
   }
 
   // Class (+ optional level + optional subclass)
   if ("className" in forWhom) {
     const classDef = ruleset.classes[forWhom.className]
     if (classDef) {
-      traits = classDef.traits || []
+      traits = classDef.traits?.map((t) => ({ ...t, source: "class" })) || []
 
       if (forWhom.subclass) {
         const subclass = classDef.subclasses.find(
           (sc) => sc.name.toLowerCase() === forWhom.subclass!.toLowerCase()
         )
 
-        traits = traits.concat(subclass?.traits || [])
+        traits = traits.concat(subclass?.traits?.map((t) => ({ ...t, source: "subclass" })) || [])
       }
     }
   }

@@ -1,11 +1,13 @@
 import { create as createAbilityDb } from "@src/db/char_abilities"
 import { create as createClassLevelDb } from "@src/db/char_levels"
 import { create as createSkillDb } from "@src/db/char_skills"
+import { create as createTraitDb } from "@src/db/char_traits"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
 import {
   type AbilityType,
   ClassNames,
   getRuleset,
+  getTraits,
   type Ruleset,
   type SkillType,
 } from "@src/lib/dnd"
@@ -248,6 +250,42 @@ export async function createCharacter(
         proficiency: "proficient",
         note: `Proficiency as ${background?.name}`,
       })
+    }
+
+    // Add traits from species/lineage (only non-level traits at character creation)
+    const speciesTraits = getTraits(ruleset, {
+      species: validated.species,
+      lineage: validated.lineage,
+    })
+    for (const trait of speciesTraits) {
+      if (!trait.level) {
+        const sourceDetail = validated.lineage || validated.species
+        await createTraitDb(tx, {
+          character_id: character.id,
+          name: trait.name,
+          description: trait.description,
+          source: trait.source,
+          source_detail: sourceDetail,
+          level: null,
+          note: null,
+        })
+      }
+    }
+
+    // Add traits from background (only non-level traits at character creation)
+    const backgroundTraits = getTraits(ruleset, { background: validated.background })
+    for (const trait of backgroundTraits) {
+      if (!trait.level) {
+        await createTraitDb(tx, {
+          character_id: character.id,
+          name: trait.name,
+          description: trait.description,
+          source: trait.source,
+          source_detail: validated.background,
+          level: null,
+          note: null,
+        })
+      }
     }
 
     return character

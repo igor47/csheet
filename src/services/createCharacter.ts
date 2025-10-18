@@ -1,7 +1,5 @@
 import { create as createAbilityDb } from "@src/db/char_abilities"
-import { create as createClassLevelDb } from "@src/db/char_levels"
 import { create as createSkillDb } from "@src/db/char_skills"
-import { create as createTraitDb } from "@src/db/char_traits"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import {
@@ -9,7 +7,6 @@ import {
   ClassNamesSchema,
   type ClassNameType,
   getRuleset,
-  getTraits,
   type Ruleset,
   type SkillType,
 } from "@src/lib/dnd"
@@ -17,6 +14,8 @@ import { RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets
 import { OptionalNullStringSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
+import { addLevel } from "./addLevel"
+import { beginOrSavepoint } from "@src/db"
 
 /**
  * Generic Create Character API Schema that works across all rulesets
@@ -192,7 +191,7 @@ export async function createCharacter(
 
   const validated = result.data
 
-  const character = await db.begin(async (tx) => {
+  const character = await beginOrSavepoint(db, async (tx) => {
     // Create the character in the database
     const character = await createCharacterDb(tx, {
       user_id: user.id,
@@ -204,17 +203,8 @@ export async function createCharacter(
       alignment: validated.alignment,
     })
 
-    // set initial level in the class
-    // At first level, characters get the maximum value of their hit die
+    // Get class definition for initial setup
     const classDef = ruleset.classes[validated.class]
-    await createClassLevelDb(tx, {
-      character_id: character.id,
-      class: classDef.name,
-      subclass: validated.subclass,
-      level: 1,
-      hit_die_roll: classDef.hitDie,
-      note: "Starting Level",
-    })
 
     // populate initial ability scores with species/lineage modifiers
     const initialScores = calculateInitialAbilityScores(
@@ -269,40 +259,19 @@ export async function createCharacter(
       })
     }
 
-    // Add traits from species/lineage (only non-level traits at character creation)
-    const speciesTraits = getTraits(ruleset, {
-      species: validated.species,
-      lineage: validated.lineage,
+    // Add the initial level using addLevel service
+    // This will add all traits (species/lineage/background/class/subclass)
+    // At first level, characters get the maximum value of their hit die
+    const levelResult = await addLevel(tx, character, {
+      class: validated.class,
+      subclass: validated.subclass || "",
+      level: "1",
+      hit_die_roll: classDef.hitDie.toString(),
+      note: "Starting Level",
     })
-    for (const trait of speciesTraits) {
-      if (!trait.level) {
-        const sourceDetail = validated.lineage || validated.species
-        await createTraitDb(tx, {
-          character_id: character.id,
-          name: trait.name,
-          description: trait.description,
-          source: trait.source,
-          source_detail: sourceDetail,
-          level: null,
-          note: null,
-        })
-      }
-    }
 
-    // Add traits from background (only non-level traits at character creation)
-    const backgroundTraits = getTraits(ruleset, { background: validated.background })
-    for (const trait of backgroundTraits) {
-      if (!trait.level) {
-        await createTraitDb(tx, {
-          character_id: character.id,
-          name: trait.name,
-          description: trait.description,
-          source: trait.source,
-          source_detail: validated.background,
-          level: null,
-          note: null,
-        })
-      }
+    if (!levelResult.complete) {
+      throw new Error("Failed to add initial level")
     }
 
     return character

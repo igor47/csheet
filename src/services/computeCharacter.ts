@@ -4,6 +4,7 @@ import { getHpDelta } from "@src/db/char_hp"
 import { findByCharacterId as getAllLevels, getCurrentLevels } from "@src/db/char_levels"
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
+import { type CharTrait, findByCharacterId as findTraits } from "@src/db/char_traits"
 import { type Character, findById } from "@src/db/characters"
 import {
   Abilities,
@@ -60,6 +61,7 @@ export interface ComputedCharacter extends Character {
   availableSpellSlots: SpellSlotsType
   pactMagicSlots: SpellSlotsType | null
   spells: SpellInfoForClass[]
+  traits: CharTrait[]
 }
 
 export async function computeCharacter(
@@ -283,6 +285,9 @@ export async function computeCharacter(
     proficiencyBonus
   )
 
+  // Fetch all traits for this character
+  const traits = await findTraits(db, characterId)
+
   const char = {
     ...character,
     classes,
@@ -303,6 +308,7 @@ export async function computeCharacter(
     availableSpellSlots,
     pactMagicSlots,
     spells,
+    traits,
   }
 
   return char

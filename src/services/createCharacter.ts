@@ -1,3 +1,4 @@
+import { beginOrSavepoint } from "@src/db"
 import { create as createAbilityDb } from "@src/db/char_abilities"
 import { create as createSkillDb } from "@src/db/char_skills"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
@@ -15,7 +16,6 @@ import { OptionalNullStringSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 import { addLevel } from "./addLevel"
-import { beginOrSavepoint } from "@src/db"
 
 /**
  * Generic Create Character API Schema that works across all rulesets

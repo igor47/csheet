@@ -7,21 +7,33 @@ import clsx from "clsx"
 
 export interface ClassEditFormProps {
   character: ComputedCharacter
-  values?: Record<string, string>
+  values: Record<string, string>
   errors?: Record<string, string>
 }
 
 export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps) => {
   const ruleset = getRuleset(character.ruleset)
 
+  // if no class selected yet, default to highest level class
+  if (!values.class) {
+    const highestClass = character.classes.reduce((prev, curr) =>
+      curr.level > prev.level ? curr : prev
+    )
+    values = {
+      ...values,
+      class: highestClass.class,
+      level: (highestClass.level + 1).toString(),
+    }
+  }
+
   // Find current level for the selected class
-  const currentClassLevel = values?.class
+  const currentClassLevel = values.class
     ? character.classes.find((cl) => cl.class === values.class) || null
     : null
-  const selectedClass = values?.class ? ruleset.classes[values.class as ClassNameType] : null
+  const selectedClass = values.class ? ruleset.classes[values.class as ClassNameType] : null
   const subclasses = selectedClass?.subclasses || []
 
-  const level = values?.level ? parseInt(values.level, 10) : 1
+  const level = values.level ? parseInt(values.level, 10) : 1
 
   // Check if this class already has levels (continuing) or is new (multiclassing)
   const isFirstLevelInClass = currentClassLevel === null
@@ -48,7 +60,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
   const hitDieReadonly = isFirstLevelInClass
   const hitDieValue = isFirstLevelInClass
     ? hitDieMax.toString()
-    : (values?.hit_die_roll || hitDieAvg).toString()
+    : (values.hit_die_roll || hitDieAvg).toString()
   const hitDieHelpText = isFirstLevelInClass
     ? "First level in this class grants maximum hit die"
     : `Roll D${selectedClass?.hitDie} to determine HP gained (or use the average: ${hitDieAvg})`
@@ -81,7 +93,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
               placeholder="Select a class"
               required
               error={errors?.class}
-              value={values?.class}
+              value={values.class}
             />
           </div>
 
@@ -96,7 +108,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
               })}
               id="level"
               name="level"
-              value={isFirstLevelInClass ? "1" : values?.level || ""}
+              value={isFirstLevelInClass ? "1" : values.level || ""}
               readonly
             />
             <small class="form-text text-muted">
@@ -118,7 +130,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
               }))}
               placeholder={subclassPlh}
               error={errors?.subclass}
-              value={values?.subclass}
+              value={values.subclass}
               disabled={!showSubclass}
               required={showSubclass}
             />
@@ -158,7 +170,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
               name="note"
               rows={2}
               placeholder="Add a note about this level-up..."
-              value={values?.note || ""}
+              value={values.note || ""}
             />
           </div>
 

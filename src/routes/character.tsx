@@ -18,12 +18,15 @@ import { PrepareSpellForm } from "@src/components/PrepareSpellForm"
 import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
+import { TraitsPanel } from "@src/components/panels/TraitsPanel"
 import { SkillEditForm } from "@src/components/SkillEditForm"
 import { SkillHistory } from "@src/components/SkillHistory"
 import { SpellbookHistory } from "@src/components/SpellbookHistory"
 import { SpellCastResult } from "@src/components/SpellCastResult"
 import { SpellSlotsEditForm } from "@src/components/SpellSlotsEditForm"
 import { SpellSlotsHistory } from "@src/components/SpellSlotsHistory"
+import { TraitEditForm } from "@src/components/TraitEditForm"
+import { TraitHistory } from "@src/components/TraitHistory"
 import { ModalContent } from "@src/components/ui/ModalContent"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
@@ -34,10 +37,12 @@ import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
+import { findByCharacterId as findTraits } from "@src/db/char_traits"
 import { findByUserId } from "@src/db/characters"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
 import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
+import { addTrait } from "@src/services/addTrait"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { createCharacter } from "@src/services/createCharacter"
@@ -116,10 +121,11 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
   c.header("HX-Trigger", "closeEditModal")
   return c.html(
     <>
-      <CharacterInfo character={updatedChar} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <SpellsPanel character={updatedChar} swapOob={true} />
+      <TraitsPanel character={updatedChar} swapOob={true} />
     </>
   )
 })
@@ -267,6 +273,50 @@ characterRoutes.post("/characters/:id/edit/spellbook", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
   return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
+})
+
+characterRoutes.get("/characters/:id/edit/trait", async (c) => {
+  const characterId = c.req.param("id") as string
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 403)
+  }
+
+  return c.html(<TraitEditForm character={char} />)
+})
+
+characterRoutes.post("/characters/:id/edit/trait", async (c) => {
+  const characterId = c.req.param("id") as string
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  // Set source to "custom" for user-added traits
+  body.source = "custom"
+  body.character_id = characterId
+
+  const result = await addTrait(getDb(c), body)
+
+  if (!result.complete) {
+    return c.html(<TraitEditForm character={char} values={result.values} errors={result.errors} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<TraitsPanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.get("/characters/:id/castspell", async (c) => {
@@ -620,6 +670,13 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     // Reverse to show most recent first
     spellbookEvents.reverse()
     return c.html(<SpellbookHistory events={spellbookEvents} />)
+  }
+
+  if (field === "traits") {
+    const traits = await findTraits(getDb(c), characterId)
+    // Reverse to show most recent first
+    traits.reverse()
+    return c.html(<TraitHistory traits={traits} />)
   }
 
   // Check if field is an ability

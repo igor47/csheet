@@ -3,54 +3,36 @@ import { create as createClassLevelDb } from "@src/db/char_levels"
 import { create as createSkillDb } from "@src/db/char_skills"
 import { create as createTraitDb } from "@src/db/char_traits"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
+import type { User } from "@src/db/users"
 import {
   type AbilityType,
-  ClassNames,
+  ClassNamesSchema,
+  type ClassNameType,
   getRuleset,
   getTraits,
   type Ruleset,
   type SkillType,
 } from "@src/lib/dnd"
 import { RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets"
+import { OptionalNullStringSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 
 /**
- * Create API Schema for creating a new character based on a ruleset
- * This is separate from the DB schema to allow for different validation rules
- * and to include fields that may not be stored directly (like class)
+ * Generic Create Character API Schema that works across all rulesets
+ * Ruleset-specific validation happens in the service logic
+ * Note: user_id is passed separately via User object, not in form data
  */
-export function createCharacterApiSchema(ruleset: Ruleset) {
-  const speciesNames = ruleset.species.map((s) => s.name) as [string, ...string[]]
-  const backgroundNames = Object.keys(ruleset.backgrounds) as [string, ...string[]]
-
-  // Get all lineage names across all species
-  const allLineageNames = ruleset.species.flatMap((s) => (s.lineages || []).map((l) => l.name)) as [
-    string,
-    ...string[],
-  ]
-
-  // Get all subclass names
-  const allSubclassNames = ruleset.listSubclasses() as [string, ...string[]]
-
-  return z.object({
-    user_id: z.string(),
-    name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
-    species: z.enum(speciesNames, "Pick a valid species!"),
-    lineage:
-      allLineageNames.length > 0
-        ? z.enum(allLineageNames, "Pick a valid lineage!").nullable().default(null)
-        : z.string().nullable().default(null),
-    class: z.enum(ClassNames, "Pick a valid class!"),
-    subclass:
-      allSubclassNames.length > 0
-        ? z.enum(allSubclassNames, "Pick a valid subclass!").nullable().default(null)
-        : z.string().nullable().default(null),
-    background: z.enum(backgroundNames, "Pick a valid background!"),
-    alignment: z.nullable(z.string().optional()),
-    ruleset: RulesetIdSchema,
-  })
-}
+export const CreateCharacterApiSchema = z.object({
+  name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
+  species: z.string(),
+  lineage: OptionalNullStringSchema,
+  class: ClassNamesSchema,
+  subclass: OptionalNullStringSchema,
+  background: z.string(),
+  alignment: OptionalNullStringSchema,
+  ruleset: RulesetIdSchema,
+})
 
 export type CreateCharacterResult =
   | { complete: true; character: Character }
@@ -115,6 +97,7 @@ function calculateInitialAbilityScores(
  */
 export async function createCharacter(
   db: SQL,
+  user: User,
   data: Record<string, string>
 ): Promise<CreateCharacterResult> {
   const errors: Record<string, string> = {}
@@ -136,8 +119,8 @@ export async function createCharacter(
     errors.name = "Character name must be at least 3 characters"
   } else if (data.name.length > 50) {
     errors.name = "Character name must be less than 50 characters"
-  } else if (data.user_id) {
-    const exists = await nameExistsForUser(db, data.user_id, data.name)
+  } else {
+    const exists = await nameExistsForUser(db, user.id, data.name)
     if (exists) {
       errors.name = "You already have a character with this name"
     }
@@ -148,11 +131,46 @@ export async function createCharacter(
     errors.species = "Invalid species for this ruleset"
   }
 
-  // Validate lineage exists for selected species
-  if (data.lineage && data.species) {
+  // Validate lineage for selected species
+  if (data.species) {
     const species = ruleset.species.find((s) => s.name === data.species)
-    if (species && !species.lineages?.find((l) => l.name === data.lineage)) {
-      errors.lineage = "Invalid lineage for this species"
+    if (species) {
+      // If species has lineages, one must be selected
+      if (species.lineages && species.lineages.length > 0 && !data.lineage) {
+        errors.lineage = "Lineage is required for this species"
+      }
+      // Validate lineage if provided
+      if (data.lineage && !species.lineages?.find((l) => l.name === data.lineage)) {
+        errors.lineage = "Invalid lineage for this species"
+      }
+    }
+  }
+
+  // Validate background exists in ruleset
+  if (data.background && !ruleset.backgrounds[data.background]) {
+    errors.background = "Invalid background for this ruleset"
+  }
+
+  // Validate subclass
+  if (data.class) {
+    const classDef = ruleset.classes[data.class as ClassNameType]
+    if (classDef) {
+      // Check if subclass is required at level 1
+      if (classDef.subclassLevel === 1 && !data.subclass) {
+        errors.subclass = "Subclass is required for this class at level 1"
+      }
+      // Check if subclass is provided but not available until later
+      if (data.subclass && classDef.subclassLevel !== 1) {
+        errors.subclass = `Subclass not available until level ${classDef.subclassLevel}`
+      }
+      // Validate subclass name if provided and allowed
+      if (
+        data.subclass &&
+        classDef.subclassLevel === 1 &&
+        !classDef.subclasses.find((sc) => sc.name === data.subclass)
+      ) {
+        errors.subclass = "Invalid subclass for this class"
+      }
     }
   }
 
@@ -161,8 +179,7 @@ export async function createCharacter(
   }
 
   // Full validation with Zod
-  const schema = createCharacterApiSchema(ruleset)
-  const result = schema.safeParse(data)
+  const result = CreateCharacterApiSchema.safeParse(data)
 
   if (!result.success) {
     const zodErrors: Record<string, string> = {}
@@ -178,7 +195,7 @@ export async function createCharacter(
   const character = await db.begin(async (tx) => {
     // Create the character in the database
     const character = await createCharacterDb(tx, {
-      user_id: validated.user_id,
+      user_id: user.id,
       name: validated.name,
       species: validated.species,
       lineage: validated.lineage,

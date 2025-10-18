@@ -157,7 +157,6 @@ export async function computeCharacter(
 
   // Compute current HP
   const currentHP = maxHitPoints + hpDelta
-  console.dir({ conModifier, hpDelta, maxHitPoints, currentHP })
 
   // Compute available hit dice by applying uses and restores
   const availableHitDice = [...hitDice]

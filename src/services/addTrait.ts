@@ -23,10 +23,7 @@ export type AddTraitResult =
  * Add a trait to a character
  * Can be called with isCheck for validation or without for persistence
  */
-export async function addTrait(
-  db: SQL,
-  data: Record<string, string>
-): Promise<AddTraitResult> {
+export async function addTrait(db: SQL, data: Record<string, string>): Promise<AddTraitResult> {
   const errors: Record<string, string> = {}
   const values = data as AddTraitData
   const isCheck = data.is_check === "true"

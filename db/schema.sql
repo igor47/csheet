@@ -163,6 +163,25 @@ CREATE TABLE public.char_spells_prepared (
 
 
 --
+-- Name: char_traits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_traits (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    name text NOT NULL,
+    description text NOT NULL,
+    source text NOT NULL,
+    source_detail text,
+    level integer,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT char_traits_source_check CHECK ((source = ANY (ARRAY['species'::text, 'lineage'::text, 'background'::text, 'class'::text, 'subclass'::text, 'custom'::text])))
+);
+
+
+--
 -- Name: characters; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -266,6 +285,14 @@ ALTER TABLE ONLY public.char_spells_prepared
 
 
 --
+-- Name: char_traits char_traits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_traits
+    ADD CONSTRAINT char_traits_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: characters characters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -360,6 +387,13 @@ CREATE INDEX idx_char_spells_prepared_spell_id ON public.char_spells_prepared US
 
 
 --
+-- Name: idx_char_traits_char_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_traits_char_id ON public.char_traits USING btree (character_id, created_at);
+
+
+--
 -- Name: idx_characters_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -427,6 +461,13 @@ CREATE TRIGGER char_spells_learned_updated_at BEFORE UPDATE ON public.char_spell
 --
 
 CREATE TRIGGER char_spells_prepared_updated_at BEFORE UPDATE ON public.char_spells_prepared FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: char_traits char_traits_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_traits_updated_at BEFORE UPDATE ON public.char_traits FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
@@ -508,6 +549,14 @@ ALTER TABLE ONLY public.char_spells_prepared
 
 
 --
+-- Name: char_traits char_traits_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_traits
+    ADD CONSTRAINT char_traits_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
 -- Name: characters characters_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -538,4 +587,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251007100000'),
     ('20251007100001'),
     ('20251014115526'),
+    ('20251017195912'),
     ('20251017232744');

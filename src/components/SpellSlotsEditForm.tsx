@@ -1,22 +1,17 @@
 import { SpellSlotsDisplay } from "@src/components/ui/SpellSlotsDisplay"
 import type { SpellLevelType, SpellSlotsType } from "@src/lib/dnd"
+import type { ComputedCharacter } from "@src/services/computeCharacter"
 import clsx from "clsx"
 
 export interface SpellSlotsEditFormProps {
-  characterId: string
-  allSlots: SpellSlotsType
-  availableSlots: SpellSlotsType
+  character: ComputedCharacter
   values?: Record<string, string>
   errors?: Record<string, string>
 }
 
-export const SpellSlotsEditForm = ({
-  characterId,
-  allSlots,
-  availableSlots,
-  values,
-  errors,
-}: SpellSlotsEditFormProps) => {
+export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEditFormProps) => {
+  const allSlots = character.spellSlots
+  const availableSlots = character.availableSpellSlots
   // Determine default action based on current state
   let defaultAction = "use"
   if (allSlots && availableSlots) {
@@ -84,7 +79,8 @@ export const SpellSlotsEditForm = ({
       <div class="modal-body">
         <form
           id="spellslots-edit-form"
-          hx-post={`/characters/${characterId}/edit/spellslots/check`}
+          hx-post={`/characters/${character.id}/edit/spellslots`}
+          hx-vals='{"is_check": "true"}'
           hx-trigger="change delay:300ms"
           hx-target="#editModalContent"
           hx-swap="innerHTML"
@@ -218,7 +214,8 @@ export const SpellSlotsEditForm = ({
             <button
               type="submit"
               class="btn btn-primary"
-              hx-post={`/characters/${characterId}/edit/spellslots`}
+              hx-post={`/characters/${character.id}/edit/spellslots`}
+              hx-vals='{"is_check": "false"}'
               hx-target="#editModalContent"
               hx-swap="innerHTML"
             >

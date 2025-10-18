@@ -1,26 +1,23 @@
 import { Select } from "@src/components/ui/Select"
-import type { CharLevel } from "@src/db/char_levels"
 import { ClassNames, type ClassNameType } from "@src/lib/dnd"
-import srd51 from "@src/lib/dnd/srd51"
+import { getRuleset } from "@src/lib/dnd/rulesets"
 import { toTitleCase } from "@src/lib/strings"
+import type { ComputedCharacter } from "@src/services/computeCharacter"
 import clsx from "clsx"
 
-// TODO: Make this dynamic based on character's ruleset
-const ruleset = srd51
-
 export interface ClassEditFormProps {
-  characterId: string
-  currentClassLevel: CharLevel | null // null = multiclassing to new class
+  character: ComputedCharacter
   values?: Record<string, string>
   errors?: Record<string, string>
 }
 
-export const ClassEditForm = ({
-  characterId,
-  currentClassLevel,
-  values,
-  errors,
-}: ClassEditFormProps) => {
+export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps) => {
+  const ruleset = getRuleset(character.ruleset)
+
+  // Find current level for the selected class
+  const currentClassLevel = values?.class
+    ? character.classes.find((cl) => cl.class === values.class) || null
+    : null
   const selectedClass = values?.class ? ruleset.classes[values.class as ClassNameType] : null
   const subclasses = selectedClass?.subclasses || []
 
@@ -65,7 +62,8 @@ export const ClassEditForm = ({
       <div class="modal-body">
         <form
           id="class-edit-form"
-          hx-post={`/characters/${characterId}/edit/class/check`}
+          hx-post={`/characters/${character.id}/edit/class`}
+          hx-vals='{"is_check": "true"}'
           hx-trigger="change delay:300ms"
           hx-target="#editModalContent"
           hx-swap="innerHTML"
@@ -171,7 +169,8 @@ export const ClassEditForm = ({
             <button
               type="submit"
               class="btn btn-primary"
-              hx-post={`/characters/${characterId}/edit/class`}
+              hx-post={`/characters/${character.id}/edit/class`}
+              hx-vals='{"is_check": "false"}'
               hx-target="#editModalContent"
               hx-swap="innerHTML"
             >

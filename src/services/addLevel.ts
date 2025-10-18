@@ -1,14 +1,11 @@
-import { type CharLevel, create as createCharLevelDb, getCurrentLevels } from "@src/db/char_levels"
+import { create as createCharLevelDb, getCurrentLevels } from "@src/db/char_levels"
 import { create as createTraitDb } from "@src/db/char_traits"
-import { findById as findCharacterById } from "@src/db/characters"
+import type { Character } from "@src/db/characters"
 import { ClassNames, ClassNamesSchema, type ClassNameType, getTraits } from "@src/lib/dnd"
 import { getRuleset } from "@src/lib/dnd/rulesets"
-import srd51 from "@src/lib/dnd/srd51"
+import { zodToFormErrors } from "@src/lib/formErrors"
 import type { SQL } from "bun"
 import { z } from "zod"
-
-// TODO: Make this dynamic based on character's ruleset
-const ruleset = srd51
 
 export const AddLevelApiSchema = z.object({
   character_id: z.string(),
@@ -21,186 +18,104 @@ export const AddLevelApiSchema = z.object({
 
 export type AddLevelApi = z.infer<typeof AddLevelApiSchema>
 
-/**
- * Prepare form values for live validation (/check endpoint)
- * Mutates values to be helpful (auto-calculate level, reset invalid fields)
- * Returns soft validation hints
- */
-export function prepareAddLevelForm(
-  values: Record<string, string>,
-  currentLevels: CharLevel[]
-): { values: Record<string, string>; errors: Record<string, string> } {
-  const errors: Record<string, string> = {}
-  const preparedValues = { ...values }
-
-  if (!(preparedValues.class && ClassNames.includes(values.class as ClassNameType))) {
-    return { values: preparedValues, errors }
-  }
-
-  const classDef = ruleset.classes[preparedValues.class as ClassNameType]
-  if (!classDef) {
-    errors.class = "Invalid class"
-    return { values: preparedValues, errors }
-  }
-
-  // Find current level for this class
-  const currentClassLevel = currentLevels.find((cl) => cl.class === preparedValues.class)
-  const isMulticlassing = !currentClassLevel
-  const nextLevel = isMulticlassing ? 1 : currentClassLevel.level + 1
-
-  // Auto-calculate level
-  preparedValues.level = nextLevel.toString()
-
-  // If multiclassing, set hit die to max (first level in class = max HP)
-  if (isMulticlassing) {
-    preparedValues.hit_die_roll = classDef.hitDie.toString()
-  }
-
-  // Reset subclass if it's invalid for the current class
-  const subclassNames = classDef.subclasses.map((s) => s.name)
-  if (preparedValues.subclass && !subclassNames.includes(preparedValues.subclass)) {
-    preparedValues.subclass = ""
-  }
-
-  // Validate subclass if required at this level
-  if (nextLevel === classDef.subclassLevel) {
-    if (!preparedValues.subclass) {
-      errors.subclass = `Subclass is required at level ${classDef.subclassLevel}`
-    } else if (!subclassNames.includes(preparedValues.subclass)) {
-      errors.subclass = `Invalid subclass for ${preparedValues.class}`
-    }
-  }
-
-  // Validate hit die roll
-  if (preparedValues.hit_die_roll) {
-    const hitDieRoll = parseInt(preparedValues.hit_die_roll, 10)
-    if (Number.isNaN(hitDieRoll) || hitDieRoll < 1 || hitDieRoll > classDef.hitDie) {
-      errors.hit_die_roll = `Hit die roll must be between 1 and ${classDef.hitDie}`
-    }
-  }
-
-  return { values: preparedValues, errors }
-}
-
-/**
- * Strict validation for form submission (POST endpoint)
- * Does NOT mutate values - validates as-is
- * Returns hard errors
- */
-export function validateAddLevel(
-  values: Record<string, string>,
-  currentLevels: CharLevel[]
-): { valid: boolean; errors: Record<string, string> } {
-  const errors: Record<string, string> = {}
-
-  if (!values.class || !ClassNames.includes(values.class as ClassNameType)) {
-    errors.class = "Class is required"
-    return { valid: false, errors }
-  }
-
-  const classDef = ruleset.classes[values.class as ClassNameType]
-  if (!classDef) {
-    errors.class = "Invalid class"
-    return { valid: false, errors }
-  }
-
-  // Validate level
-  const level = parseInt(values.level || "", 10)
-  if (Number.isNaN(level)) {
-    errors.level = "Level must be a number"
-    return { valid: false, errors }
-  }
-
-  const currentClassLevel = currentLevels.find((cl) => cl.class === values.class)
-  const expectedLevel = currentClassLevel ? currentClassLevel.level + 1 : 1
-
-  if (level !== expectedLevel) {
-    errors.level = `Invalid level. Expected ${expectedLevel}`
-    return { valid: false, errors }
-  }
-
-  // Validate subclass if required
-  const subclassNames = classDef.subclasses.map((s) => s.name)
-  if (level === classDef.subclassLevel) {
-    if (!values.subclass) {
-      errors.subclass = `Subclass is required at level ${classDef.subclassLevel}`
-    } else if (!subclassNames.includes(values.subclass)) {
-      errors.subclass = `Invalid subclass for ${values.class}`
-    }
-  }
-
-  // Validate hit die roll
-  if (!values.hit_die_roll) {
-    errors.hit_die_roll = "Hit die roll is required"
-  } else {
-    const hitDieRoll = parseInt(values.hit_die_roll, 10)
-    if (Number.isNaN(hitDieRoll) || hitDieRoll < 1 || hitDieRoll > classDef.hitDie) {
-      errors.hit_die_roll = `Hit die roll must be between 1 and ${classDef.hitDie}`
-    }
-  }
-
-  const valid = Object.keys(errors).length === 0
-  return { valid, errors }
-}
+export type AddLevelResult =
+  | { complete: true }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
  * Add a level to a character
  * Validates level progression and adds the level to the database
  */
-export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
-  // Get current levels to validate progression
-  const currentLevels = await getCurrentLevels(db, data.character_id)
+export async function addLevel(
+  db: SQL,
+  char: Character,
+  data: Record<string, string>
+): Promise<AddLevelResult> {
+  const errors: Record<string, string> = {}
+  const isCheck = data.is_check === "true"
 
-  // Find the current level for this class (if it exists)
-  const currentClassLevel = currentLevels.find((cl) => cl.class === data.class)
+  // Get character's ruleset and current levels
+  const charRuleset = getRuleset(char.ruleset)
+  const currentLevels = await getCurrentLevels(db, char.id)
 
-  if (currentClassLevel) {
-    // Continuing an existing class - must be exactly level + 1
-    if (data.level !== currentClassLevel.level + 1) {
-      throw new Error(
-        `Cannot skip levels. Next level for ${data.class} should be ${currentClassLevel.level + 1}`
-      )
+  // Validate class
+  if (!data.class || !ClassNames.includes(data.class as ClassNameType)) {
+    if (!isCheck) {
+      errors.class = "Class is required"
     }
-  } else {
-    // Multiclassing to a new class - must start at level 1
-    if (data.level !== 1) {
-      throw new Error(`When multiclassing to ${data.class}, you must start at level 1`)
-    }
+    return { complete: false, values: data, errors }
   }
 
-  // Validate hit die roll is within range for this class
-  const classDef = ruleset.classes[data.class]
+  const classDef = charRuleset.classes[data.class as ClassNameType]
   if (!classDef) {
-    throw new Error(`Invalid class: ${data.class}`)
+    errors.class = "Invalid class"
+    return { complete: false, values: data, errors }
   }
 
-  if (data.hit_die_roll < 1 || data.hit_die_roll > classDef.hitDie) {
-    throw new Error(`Hit die roll must be between 1 and ${classDef.hitDie} for ${data.class}`)
+  // Find current level for this class
+  const currentClassLevel = currentLevels.find((cl) => cl.class === data.class)
+  const isMulticlassing = !currentClassLevel
+  const nextLevel = isMulticlassing ? 1 : currentClassLevel.level + 1
+
+  // Validate level
+  const level = data.level ? parseInt(data.level, 10) : nextLevel
+  if (Number.isNaN(level)) {
+    errors.level = "Level must be a number"
+    return { complete: false, values: data, errors }
+  }
+
+  if (level !== nextLevel) {
+    errors.level = `Invalid level. Expected ${nextLevel}`
+    return { complete: false, values: data, errors }
   }
 
   // Validate subclass if required
   const subclassNames = classDef.subclasses.map((s) => s.name)
-  if (data.level === classDef.subclassLevel) {
+  if (level === classDef.subclassLevel) {
     if (!data.subclass) {
-      throw new Error(
-        `Subclass is required when reaching level ${classDef.subclassLevel} in ${data.class}`
-      )
+      if (!isCheck) {
+        errors.subclass = `Subclass is required at level ${classDef.subclassLevel}`
+      }
+    } else if (!subclassNames.includes(data.subclass)) {
+      errors.subclass = `Invalid subclass for ${data.class}`
     }
-    if (!subclassNames.includes(data.subclass)) {
-      throw new Error(`Invalid subclass ${data.subclass} for ${data.class}`)
-    }
-  } else if (data.level > classDef.subclassLevel) {
-    data.subclass = currentClassLevel?.subclass
   }
 
-  // Get character for trait lookup
-  const character = await findCharacterById(db, data.character_id)
-  if (!character) {
-    throw new Error(`Character with ID ${data.character_id} not found`)
+  // Validate hit die roll
+  if (!data.hit_die_roll) {
+    if (!isCheck) {
+      errors.hit_die_roll = "Hit die roll is required"
+    }
+  } else {
+    const hitDieRoll = parseInt(data.hit_die_roll, 10)
+    if (Number.isNaN(hitDieRoll) || hitDieRoll < 1 || hitDieRoll > classDef.hitDie) {
+      errors.hit_die_roll = `Hit die roll must be between 1 and ${classDef.hitDie}`
+    }
   }
 
-  // Use character's ruleset instead of hardcoded srd51
-  const charRuleset = getRuleset(character.ruleset)
+  if (isCheck || Object.keys(errors).length > 0) {
+    return { complete: false, values: data, errors }
+  }
+
+  // If we got here, let's actually validate and persist the data
+  const result = AddLevelApiSchema.safeParse({
+    character_id: char.id,
+    class: data.class,
+    level,
+    subclass: data.subclass ? data.subclass : null,
+    hit_die_roll: parseInt(data.hit_die_roll!, 10),
+    note: data.note ? data.note : null,
+  })
+
+  if (!result.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
+  }
+
+  // Determine subclass for levels beyond subclass level
+  let finalSubclass = result.data.subclass
+  if (result.data.level > classDef.subclassLevel) {
+    finalSubclass = currentClassLevel?.subclass || null
+  }
 
   // Calculate total character level (sum of all class levels + this new level)
   const totalLevel =
@@ -209,25 +124,25 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
   await db.begin(async (tx) => {
     // Create the level
     await createCharLevelDb(tx, {
-      character_id: data.character_id,
-      class: data.class,
-      level: data.level,
-      subclass: data.subclass || null,
-      hit_die_roll: data.hit_die_roll,
-      note: data.note || null,
+      character_id: char.id,
+      class: result.data.class,
+      level: result.data.level,
+      subclass: finalSubclass ?? null,
+      hit_die_roll: result.data.hit_die_roll,
+      note: result.data.note ?? null,
     })
 
     // Add level-based traits from species/lineage
     const speciesTraits = getTraits(charRuleset, {
-      species: character.species,
-      lineage: character.lineage,
+      species: char.species,
+      lineage: char.lineage,
       level: totalLevel,
     })
     for (const trait of speciesTraits) {
       if (trait.level === totalLevel) {
-        const sourceDetail = trait.source === "lineage" ? character.lineage : character.species
+        const sourceDetail = trait.source === "lineage" ? char.lineage : char.species
         await createTraitDb(tx, {
-          character_id: character.id,
+          character_id: char.id,
           name: trait.name,
           description: trait.description,
           source: trait.source,
@@ -240,17 +155,17 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
 
     // Add level-based traits from background
     const backgroundTraits = getTraits(charRuleset, {
-      background: character.background,
+      background: char.background,
       level: totalLevel,
     })
     for (const trait of backgroundTraits) {
       if (trait.level === totalLevel) {
         await createTraitDb(tx, {
-          character_id: character.id,
+          character_id: char.id,
           name: trait.name,
           description: trait.description,
           source: "background",
-          source_detail: character.background,
+          source_detail: char.background,
           level: totalLevel,
           note: `Gained at level ${totalLevel}`,
         })
@@ -259,23 +174,25 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
 
     // Add level-based traits from class/subclass
     const classTraits = getTraits(charRuleset, {
-      className: data.class,
-      subclass: data.subclass,
-      level: data.level,
+      className: result.data.class,
+      subclass: finalSubclass,
+      level: result.data.level,
     })
     for (const trait of classTraits) {
-      if (trait.level === data.level) {
-        const sourceDetail = data.subclass || data.class
+      if (trait.level === result.data.level) {
+        const sourceDetail = finalSubclass || result.data.class
         await createTraitDb(tx, {
-          character_id: character.id,
+          character_id: char.id,
           name: trait.name,
           description: trait.description,
           source: trait.source,
           source_detail: sourceDetail,
-          level: data.level,
-          note: `Gained at ${data.class} level ${data.level}`,
+          level: result.data.level,
+          note: `Gained at ${result.data.class} level ${result.data.level}`,
         })
       }
     }
   })
+
+  return { complete: true }
 }

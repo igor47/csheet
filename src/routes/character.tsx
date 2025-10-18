@@ -29,21 +29,15 @@ import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
-import { findByCharacterId, getCurrentLevels, maxClassLevel } from "@src/db/char_levels"
+import { findByCharacterId } from "@src/db/char_levels"
 import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByUserId } from "@src/db/characters"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
-import { zodToFormErrors } from "@src/lib/formErrors"
 import { setFlashMsg } from "@src/middleware/flash"
-import {
-  AddLevelApiSchema,
-  addLevel,
-  prepareAddLevelForm,
-  validateAddLevel,
-} from "@src/services/addLevel"
+import { addLevel } from "@src/services/addLevel"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { createCharacter } from "@src/services/createCharacter"
@@ -54,12 +48,7 @@ import { updateAbility } from "@src/services/updateAbility"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateSkill } from "@src/services/updateSkill"
-import {
-  prepareUpdateSpellSlotsForm,
-  UpdateSpellSlotsApiSchema,
-  updateSpellSlots,
-  validateUpdateSpellSlots,
-} from "@src/services/updateSpellSlots"
+import { updateSpellSlots } from "@src/services/updateSpellSlots"
 import { Hono } from "hono"
 
 export const characterRoutes = new Hono()
@@ -106,118 +95,25 @@ characterRoutes.get("/characters/:id", async (c) => {
   return c.render(<Character character={char} />, { title: "Character Sheet" })
 })
 
-characterRoutes.post("/characters/:id/edit/class/check", async (c) => {
-  const characterId = c.req.param("id") as string
-  const body = (await c.req.parseBody()) as Record<string, string>
-
-  // Get current levels to calculate the correct level
-  const currentLevels = await getCurrentLevels(getDb(c), characterId)
-  const currentClassLevel = currentLevels.find((cl) => cl.class === body.class) || null
-
-  // Prepare form values and get soft validation hints
-  const { values, errors } = prepareAddLevelForm(body, currentLevels)
-  return c.html(
-    <ClassEditForm
-      characterId={characterId}
-      currentClassLevel={currentClassLevel}
-      values={values}
-      errors={Object.keys(errors).length > 0 ? errors : undefined}
-    />
-  )
-})
-
-characterRoutes.post("/characters/:id/edit/spellslots/check", async (c) => {
+characterRoutes.post("/characters/:id/edit/class", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
   const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
-    return c.html(
-      <ModalContent title="error">
-        <div id="alert alert-danger">Character not found</div>
-      </ModalContent>
-    )
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
   }
 
-  const { values, errors } = prepareUpdateSpellSlotsForm(
-    body,
-    char.spellSlots,
-    char.availableSpellSlots
-  )
-  return c.html(
-    <SpellSlotsEditForm
-      characterId={characterId}
-      allSlots={char.spellSlots}
-      availableSlots={char.availableSpellSlots}
-      values={values}
-      errors={Object.keys(errors).length > 0 ? errors : undefined}
-    />
-  )
-})
+  const result = await addLevel(getDb(c), char, body)
 
-characterRoutes.post("/characters/:id/edit/class", async (c) => {
-  const characterId = c.req.param("id") as string
-  const body = (await c.req.parseBody()) as Record<string, string>
-
-  // Get current levels for validation
-  const currentLevels = await getCurrentLevels(getDb(c), characterId)
-  const currentClassLevel = currentLevels.find((cl) => cl.class === body.class) || null
-
-  // Strict validation (no mutation)
-  const validation = validateAddLevel(body, currentLevels)
-
-  if (!validation.valid) {
-    return c.html(
-      <ClassEditForm
-        characterId={characterId}
-        currentClassLevel={currentClassLevel}
-        values={body}
-        errors={validation.errors}
-      />
-    )
-  }
-
-  // Parse with Zod
-  const result = AddLevelApiSchema.safeParse({
-    character_id: characterId,
-    class: body.class,
-    level: parseInt(body.level || "", 10),
-    subclass: body.subclass || null,
-    hit_die_roll: parseInt(body.hit_die_roll || "", 10),
-    note: body.note || null,
-  })
-
-  if (!result.success) {
-    const errors: Record<string, string> = {}
-    for (const issue of result.error.issues) {
-      const field = issue.path[0] as string
-      errors[field] = issue.message
-    }
-    return c.html(
-      <ClassEditForm
-        characterId={characterId}
-        currentClassLevel={currentClassLevel}
-        values={body}
-        errors={errors}
-      />
-    )
-  }
-
-  try {
-    await addLevel(getDb(c), result.data)
-  } catch (error) {
-    console.error("adding level", error)
-    await setFlashMsg(c, "Failed to add level", "error")
-    return c.html(
-      <ClassEditForm
-        characterId={characterId}
-        currentClassLevel={currentClassLevel}
-        values={body}
-      />
-    )
+  if (!result.complete) {
+    return c.html(<ClassEditForm character={char} values={result.values} errors={result.errors} />)
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
   return c.html(
     <>
       <CharacterInfo character={updatedChar} />
@@ -300,6 +196,8 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
 
 characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
   const characterId = c.req.param("id") as string
+  const body = (await c.req.parseBody()) as Record<string, string>
+
   const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
@@ -307,55 +205,11 @@ characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
     return c.body(null, 204)
   }
 
-  // Strict validation (no mutation)
-  const body = (await c.req.parseBody()) as Record<string, string>
-  const validation = validateUpdateSpellSlots(body, char.spellSlots, char.availableSpellSlots)
+  const result = await updateSpellSlots(getDb(c), char, body)
 
-  if (!validation.valid) {
+  if (!result.complete) {
     return c.html(
-      <SpellSlotsEditForm
-        characterId={characterId}
-        allSlots={char.spellSlots}
-        availableSlots={char.availableSpellSlots}
-        values={body}
-        errors={validation.errors}
-      />
-    )
-  }
-
-  // Parse with Zod
-  const result = UpdateSpellSlotsApiSchema.safeParse({
-    character_id: characterId,
-    action: body.action,
-    slot_level: body.slot_level ? parseInt(body.slot_level, 10) : null,
-    note: body.note || null,
-  })
-
-  if (!result.success) {
-    const errors = zodToFormErrors(result.error)
-    return c.html(
-      <SpellSlotsEditForm
-        characterId={characterId}
-        allSlots={char.spellSlots}
-        availableSlots={char.availableSpellSlots}
-        values={body}
-        errors={errors}
-      />
-    )
-  }
-
-  try {
-    await updateSpellSlots(getDb(c), result.data, char.spellSlots, char.availableSpellSlots)
-  } catch (error) {
-    console.error("updating spell slots", error)
-    return c.html(
-      <SpellSlotsEditForm
-        characterId={characterId}
-        allSlots={char.spellSlots}
-        availableSlots={char.availableSpellSlots}
-        values={body}
-        errors={{ action: "Failed to update spell slots" }}
-      />
+      <SpellSlotsEditForm character={char} values={result.values} errors={result.errors} />
     )
   }
 
@@ -547,13 +401,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "class") {
-    const currentLevels = await getCurrentLevels(getDb(c), characterId)
-    const maxLevel = await maxClassLevel(getDb(c), characterId)
-    const { values } = prepareAddLevelForm({ class: maxLevel.class }, currentLevels)
-
-    return c.html(
-      <ClassEditForm characterId={characterId} currentClassLevel={maxLevel} values={values} />
-    )
+    return c.html(<ClassEditForm character={char} values={{}} />)
   }
 
   if (field === "hitpoints") {
@@ -583,13 +431,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "spellslots") {
-    return c.html(
-      <SpellSlotsEditForm
-        characterId={characterId}
-        allSlots={char.spellSlots}
-        availableSlots={char.availableSpellSlots}
-      />
-    )
+    return c.html(<SpellSlotsEditForm character={char} values={{}} />)
   }
 
   if (field === "prepspell") {

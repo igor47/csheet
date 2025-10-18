@@ -152,17 +152,17 @@ export async function castSpell(
   }
 
   // Use the spell slot
-  await updateSpellSlots(
-    db,
-    {
-      character_id: char.id,
-      action: "use",
-      slot_level: result.data.slot_level,
-      note: generatedNote,
-    },
-    char.spellSlots,
-    char.availableSpellSlots
-  )
+  const slotResult = await updateSpellSlots(db, char, {
+    is_check: "false",
+    action: "use",
+    slot_level: result.data.slot_level.toString(),
+    note: generatedNote,
+  })
+
+  if (!slotResult.complete) {
+    // This shouldn't happen since we already validated, but handle it just in case
+    throw new Error("Failed to use spell slot")
+  }
 
   return {
     complete: true,

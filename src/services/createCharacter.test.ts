@@ -14,9 +14,7 @@ import { type CreateCharacterResult, createCharacter } from "./createCharacter"
  * Type-safe assertion for CreateCharacterResult success
  * Throws a helpful error with details if the result indicates failure
  */
-function assertSuccess(
-  result: CreateCharacterResult
-): asserts result is {
+function assertSuccess(result: CreateCharacterResult): asserts result is {
   complete: true
   character: ReturnType<typeof createCharacter> extends Promise<infer R>
     ? R extends { complete: true; character: infer C }

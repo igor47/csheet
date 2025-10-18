@@ -15,7 +15,169 @@ export const SRD51_DESCRIPTION = "D&D 5e (2014)"
 
 const SpeciesData: Species[] = [
   {
+    name: "dragonborn",
+    description:
+      "Dragonborn look very much like dragons standing erect in humanoid form, though they lack wings or a tail. They are tall and strongly built, often standing close to 6½ feet tall and weighing 300 pounds or more. Their draconic heritage manifests in a variety of traits they share with true dragons.",
+    size: "medium",
+    speed: 30,
+    traits: [ ],
+    lineages: [
+      {
+        name: "black",
+        description: "Black dragon ancestry, associated with acid and swamps.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of acid in 5 by 30 foot line. Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 acid damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to acid damage.",
+          },
+        ],
+      },
+      {
+        name: "blue",
+        description: "Blue dragon ancestry, associated with lightning and deserts.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of lightning in 5 by 30 foot line. Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 lightning damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to lightning damage.",
+          },
+        ],
+      },
+      {
+        name: "brass",
+        description: "Brass dragon ancestry, associated with fire and deserts.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of fire in 5 by 30 foot line. Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 fire damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to fire damage.",
+          },
+        ],
+      },
+      {
+        name: "bronze",
+        description: "Bronze dragon ancestry, associated with lightning and coastlines.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of lightning in 5 by 30 foot line. Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 lightning damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to lightning damage.",
+          },
+        ],
+      },
+      {
+        name: "copper",
+        description: "Copper dragon ancestry, associated with acid and hills.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of acid in 5 by 30 foot line. Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 acid damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to acid damage.",
+          },
+        ],
+      },
+      {
+        name: "gold",
+        description: "Gold dragon ancestry, associated with fire and noble causes.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of fire in 15 ft. cone. Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 fire damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to fire damage.",
+          },
+        ],
+      },
+      {
+        name: "green",
+        description: "Green dragon ancestry, associated with poison and forests.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of poison in 15 ft. cone. Each creature in that area must make a Constitution saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 poison damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to poison damage.",
+          },
+        ],
+      },
+      {
+        name: "red",
+        description: "Red dragon ancestry, associated with fire and mountains.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of fire in 15 ft. cone. Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 fire damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to fire damage.",
+          },
+        ],
+      },
+      {
+        name: "silver",
+        description: "Silver dragon ancestry, associated with cold and mountains.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of cold in 15 ft. cone. Each creature in that area must make a Constitution saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 cold damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to cold damage.",
+          },
+        ],
+      },
+      {
+        name: "white",
+        description: "White dragon ancestry, associated with cold and arctic regions.",
+        traits: [
+          {
+            name: "Breath Weapon",
+            description:
+              "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of cold in 15 ft. cone. Each creature in that area must make a Constitution saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). A creature takes 2d6 cold damage on a failed save, and half as much on a successful save. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your weapon, you can't use it again until you complete a short or long rest.",
+          },
+          {
+            name: "Damage Resistance",
+            description: "You have Resistance to cold damage.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     name: "dwarf",
+    description:
+      "Bold and hardy, dwarves are known as skilled warriors, miners, and workers of stone and metal. Though they stand well under 5 feet tall, dwarves are so broad and compact that they can weigh as much as a human standing nearly two feet taller.",
     size: "medium",
     speed: 25,
     abilityScoreModifiers: { constitution: 2 },
@@ -54,6 +216,8 @@ const SpeciesData: Species[] = [
     lineages: [
       {
         name: "hill dwarf",
+        description:
+          "As a hill dwarf, you have keen senses, deep intuition, and remarkable resilience.",
         abilityScoreModifiers: { wisdom: 1 },
         traits: [
           {
@@ -65,6 +229,8 @@ const SpeciesData: Species[] = [
       },
       {
         name: "mountain dwarf",
+        description:
+          "As a mountain dwarf, you're strong and hardy, accustomed to a difficult life in rugged terrain.",
         abilityScoreModifiers: { strength: 2 },
         traits: [
           {
@@ -77,6 +243,8 @@ const SpeciesData: Species[] = [
   },
   {
     name: "elf",
+    description:
+      "Elves are a magical people of otherworldly grace, living in the world but not entirely part of it. They live in places of ethereal beauty, in the midst of ancient forests or in silvery spires glittering with faerie light.",
     size: "medium",
     speed: 30,
     abilityScoreModifiers: { dexterity: 2 },
@@ -109,6 +277,8 @@ const SpeciesData: Species[] = [
     lineages: [
       {
         name: "high elf",
+        description:
+          "As a high elf, you have a keen mind and a mastery of at least the basics of magic.",
         abilityScoreModifiers: { intelligence: 1 },
         traits: [
           {
@@ -129,6 +299,8 @@ const SpeciesData: Species[] = [
       },
       {
         name: "wood elf",
+        description:
+          "As a wood elf, you have keen senses and deep intuition, and your fleet feet carry you quickly and stealthily through your native forests.",
         abilityScoreModifiers: { wisdom: 1 },
         traits: [
           {
@@ -149,6 +321,8 @@ const SpeciesData: Species[] = [
       },
       {
         name: "drow",
+        description:
+          "Descended from an earlier subterranean elf society, the drow were banished from the surface world for following the goddess Lolth down the path to evil and corruption.",
         abilityScoreModifiers: { charisma: 1 },
         traits: [
           {
@@ -176,6 +350,8 @@ const SpeciesData: Species[] = [
   },
   {
     name: "halfling",
+    description:
+      "The diminutive halflings survive in a world full of larger creatures by avoiding notice or, barring that, avoiding offense. Standing about 3 feet tall, they appear relatively harmless and so have managed to survive for centuries in the shadow of empires.",
     size: "small",
     speed: 25,
     abilityScoreModifiers: { dexterity: 2 },
@@ -203,6 +379,8 @@ const SpeciesData: Species[] = [
     lineages: [
       {
         name: "lightfoot",
+        description:
+          "As a lightfoot halfling, you can easily hide from notice, even using other people as cover. You're inclined to be affable and get along well with others.",
         abilityScoreModifiers: { charisma: 1 },
         traits: [
           {
@@ -214,6 +392,8 @@ const SpeciesData: Species[] = [
       },
       {
         name: "stout",
+        description:
+          "As a stout halfling, you're hardier than average and have some resistance to poison. Some say that stouts have dwarven blood.",
         abilityScoreModifiers: { constitution: 1 },
         traits: [
           {
@@ -227,6 +407,8 @@ const SpeciesData: Species[] = [
   },
   {
     name: "human",
+    description:
+      "In the reckonings of most worlds, humans are the youngest of the common species, late to arrive on the world scene and short-lived in comparison to dwarves, elves, and dragons. Their capacity for expansion and adaptability makes them highly diverse in tastes, morals, and customs.",
     size: "medium",
     speed: 30,
     abilityScoreModifiers: {
@@ -247,35 +429,9 @@ const SpeciesData: Species[] = [
     variants: [],
   },
   {
-    name: "dragonborn",
-    size: "medium",
-    speed: 30,
-    abilityScoreModifiers: { strength: 2, charisma: 1 },
-    traits: [
-      {
-        name: "Draconic Ancestry",
-        description:
-          "You have draconic ancestry. Choose one type of dragon from the Draconic Ancestry table. Your breath weapon and damage resistance are determined by the dragon type, as shown in the table.",
-      },
-      {
-        name: "Breath Weapon",
-        description:
-          "You can use your action to exhale destructive energy. Your draconic ancestry determines the size, shape, and damage type of the exhalation. When you use your breath weapon, each creature in the area of the exhalation must make a saving throw, the type of which is determined by your draconic ancestry. The DC for this saving throw equals 8 + your Constitution modifier + your proficiency bonus. A creature takes 2d6 damage on a failed save, and half as much damage on a successful one. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your breath weapon, you can't use it again until you complete a short or long rest.",
-      },
-      {
-        name: "Damage Resistance",
-        description:
-          "You have resistance to the damage type associated with your draconic ancestry.",
-      },
-      {
-        name: "Languages",
-        description:
-          "You can speak, read, and write Common and Draconic. Draconic is thought to be one of the oldest languages and is often used in the study of magic. The language sounds harsh to most other creatures and includes numerous hard consonants and sibilants.",
-      },
-    ],
-  },
-  {
     name: "gnome",
+    description:
+      "A constant hum of busy activity pervades the warrens and neighborhoods where gnomes form their close-knit communities. Louder sounds punctuate the hum: a crunch of grinding gears here, a minor explosion there, a yelp of surprise or triumph, and especially bursts of laughter. Gnomes take delight in life, enjoying every moment of invention, exploration, investigation, creation, and play.",
     size: "small",
     speed: 25,
     abilityScoreModifiers: { intelligence: 2 },
@@ -299,6 +455,8 @@ const SpeciesData: Species[] = [
     lineages: [
       {
         name: "forest gnome",
+        description:
+          "As a forest gnome, you have a natural knack for illusion and inherent quickness and stealth. In the worlds of D&D, forest gnomes are rare and secretive. They gather in hidden communities in sylvan forests, using illusions and trickery to conceal themselves from threats or to mask their escape should they be detected.",
         abilityScoreModifiers: { dexterity: 1 },
         traits: [
           {
@@ -315,6 +473,8 @@ const SpeciesData: Species[] = [
       },
       {
         name: "rock gnome",
+        description:
+          "As a rock gnome, you have a natural inventiveness and hardiness beyond that of other gnomes. Most gnomes in the worlds of D&D are rock gnomes, including the tinker gnomes of the Dragonlance setting.",
         abilityScoreModifiers: { constitution: 1 },
         traits: [
           {
@@ -331,6 +491,8 @@ const SpeciesData: Species[] = [
       },
       {
         name: "deep gnome",
+        description:
+          "Forest gnomes and rock gnomes are the gnomes most commonly encountered in the lands of the surface world. There is another subrace of gnomes rarely seen by any surface-dweller: deep gnomes, also known as svirfneblin. Guarded, and suspicious of outsiders, svirfneblin are cunning and taciturn, but can be just as kind-hearted, loyal, and compassionate as their surface cousins.",
         abilityScoreModifiers: { dexterity: 1 },
         traits: [
           {
@@ -348,6 +510,8 @@ const SpeciesData: Species[] = [
   },
   {
     name: "half-elf",
+    description:
+      "Walking in two worlds but truly belonging to neither, half-elves combine what some say are the best qualities of their elf and human parents: human curiosity, inventiveness, and ambition tempered by the refined senses, love of nature, and artistic tastes of the elves.",
     size: "medium",
     speed: 30,
     abilityScoreModifiers: {
@@ -378,6 +542,8 @@ const SpeciesData: Species[] = [
   },
   {
     name: "half-orc",
+    description:
+      "Whether united under the leadership of a mighty warlock or having fought to a standstill after years of conflict, orc and human tribes sometimes form alliances, joining forces into a larger horde to the terror of civilized lands nearby. When these alliances are sealed by marriages, half-orcs are born.",
     size: "medium",
     speed: 30,
     abilityScoreModifiers: { strength: 2, constitution: 1 },
@@ -410,6 +576,8 @@ const SpeciesData: Species[] = [
   },
   {
     name: "tiefling",
+    description:
+      "To be greeted with stares and whispers, to suffer violence and insult on the street, to see mistrust and fear in every eye: this is the lot of the tiefling. And to twist the knife, tieflings know that this is because a pact struck generations ago infused the essence of Asmodeus into their bloodline.",
     size: "medium",
     speed: 30,
     abilityScoreModifiers: { charisma: 2, intelligence: 1 },
@@ -440,6 +608,8 @@ const SpeciesData: Species[] = [
 const Backgrounds: Record<string, Background> = {
   acolyte: {
     name: "acolyte",
+    description:
+      "You have spent your life in the service of a temple to a specific god or pantheon of gods. You act as an intermediary between the realm of the holy and the mortal world, performing sacred rites and offering sacrifices in order to conduct worshipers into the presence of the divine.",
     skillProficiencies: ["insight", "religion"],
     additionalLanguages: 2,
     equipment: [
@@ -460,6 +630,8 @@ const Backgrounds: Record<string, Background> = {
   },
   charlatan: {
     name: "charlatan",
+    description:
+      "You have always had a way with people. You know what makes them tick, you can tease out their hearts' desires after a few minutes of conversation, and with a few leading questions you can read them like they were children's books. It's a useful talent, and one that you're perfectly willing to use for your advantage.",
     skillProficiencies: ["deception", "sleight of hand"],
     toolProficiencies: ["disguise kit", "forgery kit"],
     equipment: [
@@ -478,6 +650,8 @@ const Backgrounds: Record<string, Background> = {
   },
   criminal: {
     name: "criminal",
+    description:
+      "You are an experienced criminal with a history of breaking the law. You have spent a lot of time among other criminals and still have contacts within the criminal underworld. You're far closer than most people to the world of murder, theft, and violence that pervades the underbelly of civilization.",
     skillProficiencies: ["deception", "stealth"],
     toolProficiencies: [{ choose: 1, from: ["dice set", "playing card set"] }, "thieves' tools"],
     equipment: ["crowbar", "dark common clothes with hood", "15 gp"],
@@ -491,6 +665,8 @@ const Backgrounds: Record<string, Background> = {
   },
   entertainer: {
     name: "entertainer",
+    description:
+      "You thrive in front of an audience. You know how to entrance them, entertain them, and even inspire them. Your poetics can stir the hearts of those who hear you, awakening grief or joy, laughter or anger. Your music raises their spirits or captures their sorrow. Your dance steps captivate, your humor cuts to the quick.",
     skillProficiencies: ["acrobatics", "performance"],
     toolProficiencies: [
       {
@@ -526,6 +702,8 @@ const Backgrounds: Record<string, Background> = {
   },
   "folk hero": {
     name: "folk hero",
+    description:
+      "You come from a humble social rank, but you are destined for so much more. Already the people of your home village regard you as their champion, and your destiny calls you to stand against the tyrants and monsters that threaten the common folk everywhere.",
     skillProficiencies: ["animal handling", "survival"],
     toolProficiencies: [
       {
@@ -569,6 +747,8 @@ const Backgrounds: Record<string, Background> = {
   },
   "guild artisan": {
     name: "guild artisan",
+    description:
+      "You are a member of an artisan's guild, skilled in a particular field and closely associated with other artisans. You are a well-established part of the mercantile world, freed by talent and wealth from the constraints of a feudal social order. You learned your skills as an apprentice to a master artisan.",
     skillProficiencies: ["insight", "persuasion"],
     toolProficiencies: [
       {
@@ -611,6 +791,8 @@ const Backgrounds: Record<string, Background> = {
   },
   hermit: {
     name: "hermit",
+    description:
+      "You lived in seclusion—either in a sheltered community such as a monastery, or entirely alone—for a formative part of your life. In your time apart from the clamor of society, you found quiet, solitude, and perhaps some of the answers you were looking for.",
     skillProficiencies: ["medicine", "religion"],
     toolProficiencies: ["herbalism kit"],
     additionalLanguages: 1,
@@ -631,6 +813,8 @@ const Backgrounds: Record<string, Background> = {
   },
   noble: {
     name: "noble",
+    description:
+      "You understand wealth, power, and privilege. You carry a noble title, and your family owns land, collects taxes, and wields significant political influence. You might be a pampered aristocrat unfamiliar with work or discomfort, a former merchant just elevated to the nobility, or a disinherited scoundrel with a disproportionate sense of entitlement.",
     skillProficiencies: ["history", "persuasion"],
     toolProficiencies: [{ choose: 1, from: ["dice set", "playing card set"] }],
     additionalLanguages: 1,
@@ -645,6 +829,8 @@ const Backgrounds: Record<string, Background> = {
   },
   outlander: {
     name: "outlander",
+    description:
+      "You grew up in the wilds, far from civilization and the comforts of town and technology. You've witnessed the migration of herds larger than forests, survived weather more extreme than any city-dweller could comprehend, and enjoyed the solitude of being the only thinking creature for miles in any direction.",
     skillProficiencies: ["athletics", "survival"],
     toolProficiencies: [
       {
@@ -675,6 +861,8 @@ const Backgrounds: Record<string, Background> = {
   },
   sage: {
     name: "sage",
+    description:
+      "You spent years learning the lore of the multiverse. You scoured manuscripts, studied scrolls, and listened to the greatest experts on the subjects that interest you. Your efforts have made you a master in your fields of study.",
     skillProficiencies: ["arcana", "history"],
     additionalLanguages: 2,
     equipment: [
@@ -695,6 +883,8 @@ const Backgrounds: Record<string, Background> = {
   },
   sailor: {
     name: "sailor",
+    description:
+      "You sailed on a seagoing vessel for years. In that time, you faced down mighty storms, monsters of the deep, and those who wanted to sink your craft to the bottomless depths. Your first love is the distant line of the horizon, but the time has come to try your hand at something new.",
     skillProficiencies: ["athletics", "perception"],
     toolProficiencies: ["navigator's tools", "vehicles (water)"],
     equipment: [
@@ -714,6 +904,8 @@ const Backgrounds: Record<string, Background> = {
   },
   pirate: {
     name: "pirate",
+    description:
+      "You spent your youth under the sway of a dread pirate, a ruthless cutthroat who taught you how to survive in a world of sharks and savages. You've indulged in larceny on the high seas and sent more than one deserving soul to a briny grave. Fear and bloodshed are no strangers to you.",
     skillProficiencies: ["athletics", "perception"],
     toolProficiencies: ["navigator's tools", "vehicles (water)"],
     equipment: [
@@ -733,6 +925,8 @@ const Backgrounds: Record<string, Background> = {
   },
   soldier: {
     name: "soldier",
+    description:
+      "War has been your life for as long as you care to remember. You trained as a youth, studied the use of weapons and armor, learned basic survival techniques, including how to stay alive on the battlefield. You might have been part of a standing national army or a mercenary company, or perhaps a member of a local militia.",
     skillProficiencies: ["athletics", "intimidation"],
     toolProficiencies: [{ choose: 1, from: ["dice set", "playing card set"] }, "vehicles (land)"],
     equipment: [
@@ -752,6 +946,8 @@ const Backgrounds: Record<string, Background> = {
   },
   urchin: {
     name: "urchin",
+    description:
+      "You grew up on the streets alone, orphaned, and poor. You had no one to watch over you or to provide for you, so you learned to provide for yourself. You fought fiercely over food and kept a constant watch out for other desperate souls who might steal from you. You slept on rooftops and in alleyways, exposed to the elements.",
     skillProficiencies: ["sleight of hand", "stealth"],
     toolProficiencies: ["disguise kit", "thieves' tools"],
     equipment: [
@@ -775,6 +971,8 @@ const Backgrounds: Record<string, Background> = {
 const Classes: Record<ClassNameType, ClassDef> = {
   barbarian: {
     name: "barbarian",
+    description:
+      "A fierce warrior of primitive background who can enter a battle rage. Barbarians come alive in the chaos of combat, using their rage to fuel powerful attacks and shrug off damage that would fell lesser warriors.",
     hitDie: 12,
     primaryAbilities: ["strength", "constitution"],
     savingThrows: ["strength", "constitution"],
@@ -932,6 +1130,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   bard: {
     name: "bard",
+    description:
+      "An inspiring magician whose power echoes the music of creation. Bards are masters of song, speech, and magic, using their artistic talents to inspire allies, demoralize foes, manipulate minds, and create illusions.",
     hitDie: 8,
     primaryAbilities: ["charisma", "dexterity"],
     savingThrows: ["dexterity", "charisma"],
@@ -1100,6 +1300,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   cleric: {
     name: "cleric",
+    description:
+      "A priestly champion who wields divine magic in service of a higher power. Clerics are intermediaries between the mortal world and the distant planes of the gods, channeling divine power to heal wounds, protect allies, and smite enemies.",
     hitDie: 8,
     primaryAbilities: ["wisdom"],
     savingThrows: ["wisdom", "charisma"],
@@ -1430,6 +1632,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   druid: {
     name: "druid",
+    description:
+      "A priest of the Old Faith, wielding the powers of nature and adopting animal forms. Druids revere nature above all, gaining their spells and other magical powers from the force of nature itself or from a nature deity, using these powers to preserve the natural world.",
     hitDie: 8,
     primaryAbilities: ["wisdom"],
     savingThrows: ["intelligence", "wisdom"],
@@ -1578,6 +1782,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   fighter: {
     name: "fighter",
+    description:
+      "A master of martial combat, skilled with a variety of weapons and armor. Fighters learn the basics of all combat styles and can master any weapon they choose, combining rigorous training with physical excellence to deadly effect.",
     hitDie: 10,
     primaryAbilities: ["strength", "dexterity", "constitution"],
     savingThrows: ["strength", "constitution"],
@@ -1755,6 +1961,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   monk: {
     name: "monk",
+    description:
+      "A master of martial arts, harnessing the power of the body in pursuit of physical and spiritual perfection. Monks make careful study of a magical energy that most monastic traditions call ki, using this energy to perform amazing feats of speed and strength.",
     hitDie: 8,
     primaryAbilities: ["dexterity", "wisdom"],
     savingThrows: ["strength", "dexterity"],
@@ -1974,6 +2182,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   paladin: {
     name: "paladin",
+    description:
+      "A holy warrior bound to a sacred oath. Paladins are united by their oaths to stand against the forces of evil, wielding divine magic and martial prowess to smite evil, protect the innocent, and uphold justice.",
     hitDie: 10,
     primaryAbilities: ["strength", "charisma"],
     savingThrows: ["wisdom", "charisma"],
@@ -2175,6 +2385,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   ranger: {
     name: "ranger",
+    description:
+      "A warrior who uses martial prowess and nature magic to combat threats on the edges of civilization. Rangers are skilled hunters and trackers who use both combat skills and spellcasting to pursue and defeat their enemies.",
     hitDie: 10,
     primaryAbilities: ["dexterity", "wisdom"],
     savingThrows: ["strength", "dexterity"],
@@ -2337,6 +2549,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   rogue: {
     name: "rogue",
+    description:
+      "A scoundrel who uses stealth and trickery to overcome obstacles and enemies. Rogues rely on skill, stealth, and their foes' vulnerabilities to get the upper hand in any situation, having a knack for finding the solution to just about any problem.",
     hitDie: 8,
     primaryAbilities: ["dexterity"],
     savingThrows: ["dexterity", "intelligence"],
@@ -2550,6 +2764,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   sorcerer: {
     name: "sorcerer",
+    description:
+      "A spellcaster who draws on inherent magic from a gift or bloodline. Sorcerers carry a magical birthright conferred upon them by an exotic bloodline, some otherworldly influence, or exposure to unknown cosmic forces, wielding raw magic with their very being.",
     hitDie: 6,
     primaryAbilities: ["charisma"],
     savingThrows: ["constitution", "charisma"],
@@ -2673,6 +2889,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   warlock: {
     name: "warlock",
+    description:
+      "A wielder of magic that is derived from a bargain with an extraplanar entity. Warlocks are seekers of the knowledge that lies hidden in the fabric of the multiverse, piecing together arcane secrets to bolster their own power through pacts with mysterious beings.",
     hitDie: 8,
     primaryAbilities: ["charisma"],
     savingThrows: ["wisdom", "charisma"],
@@ -2835,6 +3053,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
   },
   wizard: {
     name: "wizard",
+    description:
+      "A scholarly magic-user capable of manipulating the structures of reality. Wizards are supreme magic-users, defined and united by the spells they cast, drawing on the subtle weave of magic through scholarly study and dedication to unravel arcane mysteries.",
     hitDie: 6,
     primaryAbilities: ["intelligence"],
     savingThrows: ["intelligence", "wisdom"],

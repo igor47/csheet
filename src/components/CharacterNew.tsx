@@ -46,6 +46,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         placeholder="Enter character name"
       />
       {errors?.name && <div class="invalid-feedback d-block">{errors.name}</div>}
+      <div class="form-text">Every adventurer needs a name befitting their glory!</div>
     </div>,
     <div class="mb-3">
       <label for="species" class="form-label">
@@ -60,6 +61,14 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         error={errors?.species}
         value={values?.species}
       />
+      {values?.species && (
+        <div class="alert alert-light mx-1 mt-1">
+          {
+            ruleset.species.find((s) => s.name === values.species)
+              ?.description
+          }
+        </div>
+      )}
     </div>,
   ]
 
@@ -91,6 +100,41 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         value={values?.lineage}
         disabled={lineages.length === 0}
       />
+      {values?.species && values?.lineage && (
+        <div class="alert alert-light mx-1 mt-1">
+          {
+            ruleset.species
+              .find((s) => s.name === values.species)
+              ?.lineages?.find((l) => l.name === values.lineage)
+              ?.description
+          }
+        </div>
+      )}
+    </div>
+  )
+
+  fields.push(
+    <div class="mb-3">
+      <label for="background" class="form-label">
+        Background
+      </label>
+      <Select
+        name="background"
+        id="background"
+        options={backgroundNames.map((bg) => ({ value: bg, label: toTitleCase(bg) }))}
+        placeholder="Select a background"
+        required
+        error={errors?.background}
+        value={values?.background}
+      />
+      {values?.background && (
+        <div class="alert alert-light mx-1 mt-1">
+          {
+            ruleset.backgrounds[values.background]
+              ?.description
+          }
+        </div>
+      )}
     </div>
   )
 
@@ -108,6 +152,14 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         error={errors?.class}
         value={values?.class}
       />
+      {values?.class && (
+        <div class="alert alert-light mx-1 mt-1">
+          {
+            ruleset.classes[values.class as ClassNameType]
+              ?.description
+          }
+        </div>
+      )}
     </div>
   )
 
@@ -136,23 +188,15 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         value={values?.subclass}
         disabled={subclasses.length === 0}
       />
-    </div>
-  )
-
-  fields.push(
-    <div class="mb-3">
-      <label for="background" class="form-label">
-        Background
-      </label>
-      <Select
-        name="background"
-        id="background"
-        options={backgroundNames.map((bg) => ({ value: bg, label: toTitleCase(bg) }))}
-        placeholder="Select a background"
-        required
-        error={errors?.background}
-        value={values?.background}
-      />
+      {values?.class && values?.subclass && (
+        <div class="alert alert-light mx-1 mt-1">
+          {
+            ruleset.classes[values.class as ClassNameType]
+              ?.subclasses.find((sc) => sc.name === values.subclass)
+              ?.description
+          }
+        </div>
+      )}
     </div>
   )
 

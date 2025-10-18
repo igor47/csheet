@@ -50,18 +50,6 @@ export function createCharacterApiSchema(ruleset: Ruleset) {
   })
 }
 
-export type CreateCharacterApi = {
-  user_id: string
-  name: string
-  species: string
-  lineage: string | null
-  class: (typeof ClassNames)[number]
-  subclass: string | null
-  background: string
-  alignment?: string | null
-  ruleset: RulesetId
-}
-
 export type CreateCharacterResult =
   | { complete: true; character: Character }
   | { complete: false; values: Record<string, string>; errors: Record<string, string> }

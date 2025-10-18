@@ -82,6 +82,7 @@ export interface Trait {
 
 export interface Lineage {
   name: string
+  description: string
 
   // in SRD 5.1, some lineages get an ability score increase
   abilityScoreModifiers?: AbilityScoreModifiers
@@ -93,6 +94,7 @@ export interface Species {
   name: string
   size: SizeType
   speed: number
+  description: string
 
   // in SRD 5.1, some species get an ability score increase
   abilityScoreModifiers?: AbilityScoreModifiers
@@ -104,6 +106,8 @@ export interface Species {
 
 export interface Background {
   name: string
+  description: string
+
   skillProficiencies?: SkillType[]
   abilityScoresModified?: AbilityType[]
   additionalLanguages?: number
@@ -162,6 +166,8 @@ export interface Subclass {
 
 export interface ClassDef {
   name: ClassNameType
+  description: string
+
   hitDie: HitDieType
   primaryAbilities: AbilityType[]
   savingThrows: AbilityType[]

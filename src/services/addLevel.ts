@@ -1,5 +1,8 @@
 import { type CharLevel, create as createCharLevelDb, getCurrentLevels } from "@src/db/char_levels"
-import { ClassNames, ClassNamesSchema, type ClassNameType } from "@src/lib/dnd"
+import { create as createTraitDb } from "@src/db/char_traits"
+import { findById as findCharacterById } from "@src/db/characters"
+import { ClassNames, ClassNamesSchema, type ClassNameType, getTraits } from "@src/lib/dnd"
+import { getRuleset } from "@src/lib/dnd/rulesets"
 import srd51 from "@src/lib/dnd/srd51"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -190,13 +193,89 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
     data.subclass = currentClassLevel?.subclass
   }
 
-  // Create the level
-  await createCharLevelDb(db, {
-    character_id: data.character_id,
-    class: data.class,
-    level: data.level,
-    subclass: data.subclass || null,
-    hit_die_roll: data.hit_die_roll,
-    note: data.note || null,
+  // Get character for trait lookup
+  const character = await findCharacterById(db, data.character_id)
+  if (!character) {
+    throw new Error(`Character with ID ${data.character_id} not found`)
+  }
+
+  // Use character's ruleset instead of hardcoded srd51
+  const charRuleset = getRuleset(character.ruleset)
+
+  // Calculate total character level (sum of all class levels + this new level)
+  const totalLevel =
+    currentLevels.reduce((sum, cl) => sum + cl.level, 0) + (currentClassLevel ? 0 : 1)
+
+  await db.begin(async (tx) => {
+    // Create the level
+    await createCharLevelDb(tx, {
+      character_id: data.character_id,
+      class: data.class,
+      level: data.level,
+      subclass: data.subclass || null,
+      hit_die_roll: data.hit_die_roll,
+      note: data.note || null,
+    })
+
+    // Add level-based traits from species/lineage
+    const speciesTraits = getTraits(charRuleset, {
+      species: character.species,
+      lineage: character.lineage,
+      level: totalLevel,
+    })
+    for (const trait of speciesTraits) {
+      if (trait.level === totalLevel) {
+        const sourceDetail = trait.source === 'lineage' ? character.lineage : character.species
+        await createTraitDb(tx, {
+          character_id: character.id,
+          name: trait.name,
+          description: trait.description,
+          source: trait.source,
+          source_detail: sourceDetail,
+          level: totalLevel,
+          note: `Gained at level ${totalLevel}`,
+        })
+      }
+    }
+
+    // Add level-based traits from background
+    const backgroundTraits = getTraits(charRuleset, {
+      background: character.background,
+      level: totalLevel,
+    })
+    for (const trait of backgroundTraits) {
+      if (trait.level === totalLevel) {
+        await createTraitDb(tx, {
+          character_id: character.id,
+          name: trait.name,
+          description: trait.description,
+          source: "background",
+          source_detail: character.background,
+          level: totalLevel,
+          note: `Gained at level ${totalLevel}`,
+        })
+      }
+    }
+
+    // Add level-based traits from class/subclass
+    const classTraits = getTraits(charRuleset, {
+      className: data.class,
+      subclass: data.subclass,
+      level: data.level,
+    })
+    for (const trait of classTraits) {
+      if (trait.level === data.level) {
+        const sourceDetail = data.subclass || data.class
+        await createTraitDb(tx, {
+          character_id: character.id,
+          name: trait.name,
+          description: trait.description,
+          source: trait.source,
+          source_detail: sourceDetail,
+          level: data.level,
+          note: `Gained at ${data.class} level ${data.level}`,
+        })
+      }
+    }
   })
 }

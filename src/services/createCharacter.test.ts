@@ -523,7 +523,7 @@ describe("createCharacter", () => {
       const bonusProficiency = traits.find((t) => t.name === "bonus proficiency")
       expect(bonusProficiency).toBeTruthy()
       expect(bonusProficiency?.source).toBe("subclass")
-      expect(bonusProficiency?.source_detail).toBe("life")
+      expect(bonusProficiency?.source_detail).toBe("life domain")
       expect(bonusProficiency?.level).toBe(1)
 
       const discipleOfLife = traits.find((t) => t.name === "disciple of life")
@@ -563,7 +563,12 @@ describe("createCharacter", () => {
         const infernalLegacy = traits.find((t) => t.name === "infernal legacy cantrip")
         expect(infernalLegacy).toBeTruthy()
         expect(infernalLegacy?.source).toBe("species")
+        expect(infernalLegacy?.level).toBeNull()
         expect(infernalLegacy?.source_detail).toBe("tiefling")
+
+        // should NOT have helish rebuke
+        const hellishRebuke = traits.find((t) => t.name.includes("hellish rebuke"))
+        expect(hellishRebuke).toBeFalsy()
       })
 
       describe("on SRD 5.2", () => {
@@ -630,7 +635,7 @@ describe("createCharacter", () => {
         expect(breathWeapon?.source).toBe("lineage")
       })
 
-      it("adds level 1 traits from class and subclass", async () => {
+      it("adds level 1 traits from class", async () => {
         const user = await userFactory.create({}, testCtx.db)
         const data = buildCharacterData({ ruleset: SRD52_ID })
 
@@ -644,10 +649,10 @@ describe("createCharacter", () => {
         expect(spellcasting).toBeTruthy()
         expect(spellcasting?.level).toBe(1)
 
-        // Should have level 1 subclass traits
+        // Life Domain in SRD 5.2 has no level 1 subclass traits
+        // (disciple of life is level 3 in SRD 5.2)
         const discipleOfLife = traits.find((t) => t.name === "disciple of life")
-        expect(discipleOfLife).toBeTruthy()
-        expect(discipleOfLife?.level).toBe(1)
+        expect(discipleOfLife).toBeFalsy()
       })
     })
   })

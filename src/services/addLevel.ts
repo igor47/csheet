@@ -1,3 +1,4 @@
+import { beginOrSavepoint } from "@src/db"
 import { create as createCharLevelDb, getCurrentLevels } from "@src/db/char_levels"
 import { create as createTraitDb } from "@src/db/char_traits"
 import type { Character } from "@src/db/characters"
@@ -117,11 +118,13 @@ export async function addLevel(
     finalSubclass = currentClassLevel?.subclass || null
   }
 
-  // Calculate total character level (sum of all class levels + this new level)
-  const totalLevel =
-    currentLevels.reduce((sum, cl) => sum + cl.level, 0) + (currentClassLevel ? 0 : 1)
+  // Calculate level variables for clearer conditionals
+  const classLevelNew = nextLevel
+  const totalLevelOld = currentLevels.reduce((sum, cl) => sum + cl.level, 0)
+  const totalLevelNew = totalLevelOld + 1
 
-  await db.begin(async (tx) => {
+  // Helper function to add level and traits within a transaction
+  await beginOrSavepoint(db, async (tx) => {
     // Create the level
     await createCharLevelDb(tx, {
       character_id: char.id,
@@ -132,14 +135,16 @@ export async function addLevel(
       note: result.data.note ?? null,
     })
 
-    // Add level-based traits from species/lineage
+    // Add traits from species/lineage
+    // At total level 1: add always-on traits (!trait.level) and level 1 traits
+    // At other levels: only add traits for that specific level
     const speciesTraits = getTraits(charRuleset, {
       species: char.species,
       lineage: char.lineage,
-      level: totalLevel,
+      level: totalLevelNew,
     })
     for (const trait of speciesTraits) {
-      if (trait.level === totalLevel) {
+      if (trait.level === totalLevelNew || (totalLevelNew === 1 && !trait.level)) {
         const sourceDetail = trait.source === "lineage" ? char.lineage : char.species
         await createTraitDb(tx, {
           character_id: char.id,
@@ -147,48 +152,53 @@ export async function addLevel(
           description: trait.description,
           source: trait.source,
           source_detail: sourceDetail,
-          level: totalLevel,
-          note: `Gained at level ${totalLevel}`,
+          level: trait.level || null,
+          note: trait.level ? `Gained at level ${totalLevelNew}` : null,
         })
       }
     }
 
-    // Add level-based traits from background
+    // Add traits from background
+    // At total level 1: add always-on traits (!trait.level) and level 1 traits
+    // At other levels: only add traits for that specific level
     const backgroundTraits = getTraits(charRuleset, {
       background: char.background,
-      level: totalLevel,
+      level: totalLevelNew,
     })
     for (const trait of backgroundTraits) {
-      if (trait.level === totalLevel) {
+      if (trait.level === totalLevelNew || (totalLevelNew === 1 && !trait.level)) {
         await createTraitDb(tx, {
           character_id: char.id,
           name: trait.name,
           description: trait.description,
           source: "background",
           source_detail: char.background,
-          level: totalLevel,
-          note: `Gained at level ${totalLevel}`,
+          level: trait.level || null,
+          note: trait.level ? `Gained at level ${totalLevelNew}` : null,
         })
       }
     }
 
-    // Add level-based traits from class/subclass
+    // Add traits from class/subclass
+    // At class level 1 (including multiclass): add always-on traits (!trait.level) and level 1 traits
+    // At other class levels: only add traits for that specific level
     const classTraits = getTraits(charRuleset, {
       className: result.data.class,
       subclass: finalSubclass,
-      level: result.data.level,
+      level: classLevelNew,
     })
     for (const trait of classTraits) {
-      if (trait.level === result.data.level) {
-        const sourceDetail = finalSubclass || result.data.class
+      if (trait.level === classLevelNew || (classLevelNew === 1 && !trait.level)) {
+        // Use trait.source to determine if this is a class or subclass trait
+        const sourceDetail = trait.source === "subclass" ? finalSubclass : result.data.class
         await createTraitDb(tx, {
           character_id: char.id,
           name: trait.name,
           description: trait.description,
           source: trait.source,
           source_detail: sourceDetail,
-          level: result.data.level,
-          note: `Gained at ${result.data.class} level ${result.data.level}`,
+          level: trait.level || null,
+          note: trait.level ? `Gained at ${result.data.class} level ${classLevelNew}` : null,
         })
       }
     }

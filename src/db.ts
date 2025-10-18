@@ -1,4 +1,4 @@
-import { SQL } from "bun"
+import { SQL, type TransactionSQL } from "bun"
 import type { Context } from "hono"
 import { config } from "./config"
 
@@ -23,4 +23,28 @@ export function getDb(c: Context): SQL {
  */
 export function getDbForTests(): SQL {
   return db
+}
+
+
+export function beginOrSavepoint<T>(
+  db: TransactionSQL,
+  fn: (sql: SQL.SavepointContextCallback<T>) => T | Promise<T>
+): Promise<T>
+
+export function beginOrSavepoint<T>(
+  db: SQL,
+  fn: (sql: TransactionSQL) => T | Promise<T>
+): Promise<T>
+
+export function beginOrSavepoint<T>(
+  db: SQL | TransactionSQL,
+  fn: ((sql: TransactionSQL) => T | Promise<T>) | ((sql: SQL.SavepointContextCallback<T>) => T | Promise<T>)
+): Promise<T> {
+  if ('savepoint' in db) {
+    // biome-ignore lint/suspicious/noExplicitAny: working around bun type issue
+    return (db as TransactionSQL).savepoint((sql) => fn(sql as any))
+  } else {
+    // biome-ignore lint/suspicious/noExplicitAny: working around bun type issue
+    return db.begin((sql) => fn(sql as any))
+  }
 }

@@ -26,7 +26,7 @@ const TraitList = ({ traits, title }: TraitListProps) => {
         {traits.map((trait) => (
           <li class="list-group-item">
             <div class="d-flex justify-content-between align-items-start mb-1">
-              <h6 class="mb-0">{trait.name}</h6>
+              <h6 class="mb-0 text-capitalize">{trait.name}</h6>
               {trait.level && <span class="badge bg-primary">Level {trait.level}</span>}
             </div>
             <p class="mb-0 text-muted">{trait.description}</p>

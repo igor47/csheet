@@ -66,8 +66,11 @@ export async function addLevel(
   }
 
   if (level !== nextLevel) {
-    errors.level = `Invalid level. Expected ${nextLevel}`
-    return { complete: false, values: data, errors }
+    if (isCheck) {
+      data.level = nextLevel.toString()
+    } else {
+      errors.level = `Invalid level. Expected ${nextLevel}`
+    }
   }
 
   // Validate subclass if required
@@ -190,7 +193,7 @@ export async function addLevel(
     for (const trait of classTraits) {
       if (trait.level === classLevelNew || (classLevelNew === 1 && !trait.level)) {
         // Use trait.source to determine if this is a class or subclass trait
-        const sourceDetail = trait.source === "subclass" ? finalSubclass : result.data.class
+        const sourceDetail = trait.source === "subclass" ? finalSubclass || null : result.data.class
         await createTraitDb(tx, {
           character_id: char.id,
           name: trait.name,

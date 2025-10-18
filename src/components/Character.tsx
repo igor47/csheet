@@ -92,7 +92,7 @@ export const Character = ({ character }: CharacterProps) => {
                   </button>
                 </h2>
                 <div id="col-traits" class="accordion-collapse collapse">
-                  <TraitsPanel />
+                  <TraitsPanel character={character} />
                 </div>
               </div>
 

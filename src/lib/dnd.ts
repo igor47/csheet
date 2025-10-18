@@ -100,7 +100,6 @@ export interface Species {
   abilityScoreModifiers?: AbilityScoreModifiers
 
   lineages?: Lineage[]
-  variants?: Lineage[]
   traits?: Trait[]
 }
 
@@ -202,9 +201,8 @@ export interface Ruleset {
   getSlotsFor(casterKind: CasterKindType, level: number): SpellSlotsType
 }
 
-export type ForWhom = {level?: number | null} &
-(
-  | { species: string; lineage?: string | null; }
+export type ForWhom = { level?: number | null } & (
+  | { species: string; lineage?: string | null }
   | { background: string }
   | { className: ClassNameType; subclass?: string | null }
 )

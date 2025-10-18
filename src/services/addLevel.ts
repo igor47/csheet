@@ -225,7 +225,7 @@ export async function addLevel(db: SQL, data: AddLevelApi): Promise<void> {
     })
     for (const trait of speciesTraits) {
       if (trait.level === totalLevel) {
-        const sourceDetail = trait.source === 'lineage' ? character.lineage : character.species
+        const sourceDetail = trait.source === "lineage" ? character.lineage : character.species
         await createTraitDb(tx, {
           character_id: character.id,
           name: trait.name,

@@ -84,7 +84,7 @@ characterRoutes.post("/characters/new", async (c) => {
   const user = c.var.user!
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const result = await createCharacter(getDb(c), { ...body, user_id: user.id })
+  const result = await createCharacter(getDb(c), user, body)
 
   if (!result.complete) {
     return c.html(<CharacterNew values={result.values} errors={result.errors} />)

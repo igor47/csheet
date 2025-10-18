@@ -1,5 +1,5 @@
 import { Select } from "@src/components/ui/Select"
-import { ClassNames, getTraits, type ClassNameType, type Trait } from "@src/lib/dnd"
+import { ClassNames, type ClassNameType, getTraits, type Trait } from "@src/lib/dnd"
 import { getRuleset, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"
@@ -45,21 +45,18 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
   const backgroundNames = Object.keys(ruleset.backgrounds)
 
   // build separate trait lists for display
-  const speciesTraits: Trait[] =
-    values?.species
-      ? getTraits(ruleset, { species: values.species, lineage: values?.lineage })
-      : []
-  const backgroundTraits: Trait[] =
-    values?.background
-      ? getTraits(ruleset, { background: values.background })
-      : []
-  const classTraits: Trait[] =
-    values?.class
-      ? getTraits(ruleset, {
-          className: values.class as ClassNameType,
-          subclass: values?.subclass,
-        })
-      : []
+  const speciesTraits: Trait[] = values?.species
+    ? getTraits(ruleset, { species: values.species, lineage: values?.lineage })
+    : []
+  const backgroundTraits: Trait[] = values?.background
+    ? getTraits(ruleset, { background: values.background })
+    : []
+  const classTraits: Trait[] = values?.class
+    ? getTraits(ruleset, {
+        className: values.class as ClassNameType,
+        subclass: values?.subclass,
+      })
+    : []
 
   const fields = [
     <div class="mb-3">

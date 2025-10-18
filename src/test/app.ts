@@ -1,7 +1,7 @@
 import { afterEach, beforeEach } from "bun:test"
 import { createApp } from "@src/app"
 import { getDbForTests } from "@src/db"
-import type { SQL } from "bun"
+import type { ReservedSQL } from "bun"
 import type { Hono } from "hono"
 
 /**
@@ -24,7 +24,7 @@ import type { Hono } from "hono"
 export function useTestApp() {
   const state = {
     app: null as Hono | null,
-    db: null as SQL | null,
+    db: null as ReservedSQL | null,
   }
 
   beforeEach(async () => {
@@ -42,7 +42,9 @@ export function useTestApp() {
 
   afterEach(async () => {
     if (state.db) {
-      await state.db.unsafe("ROLLBACK")
+      const reserved = state.db
+      reserved.unsafe("ROLLBACK")
+      reserved.release()
     }
   })
 

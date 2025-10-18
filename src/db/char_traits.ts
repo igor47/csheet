@@ -2,7 +2,14 @@ import type { SQL } from "bun"
 import { ulid } from "ulid"
 import { z } from "zod"
 
-export const TraitSources = ["species", "lineage", "background", "class", "subclass", "custom"] as const
+export const TraitSources = [
+  "species",
+  "lineage",
+  "background",
+  "class",
+  "subclass",
+  "custom",
+] as const
 export const TraitSourceSchema = z.enum(TraitSources)
 export type TraitSource = z.infer<typeof TraitSourceSchema>
 

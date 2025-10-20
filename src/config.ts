@@ -11,6 +11,12 @@ export const config = {
   postgresDb: process.env.POSTGRES_DB || "csheet_dev",
   postgresDbTest: process.env.POSTGRES_DB_TEST || "csheet_test",
   cookieSecret: process.env.COOKIE_SECRET || "your-secret-key-should-be-in-env",
+  s3Endpoint: process.env.S3_ENDPOINT || "http://localhost:9000",
+  s3Region: process.env.S3_REGION || "us-east-1",
+  s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || "csheet_minio",
+  s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "csheet_minio_pass",
+  s3BucketName: process.env.S3_BUCKET_NAME || "csheet-uploads",
+  s3PublicUrl: process.env.S3_PUBLIC_URL || "http://localhost:9000/csheet-uploads",
 } as const
 
 // Print config as JSON when run directly

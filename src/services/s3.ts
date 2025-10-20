@@ -56,7 +56,7 @@ export async function fileExists(key: string): Promise<boolean> {
       } as HeadObjectCommandInput)
     )
     return true
-  } catch (error) {
+  } catch (_error) {
     return false
   }
 }

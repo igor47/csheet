@@ -9,6 +9,7 @@ import { authRoutes } from "./routes/auth"
 import { characterRoutes } from "./routes/character"
 import { indexRoutes } from "./routes/index"
 import { spellsRoutes } from "./routes/spells"
+import { uploadsRoutes } from "./routes/uploads"
 
 // update typescript to indicate the title prop on the layout
 // see: https://hono.dev/docs/api/context#render-setrenderer
@@ -59,6 +60,7 @@ export function createApp(db?: SQL) {
   const protectedRoutes = new Hono()
   protectedRoutes.use("*", requireAuth)
   protectedRoutes.route("/", characterRoutes)
+  protectedRoutes.route("/", uploadsRoutes)
 
   app.route("/", protectedRoutes)
 

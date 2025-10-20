@@ -195,7 +195,8 @@ CREATE TABLE public.characters (
     alignment text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    ruleset text DEFAULT 'srd51'::text NOT NULL
+    ruleset text DEFAULT 'srd51'::text NOT NULL,
+    avatar_id text
 );
 
 
@@ -205,6 +206,24 @@ CREATE TABLE public.characters (
 
 CREATE TABLE public.schema_migrations (
     version character varying NOT NULL
+);
+
+
+--
+-- Name: uploads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.uploads (
+    id text NOT NULL,
+    user_id text NOT NULL,
+    status text NOT NULL,
+    content_type text NOT NULL,
+    size_bytes bigint,
+    original_filename text,
+    s3_key text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    completed_at timestamp without time zone,
+    CONSTRAINT uploads_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'complete'::text, 'failed'::text])))
 );
 
 
@@ -309,6 +328,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: uploads uploads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.uploads
+    ADD CONSTRAINT uploads_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -398,6 +425,20 @@ CREATE INDEX idx_char_traits_char_id ON public.char_traits USING btree (characte
 --
 
 CREATE INDEX idx_characters_user_id ON public.characters USING btree (user_id);
+
+
+--
+-- Name: idx_uploads_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_uploads_status ON public.uploads USING btree (status);
+
+
+--
+-- Name: idx_uploads_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_uploads_user_id ON public.uploads USING btree (user_id);
 
 
 --
@@ -557,11 +598,27 @@ ALTER TABLE ONLY public.char_traits
 
 
 --
+-- Name: characters characters_avatar_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.characters
+    ADD CONSTRAINT characters_avatar_id_fkey FOREIGN KEY (avatar_id) REFERENCES public.uploads(id);
+
+
+--
 -- Name: characters characters_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.characters
     ADD CONSTRAINT characters_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: uploads fk_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.uploads
+    ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -588,4 +645,6 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251007100001'),
     ('20251014115526'),
     ('20251017195912'),
-    ('20251017232744');
+    ('20251017232744'),
+    ('20251020180932'),
+    ('20251020181000');

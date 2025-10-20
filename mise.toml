@@ -114,12 +114,28 @@ run = """
 description = "Run migrations on test database"
 depends = ["db:test:create"]
 
+[tasks."s3:test:setup"]
+run = """
+  CONFIG=$(bun src/config.ts)
+  S3_BUCKET_TEST=$(echo "$CONFIG" | jq -r '.s3BucketNameTest')
+  S3_ACCESS_KEY=$(echo "$CONFIG" | jq -r '.s3AccessKeyId')
+  S3_SECRET_KEY=$(echo "$CONFIG" | jq -r '.s3SecretAccessKey')
+
+  # Configure MinIO client and create test bucket
+  docker exec csheet_minio mc alias set myminio http://localhost:9000 "$S3_ACCESS_KEY" "$S3_SECRET_KEY" || true
+  docker exec csheet_minio mc mb "myminio/$S3_BUCKET_TEST" --ignore-existing || true
+"""
+description = "Create S3 test bucket in MinIO"
+depends = ["deps:up"]
+
 [tasks.test]
 run = """
   CONFIG=$(bun src/config.ts)
   PG_DB_TEST=$(echo "$CONFIG" | jq -r '.postgresDbTest')
+  S3_BUCKET_TEST=$(echo "$CONFIG" | jq -r '.s3BucketNameTest')
   export POSTGRES_DB="$PG_DB_TEST"
+  export S3_BUCKET_NAME="$S3_BUCKET_TEST"
   bun test "$@"
 """
 description = "Run tests (pass through arguments to bun test)"
-depends = ["db:test:migrate"]
+depends = ["db:test:migrate", "s3:test:setup"]

@@ -16,6 +16,7 @@ export const config = {
   s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || "csheet_minio",
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "csheet_minio_pass",
   s3BucketName: process.env.S3_BUCKET_NAME || "csheet-uploads",
+  s3BucketNameTest: process.env.S3_BUCKET_NAME_TEST || "csheet-uploads-test",
   s3PublicUrl: process.env.S3_PUBLIC_URL || "http://localhost:9000/csheet-uploads",
 } as const
 

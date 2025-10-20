@@ -97,6 +97,21 @@ CREATE TABLE public.char_levels (
 
 
 --
+-- Name: char_notes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_notes (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    content text DEFAULT ''::text NOT NULL,
+    is_backup boolean DEFAULT false NOT NULL,
+    restored_from_id character varying(26),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: char_skills; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -272,6 +287,14 @@ ALTER TABLE ONLY public.char_levels
 
 
 --
+-- Name: char_notes char_notes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_notes
+    ADD CONSTRAINT char_notes_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_skills char_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -369,6 +392,13 @@ CREATE INDEX idx_char_hp_char_id_created_at ON public.char_hp USING btree (chara
 --
 
 CREATE INDEX idx_char_levels_char_id_created_at ON public.char_levels USING btree (character_id, created_at);
+
+
+--
+-- Name: idx_char_notes_character_id_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_notes_character_id_created_at ON public.char_notes USING btree (character_id, created_at DESC);
 
 
 --
@@ -519,6 +549,13 @@ CREATE TRIGGER characters_updated_at BEFORE UPDATE ON public.characters FOR EACH
 
 
 --
+-- Name: char_notes update_char_notes_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_char_notes_updated_at BEFORE UPDATE ON public.char_notes FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: users users_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -555,6 +592,22 @@ ALTER TABLE ONLY public.char_hp
 
 ALTER TABLE ONLY public.char_levels
     ADD CONSTRAINT char_levels_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: char_notes char_notes_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_notes
+    ADD CONSTRAINT char_notes_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: char_notes char_notes_restored_from_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_notes
+    ADD CONSTRAINT char_notes_restored_from_id_fkey FOREIGN KEY (restored_from_id) REFERENCES public.char_notes(id) ON DELETE SET NULL;
 
 
 --
@@ -647,4 +700,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251017195912'),
     ('20251017232744'),
     ('20251020180932'),
-    ('20251020181000');
+    ('20251020181000'),
+    ('20251020212355');

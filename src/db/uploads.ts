@@ -100,7 +100,7 @@ export async function updateStatus(
   const result = await db`
     UPDATE uploads
     SET status = ${status},
-        s3_key = ${s3Key ?? null},
+        s3_key = COALESCE(${s3Key ?? null}, s3_key),
         completed_at = ${status === UploadStatus.COMPLETE ? new Date() : null}
     WHERE id = ${id}
     RETURNING *

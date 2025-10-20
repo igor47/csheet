@@ -17,25 +17,25 @@ interface CharacterFactoryParams {
 }
 
 const species = [
-  "Human",
-  "Elf",
-  "Dwarf",
-  "Halfling",
-  "Dragonborn",
-  "Gnome",
-  "Half-Elf",
-  "Half-Orc",
-  "Tiefling",
+  "human",
+  "elf",
+  "dwarf",
+  "halfling",
+  "dragonborn",
+  "gnome",
+  "half-elf",
+  "half-orc",
+  "tiefling",
 ]
 const backgrounds = [
-  "Acolyte",
-  "Criminal",
-  "Folk Hero",
-  "Noble",
-  "Sage",
-  "Soldier",
-  "Urchin",
-  "Entertainer",
+  "acolyte",
+  "criminal",
+  "folk hero",
+  "noble",
+  "sage",
+  "soldier",
+  "urchin",
+  "entertainer",
 ]
 const alignments = [
   "Lawful Good",
@@ -62,6 +62,7 @@ const factory = Factory.define<Character, CharacterFactoryParams>(({ params }) =
   alignment:
     params.alignment === undefined ? faker.helpers.arrayElement(alignments) : params.alignment,
   ruleset: params.ruleset ?? SRD51_ID,
+  avatar_id: null,
   created_at: new Date(),
   updated_at: new Date(),
 }))
@@ -89,6 +90,7 @@ export const characterFactory = {
       background: built.background,
       alignment: built.alignment,
       ruleset: built.ruleset,
+      avatar_id: null,
     }
 
     return await createCharacter(db, characterData)

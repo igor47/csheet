@@ -11,7 +11,7 @@ PORT = "3000"
 [tasks.dev]
 run = "bun run --watch main.ts"
 description = "Start development server with hot reload"
-depends = ["deps:up"]
+depends = ["deps:up", "s3:setup"]
 
 [tasks.start]
 run = "bun run main.tsx"
@@ -113,6 +113,20 @@ run = """
 """
 description = "Run migrations on test database"
 depends = ["db:test:create"]
+
+[tasks."s3:setup"]
+run = """
+  CONFIG=$(bun src/config.ts)
+  S3_BUCKET=$(echo "$CONFIG" | jq -r '.s3BucketName')
+  S3_ACCESS_KEY=$(echo "$CONFIG" | jq -r '.s3AccessKeyId')
+  S3_SECRET_KEY=$(echo "$CONFIG" | jq -r '.s3SecretAccessKey')
+
+  # Configure MinIO client and create dev bucket
+  docker exec csheet_minio mc alias set myminio http://localhost:9000 "$S3_ACCESS_KEY" "$S3_SECRET_KEY" || true
+  docker exec csheet_minio mc mb "myminio/$S3_BUCKET" --ignore-existing || true
+"""
+description = "Create S3 dev bucket in MinIO"
+depends = ["deps:up"]
 
 [tasks."s3:test:setup"]
 run = """

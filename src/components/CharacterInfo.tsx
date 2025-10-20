@@ -28,15 +28,43 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
   }
 
   return (
-    <div class="card shadow-sm mb-3" id="character-info" hx-swap-oob={swapOob && "true"}>
+    <div
+      class="card shadow-sm mb-3"
+      id="character-info"
+      hx-swap-oob={swapOob && "true"}
+      data-character-id={character.id}
+    >
       <div class="card-body">
         <div class="row g-2 d-flex align-items-center">
           <div class="col-3 col-lg-2">
-            <img
-              src="/static/placeholder.png"
-              class="rounded mx-auto d-block ratio ratio-1x1"
-              alt={`${character.name}'s avatar`}
-            />
+            <button
+              id="avatar-upload-button"
+              type="button"
+              class="position-relative ratio ratio-1x1 rounded overflow-hidden border-0 p-0"
+              tabindex={0}
+              hx-get={`/characters/${character.id}/edit/avatar`}
+              hx-target="#editModalContent"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#editModal"
+            >
+              <img
+                id="avatar-image"
+                src={
+                  character.avatar_id
+                    ? `/uploads/${character.avatar_id}`
+                    : "/static/placeholder.png"
+                }
+                class="w-100 h-100"
+                alt={`${character.name}'s avatar`}
+                style="object-fit: cover;"
+              />
+              <i
+                id="avatar-upload-icon"
+                class="bi bi-camera-fill text-white fs-1"
+                style="position: absolute; top: 100%; left: 50%; transform: translate(-50%, -35%); pointer-events: none;"
+              />
+            </button>
           </div>
           <div class="col-9 col-lg-10">
             <h2>{character.name}</h2>

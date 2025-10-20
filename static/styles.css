@@ -60,3 +60,16 @@
   }
 }
 
+/* character avatar */
+#avatar-upload-icon {
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+#avatar-upload-button:hover #avatar-image {
+  opacity: 0.6;
+}
+
+#avatar-upload-button:hover #avatar-upload-icon {
+  opacity: 1;
+}

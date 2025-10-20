@@ -27,6 +27,7 @@ import { SpellSlotsEditForm } from "@src/components/SpellSlotsEditForm"
 import { SpellSlotsHistory } from "@src/components/SpellSlotsHistory"
 import { TraitEditForm } from "@src/components/TraitEditForm"
 import { TraitHistory } from "@src/components/TraitHistory"
+import { UpdateAvatarForm } from "@src/components/UpdateAvatarForm"
 import { ModalContent } from "@src/components/ui/ModalContent"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
@@ -50,6 +51,7 @@ import { learnSpell } from "@src/services/learnSpell"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { updateAbility } from "@src/services/updateAbility"
+import { updateAvatar } from "@src/services/updateAvatar"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateSkill } from "@src/services/updateSkill"
@@ -501,6 +503,10 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
     return c.html(<LearnSpellForm character={char} />)
   }
 
+  if (field === "avatar") {
+    return c.html(<UpdateAvatarForm character={char} />)
+  }
+
   // Check if field is an ability
   if (Abilities.includes(field as AbilityType)) {
     const ability = field as AbilityType
@@ -595,6 +601,35 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
       <div id="alert alert-danger">Unknown field: {field}</div>
     </ModalContent>
   )
+})
+
+// POST /characters/:id/avatar - Set character avatar
+characterRoutes.post("/characters/:id/avatar", async (c) => {
+  const user = c.get("user")
+  if (!user) {
+    c.header("HX-Redirect", "/login")
+    return c.body(null, 302)
+  }
+
+  const characterId = c.req.param("id")
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  const result = await updateAvatar(getDb(c), char, body)
+
+  if (!result.complete) {
+    return c.html(<UpdateAvatarForm character={char} errors={result.errors} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.get("/characters/:id/history/:field", async (c) => {

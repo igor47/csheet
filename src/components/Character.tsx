@@ -1,3 +1,4 @@
+import type { CharNote } from "@src/db/char_notes"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { CharacterInfo } from "./CharacterInfo"
 import { CurrentStatus } from "./CurrentStatus"
@@ -6,12 +7,14 @@ import { InventoryPanel } from "./panels/InventoryPanel"
 import { SkillsPanel } from "./panels/SkillsPanel"
 import { SpellsPanel } from "./panels/SpellsPanel"
 import { TraitsPanel } from "./panels/TraitsPanel"
+import { SessionNotes } from "./SessionNotes"
 
 type CharacterProps = {
   character: ComputedCharacter
+  currentNote: CharNote | null
 }
 
-export const Character = ({ character }: CharacterProps) => {
+export const Character = ({ character, currentNote }: CharacterProps) => {
   return (
     <>
       {/* Content */}
@@ -22,18 +25,7 @@ export const Character = ({ character }: CharacterProps) => {
           <div class="character-main-view d-lg-flex flex-lg-column" id="character-main-view">
             <CurrentStatus character={character} />
 
-            <div class="card shadow-sm flex-lg-fill d-lg-flex flex-lg-column">
-              <div class="card-header">
-                <h5 class="mb-0">Session Notes</h5>
-              </div>
-              <div class="card-body flex-lg-fill d-lg-flex flex-lg-column">
-                <textarea
-                  class="form-control flex-lg-fill"
-                  style="min-height: 300px"
-                  placeholder="Write your notes here..."
-                ></textarea>
-              </div>
-            </div>
+            <SessionNotes characterId={character.id} currentNote={currentNote} />
           </div>
 
           {/* Panels */}

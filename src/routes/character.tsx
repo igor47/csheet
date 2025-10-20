@@ -13,12 +13,15 @@ import { HitDiceHistory } from "@src/components/HitDiceHistory"
 import { HitPointsEditForm } from "@src/components/HitPointsEditForm"
 import { HitPointsHistory, type HPHistoryEvent } from "@src/components/HitPointsHistory"
 import { LearnSpellForm } from "@src/components/LearnSpellForm"
+import { NotesHistory } from "@src/components/NotesHistory"
+import { NotesSaveIndicator } from "@src/components/NotesSaveIndicator"
 import { PreparedSpellsHistory } from "@src/components/PreparedSpellsHistory"
 import { PrepareSpellForm } from "@src/components/PrepareSpellForm"
 import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
+import { SessionNotes } from "@src/components/SessionNotes"
 import { SkillEditForm } from "@src/components/SkillEditForm"
 import { SkillHistory } from "@src/components/SkillHistory"
 import { SpellbookHistory } from "@src/components/SpellbookHistory"
@@ -29,11 +32,18 @@ import { TraitEditForm } from "@src/components/TraitEditForm"
 import { TraitHistory } from "@src/components/TraitHistory"
 import { UpdateAvatarForm } from "@src/components/UpdateAvatarForm"
 import { ModalContent } from "@src/components/ui/ModalContent"
+import { config } from "@src/config"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
 import { findByCharacterId } from "@src/db/char_levels"
+import {
+  create as createNote,
+  findById as findNoteById,
+  findByCharacterId as findNotes,
+  getCurrent as getCurrentNote,
+} from "@src/db/char_notes"
 import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
@@ -50,6 +60,7 @@ import { createCharacter } from "@src/services/createCharacter"
 import { learnSpell } from "@src/services/learnSpell"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
+import { saveNotes } from "@src/services/saveNotes"
 import { updateAbility } from "@src/services/updateAbility"
 import { updateAvatar } from "@src/services/updateAvatar"
 import { updateHitDice } from "@src/services/updateHitDice"
@@ -99,7 +110,11 @@ characterRoutes.get("/characters/:id", async (c) => {
     return c.redirect("/characters")
   }
 
-  return c.render(<Character character={char} />, { title: "Character Sheet" })
+  const currentNote = await getCurrentNote(getDb(c), id)
+
+  return c.render(<Character character={char} currentNote={currentNote} />, {
+    title: "Character Sheet",
+  })
 })
 
 characterRoutes.post("/characters/:id/edit/class", async (c) => {
@@ -730,9 +745,78 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     return c.html(<SkillHistory skill={field} events={filteredEvents} />)
   }
 
+  if (field === "notes") {
+    const notes = await findNotes(getDb(c), characterId)
+    return c.html(<NotesHistory characterId={characterId} notes={notes} />)
+  }
+
   return c.html(
     <ModalContent title={`${field} history`}>
       <div id="alert alert-info">Coming soon</div>
     </ModalContent>
   )
+})
+
+// POST /characters/:id/notes - Auto-save notes
+characterRoutes.post("/characters/:id/notes", async (c) => {
+  const characterId = c.req.param("id") as string
+  const user = c.var.user!
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    return c.html(<NotesSaveIndicator error={true} />)
+  }
+
+  if (char.user_id !== user.id) {
+    return c.html(<NotesSaveIndicator error={true} />)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const content = body.content || ""
+
+  const result = await saveNotes(getDb(c), characterId, content)
+
+  if (!result.complete) {
+    return c.html(<NotesSaveIndicator error={true} />)
+  }
+
+  return c.html(<NotesSaveIndicator lastSaved={result.note.created_at} />)
+})
+
+// POST /characters/:id/notes/restore/:noteId - Restore a note version
+characterRoutes.post("/characters/:id/notes/restore/:noteId", async (c) => {
+  const characterId = c.req.param("id") as string
+  const noteId = c.req.param("noteId") as string
+  const user = c.var.user!
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== user.id) {
+    await setFlashMsg(c, "Unauthorized", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 403)
+  }
+
+  // Find the note to restore
+  const noteToRestore = await findNoteById(getDb(c), noteId)
+  if (!noteToRestore || noteToRestore.character_id !== characterId) {
+    await setFlashMsg(c, "Note not found", "error")
+    return c.html(<SessionNotes characterId={characterId} currentNote={null} />)
+  }
+
+  // Create new entry with restored content
+  const restoredNote = await createNote(getDb(c), {
+    character_id: characterId,
+    content: noteToRestore.content,
+    is_backup: false,
+    restored_from_id: noteId,
+  })
+
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<SessionNotes characterId={characterId} currentNote={restoredNote} />)
 })

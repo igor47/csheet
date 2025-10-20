@@ -109,7 +109,7 @@ run = """
   PG_USER=$(echo "$CONFIG" | jq -r '.postgresUser')
   PG_PASSWORD=$(echo "$CONFIG" | jq -r '.postgresPassword')
   PG_DB_TEST=$(echo "$CONFIG" | jq -r '.postgresDbTest')
-  DATABASE_URL="postgres://$PG_USER:$PG_PASSWORD@$PG_HOST:$PG_PORT/$PG_DB_TEST?sslmode=disable" DBMATE_MIGRATIONS_DIR="./migrations" DBMATE_SCHEMA_FILE="./db/schema.sql" dbmate migrate
+  DATABASE_URL="postgres://$PG_USER:$PG_PASSWORD@$PG_HOST:$PG_PORT/$PG_DB_TEST?sslmode=disable" DBMATE_MIGRATIONS_DIR="./migrations" DBMATE_NO_DUMP_SCHEMA=true dbmate migrate
 """
 description = "Run migrations on test database"
 depends = ["db:test:create"]

@@ -18,6 +18,8 @@ export const config = {
   s3BucketName: process.env.S3_BUCKET_NAME || "csheet-uploads",
   s3BucketNameTest: process.env.S3_BUCKET_NAME_TEST || "csheet-uploads-test",
   s3PublicUrl: process.env.S3_PUBLIC_URL || "http://localhost:9000/csheet-uploads",
+  notesAutoSaveDelay: 2000, // 2 seconds
+  notesBackupInterval: 300000, // 5 minutes
 } as const
 
 // Print config as JSON when run directly

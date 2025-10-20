@@ -11,7 +11,7 @@ PORT = "3000"
 [tasks.dev]
 run = "bun run --watch main.ts"
 description = "Start development server with hot reload"
-depends = ["db:up"]
+depends = ["deps:up"]
 
 [tasks.start]
 run = "bun run main.tsx"
@@ -21,13 +21,13 @@ description = "Start production server"
 run = "bun install"
 description = "Install dependencies"
 
-[tasks."db:up"]
+[tasks."deps:up"]
 run = "docker compose up --detach --wait"
-description = "Start PostgreSQL database in Docker"
+description = "Start all Docker services (PostgreSQL and MinIO)"
 
-[tasks."db:down"]
+[tasks."deps:down"]
 run = "docker compose down"
-description = "Stop PostgreSQL database"
+description = "Stop all Docker services"
 
 [tasks."db:upgrade"]
 run = """
@@ -99,7 +99,7 @@ run = """
   $PSQL_CMD -tc "SELECT 1 FROM pg_database WHERE datname = '$PG_DB_TEST'" | grep -q 1 || $PSQL_CMD -c "CREATE DATABASE $PG_DB_TEST"
 """
 description = "Create test database if it doesn't exist"
-depends = ["db:up"]
+depends = ["deps:up"]
 
 [tasks."db:test:migrate"]
 run = """

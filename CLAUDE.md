@@ -138,9 +138,9 @@ This project uses **PostgreSQL 16** running in Docker.
 
 ### Setup
 
-1. Start the database: `mise run db:up`
+1. Start dependencies: `mise run deps:up`
 2. Run migrations: `mise run db:upgrade`
-3. Start dev server: `mise run dev` (automatically starts database)
+3. Start dev server: `mise run dev` (automatically starts dependencies)
 
 ### Environment Variables
 
@@ -156,8 +156,8 @@ POSTGRES_DB=csheet_dev
 
 ### Database Tasks
 
-- `mise run db:up` - Start PostgreSQL container
-- `mise run db:down` - Stop PostgreSQL container
+- `mise run deps:up` - Start all Docker services (PostgreSQL and MinIO)
+- `mise run deps:down` - Stop all Docker services
 - `mise run db:upgrade` - Run migrations (common task)
 - `mise run dbmate <command>` - Run specific dbmate commands (new, rollback, status, dump, etc.)
 - `mise run db:psql` - Open PostgreSQL shell

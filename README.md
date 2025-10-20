@@ -29,10 +29,16 @@ Install dependencies:
 mise run install
 ```
 
+Start Docker services (PostgreSQL and MinIO):
+
+```bash
+mise run deps:up
+```
+
 Run database migrations:
 
 ```bash
-mise run dbmate up
+mise run db:upgrade
 ```
 
 Start the development server:
@@ -40,6 +46,8 @@ Start the development server:
 ```bash
 mise run dev
 ```
+
+The `dev` task automatically starts Docker services if they're not running.
 
 The application will be available at `http://localhost:3000`.
 
@@ -53,6 +61,9 @@ This project uses `mise run` for all common tasks:
 | `mise run start` | Start production server |
 | `mise run install` | Install dependencies with bun |
 | `mise run test` | Run all tests with test database |
+| `mise run deps:up` | Start all Docker services (PostgreSQL and MinIO) |
+| `mise run deps:down` | Stop all Docker services |
+| `mise run db:upgrade` | Run database migrations |
 | `mise run dbmate <command>` | Run dbmate commands (see Database section) |
 | `mise run db:psql` | Open PostgreSQL shell for the database |
 | `mise run check` | Run Biome linting/formatting checks and TypeScript validation |

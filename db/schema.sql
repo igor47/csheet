@@ -211,8 +211,16 @@ CREATE TABLE public.characters (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     ruleset text DEFAULT 'srd51'::text NOT NULL,
-    avatar_id text
+    avatar_id text,
+    archived_at timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN characters.archived_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.characters.archived_at IS 'Timestamp when the character was archived. NULL means the character is active.';
 
 
 --
@@ -455,6 +463,13 @@ CREATE INDEX idx_char_traits_char_id ON public.char_traits USING btree (characte
 --
 
 CREATE INDEX idx_characters_user_id ON public.characters USING btree (user_id);
+
+
+--
+-- Name: idx_characters_user_id_archived_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_characters_user_id_archived_at ON public.characters USING btree (user_id, archived_at);
 
 
 --
@@ -701,4 +716,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251017232744'),
     ('20251020180932'),
     ('20251020181000'),
-    ('20251020212355');
+    ('20251020212355'),
+    ('20251021163000');

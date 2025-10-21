@@ -63,6 +63,7 @@ const factory = Factory.define<Character, CharacterFactoryParams>(({ params }) =
     params.alignment === undefined ? faker.helpers.arrayElement(alignments) : params.alignment,
   ruleset: params.ruleset ?? SRD51_ID,
   avatar_id: null,
+  archived_at: null,
   created_at: new Date(),
   updated_at: new Date(),
 }))

@@ -48,12 +48,13 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
-import { findByUserId } from "@src/db/characters"
+import { findArchivedByUserId, findByUserId } from "@src/db/characters"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
 import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
 import { addTrait } from "@src/services/addTrait"
+import { archiveCharacter } from "@src/services/archiveCharacter"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { createCharacter } from "@src/services/createCharacter"
@@ -61,6 +62,7 @@ import { learnSpell } from "@src/services/learnSpell"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { saveNotes } from "@src/services/saveNotes"
+import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
 import { updateAbility } from "@src/services/updateAbility"
 import { updateAvatar } from "@src/services/updateAvatar"
 import { updateHitDice } from "@src/services/updateHitDice"
@@ -81,6 +83,16 @@ characterRoutes.get("/characters", async (c) => {
   }
 
   return c.render(<Characters characters={characters} />, { title: "My Characters" })
+})
+
+characterRoutes.get("/characters/archived", async (c) => {
+  const user = c.var.user!
+
+  const characters = await findArchivedByUserId(getDb(c), user.id)
+
+  return c.render(<Characters characters={characters} archived={true} />, {
+    title: "Archived Characters",
+  })
 })
 
 characterRoutes.get("/characters/new", (c) => {
@@ -115,6 +127,68 @@ characterRoutes.get("/characters/:id", async (c) => {
   return c.render(<Character character={char} currentNote={currentNote} />, {
     title: "Character Sheet",
   })
+})
+
+characterRoutes.post("/characters/:id/archive", async (c) => {
+  const characterId = c.req.param("id") as string
+  const user = c.var.user!
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 404)
+  }
+
+  // Verify ownership
+  if (char.user_id !== user.id) {
+    await setFlashMsg(c, "Unauthorized", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 403)
+  }
+
+  const result = await archiveCharacter(getDb(c), char)
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors._form || "Failed to archive character", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, `Character "${char.name}" has been archived`, "success")
+  c.header("HX-Redirect", "/characters")
+  return c.body(null, 204)
+})
+
+characterRoutes.post("/characters/:id/unarchive", async (c) => {
+  const characterId = c.req.param("id") as string
+  const user = c.var.user!
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters/archived")
+    return c.body(null, 404)
+  }
+
+  // Verify ownership
+  if (char.user_id !== user.id) {
+    await setFlashMsg(c, "Unauthorized", "error")
+    c.header("HX-Redirect", "/characters/archived")
+    return c.body(null, 403)
+  }
+
+  const result = await unarchiveCharacter(getDb(c), char)
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors._form || "Failed to unarchive character", "error")
+    c.header("HX-Redirect", "/characters/archived")
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, `Character "${char.name}" has been restored`, "success")
+  c.header("HX-Redirect", "/characters")
+  return c.body(null, 204)
 })
 
 characterRoutes.post("/characters/:id/edit/class", async (c) => {

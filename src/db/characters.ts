@@ -14,18 +14,29 @@ export const CharacterSchema = z.object({
   alignment: z.nullish(z.string()),
   ruleset: RulesetIdSchema.default(SRD51_ID),
   avatar_id: z.string().nullable().default(null),
+  archived_at: z.date().nullable().default(null),
   created_at: z.date(),
   updated_at: z.date(),
 })
 
 export const CreateCharacterSchema = CharacterSchema.omit({
   id: true,
+  archived_at: true,
   created_at: true,
   updated_at: true,
 })
 
 export type Character = z.infer<typeof CharacterSchema>
 export type CreateCharacter = z.infer<typeof CreateCharacterSchema>
+
+function parseCharacter(row: any): Character {
+  return CharacterSchema.parse({
+    ...row,
+    archived_at: row.archived_at ? new Date(row.archived_at) : null,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  })
+}
 
 export async function create(db: SQL, character: CreateCharacter): Promise<Character> {
   const id = ulid()
@@ -45,12 +56,7 @@ export async function create(db: SQL, character: CreateCharacter): Promise<Chara
     RETURNING *
   `
 
-  const row = result[0]
-  return CharacterSchema.parse({
-    ...row,
-    created_at: new Date(row.created_at),
-    updated_at: new Date(row.updated_at),
-  })
+  return parseCharacter(result[0])
 }
 
 export async function findById(db: SQL, id: string): Promise<Character | null> {
@@ -62,36 +68,51 @@ export async function findById(db: SQL, id: string): Promise<Character | null> {
 
   if (!result[0]) return null
 
-  const row = result[0]
-  return CharacterSchema.parse({
-    ...row,
-    created_at: new Date(row.created_at),
-    updated_at: new Date(row.updated_at),
-  })
+  return parseCharacter(result[0])
 }
 
 export async function findByUserId(db: SQL, userId: string): Promise<Character[]> {
   const result = await db`
     SELECT * FROM characters
-    WHERE user_id = ${userId}
+    WHERE user_id = ${userId} AND archived_at IS NULL
     ORDER BY created_at DESC
   `
 
-  return result.map((row: Character) =>
-    CharacterSchema.parse({
-      ...row,
-      created_at: new Date(row.created_at),
-      updated_at: new Date(row.updated_at),
-    })
-  )
+  return result.map(parseCharacter)
+}
+
+export async function findArchivedByUserId(db: SQL, userId: string): Promise<Character[]> {
+  const result = await db`
+    SELECT * FROM characters
+    WHERE user_id = ${userId} AND archived_at IS NOT NULL
+    ORDER BY archived_at DESC
+  `
+
+  return result.map(parseCharacter)
 }
 
 export async function nameExistsForUser(db: SQL, userId: string, name: string): Promise<boolean> {
   const result = await db`
     SELECT COUNT(*) as count FROM characters
-    WHERE user_id = ${userId} AND LOWER(name) = LOWER(${name})
+    WHERE user_id = ${userId} AND LOWER(name) = LOWER(${name}) AND archived_at IS NULL
     LIMIT 1
   `
 
   return result[0].count > 0
+}
+
+export async function archive(db: SQL, id: string): Promise<void> {
+  await db`
+    UPDATE characters
+    SET archived_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+  `
+}
+
+export async function unarchive(db: SQL, id: string): Promise<void> {
+  await db`
+    UPDATE characters
+    SET archived_at = NULL
+    WHERE id = ${id}
+  `
 }

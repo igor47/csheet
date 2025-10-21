@@ -1,0 +1,32 @@
+# version control
+.git
+.jj
+.github
+
+# not using mise or docker inside docker
+mise.toml
+docker-compose.yml
+
+# linter settings
+biome.json
+
+# documentation
+refdocs/
+README.md
+CLAUDE.md
+.claude/
+
+# data files
+database.db
+database.db-shm
+database.db-wal
+node_modules
+*.log
+*.tgz
+.env*
+.cache
+.biome
+coverage
+dist
+out
+*.tsbuildinfo

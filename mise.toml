@@ -8,14 +8,19 @@ jq = "latest"
 # Optional: Set default port
 PORT = "3000"
 
-[tasks.dev]
+[tasks."app:dev"]
 run = "bun run --watch main.ts"
 description = "Start development server with hot reload"
 depends = ["deps:up", "s3:setup"]
 
-[tasks.start]
-run = "bun run main.tsx"
+[tasks."app:prod"]
+run = "NODE_ENV=production bun run main.ts"
 description = "Start production server"
+
+[tasks."app:container"]
+run = "docker compose --profile app up --build app"
+description = "Build and run the app container alongside local deps"
+depends = ["s3:setup"]
 
 [tasks.install]
 run = "bun install"

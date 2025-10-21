@@ -18,7 +18,7 @@ const COOKIE_OPTS = {
   sameSite: "Strict",
   path: "/",
   maxAge: 60,
-  secure: process.env.NODE_ENV === "production",
+  secure: config.isProd,
 } as const
 
 export const flashMiddleware = createMiddleware<{ Variables: FlashVariables }>(async (c, next) => {

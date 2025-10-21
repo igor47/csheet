@@ -1,5 +1,5 @@
 # dependencies (bun install)
-node_modules
+node_modules/
 
 # output
 out

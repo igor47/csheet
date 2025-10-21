@@ -140,7 +140,7 @@ This project uses **PostgreSQL 16** running in Docker.
 
 1. Start dependencies: `mise run deps:up`
 2. Run migrations: `mise run db:upgrade`
-3. Start dev server: `mise run dev` (automatically starts dependencies)
+3. Start dev server: `mise run app:dev` (automatically starts dependencies)
 
 ### Environment Variables
 

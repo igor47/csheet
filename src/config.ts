@@ -20,6 +20,10 @@ export const config = {
   s3PublicUrl: process.env.S3_PUBLIC_URL || "http://localhost:9000/csheet-uploads",
   notesAutoSaveDelay: 2000, // 2 seconds
   notesBackupInterval: 300000, // 5 minutes
+
+  nodeEnv: process.env.NODE_ENV || "development",
+
+  isProd: process.env.NODE_ENV === "production",
 } as const
 
 // Print config as JSON when run directly

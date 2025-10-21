@@ -44,10 +44,10 @@ mise run db:upgrade
 Start the development server:
 
 ```bash
-mise run dev
+mise run app:dev
 ```
 
-The `dev` task automatically starts Docker services if they're not running.
+The `app:dev` task automatically starts Docker services if they're not running.
 
 The application will be available at `http://localhost:3000`.
 
@@ -57,8 +57,15 @@ This project uses `mise run` for all common tasks:
 
 | Command | Description |
 |---------|-------------|
-| `mise run dev` | Start development server with hot reload |
-| `mise run start` | Start production server |
+| `mise run app:dev` | Start development server with hot reload |
+| `mise run app:prod` | Start production server |
+| `mise run app:container` | Build and run the app inside the local Docker Compose stack |
+
+The containerized app uses the `app` compose profile. Stop it (and supporting services) with:
+
+```bash
+docker compose --profile app down
+```
 | `mise run install` | Install dependencies with bun |
 | `mise run test` | Run all tests with test database |
 | `mise run deps:up` | Start all Docker services (PostgreSQL and MinIO) |

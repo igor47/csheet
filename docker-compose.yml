@@ -1,4 +1,22 @@
 services:
+  app:
+    profiles:
+      - app
+    build:
+      context: .
+      target: runtime
+    image: csheet-app:local
+    environment:
+      POSTGRES_HOST: postgres
+      S3_ENDPOINT: http://minio:9000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
   postgres:
     image: postgres:16-alpine
     container_name: csheet_postgres

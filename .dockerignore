@@ -15,6 +15,7 @@ refdocs/
 README.md
 CLAUDE.md
 .claude/
+pulumi/
 
 # data files
 database.db

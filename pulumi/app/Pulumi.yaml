@@ -1,0 +1,8 @@
+name: csheet-app
+runtime:
+  name: nodejs
+  options:
+    packagemanager: bun
+description: Cloud Run service and migration job for the CSheet application
+backend:
+  url: "gs://csheet-pulumi-state"

@@ -60,12 +60,13 @@ This project uses `mise run` for all common tasks:
 | `mise run app:dev` | Start development server with hot reload |
 | `mise run app:prod` | Start production server |
 | `mise run app:container` | Build and run the app inside the local Docker Compose stack |
-
-The containerized app uses the `app` compose profile. Stop it (and supporting services) with:
-
-```bash
-docker compose --profile app down
-```
+| `mise run deploy:push` | Build and push the application image to Artifact Registry |
+| `mise run infra:preview` | Preview infrastructure changes (VPC, Cloud SQL, secrets, service accounts, Artifact Registry) |
+| `mise run infra:up` | Apply infrastructure changes |
+| `mise run infra:destroy` | Destroy the infrastructure stack |
+| `mise run deploy:preview` | Preview Cloud Run service and migration job changes |
+| `mise run deploy:up` | Deploy the Cloud Run service and migration job |
+| `mise run deploy:destroy` | Remove the Cloud Run service and migration job |
 | `mise run install` | Install dependencies with bun |
 | `mise run test` | Run all tests with test database |
 | `mise run deps:up` | Start all Docker services (PostgreSQL and MinIO) |
@@ -75,6 +76,8 @@ docker compose --profile app down
 | `mise run db:psql` | Open PostgreSQL shell for the database |
 | `mise run check` | Run Biome linting/formatting checks and TypeScript validation |
 | `mise run check-fix` | Auto-fix linting/formatting issues and check types |
+
+The containerized app uses the `app` compose profile. Stop it (and supporting services) with `docker compose --profile app down`.
 
 ## Database
 

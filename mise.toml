@@ -1,12 +1,17 @@
 [tools]
-bun = "latest"
+bun = "1.3.1"
 jj = "latest"
-dbmate = "latest"
+dbmate = "2.28.0"
 jq = "latest"
+pulumi = "3.203.0"
 
 [env]
 # Optional: Set default port
 PORT = "3000"
+GCP_PROJECT = "csheet-475917"
+GCP_REGION = "us-central1"
+GCR_REPOSITORY = "csheet"
+GCR_REGION = "us-central1"
 
 [tasks."app:dev"]
 run = "bun run --watch main.ts"
@@ -21,6 +26,42 @@ description = "Start production server"
 run = "docker compose --profile app up --build app"
 description = "Build and run the app container alongside local deps"
 depends = ["s3:setup"]
+
+[tasks."infra:preview"]
+run = "pulumi preview --cwd pulumi/infra \"$@\""
+description = "Preview infrastructure changes"
+
+[tasks."infra:up"]
+run = "pulumi up --cwd pulumi/infra \"$@\""
+description = "Apply infrastructure changes"
+
+[tasks."infra:destroy"]
+run = "pulumi destroy --cwd pulumi/infra \"$@\""
+description = "Destroy provisioned infrastructure"
+
+[tasks."deploy:push"]
+run = """
+  set -euo pipefail
+  IMAGE_TAG=${IMAGE_TAG:-latest}
+  IMAGE="us-central1-docker.pkg.dev/${GCP_PROJECT}/${GCR_REPOSITORY}/csheet:${IMAGE_TAG}"
+  echo "Building image ${IMAGE}"
+  docker build -t "${IMAGE}" .
+  echo "Pushing image ${IMAGE}"
+  docker push "${IMAGE}"
+"""
+description = "Build and push the application image to Artifact Registry"
+
+[tasks."deploy:preview"]
+run = "pulumi preview --cwd pulumi/app \"$@\""
+description = "Preview application deployment changes"
+
+[tasks."deploy:up"]
+run = "pulumi up --cwd pulumi/app \"$@\""
+description = "Deploy the Cloud Run service and migration job"
+
+[tasks."deploy:destroy"]
+run = "pulumi destroy --cwd pulumi/app \"$@\""
+description = "Remove the Cloud Run service and migration job"
 
 [tasks.install]
 run = "bun install"

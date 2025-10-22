@@ -2,6 +2,8 @@ import { dirname } from "node:path"
 
 const repoRoot = dirname(import.meta.dir)
 
+// NOTE: Environment variables mirror this config structure.
+// Cloud Run deployments set these env vars via pulumi/app/index.ts
 export const config = {
   repoRoot,
   postgresHost: process.env.POSTGRES_HOST || "localhost",
@@ -17,7 +19,6 @@ export const config = {
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "csheet_minio_pass",
   s3BucketName: process.env.S3_BUCKET_NAME || "csheet-uploads",
   s3BucketNameTest: process.env.S3_BUCKET_NAME_TEST || "csheet-uploads-test",
-  s3PublicUrl: process.env.S3_PUBLIC_URL || "http://localhost:9000/csheet-uploads",
   notesAutoSaveDelay: 2000, // 2 seconds
   notesBackupInterval: 300000, // 5 minutes
 

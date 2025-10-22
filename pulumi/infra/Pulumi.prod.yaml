@@ -1,0 +1,7 @@
+secretsprovider: gcpkms://projects/csheet-475917/locations/us-central1/keyRings/csheet-pulumi/cryptoKeys/infra
+encryptedkey: CiQARYEYhQPobp87aFkPZCCg/BdRvvOjRtiwrG48HCJCfF4dtfsSSQBEk0HDu/jeBDd9bAALq4oO/b8IiWetvujVCNoJRkFXvyJDGvYgJg04+FZSJSljwnwhMY35bus9mHYb5jqwtHdYiO86inLxcL0=
+config:
+  gcp:project: csheet-475917
+  gcp:region: us-central1
+  csheet-infra:postgresUser: app
+  csheet-infra:postgresDb: csheet

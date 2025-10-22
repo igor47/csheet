@@ -1,4 +1,22 @@
 services:
+  migrations:
+    profiles:
+      - app
+    build:
+      context: .
+      target: runtime
+    image: csheet-app:local
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: csheet_user
+      POSTGRES_PASSWORD: csheet_pass
+      POSTGRES_DB: csheet_dev
+    command: ["/usr/local/bin/run-migrations.sh", "migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   app:
     profiles:
       - app
@@ -12,6 +30,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
+      migrations:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio:

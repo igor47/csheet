@@ -1,0 +1,8 @@
+name: csheet-infra
+runtime:
+  name: nodejs
+  options:
+    packagemanager: bun
+description: Core cloud infrastructure for the CSheet application
+backend:
+  url: "gs://csheet-pulumi-state"

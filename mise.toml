@@ -3,10 +3,16 @@ bun = "latest"
 jj = "latest"
 dbmate = "latest"
 jq = "latest"
+pulumi = "latest"
 
 [env]
 # Optional: Set default port
 PORT = "3000"
+
+# Google Cloud Platform configuration
+GCP_PROJECT_ID = "csheet-475917"
+GCP_REGION = "us-central1"
+GCR_REPOSITORY = "csheet"
 
 [tasks.dev]
 run = "bun run --watch main.ts"
@@ -153,3 +159,43 @@ run = """
 """
 description = "Run tests (pass through arguments to bun test)"
 depends = ["db:test:migrate", "s3:test:setup"]
+
+# Docker and GCR tasks
+[tasks."docker:build"]
+run = """
+  docker build -t $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GCR_REPOSITORY/csheet:latest .
+"""
+description = "Build Docker image for the application"
+
+[tasks."docker:push"]
+run = """
+  gcloud auth configure-docker $GCP_REGION-docker.pkg.dev --quiet
+  docker push $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GCR_REPOSITORY/csheet:latest
+"""
+description = "Push Docker image to Google Artifact Registry"
+depends = ["docker:build"]
+
+[tasks."docker:build-push"]
+run = "mise run docker:build && mise run docker:push"
+description = "Build and push Docker image to Google Artifact Registry"
+
+# Pulumi tasks
+[tasks."infra:preview"]
+run = "cd infra && pulumi preview"
+description = "Preview infrastructure changes"
+
+[tasks."infra:up"]
+run = "cd infra && pulumi up"
+description = "Deploy infrastructure changes"
+
+[tasks."infra:destroy"]
+run = "cd infra && pulumi destroy"
+description = "Destroy infrastructure"
+
+[tasks."infra:refresh"]
+run = "cd infra && pulumi refresh"
+description = "Refresh infrastructure state"
+
+[tasks."infra:output"]
+run = "cd infra && pulumi stack output"
+description = "Show infrastructure outputs"

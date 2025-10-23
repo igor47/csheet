@@ -1,5 +1,5 @@
-import { Hono } from "hono"
 import { getDb } from "@src/db"
+import { Hono } from "hono"
 
 export const healthRoutes = new Hono()
 

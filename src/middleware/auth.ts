@@ -6,6 +6,7 @@ import { config } from "../config"
 import { getDb } from "../db"
 import type { User } from "../db/users"
 import { findById } from "../db/users"
+import { logger } from "../lib/logger"
 import { setFlashMsg } from "./flash"
 
 export interface AuthVariables {
@@ -29,7 +30,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
       c.set("user", user)
     }
   } catch (error) {
-    console.error("Auth middleware error:", error)
+    logger.error("Auth middleware error", error as Error)
   }
 
   await next()

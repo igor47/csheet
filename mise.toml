@@ -12,6 +12,7 @@ GCP_PROJECT = "csheet-475917"
 GCP_REGION = "us-central1"
 GCR_REPOSITORY = "csheet"
 GCR_REGION = "us-central1"
+RIPGREP_CONFIG_PATH = "{{config_root}}/.ripgreprc"
 
 [tasks."app:dev"]
 run = "bun run --watch main.ts"

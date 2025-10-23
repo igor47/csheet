@@ -150,6 +150,13 @@ if (stack === "prod") {
         role,
       })
   )
+
+  // Allow admin user to impersonate the deploy service account (for local testing)
+  new gcp.serviceaccount.IAMMember("admin-impersonates-deploy", {
+    serviceAccountId: deploySA.name,
+    role: "roles/iam.serviceAccountTokenCreator",
+    member: "user:igor47@gmail.com",
+  })
 }
 
 // allow deployer to impersonate runtime SA (deploy SA is created in prod stack)

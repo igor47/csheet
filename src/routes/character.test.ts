@@ -284,7 +284,7 @@ describe("POST /characters/:id/avatar", () => {
   })
 })
 
-describe("GET /characters/archived", () => {
+describe("GET /characters?show_archived=true", () => {
   const testCtx = useTestApp()
 
   describe("when user is authenticated", () => {
@@ -294,15 +294,15 @@ describe("GET /characters/archived", () => {
       user = await userFactory.create({}, testCtx.db)
     })
 
-    describe("with no archived characters", () => {
+    describe("with no characters", () => {
       test("displays empty state message", async () => {
-        const response = await makeRequest(testCtx.app, "/characters/archived", { user })
+        const response = await makeRequest(testCtx.app, "/characters?show_archived=true", { user })
 
         expect(response.status).toBe(200)
         const document = await parseHtml(response)
         const body = document.body.textContent || ""
 
-        expect(body).toContain("You don't have any archived characters")
+        expect(body).toContain("No characters to display")
       })
     })
 
@@ -316,24 +316,74 @@ describe("GET /characters/archived", () => {
       })
 
       test("displays archived characters", async () => {
-        const response = await makeRequest(testCtx.app, "/characters/archived", { user })
+        const response = await makeRequest(testCtx.app, "/characters?show_archived=true", { user })
 
         expect(response.status).toBe(200)
         const document = await parseHtml(response)
         const body = document.body.textContent || ""
 
         expect(body).toContain(character.name)
-        expect(body).toContain("Archived Characters")
+        expect(body).toContain("Archived")
       })
 
       test("shows restore button", async () => {
-        const response = await makeRequest(testCtx.app, "/characters/archived", { user })
+        const response = await makeRequest(testCtx.app, "/characters?show_archived=true", { user })
 
         const document = await parseHtml(response)
         const restoreButton = expectElement(document, `[data-testid="unarchive-${character.id}"]`)
 
         expect(restoreButton.textContent?.trim()).toBe("Restore")
         expect(restoreButton.getAttribute("hx-post")).toBe(`/characters/${character.id}/unarchive`)
+      })
+
+      test("checkbox is checked", async () => {
+        const response = await makeRequest(testCtx.app, "/characters?show_archived=true", { user })
+
+        const document = await parseHtml(response)
+        const checkbox = expectElement(document, "#showArchivedCheckbox")
+
+        expect(checkbox.hasAttribute("checked")).toBe(true)
+      })
+    })
+
+    describe("with both active and archived characters", () => {
+      let activeChar: Character
+      let archivedChar: Character
+
+      beforeEach(async () => {
+        activeChar = await characterFactory.create({ user_id: user.id, name: "Active Hero" }, testCtx.db)
+        archivedChar = await characterFactory.create({ user_id: user.id, name: "Archived Hero" }, testCtx.db)
+        await testCtx.db`UPDATE characters SET archived_at = CURRENT_TIMESTAMP WHERE id = ${archivedChar.id}`
+      })
+
+      test("displays both characters when show_archived=true", async () => {
+        const response = await makeRequest(testCtx.app, "/characters?show_archived=true", { user })
+
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain(activeChar.name)
+        expect(body).toContain(archivedChar.name)
+      })
+
+      test("displays only active character when show_archived is not set", async () => {
+        const response = await makeRequest(testCtx.app, "/characters", { user })
+
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain(activeChar.name)
+        expect(body).not.toContain(archivedChar.name)
+      })
+
+      test("shows checkbox when archived characters exist", async () => {
+        const response = await makeRequest(testCtx.app, "/characters", { user })
+
+        const document = await parseHtml(response)
+        const checkbox = expectElement(document, "#showArchivedCheckbox")
+
+        expect(checkbox.hasAttribute("checked")).toBe(false)
+        expect(checkbox.getAttribute("hx-get")).toBe("/characters?show_archived=true")
       })
     })
   })
@@ -366,13 +416,13 @@ describe("POST /characters/:id/archive", () => {
       expect(result[0].archived_at).not.toBeNull()
     })
 
-    test("redirects to characters page", async () => {
+    test("redirects to characters page with show_archived=true", async () => {
       const response = await makeRequest(testCtx.app, `/characters/${character.id}/archive`, {
         user,
         method: "POST",
       })
 
-      expect(response.headers.get("HX-Redirect")).toBe("/characters")
+      expect(response.headers.get("HX-Redirect")).toBe("/characters?show_archived=true")
     })
 
     test("sets success flash message", async () => {

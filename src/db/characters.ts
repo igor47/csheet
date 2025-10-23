@@ -71,12 +71,18 @@ export async function findById(db: SQL, id: string): Promise<Character | null> {
   return parseCharacter(result[0])
 }
 
-export async function findByUserId(db: SQL, userId: string): Promise<Character[]> {
-  const result = await db`
-    SELECT * FROM characters
-    WHERE user_id = ${userId} AND archived_at IS NULL
-    ORDER BY created_at DESC
-  `
+export async function findByUserId(db: SQL, userId: string, includeArchived = false): Promise<Character[]> {
+  const result = includeArchived
+    ? await db`
+        SELECT * FROM characters
+        WHERE user_id = ${userId}
+        ORDER BY archived_at IS NULL DESC, created_at DESC
+      `
+    : await db`
+        SELECT * FROM characters
+        WHERE user_id = ${userId} AND archived_at IS NULL
+        ORDER BY created_at DESC
+      `
 
   return result.map(parseCharacter)
 }
@@ -89,6 +95,15 @@ export async function findArchivedByUserId(db: SQL, userId: string): Promise<Cha
   `
 
   return result.map(parseCharacter)
+}
+
+export async function countArchivedByUserId(db: SQL, userId: string): Promise<number> {
+  const result = await db`
+    SELECT COUNT(*) as count FROM characters
+    WHERE user_id = ${userId} AND archived_at IS NOT NULL
+  `
+
+  return Number(result[0].count)
 }
 
 export async function nameExistsForUser(db: SQL, userId: string, name: string): Promise<boolean> {

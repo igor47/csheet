@@ -171,6 +171,25 @@ const service = new gcp.cloudrunv2.Service(
               memory,
             },
           },
+          startupProbe: {
+            httpGet: {
+              path: "/readyz",
+              port: 3000,
+            },
+            initialDelaySeconds: 0,
+            periodSeconds: 10,
+            timeoutSeconds: 1,
+            failureThreshold: 3,
+          },
+          livenessProbe: {
+            httpGet: {
+              path: "/healthz",
+              port: 3000,
+            },
+            periodSeconds: 10,
+            timeoutSeconds: 1,
+            failureThreshold: 3,
+          },
         },
       ],
       vpcAccess: {

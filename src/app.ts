@@ -8,6 +8,7 @@ import { requireAuth } from "./middleware/auth"
 import { cachingServeStatic } from "./middleware/cachingServeStatic"
 import { authRoutes } from "./routes/auth"
 import { characterRoutes } from "./routes/character"
+import { healthRoutes } from "./routes/health"
 import { indexRoutes } from "./routes/index"
 import { spellsRoutes } from "./routes/spells"
 import { uploadsRoutes } from "./routes/uploads"
@@ -34,6 +35,9 @@ export function createApp(db?: SQL) {
     })
   }
 
+  // Health checks (no middleware, no auth, no logging)
+  app.route("/", healthRoutes)
+
   // jsx renderer
   // use the layout for all routes
   app.use(
@@ -47,20 +51,6 @@ export function createApp(db?: SQL) {
 
   // middleware
   applyMiddleware(app)
-
-  // Request logging middleware
-  app.use("*", async (c, next) => {
-    const start = Date.now()
-    await next()
-    const duration = Date.now() - start
-    logger.info("request", {
-      method: c.req.method,
-      path: c.req.path,
-      status: c.res.status,
-      duration,
-      user: c.get("user")?.email,
-    })
-  })
 
   // Serve static files
   app.use("/static/*", cachingServeStatic({ root: "./" }))

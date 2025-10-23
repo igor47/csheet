@@ -3,7 +3,7 @@ encryptedkey: CiQARYEYhZUeTcpBNYV4XoRJAI8YcgIgJhrWZ/KLuPR3kx7BGYASSQBEk0HDqH+HCL
 config:
   csheet-app:infraStack: organization/csheet-infra/prod
   csheet-app:imageRepository: us-central1-docker.pkg.dev/csheet-475917/csheet/csheet
-  csheet-app:imageTag: latest
+  csheet-app:imageTag: 417ae1af5bd7
   gcp:project: csheet-475917
   csheet-app:s3Region:
     secure: v1:uTtkgylzTSoSImvG:CyNc9EWVvlk6Psj+kvWyMU3jJlA=

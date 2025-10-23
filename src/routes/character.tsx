@@ -13,6 +13,7 @@ import { HitDiceHistory } from "@src/components/HitDiceHistory"
 import { HitPointsEditForm } from "@src/components/HitPointsEditForm"
 import { HitPointsHistory, type HPHistoryEvent } from "@src/components/HitPointsHistory"
 import { LearnSpellForm } from "@src/components/LearnSpellForm"
+import { logger } from "@src/lib/logger"
 import { NotesHistory } from "@src/components/NotesHistory"
 import { NotesSaveIndicator } from "@src/components/NotesSaveIndicator"
 import { PreparedSpellsHistory } from "@src/components/PreparedSpellsHistory"
@@ -434,7 +435,7 @@ characterRoutes.post("/characters/:id/longrest", async (c) => {
 
     await setFlashMsg(c, message, "success")
   } catch (error) {
-    console.error("taking long rest", error)
+    logger.error("taking long rest", error as Error, { characterId: char.id })
     await setFlashMsg(c, "Failed to take long rest", "error")
     return c.html(<CurrentStatus character={char} />)
   }

@@ -185,6 +185,53 @@ POSTGRES_DB=csheet_dev
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
 - Bun.$`ls` instead of execa.
 
+## Logging and Observability
+
+This project uses environment-aware structured logging:
+
+### Logger API
+
+Use the logger from `src/lib/logger.ts` instead of `console.*`:
+
+```typescript
+import { logger } from "@src/lib/logger"
+
+// Info logging
+logger.info("User logged in", { userId: user.id, email: user.email })
+
+// Error logging
+try {
+  await dangerousOperation()
+} catch (error) {
+  logger.error("Operation failed", error as Error, { userId: user.id })
+}
+
+// Warning logging
+logger.warn("Rate limit approaching", { requestCount: 95, limit: 100 })
+```
+
+### Environment Behavior
+
+- **Development** (`NODE_ENV !== "production"`): Human-readable console output with `[INFO]`, `[ERROR]`, `[WARN]` prefixes
+- **Production** (`NODE_ENV === "production"`): Structured JSON output for Google Cloud Logging with proper severity levels
+
+### Automatic Features
+
+The application automatically logs:
+- **All HTTP requests** with method, path, status, duration, and authenticated user
+- **Unhandled errors** with stack traces via the global error handler
+
+### Cloud Run Integration
+
+In production (Cloud Run), logs are automatically:
+- Sent to **Google Cloud Logging** for querying and analysis
+- Routed to **Error Reporting** for errors with stack traces
+- Associated with the service, revision, and request traces
+
+View logs in production:
+- Console: https://console.cloud.google.com/run/detail/us-central1/prod-app/logs
+- CLI: `gcloud run services logs read prod-app --region=us-central1 --limit=50`
+
 ## Code Quality
 
 This project uses **Biome** for linting and formatting:

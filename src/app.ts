@@ -2,6 +2,7 @@ import type { SQL } from "bun"
 import { Hono } from "hono"
 import { jsxRenderer } from "hono/jsx-renderer"
 import { Layout } from "./components/Layout"
+import { logger } from "./lib/logger"
 import { applyMiddleware } from "./middleware"
 import { requireAuth } from "./middleware/auth"
 import { cachingServeStatic } from "./middleware/cachingServeStatic"
@@ -47,6 +48,20 @@ export function createApp(db?: SQL) {
   // middleware
   applyMiddleware(app)
 
+  // Request logging middleware
+  app.use("*", async (c, next) => {
+    const start = Date.now()
+    await next()
+    const duration = Date.now() - start
+    logger.info("request", {
+      method: c.req.method,
+      path: c.req.path,
+      status: c.res.status,
+      duration,
+      user: c.get("user")?.email,
+    })
+  })
+
   // Serve static files
   app.use("/static/*", cachingServeStatic({ root: "./" }))
   app.use("/favicon.ico", cachingServeStatic({ path: "./static/favicon.ico" }))
@@ -63,6 +78,12 @@ export function createApp(db?: SQL) {
   protectedRoutes.route("/", uploadsRoutes)
 
   app.route("/", protectedRoutes)
+
+  // Error handler
+  app.onError((err, c) => {
+    logger.error("Unhandled error", err, { path: c.req.path })
+    return c.text("Internal Server Error", 500)
+  })
 
   return app
 }

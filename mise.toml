@@ -41,9 +41,8 @@ description = "Destroy provisioned infrastructure"
 
 [tasks."deploy:push"]
 run = """
-  set -euo pipefail
-  COMMIT_SHA=$(bin/get-commit-sha.sh)
-  SHORT_SHA=${COMMIT_SHA:0:12}
+  set -eu
+  SHORT_SHA=$(bin/get-commit-sha.sh)
   IMAGE="us-central1-docker.pkg.dev/${GCP_PROJECT}/${GCR_REPOSITORY}/csheet:${SHORT_SHA}"
   echo "Building image ${IMAGE} for commit ${SHORT_SHA}"
   docker build -t "${IMAGE}" .
@@ -57,18 +56,16 @@ description = "Build and push the application image to Artifact Registry (tagged
 
 [tasks."deploy:preview"]
 run = """
-  set -euo pipefail
-  COMMIT_SHA=$(bin/get-commit-sha.sh)
-  SHORT_SHA=${COMMIT_SHA:0:12}
+  set -eu
+  SHORT_SHA=$(bin/get-commit-sha.sh)
   pulumi preview --cwd pulumi/app --config imageTag=${SHORT_SHA} "$@"
 """
 description = "Preview application deployment changes with current commit SHA"
 
 [tasks."deploy:up"]
 run = """
-  set -euo pipefail
-  COMMIT_SHA=$(bin/get-commit-sha.sh)
-  SHORT_SHA=${COMMIT_SHA:0:12}
+  set -eu
+  SHORT_SHA=$(bin/get-commit-sha.sh)
   pulumi up --cwd pulumi/app --config imageTag=${SHORT_SHA} "$@"
 """
 description = "Deploy the Cloud Run service and migration job with current commit SHA"

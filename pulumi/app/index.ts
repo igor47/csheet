@@ -29,6 +29,13 @@ const maxInstances = config.getNumber("maxInstances") ?? 4
 const cpu = config.get("cpu") ?? "1"
 const memory = config.get("memory") ?? "512Mi"
 
+// S3 configuration
+const s3Endpoint = config.require("s3Endpoint")
+const s3Region = config.require("s3Region")
+const s3AccessKeyId = config.require("s3AccessKeyId")
+const s3SecretAccessKey = config.requireSecret("s3SecretAccessKey")
+const s3BucketName = config.require("s3BucketName")
+
 // Secrets - created in app stack for easier updates without touching infra
 const cookieSecret = new random.RandomPassword("cookie-secret", {
   length: 32,
@@ -67,6 +74,8 @@ const secrets = {
   postgresHost: createSecret("postgres-host", databaseHost),
   postgresUser: createSecret("postgres-user", databaseUser),
   postgresDb: createSecret("postgres-db", databaseName),
+  s3AccessKeyId: createSecret("s3-access-key-id", s3AccessKeyId),
+  s3SecretAccessKey: createSecret("s3-secret-access-key", s3SecretAccessKey),
 }
 
 // Helper to reference a secret in environment variables
@@ -91,10 +100,11 @@ const env: pulumi.Input<gcp.types.input.cloudrunv2.JobTemplateTemplateContainerE
   secretEnv("POSTGRES_PASSWORD", secrets.postgresPassword),
   secretEnv("POSTGRES_DB", secrets.postgresDb),
   secretEnv("COOKIE_SECRET", secrets.cookieSecret),
-  // S3 configuration (for future use)
-  // { name: "S3_ENDPOINT", value: "..." },
-  // { name: "S3_REGION", value: "..." },
-  // etc.
+  { name: "S3_ENDPOINT", value: s3Endpoint },
+  { name: "S3_REGION", value: s3Region },
+  secretEnv("S3_ACCESS_KEY_ID", secrets.s3AccessKeyId),
+  secretEnv("S3_SECRET_ACCESS_KEY", secrets.s3SecretAccessKey),
+  { name: "S3_BUCKET_NAME", value: s3BucketName },
 ]
 
 // Migration job - runs dbmate migrate

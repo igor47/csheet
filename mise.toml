@@ -118,7 +118,7 @@ description = "View PostgreSQL container logs"
 [tasks.check]
 run = """
   echo "Running Biome checks..."
-  bun biome check src/
+  bun biome check src/ pulumi/
   echo "Running TypeScript checks..."
   bun tsc --noEmit
 """
@@ -127,7 +127,7 @@ description = "Check code formatting, linting, and types"
 [tasks.check-fix]
 run = """
   echo "Running Biome fixes..."
-  bun biome check --write src/
+  bun biome check --write src/ pulumi/
   echo "Running TypeScript checks..."
   bun tsc --noEmit
 """

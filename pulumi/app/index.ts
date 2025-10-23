@@ -180,5 +180,49 @@ const service = new gcp.cloudrunv2.Service(
   { dependsOn: [migrationJob] }
 )
 
+// Allow unauthenticated access to the service
+new gcp.cloudrunv2.ServiceIamMember("app-service-public-access", {
+  name: service.name,
+  location: region,
+  project,
+  role: "roles/run.invoker",
+  member: "allUsers",
+})
+
+// Custom domain mappings (prod only)
+let wwwDomainMapping: gcp.cloudrun.DomainMapping | undefined
+let apexDomainMapping: gcp.cloudrun.DomainMapping | undefined
+if (stack === "prod") {
+  wwwDomainMapping = new gcp.cloudrun.DomainMapping("custom-domain-www", {
+    name: "www.csheet.net",
+    location: region,
+    project,
+    metadata: {
+      namespace: project,
+    },
+    spec: {
+      routeName: service.name,
+    },
+  }, {
+    protect: true, // Protect from accidental deletion
+  })
+
+  apexDomainMapping = new gcp.cloudrun.DomainMapping("custom-domain-apex", {
+    name: "csheet.net",
+    location: region,
+    project,
+    metadata: {
+      namespace: project,
+    },
+    spec: {
+      routeName: service.name,
+    },
+  }, {
+    protect: true, // Protect from accidental deletion
+  })
+}
+
 export const serviceUrl = service.uri
+export const customDomainWww = wwwDomainMapping ? pulumi.interpolate`https://${wwwDomainMapping.name}` : undefined
+export const customDomainApex = apexDomainMapping ? pulumi.interpolate`https://${apexDomainMapping.name}` : undefined
 export const migrationJobName = migrationJob.name

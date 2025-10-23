@@ -48,7 +48,7 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
-import { findArchivedByUserId, findByUserId } from "@src/db/characters"
+import { countArchivedByUserId, findByUserId } from "@src/db/characters"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
 import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
@@ -75,23 +75,20 @@ export const characterRoutes = new Hono()
 
 characterRoutes.get("/characters", async (c) => {
   const user = c.var.user!
+  const showArchived = c.req.query("show_archived") === "true"
 
-  const characters = await findByUserId(getDb(c), user.id)
-  if (characters.length === 0) {
+  const characters = await findByUserId(getDb(c), user.id, showArchived)
+  const archivedCount = await countArchivedByUserId(getDb(c), user.id)
+
+  // Redirect to /new if there are no characters at all
+  const activeCharacters = characters.filter((char) => char.archived_at === null)
+  if (activeCharacters.length === 0 && archivedCount === 0) {
     await setFlashMsg(c, "Create a character to get started!", "info")
     return c.redirect("/characters/new")
   }
 
-  return c.render(<Characters characters={characters} />, { title: "My Characters" })
-})
-
-characterRoutes.get("/characters/archived", async (c) => {
-  const user = c.var.user!
-
-  const characters = await findArchivedByUserId(getDb(c), user.id)
-
-  return c.render(<Characters characters={characters} archived={true} />, {
-    title: "Archived Characters",
+  return c.render(<Characters characters={characters} showArchived={showArchived} archivedCount={archivedCount} />, {
+    title: "My Characters"
   })
 })
 
@@ -156,7 +153,7 @@ characterRoutes.post("/characters/:id/archive", async (c) => {
   }
 
   await setFlashMsg(c, `Character "${char.name}" has been archived`, "success")
-  c.header("HX-Redirect", "/characters")
+  c.header("HX-Redirect", "/characters?show_archived=true")
   return c.body(null, 204)
 })
 
@@ -167,14 +164,14 @@ characterRoutes.post("/characters/:id/unarchive", async (c) => {
   const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
     await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters/archived")
+    c.header("HX-Redirect", "/characters?show_archived=true")
     return c.body(null, 404)
   }
 
   // Verify ownership
   if (char.user_id !== user.id) {
     await setFlashMsg(c, "Unauthorized", "error")
-    c.header("HX-Redirect", "/characters/archived")
+    c.header("HX-Redirect", "/characters?show_archived=true")
     return c.body(null, 403)
   }
 
@@ -182,7 +179,7 @@ characterRoutes.post("/characters/:id/unarchive", async (c) => {
 
   if (!result.complete) {
     await setFlashMsg(c, result.errors._form || "Failed to unarchive character", "error")
-    c.header("HX-Redirect", "/characters/archived")
+    c.header("HX-Redirect", "/characters?show_archived=true")
     return c.body(null, 400)
   }
 

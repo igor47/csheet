@@ -295,14 +295,11 @@ describe("GET /characters?show_archived=true", () => {
     })
 
     describe("with no characters", () => {
-      test("displays empty state message", async () => {
+      test("redirects to /characters/new", async () => {
         const response = await makeRequest(testCtx.app, "/characters?show_archived=true", { user })
 
-        expect(response.status).toBe(200)
-        const document = await parseHtml(response)
-        const body = document.body.textContent || ""
-
-        expect(body).toContain("No characters to display")
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe("/characters/new")
       })
     })
 
@@ -351,8 +348,14 @@ describe("GET /characters?show_archived=true", () => {
       let archivedChar: Character
 
       beforeEach(async () => {
-        activeChar = await characterFactory.create({ user_id: user.id, name: "Active Hero" }, testCtx.db)
-        archivedChar = await characterFactory.create({ user_id: user.id, name: "Archived Hero" }, testCtx.db)
+        activeChar = await characterFactory.create(
+          { user_id: user.id, name: "Active Hero" },
+          testCtx.db
+        )
+        archivedChar = await characterFactory.create(
+          { user_id: user.id, name: "Archived Hero" },
+          testCtx.db
+        )
         await testCtx.db`UPDATE characters SET archived_at = CURRENT_TIMESTAMP WHERE id = ${archivedChar.id}`
       })
 
@@ -602,9 +605,14 @@ describe("Character archiving - name reuse", () => {
     test("archived character is not in active character list", async () => {
       const response = await makeRequest(testCtx.app, "/characters", { user })
 
-      // Should redirect to /characters/new since no active characters
-      expect(response.status).toBe(302)
-      expect(response.headers.get("Location")).toBe("/characters/new")
+      // Should show empty state since there's an archived character (don't redirect)
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("You haven't created any characters yet")
+      // Should show checkbox since archived characters exist
+      expect(body).toContain("Show archived characters")
     })
   })
 })

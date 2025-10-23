@@ -1,51 +1,86 @@
-import type { Character } from "@src/db/characters"
+import type { ListCharacter } from "@src/services/listCharacters"
 
 export interface CharactersProps {
-  characters: Character[]
+  characters: ListCharacter[]
   showArchived: boolean
   archivedCount: number
 }
 
-const CharacterRow = ({ char }: { char: Character }) => {
+const formatClassLevel = (classes: ListCharacter["classes"]): string => {
+  if (classes.length === 0) return "No class"
+  if (classes.length === 1) {
+    const { class: className, level } = classes[0]!
+    return `Level ${level} ${className.charAt(0).toUpperCase() + className.slice(1)}`
+  }
+  // Multiclass: "Level 3 Fighter / Level 2 Wizard"
+  return classes
+    .map(
+      ({ class: className, level }) =>
+        `Level ${level} ${className.charAt(0).toUpperCase() + className.slice(1)}`
+    )
+    .join(" / ")
+}
+
+const CharacterRow = ({ char }: { char: ListCharacter }) => {
   const isArchived = char.archived_at !== null
 
   return (
     <tr>
       <td>
-        <strong>{char.name}</strong>
-        {isArchived && <span class="badge bg-secondary ms-2">Archived</span>}
+        <a href={`/characters/${char.id}`} class="text-decoration-none">
+          <h5 class="mb-0">{char.name}</h5>
+        </a>
+        {isArchived && <span class="badge bg-secondary mt-1">Archived</span>}
       </td>
-      <td>{char.species}</td>
-      <td>{char.background}</td>
-      <td>{char.alignment || "-"}</td>
-      <td>{new Date(char.created_at).toLocaleDateString()}</td>
+      <td>{formatClassLevel(char.classes)}</td>
+      <td class="d-none d-sm-table-cell">{char.species}</td>
+      <td class="d-none d-md-table-cell">{char.background}</td>
+      <td class="d-none d-lg-table-cell">{char.alignment || "-"}</td>
+      <td class="d-none d-lg-table-cell">{new Date(char.created_at).toLocaleDateString()}</td>
       <td>
-        {/* biome-ignore lint/a11y/useSemanticElements: Bootstrap requires role="group" for btn-group */}
-        <div class="btn-group" role="group">
-          <a href={`/characters/${char.id}`} class="btn btn-sm btn-outline-primary">
-            View
-          </a>
-          {isArchived ? (
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-success"
-              hx-post={`/characters/${char.id}/unarchive`}
-              hx-confirm="Are you sure you want to restore this character?"
-              data-testid={`unarchive-${char.id}`}
-            >
-              Restore
-            </button>
-          ) : (
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-warning"
-              hx-post={`/characters/${char.id}/archive`}
-              hx-confirm={`Are you sure you want to archive "${char.name}"? This will free up the name for reuse.`}
-              data-testid={`archive-${char.id}`}
-            >
-              Archive
-            </button>
-          )}
+        <div class="dropdown">
+          <button
+            class="btn btn-sm btn-outline-secondary dropdown-toggle"
+            type="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            data-testid={`actions-${char.id}`}
+          >
+            ⋯
+          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" href={`/characters/${char.id}`}>
+                View
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider" />
+            </li>
+            <li>
+              {isArchived ? (
+                <button
+                  type="button"
+                  class="dropdown-item"
+                  hx-post={`/characters/${char.id}/unarchive`}
+                  hx-confirm="Are you sure you want to restore this character?"
+                  data-testid={`unarchive-${char.id}`}
+                >
+                  Restore
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  class="dropdown-item"
+                  hx-post={`/characters/${char.id}/archive`}
+                  hx-confirm={`Are you sure you want to archive "${char.name}"? This will free up the name for reuse.`}
+                  data-testid={`archive-${char.id}`}
+                >
+                  Archive
+                </button>
+              )}
+            </li>
+          </ul>
         </div>
       </td>
     </tr>
@@ -65,68 +100,59 @@ const EmptyState = ({ showArchived }: { showArchived: boolean }) => (
   </div>
 )
 
-const CharacterTable = ({ characters }: { characters: Character[] }) => (
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Species</th>
-          <th>Background</th>
-          <th>Alignment</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {characters.map((char) => (
-          <CharacterRow char={char} key={char.id} />
-        ))}
-      </tbody>
-    </table>
-  </div>
+const CharacterTable = ({ characters }: { characters: ListCharacter[] }) => (
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Class</th>
+        <th class="d-none d-sm-table-cell">Species</th>
+        <th class="d-none d-md-table-cell">Background</th>
+        <th class="d-none d-lg-table-cell">Alignment</th>
+        <th class="d-none d-lg-table-cell">Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {characters.map((char) => (
+        <CharacterRow char={char} key={char.id} />
+      ))}
+    </tbody>
+  </table>
 )
 
 export const Characters = ({ characters, showArchived, archivedCount }: CharactersProps) => {
   return (
-    <div class="container mt-5">
-      <div class="row justify-content-center">
-        <div class="col-md-10">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="card-title mb-0">My Characters</h1>
-                <a href="/characters/new" class="btn btn-primary">
-                  <i class="bi bi-plus-circle"></i> Create New Character
-                </a>
-              </div>
-
-              {archivedCount > 0 && (
-                <div class="form-check mb-3">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    id="showArchivedCheckbox"
-                    checked={showArchived}
-                    hx-get={showArchived ? "/characters" : "/characters?show_archived=true"}
-                    hx-target="body"
-                    hx-push-url="true"
-                  />
-                  <label class="form-check-label" for="showArchivedCheckbox">
-                    Show archived characters ({archivedCount})
-                  </label>
-                </div>
-              )}
-
-              {characters.length === 0 ? (
-                <EmptyState showArchived={showArchived} />
-              ) : (
-                <CharacterTable characters={characters} />
-              )}
-            </div>
-          </div>
-        </div>
+    <div class="container-fluid container-md mt-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>My Characters</h1>
+        <a href="/characters/new" class="btn btn-primary">
+          <i class="bi bi-plus-circle"></i> Create New Character
+        </a>
       </div>
+
+      {archivedCount > 0 && (
+        <div class="form-check mb-3">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="showArchivedCheckbox"
+            checked={showArchived}
+            hx-get={showArchived ? "/characters" : "/characters?show_archived=true"}
+            hx-target="body"
+            hx-push-url="true"
+          />
+          <label class="form-check-label" for="showArchivedCheckbox">
+            Show archived characters ({archivedCount})
+          </label>
+        </div>
+      )}
+
+      {characters.length === 0 ? (
+        <EmptyState showArchived={showArchived} />
+      ) : (
+        <CharacterTable characters={characters} />
+      )}
     </div>
   )
 }

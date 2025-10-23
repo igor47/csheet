@@ -48,7 +48,7 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
-import { countArchivedByUserId, findByUserId } from "@src/db/characters"
+import { countArchivedByUserId } from "@src/db/characters"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
 import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
@@ -59,6 +59,7 @@ import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { createCharacter } from "@src/services/createCharacter"
 import { learnSpell } from "@src/services/learnSpell"
+import { listCharacters } from "@src/services/listCharacters"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { saveNotes } from "@src/services/saveNotes"
@@ -77,7 +78,7 @@ characterRoutes.get("/characters", async (c) => {
   const user = c.var.user!
   const showArchived = c.req.query("show_archived") === "true"
 
-  const characters = await findByUserId(getDb(c), user.id, showArchived)
+  const characters = await listCharacters(getDb(c), user.id, showArchived)
   const archivedCount = await countArchivedByUserId(getDb(c), user.id)
 
   // Redirect to /new if there are no characters at all
@@ -87,9 +88,16 @@ characterRoutes.get("/characters", async (c) => {
     return c.redirect("/characters/new")
   }
 
-  return c.render(<Characters characters={characters} showArchived={showArchived} archivedCount={archivedCount} />, {
-    title: "My Characters"
-  })
+  return c.render(
+    <Characters
+      characters={characters}
+      showArchived={showArchived}
+      archivedCount={archivedCount}
+    />,
+    {
+      title: "My Characters",
+    }
+  )
 })
 
 characterRoutes.get("/characters/new", (c) => {

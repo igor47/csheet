@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi"
 import * as gcp from "@pulumi/gcp"
+import * as pulumi from "@pulumi/pulumi"
 import * as random from "@pulumi/random"
 
 const config = new pulumi.Config()
@@ -23,14 +23,17 @@ const requiredApis = [
   "vpcaccess.googleapis.com",
 ]
 
-const apiEnables = stack === "prod" ? requiredApis.map((svc) => {
-  const name = svc.replace(/\./g, "-")
-  return new gcp.projects.Service(name, {
-    project,
-    service: svc,
-    disableOnDestroy: false,
-  })
-}) : []
+const apiEnables =
+  stack === "prod"
+    ? requiredApis.map((svc) => {
+        const name = svc.replace(/\./g, "-")
+        return new gcp.projects.Service(name, {
+          project,
+          service: svc,
+          disableOnDestroy: false,
+        })
+      })
+    : []
 
 //
 // note: you might have to remove everything below here on the first run if the APIs were not previously enabled
@@ -65,7 +68,6 @@ const connectorSubnet = new gcp.compute.Subnetwork("serverless-subnet", {
   name: `${stack}-connector-subnet`,
 })
 
-
 new gcp.vpcaccess.Connector("app-connector", {
   name: `${stack}-vpc-connector`,
   project,
@@ -76,7 +78,6 @@ new gcp.vpcaccess.Connector("app-connector", {
   minInstances: stack === "prod" ? 2 : 1,
   maxInstances: 3,
 })
-
 
 // private IPs for google-managed services (like Cloud SQL)
 const serviceRange = new gcp.compute.GlobalAddress("service-range", {
@@ -96,15 +97,18 @@ const serviceConnection = new gcp.servicenetworking.Connection("service-connecti
 
 // container registry (shared across all environments)
 if (stack === "prod") {
-  new gcp.artifactregistry.Repository("repository", {
-    format: "DOCKER",
-    location: region,
-    project,
-    repositoryId: "csheet",
-    description: "Container images for the CSheet application",
-  }, { dependsOn: apiEnables })
+  new gcp.artifactregistry.Repository(
+    "repository",
+    {
+      format: "DOCKER",
+      location: region,
+      project,
+      repositoryId: "csheet",
+      description: "Container images for the CSheet application",
+    },
+    { dependsOn: apiEnables }
+  )
 }
-
 
 // service accounts + roles
 // service account for running the app (Cloud Run)
@@ -138,12 +142,13 @@ if (stack === "prod") {
     "roles/run.admin",
     "roles/secretmanager.admin", // Need admin to create/manage secrets during deployment
   ]
-  deployRoles.map((role) =>
-    new gcp.projects.IAMMember(`deploy-${role.replace(/\./g, "-")}`, {
-      member: pulumi.interpolate`serviceAccount:${deploySA.email}`,
-      project,
-      role,
-    })
+  deployRoles.map(
+    (role) =>
+      new gcp.projects.IAMMember(`deploy-${role.replace(/\./g, "-")}`, {
+        member: pulumi.interpolate`serviceAccount:${deploySA.email}`,
+        project,
+        role,
+      })
   )
 }
 
@@ -167,29 +172,31 @@ if (deployServiceAccount) {
 // Cloud SQL instance
 const dbTier = config.get("dbTier") ?? (stack === "prod" ? "db-custom-1-3840" : "db-f1-micro")
 
-const sqlInstance = new gcp.sql.DatabaseInstance("app-db", {
-  databaseVersion: "POSTGRES_16",
-  project,
-  region,
-  settings: {
-    tier: dbTier,
-    availabilityType: stack === 'prod' ? "REGIONAL" : undefined,
-    edition: stack === 'prod' ? "ENTERPRISE" : undefined,
-    ipConfiguration: {
-      privateNetwork: network.id,
-      ipv4Enabled: false,
-    },
-    backupConfiguration: {
-      enabled: true,
-      startTime: "23:00",
-      pointInTimeRecoveryEnabled: true,
-      location: "us",
-      transactionLogRetentionDays: 7,
-      backupRetentionSettings: {
-        retainedBackups: stack === "prod" ? 90 : 7,
+const sqlInstance = new gcp.sql.DatabaseInstance(
+  "app-db",
+  {
+    databaseVersion: "POSTGRES_16",
+    project,
+    region,
+    settings: {
+      tier: dbTier,
+      availabilityType: stack === "prod" ? "REGIONAL" : undefined,
+      edition: stack === "prod" ? "ENTERPRISE" : undefined,
+      ipConfiguration: {
+        privateNetwork: network.id,
+        ipv4Enabled: false,
       },
-    },
-    diskAutoresize: true,
+      backupConfiguration: {
+        enabled: true,
+        startTime: "23:00",
+        pointInTimeRecoveryEnabled: true,
+        location: "us",
+        transactionLogRetentionDays: 7,
+        backupRetentionSettings: {
+          retainedBackups: stack === "prod" ? 90 : 7,
+        },
+      },
+      diskAutoresize: true,
     },
   },
   {

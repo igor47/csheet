@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi"
 import * as gcp from "@pulumi/gcp"
+import * as pulumi from "@pulumi/pulumi"
 import * as random from "@pulumi/random"
 
 const config = new pulumi.Config()
@@ -80,7 +80,10 @@ const secrets = {
 
 // Helper to reference a secret in environment variables
 // Using Job type which works for both Service and Job (just requires version: "latest")
-const secretEnv = (name: string, secret: gcp.secretmanager.Secret): gcp.types.input.cloudrunv2.JobTemplateTemplateContainerEnv => ({
+const secretEnv = (
+  name: string,
+  secret: gcp.secretmanager.Secret
+): gcp.types.input.cloudrunv2.JobTemplateTemplateContainerEnv => ({
   name,
   valueSource: {
     secretKeyRef: {
@@ -193,36 +196,48 @@ new gcp.cloudrunv2.ServiceIamMember("app-service-public-access", {
 let wwwDomainMapping: gcp.cloudrun.DomainMapping | undefined
 let apexDomainMapping: gcp.cloudrun.DomainMapping | undefined
 if (stack === "prod") {
-  wwwDomainMapping = new gcp.cloudrun.DomainMapping("custom-domain-www", {
-    name: "www.csheet.net",
-    location: region,
-    project,
-    metadata: {
-      namespace: project,
+  wwwDomainMapping = new gcp.cloudrun.DomainMapping(
+    "custom-domain-www",
+    {
+      name: "www.csheet.net",
+      location: region,
+      project,
+      metadata: {
+        namespace: project,
+      },
+      spec: {
+        routeName: service.name,
+      },
     },
-    spec: {
-      routeName: service.name,
-    },
-  }, {
-    protect: true, // Protect from accidental deletion
-  })
+    {
+      protect: true, // Protect from accidental deletion
+    }
+  )
 
-  apexDomainMapping = new gcp.cloudrun.DomainMapping("custom-domain-apex", {
-    name: "csheet.net",
-    location: region,
-    project,
-    metadata: {
-      namespace: project,
+  apexDomainMapping = new gcp.cloudrun.DomainMapping(
+    "custom-domain-apex",
+    {
+      name: "csheet.net",
+      location: region,
+      project,
+      metadata: {
+        namespace: project,
+      },
+      spec: {
+        routeName: service.name,
+      },
     },
-    spec: {
-      routeName: service.name,
-    },
-  }, {
-    protect: true, // Protect from accidental deletion
-  })
+    {
+      protect: true, // Protect from accidental deletion
+    }
+  )
 }
 
 export const serviceUrl = service.uri
-export const customDomainWww = wwwDomainMapping ? pulumi.interpolate`https://${wwwDomainMapping.name}` : undefined
-export const customDomainApex = apexDomainMapping ? pulumi.interpolate`https://${apexDomainMapping.name}` : undefined
+export const customDomainWww = wwwDomainMapping
+  ? pulumi.interpolate`https://${wwwDomainMapping.name}`
+  : undefined
+export const customDomainApex = apexDomainMapping
+  ? pulumi.interpolate`https://${apexDomainMapping.name}`
+  : undefined
 export const migrationJobName = migrationJob.name

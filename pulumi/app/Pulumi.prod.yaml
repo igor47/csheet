@@ -5,3 +5,13 @@ config:
   csheet-app:imageRepository: us-central1-docker.pkg.dev/csheet-475917/csheet/csheet
   csheet-app:imageTag: latest
   gcp:project: csheet-475917
+  csheet-app:s3Region:
+    secure: v1:uTtkgylzTSoSImvG:CyNc9EWVvlk6Psj+kvWyMU3jJlA=
+  csheet-app:s3Endpoint:
+    secure: v1:dPWExoRCtf5RreTv:YLm7I67jXciI7xvoN6l7mVZPelmlIV5Hg3jZXbawS7XOAmoNn9R8EQ7dHY/lXhQ0lgQUaI15AnLNww9Xs5wLoX9uZPmq9s+Png1HtI1kFDFP
+  csheet-app:s3AccessKeyId:
+    secure: v1:yBj9Nrur9SHqnyp/:QB7b6Lz4YmUpFB6VsOcH2n5h2PeXvNq3fPIthWW31Sje2/hcgwLYCK9VpTEruIN4
+  csheet-app:s3SecretAccessKey:
+    secure: v1:67053rc57lqOgWYd:1E4Dimb+2izbq2u4I01I9pEnmCVYlcVVUIYzJHX0rAbBwoCqCfjQjkv/mNLJXNWrAIAMYgy8zvBLGi+cCqzxDZclD9frxbLOg4inOyp07kc=
+  csheet-app:s3BucketName:
+    secure: v1:0XyQkn9ViGFFMkr1:CU1nDNKhTteKrW6MMw3ypxcyxlfhNsYnaPL7

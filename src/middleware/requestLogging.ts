@@ -1,5 +1,5 @@
-import { createMiddleware } from "hono/factory"
 import { logger } from "@src/lib/logger"
+import { createMiddleware } from "hono/factory"
 import type { AuthVariables } from "./auth"
 
 // Request logging middleware (skip health checks)

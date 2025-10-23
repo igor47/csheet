@@ -71,7 +71,11 @@ export async function findById(db: SQL, id: string): Promise<Character | null> {
   return parseCharacter(result[0])
 }
 
-export async function findByUserId(db: SQL, userId: string, includeArchived = false): Promise<Character[]> {
+export async function findByUserId(
+  db: SQL,
+  userId: string,
+  includeArchived = false
+): Promise<Character[]> {
   const result = includeArchived
     ? await db`
         SELECT * FROM characters

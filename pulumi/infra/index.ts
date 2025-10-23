@@ -128,6 +128,7 @@ new gcp.projects.IAMMember("runtime-cloudsql-client", {
 
 // service account for deployment automation (CI/CD, shared across environments)
 let deployServiceAccount: gcp.serviceaccount.Account | undefined
+let workloadIdentityProvider: pulumi.Output<string> | undefined
 
 if (stack === "prod") {
   const deploySA = new gcp.serviceaccount.Account("app-deploys", {
@@ -151,12 +152,55 @@ if (stack === "prod") {
       })
   )
 
+  // Grant deploy SA access to Pulumi state bucket
+  new gcp.storage.BucketIAMMember("deploy-state-access", {
+    bucket: "csheet-pulumi-state",
+    role: "roles/storage.objectAdmin",
+    member: pulumi.interpolate`serviceAccount:${deploySA.email}`,
+  })
+
   // Allow admin user to impersonate the deploy service account (for local testing)
   new gcp.serviceaccount.IAMMember("admin-impersonates-deploy", {
     serviceAccountId: deploySA.name,
     role: "roles/iam.serviceAccountTokenCreator",
     member: "user:igor47@gmail.com",
   })
+
+  // Workload Identity Federation for GitHub Actions
+  const githubPool = new gcp.iam.WorkloadIdentityPool("github-pool", {
+    workloadIdentityPoolId: "github-actions",
+    displayName: "GitHub Actions",
+    description: "Identity pool for GitHub Actions workflows",
+    project,
+  })
+
+  const githubProvider = new gcp.iam.WorkloadIdentityPoolProvider("github-provider", {
+    workloadIdentityPoolId: githubPool.workloadIdentityPoolId,
+    workloadIdentityPoolProviderId: "github",
+    displayName: "GitHub OIDC",
+    description: "GitHub Actions OIDC provider",
+    project,
+    attributeMapping: {
+      "google.subject": "assertion.sub",
+      "attribute.actor": "assertion.actor",
+      "attribute.repository": "assertion.repository",
+    },
+    attributeCondition: "assertion.repository == 'igor47/csheet'",
+    oidc: {
+      issuerUri: "https://token.actions.githubusercontent.com",
+    },
+  })
+
+  // Allow GitHub Actions from igor47/csheet to impersonate the deploy SA
+  new gcp.serviceaccount.IAMMember("github-impersonates-deploy", {
+    serviceAccountId: deploySA.name,
+    role: "roles/iam.workloadIdentityUser",
+    member: pulumi.interpolate`principalSet://iam.googleapis.com/${githubPool.name}/attribute.repository/igor47/csheet`,
+  })
+
+  // Store references for export
+  deployServiceAccount = deploySA
+  workloadIdentityProvider = pulumi.interpolate`projects/${project}/locations/global/workloadIdentityPools/${githubPool.workloadIdentityPoolId}/providers/${githubProvider.workloadIdentityPoolProviderId}`
 }
 
 // allow deployer to impersonate runtime SA (deploy SA is created in prod stack)
@@ -238,3 +282,7 @@ export const databaseHost = sqlInstance.privateIpAddress
 export const databaseName = config.require("postgresDb")
 export const databaseUser = config.require("postgresUser")
 export const databasePassword = pulumi.secret(postgresPassword.result)
+
+// Export Workload Identity and deploy SA (only available in prod stack)
+export const githubWorkloadIdentityProvider = workloadIdentityProvider
+export const deployServiceAccountEmail = deployServiceAccount?.email

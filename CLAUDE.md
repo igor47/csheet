@@ -232,6 +232,91 @@ View logs in production:
 - Console: https://console.cloud.google.com/run/detail/us-central1/prod-app/logs
 - CLI: `gcloud run services logs read prod-app --region=us-central1 --limit=50`
 
+## Deployment
+
+### Architecture
+
+The application is deployed to **Google Cloud Run** using a multi-stack Pulumi infrastructure:
+
+- **Infrastructure Stack** (`pulumi/infra/`): VPC, Cloud SQL, service accounts, Workload Identity
+- **Application Stack** (`pulumi/app/`): Cloud Run service, migration job, secrets
+
+State is stored in GCS bucket `csheet-pulumi-state` with KMS encryption.
+
+### Local Deployment Testing
+
+Test deployments locally using the deploy service account:
+
+```bash
+# First time: Apply infrastructure changes to grant permissions
+mise run infra:up
+
+# Test as deploy service account (requires impersonation permission)
+bin/as-deploy.sh mise run deploy:push   # Build and push image
+bin/as-deploy.sh mise run deploy:up     # Deploy to Cloud Run
+```
+
+The `bin/as-deploy.sh` wrapper impersonates the deploy service account to verify permissions before setting up CI/CD.
+
+### Production Deployment (GitHub Actions)
+
+Deployments to production happen automatically when you **create a GitHub release**:
+
+1. Create a release in the GitHub UI (this creates a git tag)
+2. GitHub Actions workflow triggers automatically
+3. Authenticates using Workload Identity Federation (no secrets needed)
+4. Builds Docker image tagged with commit SHA
+5. Pushes to Artifact Registry
+6. Runs database migrations via Cloud Run Job
+7. Deploys updated service to Cloud Run
+
+**Workflow**: `.github/workflows/deploy.yml`
+
+**Authentication**: Uses Workload Identity Federation - GitHub's OIDC token is exchanged for GCP credentials. No long-lived service account keys are stored in GitHub.
+
+**Image tagging**: Images are tagged with the first 12 characters of the commit SHA (e.g., `33895e5d04c1`), ensuring immutable, traceable deployments.
+
+### Deployment Tasks
+
+```bash
+# Preview infrastructure changes
+mise run infra:preview
+
+# Apply infrastructure changes
+mise run infra:up
+
+# Preview application deployment
+mise run deploy:preview
+
+# Build and push Docker image
+mise run deploy:push
+
+# Deploy application to Cloud Run
+mise run deploy:up
+
+# View production logs
+mise run ops:logs
+```
+
+### Deployment Service Account
+
+The `csheet-app-deploys@csheet-475917.iam.gserviceaccount.com` service account has:
+
+- `roles/artifactregistry.writer` - Push images
+- `roles/run.admin` - Manage Cloud Run services and jobs
+- `roles/secretmanager.admin` - Create/update secrets
+- `roles/iam.serviceAccountUser` - Impersonate runtime SA
+- `roles/storage.objectAdmin` - Access Pulumi state bucket
+
+### Workload Identity Federation
+
+GitHub Actions authenticates via Workload Identity Federation:
+
+- **Identity Pool**: `github-actions`
+- **Provider**: GitHub OIDC (`https://token.actions.githubusercontent.com`)
+- **Repository constraint**: Only `igor47/csheet` repository can deploy
+- **No secrets required**: All authentication is handled via OIDC tokens
+
 ## Code Quality
 
 This project uses **Biome** for linting and formatting:

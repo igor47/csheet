@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity Federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          experimental: true
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/csheet-475917/locations/global/workloadIdentityPools/github-actions/providers/github'
+          service_account: 'csheet-app-deploys@csheet-475917.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker credential helper
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build and push Docker image
+        run: mise run deploy:push
+
+      - name: Deploy to Cloud Run
+        run: mise run deploy:up -- --yes --skip-preview

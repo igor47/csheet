@@ -39,8 +39,8 @@ const AbilityEditBox = ({ ability, character, values, errors = {} }: AbilityEdit
   return (
     <div class="col">
       <div
-        class={clsx("border rounded p-2", {
-          "border-primary border-2": changed,
+        class={clsx("border rounded p-2 border-2", {
+          "border-primary": changed,
         })}
       >
         {/* Ability Name */}

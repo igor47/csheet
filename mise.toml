@@ -220,7 +220,8 @@ run = """
   S3_BUCKET_TEST=$(echo "$CONFIG" | jq -r '.s3BucketNameTest')
   export POSTGRES_DB="$PG_DB_TEST"
   export S3_BUCKET_NAME="$S3_BUCKET_TEST"
-  bun test "$@"
+  export NODE_ENV="test"
+  bun test --randomize --only-failures "$@"
 """
 description = "Run tests (pass through arguments to bun test)"
 depends = ["db:test:migrate", "s3:test:setup"]

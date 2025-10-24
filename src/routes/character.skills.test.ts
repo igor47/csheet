@@ -28,25 +28,17 @@ describe("GET /characters/:id/edit/skills", () => {
     })
 
     test("returns status 200", async () => {
-      const response = await makeRequest(
-        testCtx.app,
-        `/characters/${character.id}/edit/skills`,
-        {
-          user,
-        }
-      )
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+        user,
+      })
 
       expect(response.status).toBe(200)
     })
 
     test("renders the skills edit form with title", async () => {
-      const response = await makeRequest(
-        testCtx.app,
-        `/characters/${character.id}/edit/skills`,
-        {
-          user,
-        }
-      )
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+        user,
+      })
 
       const document = await parseHtml(response)
       const title = expectElement(document, ".modal-title")
@@ -54,13 +46,9 @@ describe("GET /characters/:id/edit/skills", () => {
     })
 
     test("displays proficiency input fields for all 18 skills", async () => {
-      const response = await makeRequest(
-        testCtx.app,
-        `/characters/${character.id}/edit/skills`,
-        {
-          user,
-        }
-      )
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+        user,
+      })
 
       const document = await parseHtml(response)
       const skills = [
@@ -119,13 +107,9 @@ describe("GET /characters/:id/edit/skills", () => {
         )
       `
 
-      const response = await makeRequest(
-        testCtx.app,
-        `/characters/${character.id}/edit/skills`,
-        {
-          user,
-        }
-      )
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+        user,
+      })
 
       const document = await parseHtml(response)
       const acrobaticsProfInput = expectElement(document, "#acrobatics_proficiency_proficient")
@@ -134,13 +118,9 @@ describe("GET /characters/:id/edit/skills", () => {
     })
 
     test("has a note textarea", async () => {
-      const response = await makeRequest(
-        testCtx.app,
-        `/characters/${character.id}/edit/skills`,
-        {
-          user,
-        }
-      )
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+        user,
+      })
 
       const document = await parseHtml(response)
       const noteInput = expectElement(document, "#note")
@@ -155,13 +135,9 @@ describe("GET /characters/:id/edit/skills", () => {
       })
 
       test("returns 403", async () => {
-        const response = await makeRequest(
-          testCtx.app,
-          `/characters/${character.id}/edit/skills`,
-          {
-            user: otherUser,
-          }
-        )
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+          user: otherUser,
+        })
 
         expect(response.status).toBe(403)
       })
@@ -202,15 +178,11 @@ describe("POST /characters/:id/edit/skills", () => {
         formData.append("acrobatics_proficiency", "proficient") // Change from default "none"
         formData.append("note", "Trained in acrobatics!")
 
-        const response = await makeRequest(
-          testCtx.app,
-          `/characters/${character.id}/edit/skills`,
-          {
-            user,
-            method: "POST",
-            body: formData,
-          }
-        )
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
 
         expect(response.status).toBe(200)
 
@@ -230,15 +202,11 @@ describe("POST /characters/:id/edit/skills", () => {
         const formData = new FormData()
         formData.append("acrobatics_proficiency", "proficient")
 
-        const response = await makeRequest(
-          testCtx.app,
-          `/characters/${character.id}/edit/skills`,
-          {
-            user,
-            method: "POST",
-            body: formData,
-          }
-        )
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
 
         expect(response.status).toBe(200)
         const document = await parseHtml(response)
@@ -253,15 +221,11 @@ describe("POST /characters/:id/edit/skills", () => {
         const formData = new FormData()
         formData.append("acrobatics_proficiency", "proficient")
 
-        const response = await makeRequest(
-          testCtx.app,
-          `/characters/${character.id}/edit/skills`,
-          {
-            user,
-            method: "POST",
-            body: formData,
-          }
-        )
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
 
         expect(response.headers.get("HX-Trigger")).toContain("closeEditModal")
       })
@@ -275,15 +239,11 @@ describe("POST /characters/:id/edit/skills", () => {
         formData.append("perception_proficiency", "half") // Change
         formData.append("note", "Multiple skill improvements")
 
-        const response = await makeRequest(
-          testCtx.app,
-          `/characters/${character.id}/edit/skills`,
-          {
-            user,
-            method: "POST",
-            body: formData,
-          }
-        )
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
 
         expect(response.status).toBe(200)
 
@@ -370,15 +330,11 @@ describe("POST /characters/:id/edit/skills", () => {
           formData.append(`${skill.skill}_proficiency`, skill.proficiency)
         }
 
-        const response = await makeRequest(
-          testCtx.app,
-          `/characters/${character.id}/edit/skills`,
-          {
-            user,
-            method: "POST",
-            body: formData,
-          }
-        )
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
 
         expect(response.status).toBe(200)
         const html = await response.text()

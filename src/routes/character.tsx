@@ -1,4 +1,4 @@
-import { AbilityEditForm } from "@src/components/AbilityEditForm"
+import { AbilitiesEditForm } from "@src/components/AbilitiesEditForm"
 import { AbilityHistory } from "@src/components/AbilityHistory"
 import { CastSpellForm } from "@src/components/CastSpellForm"
 import { Character } from "@src/components/Character"
@@ -49,7 +49,7 @@ import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spell
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
 import { countArchivedByUserId } from "@src/db/characters"
-import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
+import { Skills, type SkillType } from "@src/lib/dnd"
 import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
@@ -64,7 +64,7 @@ import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { saveNotes } from "@src/services/saveNotes"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
-import { updateAbility } from "@src/services/updateAbility"
+import { updateAbilities } from "@src/services/updateAbilities"
 import { updateAvatar } from "@src/services/updateAvatar"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
@@ -245,7 +245,7 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
         characterId={characterId}
         currentHP={char.currentHP}
         maxHitPoints={char.maxHitPoints}
-        values={body}
+        values={result.values}
         errors={result.errors}
       />
     )
@@ -280,7 +280,7 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
         characterId={characterId}
         allHitDice={char.hitDice}
         availableHitDice={char.availableHitDice}
-        values={body}
+        values={result.values}
         errors={result.errors}
       />
     )
@@ -452,7 +452,6 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const result = await castSpell(getDb(c), char, body)
-  console.dir(result)
 
   if (!result.complete) {
     return c.html(<CastSpellForm character={char} values={result.values} errors={result.errors} />)
@@ -601,17 +600,8 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
     return c.html(<UpdateAvatarForm character={char} />)
   }
 
-  // Check if field is an ability
-  if (Abilities.includes(field as AbilityType)) {
-    const ability = field as AbilityType
-    const abilityScore = char.abilityScores[ability]
-    const values = {
-      ability,
-      score: abilityScore.score.toString(),
-      proficiency_change: "none",
-    }
-
-    return c.html(<AbilityEditForm character={char} values={values} />)
+  if (field === "abilities") {
+    return c.html(<AbilitiesEditForm character={char} values={{}} />)
   }
 
   // Check if field is a skill
@@ -633,6 +623,37 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   )
 })
 
+// POST /characters/:id/edit/abilities - Update all abilities
+characterRoutes.post("/characters/:id/edit/abilities", async (c) => {
+  const characterId = c.req.param("id") as string
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await updateAbilities(getDb(c), char, body)
+
+  if (!result.complete) {
+    return c.html(
+      <AbilitiesEditForm character={char} values={result.values} errors={result.errors} />
+    )
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(
+    <>
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
 characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   const characterId = c.req.param("id") as string
   const char = await computeCharacter(getDb(c), characterId)
@@ -645,31 +666,8 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
   const field = c.req.param("field") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  // Check if field is an ability
-  if (Abilities.includes(field as AbilityType)) {
-    const ability = field as AbilityType
-    const result = await updateAbility(getDb(c), char, { ...body, ability })
-
-    if (!result.complete) {
-      return c.html(
-        <AbilityEditForm character={char} values={{ ...body, ability }} errors={result.errors} />
-      )
-    }
-
-    const updatedChar = (await computeCharacter(getDb(c), characterId))!
-    c.header("HX-Trigger", "closeEditModal")
-    return c.html(
-      <>
-        <AbilitiesPanel character={updatedChar} swapOob={true} />
-        <CharacterInfo character={updatedChar} swapOob={true} />
-        <SkillsPanel character={updatedChar} swapOob={true} />
-        <SpellsPanel character={updatedChar} swapOob={true} />
-      </>
-    )
-  }
-
   // Check if field is a skill
-  else if (Skills.includes(field as SkillType)) {
+  if (Skills.includes(field as SkillType)) {
     const skill = field as SkillType
     const result = await updateSkill(getDb(c), char, { ...body, skill })
 
@@ -808,12 +806,11 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     return c.html(<TraitHistory traits={traits} />)
   }
 
-  // Check if field is an ability
-  if (Abilities.includes(field as AbilityType)) {
+  if (field === "abilities") {
     const abilityEvents = await findAbilityChanges(getDb(c), characterId)
-    // Filter to only this ability and reverse to show most recent first
-    const filteredEvents = abilityEvents.filter((event) => event.ability === field).reverse()
-    return c.html(<AbilityHistory ability={field} events={filteredEvents} />)
+    // Reverse to show most recent first
+    abilityEvents.reverse()
+    return c.html(<AbilityHistory events={abilityEvents} />)
   }
 
   // Check if field is a skill

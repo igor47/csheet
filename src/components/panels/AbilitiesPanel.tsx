@@ -5,12 +5,12 @@ import { clsx } from "clsx"
 interface AbilityBoxProps {
   ability: AbilityType
   score: number
+  modifier: number
   savingThrow: number
   proficient: boolean
-  characterId: string
 }
 
-const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: AbilityBoxProps) => {
+const AbilityBox = ({ ability, score, modifier, savingThrow, proficient }: AbilityBoxProps) => {
   const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
   const abilityNameClass = clsx("fw-medium text-uppercase border", {
     "bg-primary-subtle": proficient,
@@ -26,8 +26,23 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
         <div class={abilityNameClass} style="font-size: 0.7rem;">
           {ability}
         </div>
-        <div class="fw-bold p-2 d-flex align-items-center justify-content-center">
-          <span class="fs-3 pe-1">{formatModifier(savingThrow)}</span>
+
+        <div class="d-flex" style="height: 60px;">
+          {/* Modifier (left half) */}
+          <div class="flex-fill d-flex flex-column align-items-center justify-content-center border-end">
+            <div class="text-muted" style="font-size: 0.65rem;">
+              MOD
+            </div>
+            <div class="fw-bold fs-5">{formatModifier(modifier)}</div>
+          </div>
+
+          {/* Saving Throw (right half) */}
+          <div class="flex-fill d-flex flex-column align-items-center justify-content-center">
+            <div class="text-muted" style="font-size: 0.65rem;">
+              SAVE
+            </div>
+            <div class="fw-bold fs-5">{formatModifier(savingThrow)}</div>
+          </div>
         </div>
 
         <div
@@ -35,37 +50,6 @@ const AbilityBox = ({ ability, score, savingThrow, proficient, characterId }: Ab
           style="width: 40px; height: 40px; font-size: 0.85rem; bottom: -10px;"
         >
           {score}
-        </div>
-
-        <div class="position-absolute d-flex flex-column gap-1" style="right: 8px; top: 30px;">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-secondary border p-1"
-            style="width: 24px; height: 24px; line-height: 1;"
-            aria-label={`edit ${ability}`}
-            title={`edit ${ability}`}
-            hx-get={`/characters/${characterId}/edit/${ability}`}
-            hx-target="#editModalContent"
-            hx-swap="innerHTML"
-            data-bs-toggle="modal"
-            data-bs-target="#editModal"
-          >
-            <i class="bi bi-pencil"></i>
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-secondary border p-1"
-            style="width: 24px; height: 24px; line-height: 1;"
-            aria-label={`${ability} history`}
-            title={`${ability} history`}
-            hx-get={`/characters/${characterId}/history/${ability}`}
-            hx-target="#editModalContent"
-            hx-swap="innerHTML"
-            data-bs-toggle="modal"
-            data-bs-target="#editModal"
-          >
-            <i class="bi bi-clock-history"></i>
-          </button>
         </div>
       </div>
     </div>
@@ -80,6 +64,30 @@ interface AbilitiesPanelProps {
 export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
   return (
     <div class="accordion-body" id="abilities-panel" hx-swap-oob={swapOob && "true"}>
+      <div class="d-flex justify-content-end gap-2 mb-3">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          hx-get={`/characters/${character.id}/edit/abilities`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+          data-bs-toggle="modal"
+          data-bs-target="#editModal"
+        >
+          <i class="bi bi-pencil"></i> Edit Abilities
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          hx-get={`/characters/${character.id}/history/abilities`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+          data-bs-toggle="modal"
+          data-bs-target="#editModal"
+        >
+          <i class="bi bi-clock-history"></i> History
+        </button>
+      </div>
       <div class="row row-cols-3 g-2">
         {Abilities.map((ability) => {
           const abilityScore = character.abilityScores[ability]
@@ -87,9 +95,9 @@ export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
             <AbilityBox
               ability={ability}
               score={abilityScore.score}
+              modifier={abilityScore.modifier}
               savingThrow={abilityScore.savingThrow}
               proficient={abilityScore.proficient}
-              characterId={character.id}
             />
           )
         })}

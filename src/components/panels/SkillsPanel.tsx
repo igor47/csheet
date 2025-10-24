@@ -77,7 +77,7 @@ interface SkillsPanelProps {
 
 export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
   return (
-    <div class="accordion-body" hx-swap-oob={swapOob && "true"}>
+    <div class="accordion-body" id="skills-panel" hx-swap-oob={swapOob && "true"}>
       <div class="row g-2">
         <div class="col-12 col-md-6">
           <div class="list-group small">

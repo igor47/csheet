@@ -43,7 +43,7 @@ export function useTestApp() {
   afterEach(async () => {
     if (state.db) {
       const reserved = state.db
-      reserved.unsafe("ROLLBACK")
+      await reserved.unsafe("ROLLBACK")
       reserved.release()
     }
   })

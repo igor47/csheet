@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker"
+import { create as createAbilityDb } from "@src/db/char_abilities"
 import type { Character, CreateCharacter } from "@src/db/characters"
 import { create as createCharacter } from "@src/db/characters"
+import { Abilities } from "@src/lib/dnd"
 import type { RulesetId } from "@src/lib/dnd/rulesets"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import type { SQL } from "bun"
@@ -94,6 +96,19 @@ export const characterFactory = {
       avatar_id: null,
     }
 
-    return await createCharacter(db, characterData)
+    const character = await createCharacter(db, characterData)
+
+    // Create initial ability scores (default 10 for all)
+    for (const ability of Abilities) {
+      await createAbilityDb(db, {
+        character_id: character.id,
+        ability,
+        score: 10,
+        proficiency: false,
+        note: "Initial",
+      })
+    }
+
+    return character
   },
 }

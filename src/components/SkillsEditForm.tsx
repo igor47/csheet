@@ -82,7 +82,10 @@ const SkillEditRow = ({ skill, character, values, errors = {} }: SkillEditRowPro
       {/* Skill Column */}
       <div class="col-4">
         <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-secondary text-uppercase d-none d-md-inline" style="width: 40px; font-size: 0.7rem;">
+          <span
+            class="badge bg-secondary text-uppercase d-none d-md-inline"
+            style="width: 40px; font-size: 0.7rem;"
+          >
             {abilityAbbr}
           </span>
           <span class="text-capitalize fw-medium">{skillDisplay}</span>

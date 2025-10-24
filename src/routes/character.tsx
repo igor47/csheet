@@ -7,6 +7,8 @@ import { CharacterNew } from "@src/components/CharacterNew"
 import { Characters } from "@src/components/Characters"
 import { ClassEditForm } from "@src/components/ClassEditForm"
 import { ClassHistory } from "@src/components/ClassHistory"
+import { CoinsEditForm } from "@src/components/CoinsEditForm"
+import { CoinsHistory } from "@src/components/CoinsHistory"
 import { CurrentStatus } from "@src/components/CurrentStatus"
 import { HitDiceEditForm } from "@src/components/HitDiceEditForm"
 import { HitDiceHistory } from "@src/components/HitDiceHistory"
@@ -18,6 +20,7 @@ import { NotesSaveIndicator } from "@src/components/NotesSaveIndicator"
 import { PreparedSpellsHistory } from "@src/components/PreparedSpellsHistory"
 import { PrepareSpellForm } from "@src/components/PrepareSpellForm"
 import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
+import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
@@ -34,6 +37,7 @@ import { UpdateAvatarForm } from "@src/components/UpdateAvatarForm"
 import { ModalContent } from "@src/components/ui/ModalContent"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
+import { findByCharacterId as findCoinChanges } from "@src/db/char_coins"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
 import { findByCharacterId } from "@src/db/char_levels"
@@ -65,6 +69,7 @@ import { saveNotes } from "@src/services/saveNotes"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
 import { updateAbilities } from "@src/services/updateAbilities"
 import { updateAvatar } from "@src/services/updateAvatar"
+import { updateCoins } from "@src/services/updateCoins"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateSkills } from "@src/services/updateSkills"
@@ -607,6 +612,10 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
     return c.html(<SkillsEditForm character={char} values={{}} />)
   }
 
+  if (field === "coins") {
+    return c.html(<CoinsEditForm character={char} values={{}} />)
+  }
+
   return c.html(
     <ModalContent title={`${field} history`}>
       <div id="alert alert-info">Coming soon</div>
@@ -670,6 +679,28 @@ characterRoutes.post("/characters/:id/edit/skills", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
     </>
   )
+})
+
+// POST /characters/:id/edit/coins - Update coins
+characterRoutes.post("/characters/:id/edit/coins", async (c) => {
+  const characterId = c.req.param("id") as string
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await updateCoins(getDb(c), char, body)
+
+  if (!result.complete) {
+    return c.html(<CoinsEditForm character={char} values={result.values} errors={result.errors} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
 // POST /characters/:id/avatar - Set character avatar
@@ -795,6 +826,13 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     // Reverse to show most recent first
     skillEvents.reverse()
     return c.html(<SkillsHistory events={skillEvents} />)
+  }
+
+  if (field === "coins") {
+    const coinEvents = await findCoinChanges(getDb(c), characterId)
+    // Reverse to show most recent first
+    coinEvents.reverse()
+    return c.html(<CoinsHistory events={coinEvents} />)
   }
 
   if (field === "notes") {

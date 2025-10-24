@@ -1,4 +1,5 @@
 import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilities"
+import { type CurrentCoins, currentByCharacterId as getCurrentCoins } from "@src/db/char_coins"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { getHpDelta } from "@src/db/char_hp"
 import { findByCharacterId as getAllLevels, getCurrentLevels } from "@src/db/char_levels"
@@ -62,6 +63,7 @@ export interface ComputedCharacter extends Character {
   pactMagicSlots: SpellSlotsType | null
   spells: SpellInfoForClass[]
   traits: CharTrait[]
+  coins: CurrentCoins | null
 }
 
 export async function computeCharacter(
@@ -74,6 +76,7 @@ export async function computeCharacter(
   const levels = await getCurrentLevels(db, characterId)
   const currentAbilityScores = await getCurrentAbilities(db, characterId)
   const currentSkills = await getCurrentSkills(db, characterId)
+  const currentCoins = await getCurrentCoins(db, characterId)
   const hpDelta = await getHpDelta(db, characterId)
   const hitDiceChanges = await findHitDiceChanges(db, characterId)
   const spellSlotChanges = await findSpellSlotChanges(db, characterId)
@@ -309,6 +312,7 @@ export async function computeCharacter(
     pactMagicSlots,
     spells,
     traits,
+    coins: currentCoins,
   }
 
   return char

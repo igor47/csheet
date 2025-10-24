@@ -47,6 +47,29 @@ CREATE TABLE public.char_abilities (
 
 
 --
+-- Name: char_coins; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_coins (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    pp integer DEFAULT 0 NOT NULL,
+    gp integer DEFAULT 0 NOT NULL,
+    ep integer DEFAULT 0 NOT NULL,
+    sp integer DEFAULT 0 NOT NULL,
+    cp integer DEFAULT 0 NOT NULL,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT char_coins_cp_check CHECK ((cp >= 0)),
+    CONSTRAINT char_coins_ep_check CHECK ((ep >= 0)),
+    CONSTRAINT char_coins_gp_check CHECK ((gp >= 0)),
+    CONSTRAINT char_coins_pp_check CHECK ((pp >= 0)),
+    CONSTRAINT char_coins_sp_check CHECK ((sp >= 0))
+);
+
+
+--
 -- Name: char_hit_dice; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -271,6 +294,14 @@ ALTER TABLE ONLY public.char_abilities
 
 
 --
+-- Name: char_coins char_coins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_coins
+    ADD CONSTRAINT char_coins_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_hit_dice char_hit_dice_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -379,6 +410,13 @@ ALTER TABLE ONLY public.users
 --
 
 CREATE INDEX idx_char_abilities_char_id_ability_created_at ON public.char_abilities USING btree (character_id, ability, created_at);
+
+
+--
+-- Name: idx_char_coins_char_id_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_coins_char_id_created_at ON public.char_coins USING btree (character_id, created_at);
 
 
 --
@@ -501,6 +539,13 @@ CREATE TRIGGER char_abilities_updated_at BEFORE UPDATE ON public.char_abilities 
 
 
 --
+-- Name: char_coins char_coins_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_coins_updated_at BEFORE UPDATE ON public.char_coins FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: char_hit_dice char_hit_dice_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -583,6 +628,14 @@ CREATE TRIGGER users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECU
 
 ALTER TABLE ONLY public.char_abilities
     ADD CONSTRAINT char_abilities_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: char_coins char_coins_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_coins
+    ADD CONSTRAINT char_coins_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
 
 
 --
@@ -717,4 +770,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251020180932'),
     ('20251020181000'),
     ('20251020212355'),
-    ('20251021163000');
+    ('20251021163000'),
+    ('20251024193356');

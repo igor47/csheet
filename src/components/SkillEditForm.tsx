@@ -73,7 +73,7 @@ export const SkillEditForm = ({ character, values = {}, errors }: SkillEditFormP
         hx-trigger="change delay:300ms"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
-        class="needs-validation"
+        class="needs-validation modal-body"
         novalidate
       >
         {/* is_check field */}

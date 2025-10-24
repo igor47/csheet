@@ -22,6 +22,11 @@ export const config = {
   notesAutoSaveDelay: 2000, // 2 seconds
   notesBackupInterval: 300000, // 5 minutes
 
+  smtpHost: process.env.SMTP_HOST || "localhost",
+  smtpPort: parseInt(process.env.SMTP_PORT || "25", 10),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPassword: process.env.SMTP_PASSWORD || "",
+
   nodeEnv: process.env.NODE_ENV || "development",
 
   isProd: process.env.NODE_ENV === "production",

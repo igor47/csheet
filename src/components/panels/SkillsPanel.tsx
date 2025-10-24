@@ -4,10 +4,9 @@ import type { ComputedCharacter, SkillScore } from "@src/services/computeCharact
 interface SkillRowProps {
   skill: SkillType
   skillScore: SkillScore
-  characterId: string
 }
 
-const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
+const SkillRow = ({ skill, skillScore }: SkillRowProps) => {
   const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
 
   const getProficiencyIcon = (proficiency: ProficiencyLevel): string => {
@@ -36,36 +35,6 @@ const SkillRow = ({ skill, skillScore, characterId }: SkillRowProps) => {
       </span>
       <span class="flex-grow-1 text-capitalize">{skill}</span>
       <span class="badge text-bg-info">{formatModifier(skillScore.modifier)}</span>
-      <div class="d-flex gap-1">
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-secondary border p-1"
-          style="width: 24px; height: 24px; line-height: 1;"
-          aria-label={`edit ${skill}`}
-          title={`edit ${skill}`}
-          hx-get={`/characters/${characterId}/edit/${skill}`}
-          hx-target="#editModalContent"
-          hx-swap="innerHTML"
-          data-bs-toggle="modal"
-          data-bs-target="#editModal"
-        >
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-secondary border p-1"
-          style="width: 24px; height: 24px; line-height: 1;"
-          aria-label={`${skill} history`}
-          title={`${skill} history`}
-          hx-get={`/characters/${characterId}/history/${skill}`}
-          hx-target="#editModalContent"
-          hx-swap="innerHTML"
-          data-bs-toggle="modal"
-          data-bs-target="#editModal"
-        >
-          <i class="bi bi-clock-history"></i>
-        </button>
-      </div>
     </div>
   )
 }
@@ -78,15 +47,35 @@ interface SkillsPanelProps {
 export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
   return (
     <div class="accordion-body" id="skills-panel" hx-swap-oob={swapOob && "true"}>
+      <div class="d-flex justify-content-end gap-2 mb-3">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          hx-get={`/characters/${character.id}/edit/skills`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+          data-bs-toggle="modal"
+          data-bs-target="#editModal"
+        >
+          <i class="bi bi-pencil"></i> Edit Skills
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          hx-get={`/characters/${character.id}/history/skills`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+          data-bs-toggle="modal"
+          data-bs-target="#editModal"
+        >
+          <i class="bi bi-clock-history"></i> History
+        </button>
+      </div>
       <div class="row g-2">
         <div class="col-12 col-md-6">
           <div class="list-group small">
             {Skills.map((skill) => (
-              <SkillRow
-                skill={skill}
-                skillScore={character.skills[skill]}
-                characterId={character.id}
-              />
+              <SkillRow skill={skill} skillScore={character.skills[skill]} />
             ))}
           </div>
         </div>

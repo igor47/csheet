@@ -22,8 +22,8 @@ import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
 import { SessionNotes } from "@src/components/SessionNotes"
-import { SkillEditForm } from "@src/components/SkillEditForm"
-import { SkillHistory } from "@src/components/SkillHistory"
+import { SkillsEditForm } from "@src/components/SkillsEditForm"
+import { SkillsHistory } from "@src/components/SkillsHistory"
 import { SpellbookHistory } from "@src/components/SpellbookHistory"
 import { SpellCastResult } from "@src/components/SpellCastResult"
 import { SpellSlotsEditForm } from "@src/components/SpellSlotsEditForm"
@@ -49,7 +49,6 @@ import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spell
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
 import { countArchivedByUserId } from "@src/db/characters"
-import { Skills, type SkillType } from "@src/lib/dnd"
 import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
@@ -68,7 +67,7 @@ import { updateAbilities } from "@src/services/updateAbilities"
 import { updateAvatar } from "@src/services/updateAvatar"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
-import { updateSkill } from "@src/services/updateSkill"
+import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
 import { Hono } from "hono"
 
@@ -604,16 +603,8 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
     return c.html(<AbilitiesEditForm character={char} values={{}} />)
   }
 
-  // Check if field is a skill
-  if (Skills.includes(field as SkillType)) {
-    const skill = field as SkillType
-    const skillScore = char.skills[skill]
-    const values = {
-      skill,
-      proficiency: skillScore.proficiency,
-    }
-
-    return c.html(<SkillEditForm character={char} values={values} />)
+  if (field === "skills") {
+    return c.html(<SkillsEditForm character={char} values={{}} />)
   }
 
   return c.html(
@@ -654,7 +645,8 @@ characterRoutes.post("/characters/:id/edit/abilities", async (c) => {
   )
 })
 
-characterRoutes.post("/characters/:id/edit/:field", async (c) => {
+// POST /characters/:id/edit/skills - Update all skills
+characterRoutes.post("/characters/:id/edit/skills", async (c) => {
   const characterId = c.req.param("id") as string
   const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
@@ -663,35 +655,20 @@ characterRoutes.post("/characters/:id/edit/:field", async (c) => {
     return c.body(null, 204)
   }
 
-  const field = c.req.param("field") as string
   const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await updateSkills(getDb(c), char, body)
 
-  // Check if field is a skill
-  if (Skills.includes(field as SkillType)) {
-    const skill = field as SkillType
-    const result = await updateSkill(getDb(c), char, { ...body, skill })
-
-    if (!result.complete) {
-      return c.html(
-        <SkillEditForm character={char} values={{ ...body, skill }} errors={result.errors} />
-      )
-    }
-
-    const updatedChar = (await computeCharacter(getDb(c), characterId))!
-    c.header("HX-Trigger", "closeEditModal")
-    return c.html(
-      <>
-        <SkillsPanel character={updatedChar} swapOob={true} />
-        <CharacterInfo character={updatedChar} swapOob={true} />
-      </>
-    )
+  if (!result.complete) {
+    return c.html(<SkillsEditForm character={char} values={result.values} errors={result.errors} />)
   }
 
-  // Not found
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
   return c.html(
-    <ModalContent title={`${field} history`}>
-      <div id="alert alert-danger">Unknown field: {field}</div>
-    </ModalContent>
+    <>
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+    </>
   )
 })
 
@@ -813,12 +790,11 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     return c.html(<AbilityHistory events={abilityEvents} />)
   }
 
-  // Check if field is a skill
-  if (Skills.includes(field as SkillType)) {
+  if (field === "skills") {
     const skillEvents = await findSkillChanges(getDb(c), characterId)
-    // Filter to only this skill and reverse to show most recent first
-    const filteredEvents = skillEvents.filter((event) => event.skill === field).reverse()
-    return c.html(<SkillHistory skill={field} events={filteredEvents} />)
+    // Reverse to show most recent first
+    skillEvents.reverse()
+    return c.html(<SkillsHistory events={skillEvents} />)
   }
 
   if (field === "notes") {

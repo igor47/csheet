@@ -149,7 +149,7 @@ const migrationJob = new gcp.cloudrunv2.Job("migration-job", {
       ],
       vpcAccess: {
         connector: vpcConnectorName,
-        egress: "ALL_TRAFFIC",
+        egress: "PRIVATE_RANGES_ONLY",
       },
     },
   },
@@ -207,7 +207,7 @@ const service = new gcp.cloudrunv2.Service(
       ],
       vpcAccess: {
         connector: vpcConnectorName,
-        egress: "ALL_TRAFFIC",
+        egress: "PRIVATE_RANGES_ONLY",
       },
     },
     ingress: "INGRESS_TRAFFIC_ALL",

@@ -83,21 +83,7 @@ export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
 
   return (
     <div class="accordion-body" id="traits-panel" hx-swap-oob={swapOob && "true"}>
-      {traits.length === 0 ? (
-        <p class="text-muted">No traits yet.</p>
-      ) : (
-        <>
-          <TraitGroup source="species" traits={traitsBySource.species} />
-          <TraitGroup source="lineage" traits={traitsBySource.lineage} />
-          <TraitGroup source="background" traits={traitsBySource.background} />
-          <TraitGroup source="class" traits={traitsBySource.class} />
-          <TraitGroup source="subclass" traits={traitsBySource.subclass} />
-          <TraitGroup source="custom" traits={traitsBySource.custom} />
-        </>
-      )}
-
-      {/* Edit and History buttons */}
-      <div class="d-flex gap-2 mt-3">
+      <div class="d-flex justify-content-end gap-2 mb-3">
         <button
           type="button"
           class="btn btn-sm btn-outline-primary"
@@ -120,7 +106,21 @@ export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
         >
           <i class="bi bi-clock-history"></i> History
         </button>
+
       </div>
+
+      {traits.length === 0 ? (
+        <p class="text-muted">No traits yet.</p>
+      ) : (
+        <>
+          <TraitGroup source="species" traits={traitsBySource.species} />
+          <TraitGroup source="lineage" traits={traitsBySource.lineage} />
+          <TraitGroup source="background" traits={traitsBySource.background} />
+          <TraitGroup source="class" traits={traitsBySource.class} />
+          <TraitGroup source="subclass" traits={traitsBySource.subclass} />
+          <TraitGroup source="custom" traits={traitsBySource.custom} />
+        </>
+      )}
     </div>
   )
 }

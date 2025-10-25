@@ -1,0 +1,92 @@
+we're going to make an items table. we're going to have the following columns:
+name
+description
+category
+  we're going to define these in code and in the db. our categories are:
+  * weapon
+  * armor
+  * shield
+  * clothing
+  * jewelry
+  * potion
+  * scroll
+  * gear
+  * tool
+  * container
+  * wand
+  * misc
+
+armorType -- light, medium, or heavy, only applies to armor.
+armorClass -- number, only applies to armor, contains the AC of the armor
+armorClassDex -- boolean, only applies to armor, whether or not the AC of the armor includes the dex modifier
+armorClassDexMax -- number, only applies to armor with armorClassDex; the dex modifier for the armor is the smaller of the character's dex modifier or this value
+armorModifier -- number, only for shields, how much to modify base AC for the character when the shield is wielded
+normalRange -- only for weasons, indicates in feet the range of the weapon
+longRange -- only for weaspons, in feet
+thrown -- boolean, only for weapons, whether it can be thrown
+finesse -- boolean, only for weaspons
+mastery -- only for weapons, only relevant for 2024 rules, has one of cleave, graze, nick, push, sap, slow, topple, vex
+martial -- boolean for weapons, if false it's a simple weapon
+created_by -- user id who created the item
+created_at -- timestamp for when item was created
+updated_at -- when the item was last modified
+
+we're going to compute/derive certain properties from items, using a computedItem type and a computeItem service, similar to computeCharacter.
+* wearable -- whether or not the item can be worn. derived from the item category, e.g. clothing, jewelry
+* wieldable -- whether the item can be wielded. true for weapons, shields, and wands.
+* ammunition -- if an item is not thrown but has range, we copy the charges property to the ammunition property -- they're one and the same.
+* useVerb -- what verb implies 'using' an item. for instance, 'drink' for a potion, 'read' for a scroll, 
+
+
+we have an item_charges table, which is a log of the item charges or ammunition increasing/decreasing
+* item_id
+* charges
+* created_at
+* updated_at
+* notes
+
+we have an item_damage table, which specifies the type of damage the item deals (only relevant for weapons):
+* item_id
+* dice -- an array of numbers representing the damage dice. a 1d8 would be [8]. a 2d6 would be [6, 6]
+* type -- the type of damage. we should probably model damage types in dnd.ts:
+[
+  "slashing",
+  "piercing",
+  "bludgeoning",
+  "fire",
+  "cold",
+  "lightning",
+  "thunder",
+  "acid",
+  "radiant",
+  "necrotic",
+  "force",
+  "poison",
+  "psychic",
+]
+
+we have a char_items table, which relates a character to an item.
+the fields:
+* created_at -- the moment the character aquired this item
+* dropped_at -- the moment the character's possession of the item ended
+* worn -- boolean
+* wielded -- boolean
+
+this is a log; if an item is aquired, worn, removed, and dropped there will be 4 rows in this table, all with the same character id and item id but different values for worn, created_at, and dropped_at.
+so long as the most recent row does not include `dropped_at` then the character still has the item.
+
+
+we're going to have a item_effects table.
+this tracks any magical effects the item confers when wielded or worn.
+columns:
+* target -- what the effect modifies. this should be one of SkillType, AbilityType, ac, speed, attack, or damage
+* op -- what the effect does. i think 'add', 'set', 'advantage', 'disadvantage', 'proficiency', 'expertise'
+* value -- the number that goes with add/set for the op
+* applies -- when the effect is granted. 'worn', 'wielded' should do
+
+
+we need to modify computeCharacter to look at/apply item effects when computing characters.
+
+we also need item templates.
+for each dnd ruleset, we'll have that ruleset's basic items in templates.
+when creating new items, we can use a template to populate fields like damage and weapons flags.

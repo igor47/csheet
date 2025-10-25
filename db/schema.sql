@@ -116,6 +116,23 @@ CREATE TABLE public.char_hp (
 
 
 --
+-- Name: char_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_items (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    item_id character varying(26) NOT NULL,
+    worn boolean DEFAULT false,
+    wielded boolean DEFAULT false,
+    dropped_at timestamp with time zone,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: char_levels; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -262,6 +279,84 @@ COMMENT ON COLUMN public.characters.archived_at IS 'Timestamp when the character
 
 
 --
+-- Name: item_charges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_charges (
+    id character varying(26) NOT NULL,
+    item_id character varying(26) NOT NULL,
+    delta integer NOT NULL,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: item_damage; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_damage (
+    id character varying(26) NOT NULL,
+    item_id character varying(26) NOT NULL,
+    dice integer[] NOT NULL,
+    type text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT item_damage_type_check CHECK ((type = ANY (ARRAY['slashing'::text, 'piercing'::text, 'bludgeoning'::text, 'fire'::text, 'cold'::text, 'lightning'::text, 'thunder'::text, 'acid'::text, 'radiant'::text, 'necrotic'::text, 'force'::text, 'poison'::text, 'psychic'::text])))
+);
+
+
+--
+-- Name: item_effects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_effects (
+    id character varying(26) NOT NULL,
+    item_id character varying(26) NOT NULL,
+    target text NOT NULL,
+    op text NOT NULL,
+    value integer,
+    applies text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT item_effects_applies_check CHECK ((applies = ANY (ARRAY['worn'::text, 'wielded'::text]))),
+    CONSTRAINT item_effects_op_check CHECK ((op = ANY (ARRAY['add'::text, 'set'::text, 'advantage'::text, 'disadvantage'::text, 'proficiency'::text, 'expertise'::text])))
+);
+
+
+--
+-- Name: items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.items (
+    id character varying(26) NOT NULL,
+    name text NOT NULL,
+    description text,
+    category text NOT NULL,
+    armor_type text,
+    armor_class integer,
+    armor_class_dex boolean DEFAULT false,
+    armor_class_dex_max integer,
+    armor_modifier integer,
+    normal_range integer,
+    long_range integer,
+    thrown boolean DEFAULT false,
+    finesse boolean DEFAULT false,
+    mastery text,
+    martial boolean DEFAULT false,
+    created_by character varying(26) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT items_armor_class_check CHECK ((armor_class >= 0)),
+    CONSTRAINT items_armor_class_dex_max_check CHECK ((armor_class_dex_max >= 0)),
+    CONSTRAINT items_armor_type_check CHECK ((armor_type = ANY (ARRAY['light'::text, 'medium'::text, 'heavy'::text]))),
+    CONSTRAINT items_category_check CHECK ((category = ANY (ARRAY['weapon'::text, 'armor'::text, 'shield'::text, 'clothing'::text, 'jewelry'::text, 'potion'::text, 'scroll'::text, 'gear'::text, 'tool'::text, 'container'::text, 'wand'::text, 'misc'::text]))),
+    CONSTRAINT items_long_range_check CHECK ((long_range > 0)),
+    CONSTRAINT items_mastery_check CHECK ((mastery = ANY (ARRAY['cleave'::text, 'graze'::text, 'nick'::text, 'push'::text, 'sap'::text, 'slow'::text, 'topple'::text, 'vex'::text]))),
+    CONSTRAINT items_normal_range_check CHECK ((normal_range > 0))
+);
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -341,6 +436,14 @@ ALTER TABLE ONLY public.char_hp
 
 
 --
+-- Name: char_items char_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_items
+    ADD CONSTRAINT char_items_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_levels char_levels_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -402,6 +505,38 @@ ALTER TABLE ONLY public.char_traits
 
 ALTER TABLE ONLY public.characters
     ADD CONSTRAINT characters_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: item_charges item_charges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_charges
+    ADD CONSTRAINT item_charges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: item_damage item_damage_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_damage
+    ADD CONSTRAINT item_damage_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: item_effects item_effects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_effects
+    ADD CONSTRAINT item_effects_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: items items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items
+    ADD CONSTRAINT items_pkey PRIMARY KEY (id);
 
 
 --
@@ -475,6 +610,20 @@ CREATE INDEX idx_char_hit_dice_char_id_die_value_created_at ON public.char_hit_d
 --
 
 CREATE INDEX idx_char_hp_char_id_created_at ON public.char_hp USING btree (character_id, created_at);
+
+
+--
+-- Name: idx_char_items_char_id_item_id_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_items_char_id_item_id_created_at ON public.char_items USING btree (character_id, item_id, created_at);
+
+
+--
+-- Name: idx_char_items_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_items_item_id ON public.char_items USING btree (item_id);
 
 
 --
@@ -555,6 +704,41 @@ CREATE INDEX idx_characters_user_id_archived_at ON public.characters USING btree
 
 
 --
+-- Name: idx_item_charges_item_id_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_item_charges_item_id_created_at ON public.item_charges USING btree (item_id, created_at);
+
+
+--
+-- Name: idx_item_damage_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_item_damage_item_id ON public.item_damage USING btree (item_id);
+
+
+--
+-- Name: idx_item_effects_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_item_effects_item_id ON public.item_effects USING btree (item_id);
+
+
+--
+-- Name: idx_items_category; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_items_category ON public.items USING btree (category);
+
+
+--
+-- Name: idx_items_created_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_items_created_by ON public.items USING btree (created_by);
+
+
+--
 -- Name: idx_uploads_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -601,6 +785,13 @@ CREATE TRIGGER char_hit_dice_updated_at BEFORE UPDATE ON public.char_hit_dice FO
 --
 
 CREATE TRIGGER char_hp_updated_at BEFORE UPDATE ON public.char_hp FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: char_items char_items_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_items_updated_at BEFORE UPDATE ON public.char_items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
@@ -653,6 +844,20 @@ CREATE TRIGGER characters_updated_at BEFORE UPDATE ON public.characters FOR EACH
 
 
 --
+-- Name: item_charges item_charges_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER item_charges_updated_at BEFORE UPDATE ON public.item_charges FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: items items_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER items_updated_at BEFORE UPDATE ON public.items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: char_notes update_char_notes_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -696,6 +901,22 @@ ALTER TABLE ONLY public.char_hit_dice
 
 ALTER TABLE ONLY public.char_hp
     ADD CONSTRAINT char_hp_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: char_items char_items_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_items
+    ADD CONSTRAINT char_items_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: char_items char_items_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_items
+    ADD CONSTRAINT char_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE CASCADE;
 
 
 --
@@ -787,6 +1008,38 @@ ALTER TABLE ONLY public.uploads
 
 
 --
+-- Name: item_charges item_charges_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_charges
+    ADD CONSTRAINT item_charges_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: item_damage item_damage_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_damage
+    ADD CONSTRAINT item_damage_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: item_effects item_effects_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_effects
+    ADD CONSTRAINT item_effects_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: items items_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items
+    ADD CONSTRAINT items_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -816,4 +1069,9 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251020212355'),
     ('20251021163000'),
     ('20251024193356'),
-    ('20251025005815');
+    ('20251025005815'),
+    ('20251025215747'),
+    ('20251025215832'),
+    ('20251025215908'),
+    ('20251025220018'),
+    ('20251025220128');

@@ -37,7 +37,7 @@ export const NotesSaveIndicator = ({ lastSaved, error }: NotesSaveIndicatorProps
     <div id="notes-save-status">
       <small class="text-success" id="notes-saved">
         <i class="bi bi-check-circle-fill me-1"></i>
-        Saved at {new Date(lastSaved).toLocaleTimeString()}
+        Saved
       </small>
       <small class="text-muted d-none" id="notes-unsaved">
         <i class="bi bi-dash-circle me-1"></i>

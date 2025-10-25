@@ -22,16 +22,25 @@ export const config = {
   notesAutoSaveDelay: 2000, // 2 seconds
   notesBackupInterval: 300000, // 5 minutes
 
-  smtpHost: process.env.SMTP_HOST || "localhost",
+  smtpHost: process.env.SMTP_HOST || "",
   smtpPort: parseInt(process.env.SMTP_PORT || "25", 10),
   smtpUser: process.env.SMTP_USER || "",
   smtpPassword: process.env.SMTP_PASSWORD || "",
+  smtpFrom: process.env.SMTP_FROM || "CSheet <noreply@csheet.net>",
+
+  otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || "15", 10),
+  otpRateLimitPerHour: parseInt(process.env.OTP_RATE_LIMIT_PER_HOUR || "3", 10),
 
   nodeEnv: process.env.NODE_ENV || "development",
 
   isProd: process.env.NODE_ENV === "production",
   isTest: process.env.NODE_ENV === "test",
 } as const
+
+// Helper to check if SMTP is configured
+export function isSmtpConfigured(): boolean {
+  return !!(config.smtpHost && config.smtpUser && config.smtpPassword)
+}
 
 // Print config as JSON when run directly
 if (import.meta.main) {

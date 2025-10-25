@@ -36,6 +36,13 @@ const s3AccessKeyId = config.require("s3AccessKeyId")
 const s3SecretAccessKey = config.requireSecret("s3SecretAccessKey")
 const s3BucketName = config.require("s3BucketName")
 
+// SMTP configuration
+const smtpHost = config.get("SMTP_HOST") ?? ""
+const smtpPort = config.get("SMTP_PORT") ?? "25"
+const smtpUser = config.get("SMTP_USER") ?? ""
+const smtpPassword = config.getSecret("SMTP_PASSWORD") ?? ""
+const smtpFrom = config.get("SMTP_FROM") ?? "CSheet <noreply@csheet.net>"
+
 // Secrets - created in app stack for easier updates without touching infra
 const cookieSecret = new random.RandomPassword("cookie-secret", {
   length: 32,
@@ -76,6 +83,7 @@ const secrets = {
   postgresDb: createSecret("postgres-db", databaseName),
   s3AccessKeyId: createSecret("s3-access-key-id", s3AccessKeyId),
   s3SecretAccessKey: createSecret("s3-secret-access-key", s3SecretAccessKey),
+  smtpPassword: createSecret("smtp-password", smtpPassword),
 }
 
 // Helper to reference a secret in environment variables
@@ -108,6 +116,11 @@ const env: pulumi.Input<gcp.types.input.cloudrunv2.JobTemplateTemplateContainerE
   secretEnv("S3_ACCESS_KEY_ID", secrets.s3AccessKeyId),
   secretEnv("S3_SECRET_ACCESS_KEY", secrets.s3SecretAccessKey),
   { name: "S3_BUCKET_NAME", value: s3BucketName },
+  { name: "SMTP_HOST", value: smtpHost },
+  { name: "SMTP_PORT", value: smtpPort },
+  { name: "SMTP_USER", value: smtpUser },
+  secretEnv("SMTP_PASSWORD", secrets.smtpPassword),
+  { name: "SMTP_FROM", value: smtpFrom },
 ]
 
 // Migration job - runs dbmate migrate

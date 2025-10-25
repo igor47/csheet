@@ -11,6 +11,7 @@
     "@pulumi/random": "^4.18.4",
     "@types/bun": "latest",
     "@types/node": "^24.9.1",
+    "@types/nodemailer": "^7.0.3",
     "fishery": "^2.3.1",
     "linkedom": "^0.18.12",
     "ts-node": "^10.9.2"
@@ -23,6 +24,7 @@
     "@aws-sdk/s3-request-presigner": "^3.913.0",
     "clsx": "^2.1.1",
     "hono": "^4.9.6",
+    "nodemailer": "^7.0.10",
     "ulid": "^3.0.1",
     "zod": "^4.1.11"
   }

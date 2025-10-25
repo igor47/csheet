@@ -25,7 +25,7 @@ export const SessionNotes = ({ characterId, currentNote }: SessionNotesProps) =>
             data-bs-toggle="modal"
             data-bs-target="#editModal"
           >
-            History
+            <i class="bi bi-clock-history" /> History
           </button>
         </div>
       </div>

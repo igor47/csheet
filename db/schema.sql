@@ -29,6 +29,21 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: auth_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.auth_tokens (
+    id character varying(26) NOT NULL,
+    email text NOT NULL,
+    session_token_hash text NOT NULL,
+    otp_code_hash text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone
+);
+
+
+--
 -- Name: char_abilities; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -286,6 +301,14 @@ CREATE TABLE public.users (
 
 
 --
+-- Name: auth_tokens auth_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.auth_tokens
+    ADD CONSTRAINT auth_tokens_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_abilities char_abilities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -403,6 +426,27 @@ ALTER TABLE ONLY public.uploads
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_auth_tokens_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_auth_tokens_email ON public.auth_tokens USING btree (email);
+
+
+--
+-- Name: idx_auth_tokens_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_auth_tokens_expires_at ON public.auth_tokens USING btree (expires_at);
+
+
+--
+-- Name: idx_auth_tokens_session_token_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_auth_tokens_session_token_hash ON public.auth_tokens USING btree (session_token_hash);
 
 
 --
@@ -771,4 +815,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251020181000'),
     ('20251020212355'),
     ('20251021163000'),
-    ('20251024193356');
+    ('20251024193356'),
+    ('20251025005815');

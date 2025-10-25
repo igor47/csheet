@@ -3,7 +3,7 @@ import { findByCharacterId as findAbilities } from "@src/db/char_abilities"
 import { getCurrentLevels } from "@src/db/char_levels"
 import { findByCharacterId as findSkills } from "@src/db/char_skills"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
-import type { ClassNameType } from "@src/lib/dnd"
+import { type ClassNameType, getRuleset } from "@src/lib/dnd"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import { useTestApp } from "@src/test/app"
@@ -39,17 +39,69 @@ function assertSuccess(result: CreateCharacterResult): asserts result is {
 describe("createCharacter", () => {
   const testCtx = useTestApp()
 
-  const buildCharacterData = (overrides = {}) => ({
-    name: "Test Character",
-    species: "dragonborn",
-    lineage: "black",
-    class: "cleric",
-    subclass: "life domain",
-    background: "acolyte",
-    alignment: "Lawful Good",
-    ruleset: SRD51_ID,
-    ...overrides,
-  })
+  const buildCharacterData = (overrides = {}) => {
+    const base = {
+      name: "Test Character",
+      species: "dragonborn",
+      lineage: "black",
+      class: "cleric" as ClassNameType,
+      subclass: "life domain",
+      background: "acolyte",
+      alignment: "Lawful Good",
+      ruleset: SRD51_ID as typeof SRD51_ID | typeof SRD52_ID,
+      // Default ability scores (standard array)
+      ability_method: "standard-array",
+      ability_str: "15",
+      ability_dex: "14",
+      ability_con: "13",
+      ability_int: "12",
+      ability_wis: "10",
+      ability_cha: "8",
+      ...overrides,
+    }
+
+    // For SRD 5.2, add default background ability bonuses if not provided
+    if (base.ruleset === SRD52_ID) {
+      // Only add defaults if no bonuses are specified in overrides
+      const hasAnyBonus = Object.keys(overrides).some(
+        (key) => key.startsWith("background_ability_") && key.endsWith("_bonus")
+      )
+
+      if (!hasAnyBonus) {
+        // Get allowed abilities from the background
+        const ruleset = getRuleset(base.ruleset)
+        const background = ruleset.backgrounds[base.background]
+        const allowedAbilities = background?.abilityScoresModified || []
+
+        // Default: +2 to first allowed ability, +1 to second
+        const bonuses: Record<string, string> = {
+          background_ability_str_bonus: "0",
+          background_ability_dex_bonus: "0",
+          background_ability_con_bonus: "0",
+          background_ability_int_bonus: "0",
+          background_ability_wis_bonus: "0",
+          background_ability_cha_bonus: "0",
+        }
+
+        if (allowedAbilities.length >= 2) {
+          const firstAbility = allowedAbilities[0]!
+          const secondAbility = allowedAbilities[1]!
+          bonuses[`background_ability_${firstAbility.substring(0, 3)}_bonus`] = "2"
+          bonuses[`background_ability_${secondAbility.substring(0, 3)}_bonus`] = "1"
+        }
+
+        return {
+          ...base,
+          ...bonuses,
+        }
+      }
+
+      // If any bonuses are specified, return base with those overrides
+      return base
+    }
+
+    return base
+  }
 
   test("it creates a character", async () => {
     const user = await userFactory.create({}, testCtx.db)
@@ -149,12 +201,12 @@ describe("createCharacter", () => {
         const abilities = await findAbilities(testCtx.db, result.character.id)
 
         // Dragonborn in SRD 5.1 has no ability score modifiers
-        // All abilities should be at base 10
+        // Scores should match the standard array selections
         const strength = abilities.find((a) => a.ability === "strength" && !a.proficiency)
-        expect(strength?.score).toBe(10)
+        expect(strength?.score).toBe(15) // From standard array
 
         const constitution = abilities.find((a) => a.ability === "constitution" && !a.proficiency)
-        expect(constitution?.score).toBe(10)
+        expect(constitution?.score).toBe(13) // From standard array
       })
 
       it("applies saving throw proficiencies from class", async () => {
@@ -191,16 +243,36 @@ describe("createCharacter", () => {
 
           const abilities = await findAbilities(testCtx.db, result.character.id)
 
-          // Dwarf gets +2 CON from species, Hill Dwarf gets +1 WIS from lineage
-          const constitution = abilities.find((a) => a.ability === "constitution" && !a.proficiency)
-          expect(constitution?.score).toBe(12) // 10 + 2
+          // Check base scores from standard array (first record for each ability)
+          const constitutionBase = abilities.find(
+            (a) => a.ability === "constitution" && !a.proficiency
+          )
+          expect(constitutionBase?.score).toBe(13) // Standard array selection
+          expect(constitutionBase?.note).toContain("Standard array")
 
-          const wisdom = abilities.find((a) => a.ability === "wisdom" && !a.proficiency)
-          expect(wisdom?.score).toBe(11) // 10 + 1
+          // Check modified score from species (+2 CON from dwarf)
+          const constitutionModified = abilities.filter(
+            (a) => a.ability === "constitution" && !a.proficiency
+          )[1]
+          expect(constitutionModified?.score).toBe(15) // 13 + 2 from dwarf
+          expect(constitutionModified?.note).toContain("dwarf")
 
-          // Other abilities should be at base 10
-          const strength = abilities.find((a) => a.ability === "strength" && !a.proficiency)
-          expect(strength?.score).toBe(10)
+          // Check modified score from lineage (+1 WIS from hill dwarf)
+          const wisdomBase = abilities.find((a) => a.ability === "wisdom" && !a.proficiency)
+          expect(wisdomBase?.score).toBe(10) // Standard array selection
+
+          const wisdomModified = abilities.filter(
+            (a) => a.ability === "wisdom" && !a.proficiency
+          )[1]
+          expect(wisdomModified?.score).toBe(11) // 10 + 1 from hill dwarf
+          expect(wisdomModified?.note).toContain("hill dwarf")
+
+          // Strength should only have base score (no modifiers)
+          const strengthRecords = abilities.filter(
+            (a) => a.ability === "strength" && !a.proficiency
+          )
+          expect(strengthRecords.length).toBe(1)
+          expect(strengthRecords[0]?.score).toBe(15) // Standard array
         })
       })
     })
@@ -217,15 +289,25 @@ describe("createCharacter", () => {
 
           const abilities = await findAbilities(testCtx.db, result.character.id)
 
-          // All non-proficient abilities should be at base 10 in SRD 5.2
-          const strength = abilities.find((a) => a.ability === "strength" && !a.proficiency)
-          expect(strength?.score).toBe(10)
+          // In SRD 5.2, species/lineage do NOT provide modifiers
+          // Should only have base scores from standard array (no modifier records)
+          const strengthRecords = abilities.filter(
+            (a) => a.ability === "strength" && !a.proficiency
+          )
+          expect(strengthRecords.length).toBe(1) // Only base score, no modifiers
+          expect(strengthRecords[0]?.score).toBe(15) // Standard array
 
-          const dexterity = abilities.find((a) => a.ability === "dexterity" && !a.proficiency)
-          expect(dexterity?.score).toBe(10)
+          const dexterityRecords = abilities.filter(
+            (a) => a.ability === "dexterity" && !a.proficiency
+          )
+          expect(dexterityRecords.length).toBe(1)
+          expect(dexterityRecords[0]?.score).toBe(14) // Standard array
 
-          const constitution = abilities.find((a) => a.ability === "constitution" && !a.proficiency)
-          expect(constitution?.score).toBe(10)
+          const constitutionRecords = abilities.filter(
+            (a) => a.ability === "constitution" && !a.proficiency
+          )
+          expect(constitutionRecords.length).toBe(1)
+          expect(constitutionRecords[0]?.score).toBe(13) // Standard array
         })
       })
     })
@@ -653,6 +735,322 @@ describe("createCharacter", () => {
         // (disciple of life is level 3 in SRD 5.2)
         const discipleOfLife = traits.find((t) => t.name === "disciple of life")
         expect(discipleOfLife).toBeFalsy()
+      })
+    })
+  })
+
+  describe("ability score selection", () => {
+    describe("with standard array", () => {
+      it("applies player-selected ability scores", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ability_method: "standard-array",
+          ability_str: "15",
+          ability_dex: "14",
+          ability_con: "13",
+          ability_int: "12",
+          ability_wis: "10",
+          ability_cha: "8",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        assertSuccess(result)
+
+        const abilities = await findAbilities(testCtx.db, result.character.id)
+
+        const strength = abilities.find((a) => a.ability === "strength" && !a.proficiency)
+        expect(strength?.score).toBe(15)
+
+        const dexterity = abilities.find((a) => a.ability === "dexterity" && !a.proficiency)
+        expect(dexterity?.score).toBe(14)
+
+        const charisma = abilities.find((a) => a.ability === "charisma" && !a.proficiency)
+        expect(charisma?.score).toBe(8)
+      })
+
+      it("rejects invalid standard array assignments", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ability_method: "standard-array",
+          ability_str: "15",
+          ability_dex: "15", // Duplicate!
+          ability_con: "13",
+          ability_int: "12",
+          ability_wis: "10",
+          ability_cha: "8",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        expect(result.complete).toBe(false)
+        if (result.complete) return
+        expect(result.errors.ability_method).toContain("exactly the values [15, 14, 13, 12, 10, 8]")
+      })
+
+      describe("with dwarf species", () => {
+        it("applies species modifiers to selected scores", async () => {
+          const user = await userFactory.create({}, testCtx.db)
+          const data = buildCharacterData({
+            species: "dwarf",
+            lineage: "hill dwarf",
+            ability_method: "standard-array",
+            ability_str: "10",
+            ability_dex: "8",
+            ability_con: "15", // +2 from dwarf
+            ability_int: "12",
+            ability_wis: "14", // +1 from hill dwarf
+            ability_cha: "13",
+          })
+
+          const result = await createCharacter(testCtx.db, user, data)
+          assertSuccess(result)
+
+          const abilities = await findAbilities(testCtx.db, result.character.id)
+
+          // Check base and modified scores for constitution (dwarf +2)
+          const constitutionRecords = abilities.filter(
+            (a) => a.ability === "constitution" && !a.proficiency
+          )
+          expect(constitutionRecords.length).toBe(2) // Base + modifier
+          expect(constitutionRecords[0]?.score).toBe(15) // Base from standard array
+          expect(constitutionRecords[1]?.score).toBe(17) // 15 + 2 from dwarf
+
+          // Check base and modified scores for wisdom (hill dwarf +1)
+          const wisdomRecords = abilities.filter((a) => a.ability === "wisdom" && !a.proficiency)
+          expect(wisdomRecords.length).toBe(2) // Base + modifier
+          expect(wisdomRecords[0]?.score).toBe(14) // Base from standard array
+          expect(wisdomRecords[1]?.score).toBe(15) // 14 + 1 from hill dwarf
+
+          // Strength should only have base score (no modifiers)
+          const strengthRecords = abilities.filter(
+            (a) => a.ability === "strength" && !a.proficiency
+          )
+          expect(strengthRecords.length).toBe(1)
+          expect(strengthRecords[0]?.score).toBe(10) // Base from standard array
+        })
+
+        it("rejects random generation scores exceeding 18", async () => {
+          const user = await userFactory.create({}, testCtx.db)
+          const data = buildCharacterData({
+            species: "dwarf",
+            lineage: "mountain dwarf",
+            ability_method: "random",
+            ability_str: "16",
+            ability_dex: "14",
+            ability_con: "19", // Too high for random generation (max 18)
+            ability_int: "12",
+            ability_wis: "10",
+            ability_cha: "8",
+          })
+
+          const result = await createCharacter(testCtx.db, user, data)
+          expect(result.complete).toBe(false)
+          if (result.complete) return
+          expect(result.errors.ability_method).toContain("Random generation scores must be 3-18")
+        })
+      })
+    })
+
+    describe("with point buy", () => {
+      it("accepts valid point buy allocation", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ability_method: "point-buy",
+          ability_str: "15", // 9 points
+          ability_dex: "14", // 7 points
+          ability_con: "13", // 5 points
+          ability_int: "12", // 4 points
+          ability_wis: "10", // 2 points
+          ability_cha: "8", // 0 points
+          // Total: 27 points
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        assertSuccess(result)
+
+        const abilities = await findAbilities(testCtx.db, result.character.id)
+
+        const strength = abilities.find((a) => a.ability === "strength" && !a.proficiency)
+        expect(strength?.score).toBe(15)
+      })
+
+      it("rejects invalid point buy allocation", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ability_method: "point-buy",
+          ability_str: "15", // 9 points
+          ability_dex: "15", // 9 points
+          ability_con: "15", // 9 points
+          ability_int: "8", // 0 points
+          ability_wis: "8", // 0 points
+          ability_cha: "8", // 0 points
+          // Total: 27 points (valid)
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        assertSuccess(result)
+      })
+
+      it("rejects spending too many points", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ability_method: "point-buy",
+          ability_str: "15", // 9 points
+          ability_dex: "15", // 9 points
+          ability_con: "15", // 9 points
+          ability_int: "10", // 2 points (OVER!)
+          ability_wis: "8",
+          ability_cha: "8",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        expect(result.complete).toBe(false)
+        if (result.complete) return
+        expect(result.errors.ability_method).toContain("spend exactly 27 points")
+      })
+
+      it("rejects scores outside point buy range", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ability_method: "point-buy",
+          ability_str: "16", // Too high!
+          ability_dex: "14",
+          ability_con: "13",
+          ability_int: "12",
+          ability_wis: "10",
+          ability_cha: "8",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        expect(result.complete).toBe(false)
+        if (result.complete) return
+        expect(result.errors.ability_method).toContain("Point buy scores must be 8-15")
+      })
+    })
+
+    describe("with random generation", () => {
+      it("accepts any valid ability scores", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ability_method: "random",
+          rolled_values: "16,14,13,12,11,10",
+          ability_str: "16",
+          ability_dex: "14",
+          ability_con: "13",
+          ability_int: "12",
+          ability_wis: "11",
+          ability_cha: "10",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        assertSuccess(result)
+
+        const abilities = await findAbilities(testCtx.db, result.character.id)
+
+        const strength = abilities.find((a) => a.ability === "strength" && !a.proficiency)
+        expect(strength?.score).toBe(16)
+      })
+    })
+
+    describe("on SRD 5.2 (2024 rules)", () => {
+      it("requires background ability bonuses to total 3", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ruleset: SRD52_ID,
+          background: "acolyte",
+          // Missing bonus allocations (all default to 0)
+          background_ability_str_bonus: "0",
+          background_ability_dex_bonus: "0",
+          background_ability_con_bonus: "0",
+          background_ability_int_bonus: "0",
+          background_ability_wis_bonus: "0",
+          background_ability_cha_bonus: "0",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        expect(result.complete).toBe(false)
+        if (result.complete) return
+        expect(result.errors.background).toContain("must total 3")
+      })
+
+      it("applies background ability bonuses correctly", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ruleset: SRD52_ID,
+          background: "acolyte",
+          ability_str: "10",
+          ability_dex: "8",
+          ability_con: "12",
+          ability_int: "13",
+          ability_wis: "15", // +2 from background
+          ability_cha: "14", // +1 from background
+          background_ability_str_bonus: "0",
+          background_ability_dex_bonus: "0",
+          background_ability_con_bonus: "0",
+          background_ability_int_bonus: "0",
+          background_ability_wis_bonus: "2",
+          background_ability_cha_bonus: "1",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        assertSuccess(result)
+
+        const abilities = await findAbilities(testCtx.db, result.character.id)
+
+        // Check base and modified scores for wisdom (background +2)
+        const wisdomRecords = abilities.filter((a) => a.ability === "wisdom" && !a.proficiency)
+        expect(wisdomRecords.length).toBe(2) // Base + modifier
+        expect(wisdomRecords[0]?.score).toBe(15) // Base
+        expect(wisdomRecords[1]?.score).toBe(17) // 15 + 2 from background
+
+        // Check base and modified scores for charisma (background +1)
+        const charismaRecords = abilities.filter((a) => a.ability === "charisma" && !a.proficiency)
+        expect(charismaRecords.length).toBe(2) // Base + modifier
+        expect(charismaRecords[0]?.score).toBe(14) // Base
+        expect(charismaRecords[1]?.score).toBe(15) // 14 + 1 from background
+
+        // Strength should only have base score (no modifiers)
+        const strengthRecords = abilities.filter((a) => a.ability === "strength" && !a.proficiency)
+        expect(strengthRecords.length).toBe(1)
+        expect(strengthRecords[0]?.score).toBe(10) // Base
+      })
+
+      it("rejects bonuses to only one ability", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        const data = buildCharacterData({
+          ruleset: SRD52_ID,
+          background: "acolyte",
+          background_ability_str_bonus: "0",
+          background_ability_dex_bonus: "0",
+          background_ability_con_bonus: "0",
+          background_ability_int_bonus: "0",
+          background_ability_wis_bonus: "3", // All 3 to one ability!
+          background_ability_cha_bonus: "0",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        expect(result.complete).toBe(false)
+        if (result.complete) return
+        expect(result.errors.background).toContain("at least 2 different abilities")
+      })
+
+      it("rejects bonuses to abilities not allowed by background", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        // Acolyte allows Intelligence, Wisdom, Charisma
+        const data = buildCharacterData({
+          ruleset: SRD52_ID,
+          background: "acolyte",
+          background_ability_str_bonus: "2", // Strength NOT allowed!
+          background_ability_dex_bonus: "0",
+          background_ability_con_bonus: "0",
+          background_ability_int_bonus: "0",
+          background_ability_wis_bonus: "1",
+          background_ability_cha_bonus: "0",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        expect(result.complete).toBe(false)
+        if (result.complete) return
+        expect(result.errors.background_ability_str_bonus).toContain("cannot receive a bonus")
       })
     })
   })

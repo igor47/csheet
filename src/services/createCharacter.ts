@@ -1,28 +1,36 @@
 import { beginOrSavepoint } from "@src/db"
-import { create as createAbilityDb } from "@src/db/char_abilities"
+import {
+  create as createAbilityDb,
+  findByCharacterId as findAbilities,
+} from "@src/db/char_abilities"
 import { create as createSkillDb } from "@src/db/char_skills"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import {
+  Abilities,
   type AbilityType,
   ClassNamesSchema,
   type ClassNameType,
   getRuleset,
+  POINT_BUY_COSTS,
   type Ruleset,
   type SkillType,
 } from "@src/lib/dnd"
 import { RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets"
-import { OptionalNullStringSchema } from "@src/lib/schemas"
+import {
+  BooleanFormFieldSchema,
+  OptionalNullStringSchema,
+  RequiredStringNumberSchema,
+  StringNumberEnum,
+} from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 import { addLevel } from "./addLevel"
 
 /**
- * Generic Create Character API Schema that works across all rulesets
- * Ruleset-specific validation happens in the service logic
- * Note: user_id is passed separately via User object, not in form data
+ * Base Character Schema - common fields for all characters
  */
-export const CreateCharacterApiSchema = z.object({
+const BaseCharacterSchema = z.object({
   name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
   species: z.string(),
   lineage: OptionalNullStringSchema,
@@ -31,63 +39,159 @@ export const CreateCharacterApiSchema = z.object({
   background: z.string(),
   alignment: OptionalNullStringSchema,
   ruleset: RulesetIdSchema,
+  is_check: BooleanFormFieldSchema.optional().default(false),
 })
+
+/**
+ * Ability Scores Schema - base ability scores selected by player
+ */
+const BaseAbilityScoresSchema = z.object({
+  ability_method: z.enum(["standard-array", "point-buy", "random"]),
+  ability_str: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
+  ability_dex: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
+  ability_con: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
+  ability_int: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
+  ability_wis: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
+  ability_cha: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
+})
+
+/**
+ * Method-specific schemas (discriminated union based on ability_method)
+ */
+const AbilityScoreMethodSchemas = z.discriminatedUnion("ability_method", [
+  z.object({ ability_method: z.literal("standard-array") }),
+  z.object({ ability_method: z.literal("point-buy") }),
+  z.object({ ability_method: z.literal("random") }),
+])
+
+/**
+ * 2024 Background Ability Score Bonuses
+ * Player chooses how to distribute 3 points across 3 abilities
+ */
+const Background2024Schema = z.object({
+  background_ability_str_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
+  background_ability_dex_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
+  background_ability_con_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
+  background_ability_int_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
+  background_ability_wis_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
+  background_ability_cha_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
+})
+
+/**
+ * Combined Create Character API Schema
+ */
+export const CreateCharacterApiSchema = BaseCharacterSchema.and(BaseAbilityScoresSchema)
+  .and(AbilityScoreMethodSchemas)
+  .and(Background2024Schema)
 
 export type CreateCharacterResult =
   | { complete: true; character: Character }
   | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
- * Calculate initial ability scores based on spiecies and lineage modifiers
+ * Validate standard array: must be exactly [15, 14, 13, 12, 10, 8] in any order
  */
-type AbilityScore = {
-  score: number
-  note: string
+function validateStandardArray(scores: number[]): boolean {
+  const expected = [15, 14, 13, 12, 10, 8].sort()
+  const actual = [...scores].sort()
+  return JSON.stringify(expected) === JSON.stringify(actual)
 }
 
-function calculateInitialAbilityScores(
-  ruleset: Ruleset,
-  speciesName: string,
-  lineageName: string | null
-): Record<AbilityType, AbilityScore> {
-  const baseScore: AbilityScore = { score: 10, note: "Base score" }
-  const scores: Record<AbilityType, AbilityScore> = {
-    strength: { ...baseScore },
-    dexterity: { ...baseScore },
-    constitution: { ...baseScore },
-    intelligence: { ...baseScore },
-    wisdom: { ...baseScore },
-    charisma: { ...baseScore },
+/**
+ * Validate point buy: scores must be 8-15 and cost exactly 27 points
+ */
+function validatePointBuy(scores: number[]): { valid: boolean; cost: number; error?: string } {
+  // Check range
+  if (scores.some((s) => s < 8 || s > 15)) {
+    return { valid: false, cost: 0, error: "Point buy scores must be 8-15" }
   }
 
-  // Find species
-  const species = ruleset.species.find((s) => s.name === speciesName)
-  if (!species) return scores
+  // Calculate cost
+  const cost = scores.reduce((sum, s) => sum + (POINT_BUY_COSTS[s] || 0), 0)
 
-  // Apply species modifiers
-  if (species.abilityScoreModifiers) {
-    for (const [ability, modifier] of Object.entries(species.abilityScoreModifiers)) {
-      scores[ability as AbilityType] = {
-        score: baseScore.score + modifier,
-        note: `Base score for ${species.name}`,
-      }
+  if (cost !== 27) {
+    return { valid: false, cost, error: `Point buy must spend exactly 27 points (spent ${cost})` }
+  }
+
+  return { valid: true, cost: 27 }
+}
+
+/**
+ * Validate final scores after modifiers: must be ≤ 20
+ */
+function validateFinalScores(
+  baseScores: Record<AbilityType, number>,
+  modifiers: Record<AbilityType, number>
+): Record<string, string> {
+  const errors: Record<string, string> = {}
+
+  for (const ability of Abilities) {
+    const base = baseScores[ability]
+    const modifier = modifiers[ability] || 0
+    const final = base + modifier
+
+    if (final > 20) {
+      errors[`ability_${ability.substring(0, 3)}`] =
+        `Final score (${base} + ${modifier}) exceeds maximum of 20`
     }
   }
 
-  // Apply lineage modifiers
-  if (lineageName) {
-    const lineage = species.lineages?.find((l) => l.name === lineageName)
-    if (lineage?.abilityScoreModifiers) {
-      for (const [ability, modifier] of Object.entries(lineage.abilityScoreModifiers)) {
-        scores[ability as AbilityType] = {
-          score: baseScore.score + modifier,
-          note: `Base score for ${lineage.name}`,
+  return errors
+}
+
+/**
+ * Calculate ability score modifiers from species/background
+ * Does NOT mutate base scores - returns modifiers separately
+ */
+function calculateModifiers(
+  ruleset: Ruleset,
+  rulesetId: RulesetId,
+  data: Record<string, string | number | null | boolean>
+): Record<AbilityType, number> {
+  const modifiers: Record<AbilityType, number> = {
+    strength: 0,
+    dexterity: 0,
+    constitution: 0,
+    intelligence: 0,
+    wisdom: 0,
+    charisma: 0,
+  }
+
+  if (rulesetId === "srd51") {
+    // 2014 rules: Apply species and lineage modifiers
+    const species = ruleset.species.find((s) => s.name === data.species)
+    if (species) {
+      // Apply species modifiers
+      if (species.abilityScoreModifiers) {
+        for (const [ability, modifier] of Object.entries(species.abilityScoreModifiers)) {
+          const abilityType = ability as AbilityType
+          modifiers[abilityType] += modifier
+        }
+      }
+
+      // Apply lineage modifiers
+      if (data.lineage) {
+        const lineage = species.lineages?.find((l) => l.name === data.lineage)
+        if (lineage?.abilityScoreModifiers) {
+          for (const [ability, modifier] of Object.entries(lineage.abilityScoreModifiers)) {
+            const abilityType = ability as AbilityType
+            modifiers[abilityType] += modifier
+          }
         }
       }
     }
+  } else if (rulesetId === "srd52") {
+    // 2024 rules: Apply background ability bonuses
+    for (const ability of Abilities) {
+      const fieldName = `background_ability_${ability.substring(0, 3)}_bonus`
+      const bonus = Number(data[fieldName] || 0)
+      if (bonus > 0) {
+        modifiers[ability] = bonus
+      }
+    }
   }
 
-  return scores
+  return modifiers
 }
 
 /**
@@ -173,6 +277,87 @@ export async function createCharacter(
     }
   }
 
+  // Validate ability scores (only on final submit, not on isCheck)
+  if (!isCheck) {
+    // Validate ability method is provided
+    if (!data.ability_method) {
+      errors.ability_method = "Ability score method is required"
+    }
+
+    // Parse base ability scores
+    const baseScores = {
+      strength: Number.parseInt(data.ability_str || "0", 10),
+      dexterity: Number.parseInt(data.ability_dex || "0", 10),
+      constitution: Number.parseInt(data.ability_con || "0", 10),
+      intelligence: Number.parseInt(data.ability_int || "0", 10),
+      wisdom: Number.parseInt(data.ability_wis || "0", 10),
+      charisma: Number.parseInt(data.ability_cha || "0", 10),
+    }
+
+    // Method-specific validation
+    if (data.ability_method === "standard-array") {
+      const scores = Object.values(baseScores)
+      if (!validateStandardArray(scores)) {
+        errors.ability_method = "Standard array must use exactly the values [15, 14, 13, 12, 10, 8]"
+      }
+    } else if (data.ability_method === "point-buy") {
+      const scores = Object.values(baseScores)
+      const result = validatePointBuy(scores)
+      if (!result.valid) {
+        errors.ability_method = result.error || "Invalid point buy"
+      }
+    } else if (data.ability_method === "random") {
+      // Validate scores are in realistic range for dice rolls (3-18)
+      const scores = Object.values(baseScores)
+      if (scores.some((s) => s < 3 || s > 18)) {
+        errors.ability_method = "Random generation scores must be 3-18"
+      }
+    }
+
+    // Validate 2024 background ability selections
+    if (rulesetId === "srd52" && data.background) {
+      const background = ruleset.backgrounds[data.background]
+      if (background?.abilityScoresModified) {
+        const allowedAbilities = background.abilityScoresModified
+        let totalBonus = 0
+        const bonusesApplied: AbilityType[] = []
+
+        for (const ability of Abilities) {
+          const fieldName = `background_ability_${ability.substring(0, 3)}_bonus`
+          const bonus = Number.parseInt(data[fieldName] || "0", 10)
+
+          if (bonus > 0) {
+            // Check if this ability is allowed for this background
+            if (!allowedAbilities.includes(ability)) {
+              errors[fieldName] =
+                `${ability} cannot receive a bonus from ${background.name} background`
+            }
+
+            bonusesApplied.push(ability)
+            totalBonus += bonus
+          }
+        }
+
+        // Must total exactly 3
+        if (totalBonus !== 3) {
+          errors.background = `Background ability bonuses must total 3 (currently ${totalBonus})`
+        }
+
+        // Must apply to at least 2 different abilities
+        if (bonusesApplied.length < 2 && totalBonus > 0) {
+          errors.background = "Must apply bonuses to at least 2 different abilities"
+        }
+      }
+    }
+
+    // Validate final scores (base + modifiers) are ≤ 20
+    if (Object.keys(errors).length === 0) {
+      const modifiers = calculateModifiers(ruleset, rulesetId, data)
+      const finalScoreErrors = validateFinalScores(baseScores, modifiers)
+      Object.assign(errors, finalScoreErrors)
+    }
+  }
+
   if (isCheck || Object.keys(errors).length > 0) {
     return { complete: false, values, errors }
   }
@@ -207,22 +392,75 @@ export async function createCharacter(
     // Get class definition for initial setup
     const classDef = ruleset.classes[validated.class]
 
-    // populate initial ability scores with species/lineage modifiers
-    const initialScores = calculateInitialAbilityScores(
-      ruleset,
-      validated.species,
-      validated.lineage
-    )
-    const promises = Object.entries(initialScores).map(([ability, score]) =>
+    // Parse base ability scores
+    const baseScores: Record<AbilityType, number> = {
+      strength: validated.ability_str,
+      dexterity: validated.ability_dex,
+      constitution: validated.ability_con,
+      intelligence: validated.ability_int,
+      wisdom: validated.ability_wis,
+      charisma: validated.ability_cha,
+    }
+
+    // Get method-specific note for base scores
+    const methodNotes: Record<string, string> = {
+      "standard-array": "Standard array selection",
+      "point-buy": "Point buy selection",
+      random: "Random die roll",
+    }
+    const baseNote = methodNotes[validated.ability_method] || "Base ability score"
+
+    // Persist base ability scores to database
+    const baseScorePromises = Object.entries(baseScores).map(([ability, score]) =>
       createAbilityDb(tx, {
         character_id: character.id,
         ability: ability as AbilityType,
-        score: score.score,
+        score,
         proficiency: false,
-        note: score.note,
+        note: baseNote,
       })
     )
-    const scores = await Promise.all(promises)
+    await Promise.all(baseScorePromises)
+
+    // Calculate and apply modifiers from species/background as separate records
+    const modifiers = calculateModifiers(ruleset, rulesetId, validated)
+
+    for (const ability of Abilities) {
+      const modifier = modifiers[ability]
+      if (modifier && modifier > 0) {
+        const base = baseScores[ability]
+        const final = base + modifier
+
+        // Determine modifier source
+        let source = ""
+        if (rulesetId === "srd51") {
+          const species = ruleset.species.find((s) => s.name === validated.species)
+          if (species) {
+            source = species.name
+            // Check if it's from lineage instead
+            if (validated.lineage) {
+              const lineage = species.lineages?.find((l) => l.name === validated.lineage)
+              if (lineage?.abilityScoreModifiers?.[ability]) {
+                source = lineage.name
+              }
+            }
+          }
+        } else if (rulesetId === "srd52") {
+          source = validated.background
+        }
+
+        await createAbilityDb(tx, {
+          character_id: character.id,
+          ability,
+          score: final,
+          proficiency: false,
+          note: `+${modifier} from ${source}`,
+        })
+      }
+    }
+
+    // Get all ability scores for saving throw proficiencies
+    const scores = await findAbilities(tx, character.id)
 
     // Get saving throw proficiencies from class
     const savingThrowProficiencies = new Set(classDef.savingThrows)

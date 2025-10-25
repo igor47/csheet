@@ -18,7 +18,7 @@ config:
   csheet-app:SMTP_HOST:
     secure: v1:PVZe2oLc3ovUTi1l:hCI6IYYOx3a25ARNN3faGdUmnPENVy+uAUTLy9fgK6E=
   csheet-app:SMTP_PORT:
-    secure: v1:N2nsCAOo4oBi/CN2:Aisf6b/WhT8kUUl5WhJTwbRcvuY=
+    secure: v1:LMIqTbMPwkQMnuAo:X3SdjiK8UGmNs3tSr5TYq8bsqQ==
   csheet-app:SMTP_USER:
     secure: v1:C2yBsN2KQKzyZZW4:rLTeA4hbu219CQ0vzf4zx4SR2xhgNFe5Q74huJc0/w==
   csheet-app:SMTP_PASSWORD:

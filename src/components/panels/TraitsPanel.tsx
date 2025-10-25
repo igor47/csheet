@@ -106,7 +106,6 @@ export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
         >
           <i class="bi bi-clock-history"></i> History
         </button>
-
       </div>
 
       {traits.length === 0 ? (

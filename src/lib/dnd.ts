@@ -49,6 +49,86 @@ export const ProficiencyLevels = ["none", "half", "proficient", "expert"] as con
 export const ProficiencyLevelSchema = z.enum(ProficiencyLevels)
 export type ProficiencyLevel = z.infer<typeof ProficiencyLevelSchema>
 
+export const ItemCategories = [
+  "weapon",
+  "armor",
+  "shield",
+  "clothing",
+  "jewelry",
+  "potion",
+  "scroll",
+  "gear",
+  "tool",
+  "container",
+  "wand",
+  "misc",
+] as const
+export const ItemCategorySchema = z.enum(ItemCategories)
+export type ItemCategoryType = z.infer<typeof ItemCategorySchema>
+
+export const ArmorTypes = ["light", "medium", "heavy"] as const
+export const ArmorTypeSchema = z.enum(ArmorTypes)
+export type ArmorTypeType = z.infer<typeof ArmorTypeSchema>
+
+export const WeaponMasteries = [
+  "cleave",
+  "graze",
+  "nick",
+  "push",
+  "sap",
+  "slow",
+  "topple",
+  "vex",
+] as const
+export const WeaponMasterySchema = z.enum(WeaponMasteries)
+export type WeaponMasteryType = z.infer<typeof WeaponMasterySchema>
+
+export const DamageTypes = [
+  "slashing",
+  "piercing",
+  "bludgeoning",
+  "fire",
+  "cold",
+  "lightning",
+  "thunder",
+  "acid",
+  "radiant",
+  "necrotic",
+  "force",
+  "poison",
+  "psychic",
+] as const
+export const DamageTypeSchema = z.enum(DamageTypes)
+export type DamageTypeType = z.infer<typeof DamageTypeSchema>
+
+export const ItemEffectOps = [
+  "add",
+  "set",
+  "advantage",
+  "disadvantage",
+  "proficiency",
+  "expertise",
+] as const
+export const ItemEffectOpSchema = z.enum(ItemEffectOps)
+export type ItemEffectOpType = z.infer<typeof ItemEffectOpSchema>
+
+export const ItemEffectApplies = ["worn", "wielded"] as const
+export const ItemEffectAppliesSchema = z.enum(ItemEffectApplies)
+export type ItemEffectAppliesType = z.infer<typeof ItemEffectAppliesSchema>
+
+export const ItemEffectTargets = [
+  ...Skills,
+  ...Abilities,
+  "ac",
+  "speed",
+  "attack",
+  "damage",
+  "initiative",
+  "passive perception",
+] as const
+export const ItemEffectTargetSchema = z.enum(ItemEffectTargets)
+export type ItemEffectTarget = z.infer<typeof ItemEffectTargetSchema>
+
 export const SkillAbilities: Record<SkillType, AbilityType> = {
   acrobatics: "dexterity",
   "animal handling": "wisdom",

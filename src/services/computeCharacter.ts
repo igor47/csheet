@@ -7,12 +7,14 @@ import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { type CharTrait, findByCharacterId as findTraits } from "@src/db/char_traits"
 import { type Character, findById } from "@src/db/characters"
+import type { ItemEffect } from "@src/db/item_effects"
 import {
   Abilities,
   type AbilityType,
   type ClassNameType,
   getRuleset,
   type HitDieType,
+  type ItemEffectTarget,
   type ProficiencyLevel,
   type SizeType,
   SkillAbilities,
@@ -21,6 +23,10 @@ import {
   type SpellLevelType,
   type SpellSlotsType,
 } from "@src/lib/dnd"
+import {
+  computeCharacterItems,
+  type EquippedComputedItem,
+} from "@src/services/computeCharacterItems"
 import { computeSpells, type SpellInfoForClass } from "@src/services/computeSpells"
 import type { SQL } from "bun"
 
@@ -64,6 +70,44 @@ export interface ComputedCharacter extends Character {
   spells: SpellInfoForClass[]
   traits: CharTrait[]
   coins: CurrentCoins | null
+  equippedItems: EquippedComputedItem[]
+}
+// Calculate modifier and saving throw for each ability
+const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
+
+function computeAbilityScore(
+  score: number,
+  proficient: boolean,
+  proficiencyBonus: number
+): AbilityScore {
+  const modifier = calculateModifier(score)
+  return {
+    score,
+    modifier,
+    savingThrow: modifier + (proficient ? proficiencyBonus : 0),
+    proficient,
+  }
+}
+
+function computeSkillModifier(
+  skill: SkillType,
+  proficiency: ProficiencyLevel,
+  proficiencyBonus: number,
+  abilityScores: ComputedCharacter["abilityScores"]
+): number {
+  const ability = SkillAbilities[skill]
+  const abilityModifier = abilityScores[ability].modifier
+
+  switch (proficiency) {
+    case "none":
+      return abilityModifier
+    case "half":
+      return abilityModifier + Math.floor(proficiencyBonus / 2)
+    case "proficient":
+      return abilityModifier + proficiencyBonus
+    case "expert":
+      return abilityModifier + proficiencyBonus * 2
+  }
 }
 
 export async function computeCharacter(
@@ -94,16 +138,31 @@ export async function computeCharacter(
   const ruleset = getRuleset(character.ruleset)
   const species = ruleset.species.find((r) => r.name === character.species)!
 
-  // Calculate modifier and saving throw for each ability
-  const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
+  // Get equipped items
+  const equippedItems = await computeCharacterItems(db, characterId)
+  const activeEffects: { effect: ItemEffect; item: EquippedComputedItem }[] = []
+  for (const item of equippedItems) {
+    for (const effect of item.effects) {
+      // Check if effect applies based on worn/wielded state
+      if (effect.applies === "worn" && !item.worn) continue
+      if (effect.applies === "wielded" && !item.wielded) continue
+      activeEffects.push({ effect, item })
+    }
+  }
 
-  const computeAbilityScore = (score: number, proficient: boolean): AbilityScore => {
-    const modifier = calculateModifier(score)
-    return {
-      score,
-      modifier,
-      savingThrow: modifier + (proficient ? proficiencyBonus : 0),
-      proficient,
+  // apply item effects that modify ability scores before computing final scores
+  for (const { effect } of activeEffects) {
+    if ((Abilities as readonly ItemEffectTarget[]).includes(effect.target)) {
+      const ability = effect.target as AbilityType
+      const currentScore = currentAbilityScores[ability]
+      if (!currentScore) continue
+      if (effect.op === "add" && effect.value !== null) {
+        currentScore.score += effect.value
+      } else if (effect.op === "set" && effect.value !== null) {
+        currentScore.score = effect.value
+      } else if (effect.op === "proficiency") {
+        currentScore.proficient = true
+      }
     }
   }
 
@@ -112,36 +171,44 @@ export async function computeCharacter(
       ability,
       computeAbilityScore(
         currentAbilityScores[ability]?.score,
-        currentAbilityScores[ability]?.proficient
+        currentAbilityScores[ability]?.proficient,
+        proficiencyBonus
       ),
     ])
   ) as Record<AbilityType, AbilityScore>
 
-  // Compute skill modifiers
-  const computeSkillModifier = (skill: SkillType, proficiency: ProficiencyLevel): number => {
-    const ability = SkillAbilities[skill]
-    const abilityModifier = abilityScores[ability].modifier
-
-    switch (proficiency) {
-      case "none":
-        return abilityModifier
-      case "half":
-        return abilityModifier + Math.floor(proficiencyBonus / 2)
-      case "proficient":
-        return abilityModifier + proficiencyBonus
-      case "expert":
-        return abilityModifier + proficiencyBonus * 2
+  // if an item effect modifies skill proficiency bonus, apply it now
+  for (const { effect } of activeEffects) {
+    if ((Skills as readonly ItemEffectTarget[]).includes(effect.target)) {
+      const currentSkill = currentSkills[effect.target as SkillType]
+      if (effect.op === "proficiency" && currentSkill.proficiency !== "expert") {
+        currentSkill.proficiency = "proficient"
+      } else if (effect.op === "expertise") {
+        currentSkill.proficiency = "expert"
+      }
     }
   }
 
+  // compute skill modifiers from proficiency and ability scores
   const skills: Record<SkillType, SkillScore> = {} as Record<SkillType, SkillScore>
   for (const skill of Skills) {
     const proficiency = currentSkills[skill]?.proficiency || "none"
-    const ability = SkillAbilities[skill]
     skills[skill] = {
-      modifier: computeSkillModifier(skill, proficiency),
+      modifier: computeSkillModifier(skill, proficiency, proficiencyBonus, abilityScores),
       proficiency,
-      ability,
+      ability: SkillAbilities[skill],
+    }
+  }
+
+  // modify skills based on item effects
+  for (const { effect } of activeEffects) {
+    if ((Skills as readonly ItemEffectTarget[]).includes(effect.target)) {
+      const currentSkill = skills[effect.target as SkillType]
+      if (effect.op === "add" && effect.value !== null) {
+        currentSkill.modifier += effect.value
+      } else if (effect.op === "set" && effect.value !== null) {
+        currentSkill.modifier = Math.max(effect.value, currentSkill.modifier)
+      }
     }
   }
 
@@ -179,13 +246,16 @@ export async function computeCharacter(
   }
 
   // Initiative is DEX modifier
-  const initiative = abilityScores.dexterity.modifier
+  let initiative = abilityScores.dexterity.modifier
 
   // Armor Class (unarmored: 10 + DEX modifier)
-  const armorClass = 10 + abilityScores.dexterity.modifier
+  let armorClass = 10 + abilityScores.dexterity.modifier
 
   // Passive Perception is 10 + Perception skill modifier
-  const passivePerception = 10 + skills.perception.modifier
+  let passivePerception = 10 + skills.perception.modifier
+
+  // Speed (from species, but can be modified by items)
+  let speed = species.speed
 
   // Compute spell slots
   let spellSlots: SpellSlotsType = []
@@ -291,12 +361,45 @@ export async function computeCharacter(
   // Fetch all traits for this character
   const traits = await findTraits(db, characterId)
 
+  /// IGOR: FIX
+  for (const { effect } of activeEffects) {
+    if (effect.target === "ac" && effect.value !== null) {
+      // Armor class effect
+      if (effect.op === "add") {
+        armorClass += effect.value
+      } else if (effect.op === "set") {
+        armorClass = effect.value
+      }
+    } else if (effect.target === "speed" && effect.value !== null) {
+      // Speed effect
+      if (effect.op === "add") {
+        speed += effect.value
+      } else if (effect.op === "set") {
+        speed = effect.value
+      }
+    } else if (effect.target === "initiative" && effect.value !== null) {
+      // Initiative effect
+      if (effect.op === "add") {
+        initiative += effect.value
+      } else if (effect.op === "set") {
+        initiative = effect.value
+      }
+    } else if (effect.target === "passive perception" && effect.value !== null) {
+      // Passive perception effect
+      if (effect.op === "add") {
+        passivePerception += effect.value
+      } else if (effect.op === "set") {
+        passivePerception = effect.value
+      }
+    }
+  }
+
   const char = {
     ...character,
     classes,
     totalLevel,
     size: species.size,
-    speed: species.speed,
+    speed,
     proficiencyBonus,
     abilityScores,
     skills,
@@ -313,6 +416,7 @@ export async function computeCharacter(
     spells,
     traits,
     coins: currentCoins,
+    equippedItems,
   }
 
   return char

@@ -1,3 +1,5 @@
+import { AbilityScoreSelector } from "@src/components/AbilityScoreSelector"
+import { FinalAbilityScores } from "@src/components/FinalAbilityScores"
 import { Select } from "@src/components/ui/Select"
 import { ClassNames, type ClassNameType, getTraits, type Trait } from "@src/lib/dnd"
 import { getRuleset, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
@@ -235,6 +237,18 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
     </div>
   )
 
+  // Add ability score selection
+  fields.push(
+    <AbilityScoreSelector
+      values={values}
+      selectedClass={values?.class as ClassNameType}
+      errors={errors}
+    />
+  )
+
+  // Add final ability scores display
+  fields.push(<FinalAbilityScores values={values} rulesetId={rulesetId} errors={errors} />)
+
   fields.push(
     <div class="mb-3">
       <label for="alignment" class="form-label">
@@ -271,7 +285,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
               <form
                 hx-post="/characters/new"
                 hx-vals='{"is_check": "true"}'
-                hx-trigger="change delay:300ms"
+                hx-trigger="change"
                 hx-target="#character-new"
                 hx-swap="outerHTML"
                 class="needs-validation"

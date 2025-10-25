@@ -22,6 +22,118 @@ export const Abilities = [
 export const AbilitySchema = z.enum(Abilities)
 export type AbilityType = z.infer<typeof AbilitySchema>
 
+// Point buy cost table (score -> cost in points)
+export const POINT_BUY_COSTS: Record<number, number> = {
+  8: 0,
+  9: 1,
+  10: 2,
+  11: 3,
+  12: 4,
+  13: 5,
+  14: 7,
+  15: 9,
+}
+
+// Standard Array by Class - official recommendations from SRD 5.2
+export const STANDARD_ARRAY_BY_CLASS: Record<ClassNameType, Record<AbilityType, number>> = {
+  barbarian: {
+    strength: 15,
+    dexterity: 13,
+    constitution: 14,
+    intelligence: 10,
+    wisdom: 12,
+    charisma: 8,
+  },
+  bard: {
+    strength: 8,
+    dexterity: 14,
+    constitution: 12,
+    intelligence: 13,
+    wisdom: 10,
+    charisma: 15,
+  },
+  cleric: {
+    strength: 14,
+    dexterity: 8,
+    constitution: 13,
+    intelligence: 10,
+    wisdom: 15,
+    charisma: 12,
+  },
+  druid: {
+    strength: 8,
+    dexterity: 12,
+    constitution: 14,
+    intelligence: 13,
+    wisdom: 15,
+    charisma: 10,
+  },
+  fighter: {
+    strength: 15,
+    dexterity: 14,
+    constitution: 13,
+    intelligence: 8,
+    wisdom: 10,
+    charisma: 12,
+  },
+  monk: {
+    strength: 12,
+    dexterity: 15,
+    constitution: 13,
+    intelligence: 10,
+    wisdom: 14,
+    charisma: 8,
+  },
+  paladin: {
+    strength: 15,
+    dexterity: 10,
+    constitution: 13,
+    intelligence: 8,
+    wisdom: 12,
+    charisma: 14,
+  },
+  ranger: {
+    strength: 12,
+    dexterity: 15,
+    constitution: 13,
+    intelligence: 8,
+    wisdom: 14,
+    charisma: 10,
+  },
+  rogue: {
+    strength: 12,
+    dexterity: 15,
+    constitution: 13,
+    intelligence: 14,
+    wisdom: 10,
+    charisma: 8,
+  },
+  sorcerer: {
+    strength: 10,
+    dexterity: 13,
+    constitution: 14,
+    intelligence: 8,
+    wisdom: 12,
+    charisma: 15,
+  },
+  warlock: {
+    strength: 8,
+    dexterity: 14,
+    constitution: 13,
+    intelligence: 12,
+    wisdom: 10,
+    charisma: 15,
+  },
+  wizard: {
+    strength: 8,
+    dexterity: 12,
+    constitution: 13,
+    intelligence: 15,
+    wisdom: 14,
+    charisma: 10,
+  },
+}
+
 export const Skills = [
   "acrobatics",
   "animal handling",

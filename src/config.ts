@@ -39,7 +39,7 @@ export const config = {
 
 // Helper to check if SMTP is configured
 export function isSmtpConfigured(): boolean {
-  return !!(config.smtpHost && config.smtpUser && config.smtpPassword)
+  return config.isTest || !!config.smtpHost
 }
 
 // Print config as JSON when run directly

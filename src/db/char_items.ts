@@ -85,3 +85,49 @@ export async function getCurrentInventory(
     wielded: row.wielded,
   }))
 }
+
+export interface CharItemHistoryEvent {
+  id: string
+  character_id: string
+  item_id: string
+  item_name: string
+  worn: boolean
+  wielded: boolean
+  dropped_at: Date | null
+  note: string | null
+  created_at: Date
+}
+
+export async function getCharItemHistory(
+  db: SQL,
+  characterId: string
+): Promise<CharItemHistoryEvent[]> {
+  const result = await db`
+    SELECT
+      ci.id,
+      ci.character_id,
+      ci.item_id,
+      i.name as item_name,
+      ci.worn,
+      ci.wielded,
+      ci.dropped_at,
+      ci.note,
+      ci.created_at
+    FROM char_items ci
+    JOIN items i ON i.id = ci.item_id
+    WHERE ci.character_id = ${characterId}
+    ORDER BY ci.created_at DESC
+  `
+
+  return result.map((row: any) => ({
+    id: row.id,
+    character_id: row.character_id,
+    item_id: row.item_id,
+    item_name: row.item_name,
+    worn: row.worn,
+    wielded: row.wielded,
+    dropped_at: row.dropped_at ? new Date(row.dropped_at) : null,
+    note: row.note,
+    created_at: new Date(row.created_at),
+  }))
+}

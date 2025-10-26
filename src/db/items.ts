@@ -17,7 +17,7 @@ export const ItemSchema = z.object({
   // Armor-specific fields
   armor_type: ArmorTypeSchema.nullable().default(null),
   armor_class: z.number().int().min(0).nullable().default(null),
-  armor_class_dex: z.boolean().default(false),
+  armor_class_dex: z.boolean().nullable().default(false),
   armor_class_dex_max: z.number().int().min(0).nullable().default(null),
 
   // Shield-specific field

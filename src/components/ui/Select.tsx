@@ -10,12 +10,14 @@ export interface SelectProps extends Omit<JSX.IntrinsicElements["select"], "valu
   placeholder?: string
   error?: string
   value?: string
+  hideErrorMsg?: boolean
 }
 
 export const Select = ({
   options,
   placeholder = "Select an option",
   error,
+  hideErrorMsg = false,
   value,
   class: className,
   ...props
@@ -29,6 +31,6 @@ export const Select = ({
         </option>
       ))}
     </select>
-    {error && <div class="invalid-feedback d-block">{error}</div>}
+    {error && !hideErrorMsg && <div class="invalid-feedback d-block">{error}</div>}
   </>
 )

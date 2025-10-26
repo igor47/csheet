@@ -23,6 +23,8 @@ export type CreateItemDamage = z.infer<typeof CreateItemDamageSchema>
 function parseItemDamage(row: any): ItemDamage {
   return ItemDamageSchema.parse({
     ...row,
+    // Convert Int32Array to regular array
+    dice: Array.isArray(row.dice) ? row.dice : Array.from(row.dice),
     created_at: new Date(row.created_at),
   })
 }
@@ -30,12 +32,15 @@ function parseItemDamage(row: any): ItemDamage {
 export async function create(db: SQL, itemDamage: CreateItemDamage): Promise<ItemDamage> {
   const id = ulid()
 
+  // Format the dice array as a PostgreSQL array literal
+  const diceArray = `{${itemDamage.dice.join(",")}}`
+
   const result = await db`
     INSERT INTO item_damage (id, item_id, dice, type, created_at)
     VALUES (
       ${id},
       ${itemDamage.item_id},
-      ${itemDamage.dice},
+      ${diceArray}::integer[],
       ${itemDamage.type},
       CURRENT_TIMESTAMP
     )

@@ -9,11 +9,13 @@ import { ClassEditForm } from "@src/components/ClassEditForm"
 import { ClassHistory } from "@src/components/ClassHistory"
 import { CoinsEditForm } from "@src/components/CoinsEditForm"
 import { CoinsHistory } from "@src/components/CoinsHistory"
+import { CreateItemForm } from "@src/components/CreateItemForm"
 import { CurrentStatus } from "@src/components/CurrentStatus"
 import { HitDiceEditForm } from "@src/components/HitDiceEditForm"
 import { HitDiceHistory } from "@src/components/HitDiceHistory"
 import { HitPointsEditForm } from "@src/components/HitPointsEditForm"
 import { HitPointsHistory, type HPHistoryEvent } from "@src/components/HitPointsHistory"
+import { ItemHistory } from "@src/components/ItemHistory"
 import { LearnSpellForm } from "@src/components/LearnSpellForm"
 import { NotesHistory } from "@src/components/NotesHistory"
 import { NotesSaveIndicator } from "@src/components/NotesSaveIndicator"
@@ -52,6 +54,7 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
+import { getCharItemHistory } from "@src/db/char_items"
 import { countArchivedByUserId } from "@src/db/characters"
 import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
@@ -61,6 +64,7 @@ import { archiveCharacter } from "@src/services/archiveCharacter"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { createCharacter } from "@src/services/createCharacter"
+import { createItem } from "@src/services/createItem"
 import { learnSpell } from "@src/services/learnSpell"
 import { listCharacters } from "@src/services/listCharacters"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
@@ -419,6 +423,32 @@ characterRoutes.post("/characters/:id/edit/trait", async (c) => {
   return c.html(<TraitsPanel character={updatedChar} swapOob={true} />)
 })
 
+characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
+  const characterId = c.req.param("id") as string
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  // Set character_id for the item
+  body.character_id = characterId
+
+  const result = await createItem(getDb(c), c.var.user!.id, body)
+
+  if (!result.complete) {
+    console.dir(result)
+    return c.html(<CreateItemForm character={char} values={result.values} errors={result.errors} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
+})
+
 characterRoutes.get("/characters/:id/castspell", async (c) => {
   const characterId = c.req.param("id") as string
   const char = await computeCharacter(getDb(c), characterId)
@@ -594,6 +624,10 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
     }
 
     return c.html(<PrepareSpellForm character={char} values={values} />)
+  }
+
+  if (field === "newitem") {
+    return c.html(<CreateItemForm character={char} values={ {} } />)
   }
 
   if (field === "spellbook") {
@@ -812,6 +846,12 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     // Reverse to show most recent first
     traits.reverse()
     return c.html(<TraitHistory traits={traits} />)
+  }
+
+  if (field === "items") {
+    const itemEvents = await getCharItemHistory(getDb(c), characterId)
+    // Already returned in DESC order from the query
+    return c.html(<ItemHistory events={itemEvents} />)
   }
 
   if (field === "abilities") {

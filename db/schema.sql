@@ -316,9 +316,9 @@ CREATE TABLE public.item_effects (
     target text NOT NULL,
     op text NOT NULL,
     value integer,
-    applies text NOT NULL,
+    applies text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT item_effects_applies_check CHECK ((applies = ANY (ARRAY['worn'::text, 'wielded'::text]))),
+    CONSTRAINT item_effects_applies_check CHECK (((applies IS NULL) OR (applies = ANY (ARRAY['worn'::text, 'wielded'::text])))),
     CONSTRAINT item_effects_op_check CHECK ((op = ANY (ARRAY['add'::text, 'set'::text, 'advantage'::text, 'disadvantage'::text, 'proficiency'::text, 'expertise'::text])))
 );
 
@@ -1074,4 +1074,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251025215832'),
     ('20251025215908'),
     ('20251025220018'),
-    ('20251025220128');
+    ('20251025220128'),
+    ('20251027195737');

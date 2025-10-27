@@ -16,6 +16,7 @@ import { HitDiceEditForm } from "@src/components/HitDiceEditForm"
 import { HitDiceHistory } from "@src/components/HitDiceHistory"
 import { HitPointsEditForm } from "@src/components/HitPointsEditForm"
 import { HitPointsHistory, type HPHistoryEvent } from "@src/components/HitPointsHistory"
+import { ItemEffectsEditor } from "@src/components/ItemEffectsEditor"
 import { ItemHistory } from "@src/components/ItemHistory"
 import { LearnSpellForm } from "@src/components/LearnSpellForm"
 import { NotesHistory } from "@src/components/NotesHistory"
@@ -68,6 +69,8 @@ import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { createCharacter } from "@src/services/createCharacter"
 import { createItem } from "@src/services/createItem"
+import { createItemEffect } from "@src/services/createItemEffect"
+import { deleteItemEffect } from "@src/services/deleteItemEffect"
 import { learnSpell } from "@src/services/learnSpell"
 import { listCharacters } from "@src/services/listCharacters"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
@@ -530,6 +533,157 @@ characterRoutes.post("/characters/:id/items/:itemId/edit", async (c) => {
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
+
+// GET /characters/:id/items/:itemId/effects - Show effects editor
+characterRoutes.get("/characters/:id/items/:itemId/effects", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 403)
+  }
+
+  const item = char.equippedItems.find((i) => i.id === itemId)
+  if (!item) {
+    return c.html(
+      <ModalContent title="Error">
+        <div class="modal-body">
+          <div class="alert alert-danger">Item not found</div>
+        </div>
+      </ModalContent>
+    )
+  }
+
+  return c.html(<ItemEffectsEditor character={char} item={item} effects={item.effects} />)
+})
+
+// POST /characters/:id/items/:itemId/effects - Add new effect
+characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 403)
+  }
+
+  let item = char.equippedItems.find((i) => i.id === itemId)
+  if (!item) {
+    return c.html(
+      <ModalContent title="Error">
+        <div class="modal-body">
+          <div class="alert alert-danger">Item not found</div>
+        </div>
+      </ModalContent>
+    )
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  body.item_id = itemId
+  const result = await createItemEffect(getDb(c), body)
+
+  if (!result.complete) {
+    console.dir(result)
+    return c.html(
+      <ItemEffectsEditor
+        character={char}
+        item={item}
+        effects={item.effects}
+        values={result.values}
+        errors={result.errors}
+      />
+    )
+  }
+
+  // Effect created successfully - reload the effects editor and all affected panels
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  item = updatedChar.equippedItems.find((i) => i.id === itemId)!
+  return c.html(
+    <>
+      <ItemEffectsEditor character={updatedChar} item={item} effects={item.effects} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CurrentStatus character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// DELETE /characters/:id/items/:itemId/effects/:effectId - Delete effect
+characterRoutes.delete("/characters/:id/items/:itemId/effects/:effectId", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+  const effectId = c.req.param("effectId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 403)
+  }
+
+  let item = char.equippedItems.find((i) => i.id === itemId)
+  if (!item) {
+    return c.html(
+      <ModalContent title="Error">
+        <div class="modal-body">
+          <div class="alert alert-danger">Item not found</div>
+        </div>
+      </ModalContent>
+    )
+  }
+
+  const deleteResult = await deleteItemEffect(getDb(c), itemId, effectId)
+
+  if (!deleteResult.success) {
+    return c.html(
+      <ItemEffectsEditor
+        character={char}
+        item={item}
+        effects={item.effects}
+        errors={{ general: deleteResult.error || "Failed to delete effect" }}
+      />
+    )
+  }
+
+  // Effect deleted successfully - reload the effects editor and all affected panels
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  item = updatedChar.equippedItems.find((i) => i.id === itemId)!
+  return c.html(
+    <>
+      <ItemEffectsEditor character={updatedChar} item={item} effects={item.effects} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CurrentStatus character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
 
 characterRoutes.get("/characters/:id/castspell", async (c) => {
   const characterId = c.req.param("id") as string

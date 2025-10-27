@@ -101,7 +101,7 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
                     <strong>{item.name}</strong>
                     {item.worn && <span class="badge bg-secondary">Worn</span>}
                     {item.wielded && <span class="badge bg-primary">Wielded</span>}
-                    <span class="badge bg-light text-dark text-capitalize">{item.category}</span>
+                    <span class="badge bg-secondary text-capitalize">{item.category}</span>
                     {item.description && (
                       <span title={item.description} data-bs-toggle="tooltip">
                         <i class="bi bi-info-circle text-muted"></i>
@@ -161,6 +161,23 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
                     >
                       <i class="bi bi-trash"></i> Drop
                     </button>
+
+                    {/* Charge management button */}
+                    {item.chargeLabel && (
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-info"
+                        hx-get={`/characters/${character.id}/items/${item.id}/charges`}
+                        hx-target="#editModalContent"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editModal"
+                      >
+                        <i class="bi bi-lightning-charge"></i>{" "}
+                        {item.chargeLabel === "ammunition" ? "Ammo" : "Charges"}
+                        <span class="badge bg-info ms-1">{item.currentCharges}</span>
+                      </button>
+                    )}
 
                     {/* Item management buttons */}
                     <button

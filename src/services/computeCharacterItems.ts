@@ -35,6 +35,7 @@ export interface EquippedComputedItem {
   ammunition: number | null
   useVerb: string
   currentCharges: number
+  chargeLabel: "ammunition" | "charges" | null
 
   // Equipment state
   worn: boolean
@@ -129,6 +130,14 @@ export async function computeCharacterItems(
     const ammunition =
       category === "weapon" && row.normal_range && !row.thrown ? row.current_charges : null
 
+    // Determine charge label
+    let chargeLabel: "ammunition" | "charges" | null = null
+    if (category === "weapon" && row.normal_range && !row.thrown) {
+      chargeLabel = "ammunition"
+    } else if (category === "wand") {
+      chargeLabel = "charges"
+    }
+
     // Determine use verb
     let useVerb = "use"
     if (category === "potion") {
@@ -184,6 +193,7 @@ export async function computeCharacterItems(
       ammunition,
       useVerb,
       currentCharges: row.current_charges,
+      chargeLabel,
       worn: row.worn,
       wielded: row.wielded,
       damage,

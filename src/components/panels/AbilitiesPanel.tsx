@@ -1,5 +1,5 @@
-import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import { Abilities, type AbilityType } from "@src/lib/dnd"
+import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 

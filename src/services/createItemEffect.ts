@@ -19,10 +19,12 @@ const BaseItemEffectSchema = z.object({
 })
 
 export const CreateItemEffectApiSchema = BaseItemEffectSchema
-const CheckSchema = BaseItemEffectSchema.extend(z.object({
-  target: UnsetEnumSchema(ItemEffectTargetSchema),
-  op: UnsetEnumSchema(ItemEffectOpSchema),
-}).shape).partial()
+const CheckSchema = BaseItemEffectSchema.extend(
+  z.object({
+    target: UnsetEnumSchema(ItemEffectTargetSchema),
+    op: UnsetEnumSchema(ItemEffectOpSchema),
+  }).shape
+).partial()
 
 export type CreateItemEffectData = z.infer<typeof CreateItemEffectApiSchema>
 

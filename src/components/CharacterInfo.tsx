@@ -145,7 +145,9 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   label="Speed"
                   value={`${character.speed} ft.`}
                   hasEffect={hasEffect("speed", character.affectedAttributes)}
-                  effectTooltip={getEffectTooltip("speed", character.affectedAttributes) || undefined}
+                  effectTooltip={
+                    getEffectTooltip("speed", character.affectedAttributes) || undefined
+                  }
                 />
               </div>
 
@@ -159,7 +161,8 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   value={`${character.passivePerception}`}
                   hasEffect={hasEffect("passive perception", character.affectedAttributes)}
                   effectTooltip={
-                    getEffectTooltip("passive perception", character.affectedAttributes) || undefined
+                    getEffectTooltip("passive perception", character.affectedAttributes) ||
+                    undefined
                   }
                 />
               </div>

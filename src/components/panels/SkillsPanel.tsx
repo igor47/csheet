@@ -1,5 +1,5 @@
-import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import { type ProficiencyLevel, Skills, type SkillType } from "@src/lib/dnd"
+import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import type { ComputedCharacter, SkillScore } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 
@@ -10,12 +10,7 @@ interface SkillRowProps {
   effectTooltip?: string
 }
 
-const SkillRow = ({
-  skill,
-  skillScore,
-  hasEffect = false,
-  effectTooltip,
-}: SkillRowProps) => {
+const SkillRow = ({ skill, skillScore, hasEffect = false, effectTooltip }: SkillRowProps) => {
   const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
 
   const getProficiencyIcon = (proficiency: ProficiencyLevel): string => {

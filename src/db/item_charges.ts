@@ -65,3 +65,47 @@ export async function getCurrentCharges(db: SQL, itemId: string): Promise<number
 
   return Number(result[0].total)
 }
+
+export interface ItemChargeHistoryEvent {
+  id: string
+  item_id: string
+  item_name: string
+  delta: number
+  note: string | null
+  created_at: Date
+}
+
+export async function getChargeHistoryByCharacter(
+  db: SQL,
+  characterId: string
+): Promise<ItemChargeHistoryEvent[]> {
+  const result = await db`
+    SELECT
+      ic.id,
+      ic.item_id,
+      i.name as item_name,
+      ic.delta,
+      ic.note,
+      ic.created_at
+    FROM item_charges ic
+    JOIN items i ON i.id = ic.item_id
+    WHERE i.created_by IN (
+      SELECT id FROM characters WHERE id = ${characterId}
+    )
+    OR ic.item_id IN (
+      SELECT DISTINCT item_id
+      FROM char_items
+      WHERE character_id = ${characterId}
+    )
+    ORDER BY ic.created_at DESC
+  `
+
+  return result.map((row: any) => ({
+    id: row.id,
+    item_id: row.item_id,
+    item_name: row.item_name,
+    delta: row.delta,
+    note: row.note,
+    created_at: new Date(row.created_at),
+  }))
+}

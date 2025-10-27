@@ -15,9 +15,10 @@ export const LabeledValue = ({
   hasEffect = false,
   effectTooltip,
 }: LabeledValueProps) => {
-  const tooltipAttrs = hasEffect && effectTooltip
-    ? { "data-bs-toggle": "tooltip", "data-bs-placement": "top", title: effectTooltip }
-    : {}
+  const tooltipAttrs =
+    hasEffect && effectTooltip
+      ? { "data-bs-toggle": "tooltip", "data-bs-placement": "top", title: effectTooltip }
+      : {}
 
   return (
     <div

@@ -5,6 +5,7 @@ import { Character } from "@src/components/Character"
 import { CharacterInfo } from "@src/components/CharacterInfo"
 import { CharacterNew } from "@src/components/CharacterNew"
 import { Characters } from "@src/components/Characters"
+import { ChargeManagementForm } from "@src/components/ChargeManagementForm"
 import { ClassEditForm } from "@src/components/ClassEditForm"
 import { ClassHistory } from "@src/components/ClassHistory"
 import { CoinsEditForm } from "@src/components/CoinsEditForm"
@@ -58,6 +59,7 @@ import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spell
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
 import { countArchivedByUserId } from "@src/db/characters"
+import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
 import { findById as findItemById } from "@src/db/items"
 import { logger } from "@src/lib/logger"
@@ -71,9 +73,11 @@ import { createCharacter } from "@src/services/createCharacter"
 import { createItem } from "@src/services/createItem"
 import { createItemEffect } from "@src/services/createItemEffect"
 import { deleteItemEffect } from "@src/services/deleteItemEffect"
+import { changeItemState } from "@src/services/itemState"
 import { learnSpell } from "@src/services/learnSpell"
 import { listCharacters } from "@src/services/listCharacters"
 import { LongRestApiSchema, longRest } from "@src/services/longRest"
+import { manageCharge } from "@src/services/manageCharge"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { saveNotes } from "@src/services/saveNotes"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
@@ -85,7 +89,6 @@ import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateItem } from "@src/services/updateItem"
 import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
-import { changeItemState } from "@src/services/itemState"
 import { Hono } from "hono"
 
 export const characterRoutes = new Hono()
@@ -533,7 +536,6 @@ characterRoutes.post("/characters/:id/items/:itemId/edit", async (c) => {
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
-
 // GET /characters/:id/items/:itemId/effects - Show effects editor
 characterRoutes.get("/characters/:id/items/:itemId/effects", async (c) => {
   const characterId = c.req.param("id") as string
@@ -807,6 +809,88 @@ characterRoutes.post("/characters/:id/items/:itemId/drop", async (c) => {
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )
+})
+
+// GET /characters/:id/items/:itemId/charges - Show charge management form
+characterRoutes.get("/characters/:id/items/:itemId/charges", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 403)
+  }
+
+  const item = char.equippedItems.find((i) => i.id === itemId)
+  if (!item) {
+    return c.html(
+      <ModalContent title="Error">
+        <div class="modal-body">
+          <div class="alert alert-danger">Item not found</div>
+        </div>
+      </ModalContent>
+    )
+  }
+
+  return c.html(<ChargeManagementForm characterId={characterId} item={item} />)
+})
+
+// POST /characters/:id/items/:itemId/charges - Manage charges
+characterRoutes.post("/characters/:id/items/:itemId/charges", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", "/characters")
+    return c.body(null, 403)
+  }
+
+  const item = char.equippedItems.find((i) => i.id === itemId)
+  if (!item) {
+    return c.html(
+      <ModalContent title="Error">
+        <div class="modal-body">
+          <div class="alert alert-danger">Item not found</div>
+        </div>
+      </ModalContent>
+    )
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  body.item_id = itemId
+
+  const result = await manageCharge(getDb(c), item, body)
+
+  if (!result.complete) {
+    return c.html(
+      <ChargeManagementForm
+        characterId={characterId}
+        item={item}
+        values={result.values}
+        errors={result.errors}
+      />
+    )
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.get("/characters/:id/castspell", async (c) => {
@@ -1210,8 +1294,9 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
 
   if (field === "items") {
     const itemEvents = await getCharItemHistory(getDb(c), characterId)
+    const chargeEvents = await getChargeHistoryByCharacter(getDb(c), characterId)
     // Already returned in DESC order from the query
-    return c.html(<ItemHistory events={itemEvents} />)
+    return c.html(<ItemHistory events={itemEvents} chargeEvents={chargeEvents} />)
   }
 
   if (field === "abilities") {

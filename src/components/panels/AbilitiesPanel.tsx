@@ -1,3 +1,4 @@
+import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import { Abilities, type AbilityType } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
@@ -8,20 +9,38 @@ interface AbilityBoxProps {
   modifier: number
   savingThrow: number
   proficient: boolean
+  hasEffect?: boolean
+  effectTooltip?: string
 }
 
-const AbilityBox = ({ ability, score, modifier, savingThrow, proficient }: AbilityBoxProps) => {
+const AbilityBox = ({
+  ability,
+  score,
+  modifier,
+  savingThrow,
+  proficient,
+  hasEffect = false,
+  effectTooltip,
+}: AbilityBoxProps) => {
   const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
   const abilityNameClass = clsx("fw-medium text-uppercase border", {
     "bg-primary-subtle": proficient,
     "bg-dark-subtle": !proficient,
   })
 
+  const tooltipAttrs =
+    hasEffect && effectTooltip
+      ? { "data-bs-toggle": "tooltip", "data-bs-placement": "top", title: effectTooltip }
+      : {}
+
   return (
     <div class="col">
       <div
-        class="border rounded p-2 text-center position-relative"
+        class={clsx("border rounded p-2 text-center position-relative", {
+          "border-primary border-2": hasEffect,
+        })}
         style="padding-bottom: 35px !important;"
+        {...tooltipAttrs}
       >
         <div class={abilityNameClass} style="font-size: 0.7rem;">
           {ability}
@@ -98,6 +117,8 @@ export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
               modifier={abilityScore.modifier}
               savingThrow={abilityScore.savingThrow}
               proficient={abilityScore.proficient}
+              hasEffect={hasEffect(ability, character.affectedAttributes)}
+              effectTooltip={getEffectTooltip(ability, character.affectedAttributes) || undefined}
             />
           )
         })}

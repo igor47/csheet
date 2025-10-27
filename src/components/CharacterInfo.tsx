@@ -1,3 +1,4 @@
+import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { HitDiceDisplay } from "./ui/HitDiceDisplay"
 import { HitPointsBar } from "./ui/HitPointsBar"
@@ -140,7 +141,12 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
             {/* Second row: Speed, Proficiency Bonus, Armor Class */}
             <div class="row g-2 h-auto mt-1">
               <div class="col-sm-4">
-                <LabeledValue label="Speed" value={`${character.speed} ft.`} />
+                <LabeledValue
+                  label="Speed"
+                  value={`${character.speed} ft.`}
+                  hasEffect={hasEffect("speed", character.affectedAttributes)}
+                  effectTooltip={getEffectTooltip("speed", character.affectedAttributes) || undefined}
+                />
               </div>
 
               <div class="col-sm-4">
@@ -148,14 +154,26 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
               </div>
 
               <div class="col-sm-4">
-                <LabeledValue label="Passive Perception" value={`${character.passivePerception}`} />
+                <LabeledValue
+                  label="Passive Perception"
+                  value={`${character.passivePerception}`}
+                  hasEffect={hasEffect("passive perception", character.affectedAttributes)}
+                  effectTooltip={
+                    getEffectTooltip("passive perception", character.affectedAttributes) || undefined
+                  }
+                />
               </div>
             </div>
 
             {/* third row: AC, initiative */}
             <div class="row g-2 h-auto mt-1">
               <div class="col-sm-3 offset-sm-3">
-                <LabeledValue label="Armor Class" value={character.armorClass} />
+                <LabeledValue
+                  label="Armor Class"
+                  value={character.armorClass}
+                  hasEffect={hasEffect("ac", character.affectedAttributes)}
+                  effectTooltip={getEffectTooltip("ac", character.affectedAttributes) || undefined}
+                />
               </div>
 
               <div class="col-sm-3">
@@ -165,6 +183,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                     character.initiative >= 0
                       ? `+${character.initiative}`
                       : `${character.initiative}`
+                  }
+                  hasEffect={hasEffect("initiative", character.affectedAttributes)}
+                  effectTooltip={
+                    getEffectTooltip("initiative", character.affectedAttributes) || undefined
                   }
                 />
               </div>

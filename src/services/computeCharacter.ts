@@ -49,6 +49,11 @@ export interface SkillScore {
   ability: AbilityType
 }
 
+export interface ItemEffectInfo {
+  itemName: string
+  effectDescription: string
+}
+
 export interface ComputedCharacter extends Character {
   classes: CharacterClass[]
   totalLevel: number
@@ -71,6 +76,7 @@ export interface ComputedCharacter extends Character {
   traits: CharTrait[]
   coins: CurrentCoins | null
   equippedItems: EquippedComputedItem[]
+  affectedAttributes: Record<string, ItemEffectInfo[]>
 }
 // Calculate modifier and saving throw for each ability
 const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
@@ -143,10 +149,35 @@ export async function computeCharacter(
 
   // Collect active effects using the precomputed isActive field
   const activeEffects: { effect: ItemEffect; item: EquippedComputedItem }[] = []
+  const affectedAttributes: Record<string, ItemEffectInfo[]> = {}
+
   for (const item of equippedItems) {
     for (const effect of item.effects) {
       if (effect.isActive) {
         activeEffects.push({ effect, item })
+
+        // Build affectedAttributes map for UI highlighting
+        const target = effect.target
+        if (!affectedAttributes[target]) {
+          affectedAttributes[target] = []
+        }
+
+        // Create human-readable effect description
+        let effectDescription = ""
+        if (effect.op === "add" && effect.value !== null) {
+          effectDescription = `${effect.value >= 0 ? "+" : ""}${effect.value}`
+        } else if (effect.op === "set" && effect.value !== null) {
+          effectDescription = `Set to ${effect.value}`
+        } else if (effect.op === "proficiency") {
+          effectDescription = "Grant proficiency"
+        } else if (effect.op === "expertise") {
+          effectDescription = "Grant expertise"
+        }
+
+        affectedAttributes[target].push({
+          itemName: item.name,
+          effectDescription,
+        })
       }
     }
   }
@@ -182,10 +213,17 @@ export async function computeCharacter(
   for (const { effect } of activeEffects) {
     if ((Skills as readonly ItemEffectTarget[]).includes(effect.target)) {
       const currentSkill = currentSkills[effect.target as SkillType]
-      if (effect.op === "proficiency" && currentSkill.proficiency !== "expert") {
-        currentSkill.proficiency = "proficient"
+      let newProficiency: ProficiencyLevel = currentSkill?.proficiency || "none"
+      if (effect.op === "proficiency" && currentSkill?.proficiency !== "expert") {
+        newProficiency = "proficient"
       } else if (effect.op === "expertise") {
-        currentSkill.proficiency = "expert"
+        newProficiency = "expert"
+      }
+
+      if (currentSkill) {
+        currentSkill.proficiency = newProficiency
+      } else {
+        currentSkills[effect.target as SkillType] = { proficiency: newProficiency }
       }
     }
   }
@@ -418,6 +456,7 @@ export async function computeCharacter(
     traits,
     coins: currentCoins,
     equippedItems,
+    affectedAttributes,
   }
 
   return char

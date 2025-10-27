@@ -74,7 +74,7 @@ export interface CurrentSkill {
 export async function currentByCharacterId(
   db: SQL,
   characterId: string
-): Promise<Record<SkillType, CurrentSkill>> {
+): Promise<Partial<Record<SkillType, CurrentSkill>>> {
   const result = await db`
     WITH ranked AS (
       SELECT

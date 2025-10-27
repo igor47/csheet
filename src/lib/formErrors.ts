@@ -30,6 +30,10 @@ export function zodToFormErrors(zodError: ZodError): FormErrors {
 export function parsedToForm(values: Record<string, any>): Record<string, string> {
   const result: Record<string, string> = {}
   for (const [key, value] of Object.entries(values)) {
+    if (value === null) {
+      result[key] = ""
+      continue
+    }
     result[key] = String(value)
   }
   return result

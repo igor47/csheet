@@ -11,6 +11,7 @@ import { CoinsEditForm } from "@src/components/CoinsEditForm"
 import { CoinsHistory } from "@src/components/CoinsHistory"
 import { CreateItemForm } from "@src/components/CreateItemForm"
 import { CurrentStatus } from "@src/components/CurrentStatus"
+import { EditItemForm } from "@src/components/EditItemForm"
 import { HitDiceEditForm } from "@src/components/HitDiceEditForm"
 import { HitDiceHistory } from "@src/components/HitDiceHistory"
 import { HitPointsEditForm } from "@src/components/HitPointsEditForm"
@@ -42,6 +43,7 @@ import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { findByCharacterId as findCoinChanges } from "@src/db/char_coins"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
+import { getCharItemHistory } from "@src/db/char_items"
 import { findByCharacterId } from "@src/db/char_levels"
 import {
   create as createNote,
@@ -54,8 +56,9 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
-import { getCharItemHistory } from "@src/db/char_items"
 import { countArchivedByUserId } from "@src/db/characters"
+import { findByItemId as findItemDamage } from "@src/db/item_damage"
+import { findById as findItemById } from "@src/db/items"
 import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
@@ -76,6 +79,7 @@ import { updateAvatar } from "@src/services/updateAvatar"
 import { updateCoins } from "@src/services/updateCoins"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
+import { updateItem } from "@src/services/updateItem"
 import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
 import { Hono } from "hono"
@@ -449,6 +453,84 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
+characterRoutes.get("/characters/:id/items/:itemId/edit", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 403)
+  }
+
+  // Load the item
+  const item = await findItemById(getDb(c), itemId)
+  if (!item) {
+    await setFlashMsg(c, "Item not found", "error")
+    c.header("HX-Redirect", `/characters/${characterId}`)
+    return c.body(null, 204)
+  }
+
+  // Load damage data for weapons
+  const damages = item.category === "weapon" ? await findItemDamage(getDb(c), itemId) : []
+
+  return c.html(<EditItemForm character={char} item={item} damages={damages} />)
+})
+
+characterRoutes.post("/characters/:id/items/:itemId/edit", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to edit this character")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 403)
+  }
+
+  const result = await updateItem(getDb(c), itemId, characterId, body)
+
+  if (!result.complete) {
+    // Load item and damages for re-rendering the form with errors
+    const item = await findItemById(getDb(c), itemId)
+    if (!item) {
+      await setFlashMsg(c, "Item not found", "error")
+      c.header("HX-Redirect", `/characters/${characterId}`)
+      return c.body(null, 204)
+    }
+    const damages = item.category === "weapon" ? await findItemDamage(getDb(c), itemId) : []
+
+    return c.html(
+      <EditItemForm
+        character={char}
+        item={item}
+        damages={damages}
+        values={result.values}
+        errors={result.errors}
+      />
+    )
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
+})
+
+
 characterRoutes.get("/characters/:id/castspell", async (c) => {
   const characterId = c.req.param("id") as string
   const char = await computeCharacter(getDb(c), characterId)
@@ -627,7 +709,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "newitem") {
-    return c.html(<CreateItemForm character={char} values={ {} } />)
+    return c.html(<CreateItemForm character={char} values={{}} />)
   }
 
   if (field === "spellbook") {

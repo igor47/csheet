@@ -9,7 +9,7 @@ export const ItemEffectSchema = z.object({
   target: ItemEffectTargetSchema,
   op: ItemEffectOpSchema,
   value: z.number().int().nullable().default(null),
-  applies: ItemEffectAppliesSchema,
+  applies: ItemEffectAppliesSchema.nullable(),
   created_at: z.date(),
 })
 
@@ -57,4 +57,21 @@ export async function findByItemId(db: SQL, itemId: string): Promise<ItemEffect[
   `
 
   return result.map(parseItemEffect)
+}
+
+export async function findById(db: SQL, id: string): Promise<ItemEffect | null> {
+  const result = await db`
+    SELECT * FROM item_effects
+    WHERE id = ${id}
+    LIMIT 1
+  `
+
+  return result.length > 0 ? parseItemEffect(result[0]) : null
+}
+
+export async function deleteById(db: SQL, id: string): Promise<void> {
+  await db`
+    DELETE FROM item_effects
+    WHERE id = ${id}
+  `
 }

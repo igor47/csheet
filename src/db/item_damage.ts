@@ -59,3 +59,10 @@ export async function findByItemId(db: SQL, itemId: string): Promise<ItemDamage[
 
   return result.map(parseItemDamage)
 }
+
+export async function deleteByItemId(db: SQL, itemId: string): Promise<void> {
+  await db`
+    DELETE FROM item_damage
+    WHERE item_id = ${itemId}
+  `
+}

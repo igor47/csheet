@@ -1,6 +1,7 @@
 import { ModalContent } from "@src/components/ui/ModalContent"
 import { Select } from "@src/components/ui/Select"
 import { ArmorTypes, DamageTypes, ItemCategories, WeaponMasteries } from "@src/lib/dnd"
+import { getGroupedTemplates, getTemplateByName, type RulesetId } from "@src/lib/dnd/itemTemplates"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 
@@ -15,12 +16,34 @@ const DIE_VALUES = [4, 6, 8, 10, 12, 20, 100] as const
 const MAX_DAMAGE_ROWS = 10
 
 export const CreateItemForm = ({ character, values, errors }: CreateItemFormProps) => {
-  const selectedCategory = values.category || ""
-  const selectedWeaponType = values.weapon_type || "melee"
-  const damageRowCount = Math.min(
-    Number.parseInt(values.damage_row_count || "1", 10),
-    MAX_DAMAGE_ROWS
-  )
+  // Load templates for the character's ruleset
+  const rulesetId = character.ruleset as RulesetId
+  const groupedTemplates = getGroupedTemplates(rulesetId)
+
+  // Build template select options with grouped headers
+  const templateOptions: Array<{ value: string; label: string; disabled?: boolean }> = [
+  ]
+
+  if (groupedTemplates.weapons.length > 0) {
+    templateOptions.push({ value: "weapons_header", label: "— Weapons —", disabled: true })
+    for (const weapon of groupedTemplates.weapons) {
+      templateOptions.push({ value: weapon.name, label: weapon.name })
+    }
+  }
+
+  if (groupedTemplates.armor.length > 0) {
+    templateOptions.push({ value: "armor_header", label: "— Armor —", disabled: true })
+    for (const armor of groupedTemplates.armor) {
+      templateOptions.push({ value: armor.name, label: armor.name })
+    }
+  }
+
+  if (groupedTemplates.shields.length > 0) {
+    templateOptions.push({ value: "shields_header", label: "— Shields —", disabled: true })
+    for (const shield of groupedTemplates.shields) {
+      templateOptions.push({ value: shield.name, label: shield.name })
+    }
+  }
 
   // Pre-compute option arrays for selects
   const armorTypeOptions = ArmorTypes.map((type) => ({
@@ -43,6 +66,59 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
     label: mastery.charAt(0).toUpperCase() + mastery.slice(1),
   }))
 
+  // populate values from template if it's changed
+  const template = getTemplateByName(rulesetId, values.template || "")
+  if (values.template && values.template !== values.prev_template && template) {
+    values.prev_template = values.template
+
+    values.name = template.name
+    values.category = template.category
+    values.description = ""
+
+    // Weapon-specific fields
+    if (template.weapon_type) values.weapon_type = template.weapon_type
+    if (template.normal_range) values.normal_range = String(template.normal_range)
+    if (template.long_range) values.long_range = String(template.long_range)
+    if (template.starting_ammo !== undefined)
+      values.starting_ammo = String(template.starting_ammo)
+    if (template.mastery) values.mastery = template.mastery
+    if (template.finesse) values.finesse = "true"
+    if (template.martial !== undefined) values.martial = template.martial ? "true" : "false"
+
+    // Damage arrays
+    if (template.damage) {
+      values.damage_row_count = String(template.damage.length)
+      for (let i = 0; i < template.damage.length; i++) {
+        const dmg = template.damage[i]
+        if (dmg) {
+          values[`damage_num_dice_${i}`] = String(dmg.num_dice)
+          values[`damage_die_value_${i}`] = String(dmg.die_value)
+          values[`damage_type_${i}`] = dmg.type
+        }
+      }
+    }
+
+    // Armor-specific fields
+    if (template.armor_type) values.armor_type = template.armor_type
+    if (template.armor_class !== undefined) values.armor_class = String(template.armor_class)
+    if (template.armor_class_dex !== undefined)
+      values.armor_class_dex = template.armor_class_dex ? "true" : "false"
+    if (template.armor_class_dex_max !== undefined)
+      values.armor_class_dex_max = String(template.armor_class_dex_max)
+
+    // Shield-specific fields
+    if (template.armor_modifier !== undefined)
+      values.armor_modifier = String(template.armor_modifier)
+  }
+
+  if (values.category === "weapon" && !values.weapon_type) {
+    values.weapon_type = "melee"
+  }
+  const damageRowCount = Math.min(
+    Number.parseInt(values.damage_row_count || "1", 10),
+    MAX_DAMAGE_ROWS
+  )
+
   return (
     <ModalContent title="Add Item to Inventory">
       <form
@@ -60,6 +136,23 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             {errors.general}
           </div>
         )}
+
+        {/* Template Selection */}
+        <input type="hidden" name="prev_template" value={values.prev_template} />
+
+        <div class="mb-3">
+          <label for="item-template" class="form-label">
+            Template
+          </label>
+          <Select
+            id="item-template"
+            name="template"
+            placeholder="Create from scratch"
+            options={templateOptions}
+            value={values.template || ""}
+          />
+          <div class="form-text">Select a common item to auto-fill the form</div>
+        </div>
 
         {/* Item Name */}
         <div class="mb-3">
@@ -112,7 +205,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
         </div>
 
         {/* Armor-specific fields */}
-        <div id="armor-fields" class={clsx({ "d-none": selectedCategory !== "armor" })}>
+        <div id="armor-fields" class={clsx({ "d-none": values.category !== "armor" })}>
           <h6 class="text-muted mb-3">Armor Properties</h6>
 
           <div class="mb-3">
@@ -183,7 +276,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
         </div>
 
         {/* Shield-specific fields */}
-        <div id="shield-fields" class={clsx({ "d-none": selectedCategory !== "shield" })}>
+        <div id="shield-fields" class={clsx({ "d-none": values.category !== "shield" })}>
           <h6 class="text-muted mb-3">Shield Properties</h6>
 
           <div class="mb-3">
@@ -204,7 +297,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
         </div>
 
         {/* Weapon-specific fields */}
-        <div id="weapon-fields" class={clsx({ "d-none": selectedCategory !== "weapon" })}>
+        <div id="weapon-fields" class={clsx({ "d-none": values.category !== "weapon" })}>
           <h6 class="text-muted mb-3">Weapon Properties</h6>
 
           {/* Weapon Type Radio */}
@@ -218,7 +311,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                   name="weapon_type"
                   id="weapon-type-melee"
                   value="melee"
-                  checked={selectedWeaponType === "melee"}
+                  checked={values.weapon_type === "melee"}
                 />
                 <label class="form-check-label" for="weapon-type-melee">
                   Melee
@@ -231,7 +324,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                   name="weapon_type"
                   id="weapon-type-ranged"
                   value="ranged"
-                  checked={selectedWeaponType === "ranged"}
+                  checked={values.weapon_type === "ranged"}
                 />
                 <label class="form-check-label" for="weapon-type-ranged">
                   Ranged
@@ -244,7 +337,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                   name="weapon_type"
                   id="weapon-type-thrown"
                   value="thrown"
-                  checked={selectedWeaponType === "thrown"}
+                  checked={values.weapon_type === "thrown"}
                 />
                 <label class="form-check-label" for="weapon-type-thrown">
                   Thrown
@@ -254,7 +347,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           </fieldset>
 
           {/* Range fields - shown for ranged and thrown */}
-          {(selectedWeaponType === "ranged" || selectedWeaponType === "thrown") && (
+          {(values.weapon_type === "ranged" || values.weapon_type === "thrown") && (
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label for="normal-range" class="form-label">
@@ -294,7 +387,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           )}
 
           {/* Starting ammo - only for ranged */}
-          {selectedWeaponType === "ranged" && (
+          {values.weapon_type === "ranged" && (
             <div class="mb-3">
               <label for="starting-ammo" class="form-label">
                 Starting Ammunition

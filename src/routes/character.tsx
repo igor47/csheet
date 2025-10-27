@@ -70,7 +70,7 @@ import { archiveCharacter } from "@src/services/archiveCharacter"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { createCharacter } from "@src/services/createCharacter"
-import { createItem } from "@src/services/createItem"
+import { type CreateItemResult, createItem } from "@src/services/createItem"
 import { createItemEffect } from "@src/services/createItemEffect"
 import { deleteItemEffect } from "@src/services/deleteItemEffect"
 import { changeItemState } from "@src/services/itemState"
@@ -448,9 +448,16 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   // Set character_id for the item
   body.character_id = characterId
 
-  const result = await createItem(getDb(c), c.var.user!.id, body)
+  // if we have a template change, skip the validation
+  let result: CreateItemResult
+  if (body.template === body.prev_template) {
+    result = await createItem(getDb(c), c.var.user!.id, body)
+  } else {
+    result = { complete: false, values: body, errors: {} }
+  }
 
   if (!result.complete) {
+    console.dir(result)
     return c.html(<CreateItemForm character={char} values={result.values} errors={result.errors} />)
   }
 

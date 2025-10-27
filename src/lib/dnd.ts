@@ -160,6 +160,47 @@ export interface Trait {
   level?: number // Level at which trait is gained, if applicable
 }
 
+// Item templates for auto-populating the create item form
+export interface WeaponDamage {
+  num_dice: number
+  die_value: number
+  type: DamageTypeType
+}
+
+export interface TemplateItem {
+  name: string
+  category: ItemCategoryType
+
+  // Weapon-specific fields
+  weapon_type?: "melee" | "ranged" | "thrown"
+  damage?: WeaponDamage[]
+  normal_range?: number
+  long_range?: number
+  starting_ammo?: number
+  mastery?: WeaponMasteryType
+  finesse?: boolean
+  martial?: boolean
+  // Weapon properties (for potential future use)
+  light?: boolean
+  heavy?: boolean
+  two_handed?: boolean
+  reach?: boolean
+  loading?: boolean
+  versatile?: string
+  ammunition?: boolean
+
+  // Armor-specific fields
+  armor_type?: ArmorTypeType
+  armor_class?: number
+  armor_class_dex?: boolean
+  armor_class_dex_max?: number
+  min_strength?: number
+  stealth_disadvantage?: boolean
+
+  // Shield-specific fields
+  armor_modifier?: number
+}
+
 export interface Lineage {
   name: string
   description: string

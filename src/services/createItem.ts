@@ -29,9 +29,19 @@ const BaseItemSchema = z.object({
   category: ItemCategorySchema,
   note: OptionalNullStringSchema,
   is_check: BooleanFormFieldSchema.optional().default(false),
-})
 
-export const BasicItemSchema = z.object({
+  // ignored here, just for tempalte management
+  template: z.string().nullable().optional().default(null),
+  prev_template: z.string().nullable().optional().default(null),
+})
+const BaseItemCheckSchema = BaseItemSchema.extend(
+  z.object({
+    name: z.string(),
+    category: UnsetEnumSchema(ItemCategorySchema),
+  }).shape
+).partial()
+
+const BasicItemSchema = z.object({
   category: ItemCategorySchema.exclude(["armor", "shield", "weapon"]),
 })
 
@@ -150,8 +160,9 @@ export async function createItem(
   data: Record<string, string>
 ): Promise<CreateItemResult> {
   const errors: Record<string, string> = {}
-  const partial = ItemTypeSchemas.and(BaseItemSchema.partial()).safeParse(data)
+  const partial = ItemTypeSchemas.and(BaseItemCheckSchema).safeParse(data)
   if (!partial.success) {
+    console.log("Partial validation failed:", partial.error)
     return {
       complete: false,
       values: data,

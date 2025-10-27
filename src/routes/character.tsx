@@ -85,6 +85,7 @@ import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateItem } from "@src/services/updateItem"
 import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
+import { changeItemState } from "@src/services/itemState"
 import { Hono } from "hono"
 
 export const characterRoutes = new Hono()
@@ -447,7 +448,6 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   const result = await createItem(getDb(c), c.var.user!.id, body)
 
   if (!result.complete) {
-    console.dir(result)
     return c.html(<CreateItemForm character={char} values={result.values} errors={result.errors} />)
   }
 
@@ -600,7 +600,6 @@ characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
   const result = await createItemEffect(getDb(c), body)
 
   if (!result.complete) {
-    console.dir(result)
     return c.html(
       <ItemEffectsEditor
         character={char}
@@ -681,6 +680,126 @@ characterRoutes.delete("/characters/:id/items/:itemId/effects/:effectId", async 
   return c.html(
     <>
       <ItemEffectsEditor character={updatedChar} item={item} effects={item.effects} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CurrentStatus character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/items/:itemId/wear - Wear an item
+characterRoutes.post("/characters/:id/items/:itemId/wear", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char || char.user_id !== c.var.user?.id) {
+    return c.body(null, 403)
+  }
+
+  await changeItemState(getDb(c), characterId, itemId, { worn: true })
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(
+    <>
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CurrentStatus character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/items/:itemId/remove - Remove (unwear) an item
+characterRoutes.post("/characters/:id/items/:itemId/remove", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char || char.user_id !== c.var.user?.id) {
+    return c.body(null, 403)
+  }
+
+  await changeItemState(getDb(c), characterId, itemId, { worn: false })
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(
+    <>
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CurrentStatus character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/items/:itemId/wield - Wield an item
+characterRoutes.post("/characters/:id/items/:itemId/wield", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char || char.user_id !== c.var.user?.id) {
+    return c.body(null, 403)
+  }
+
+  await changeItemState(getDb(c), characterId, itemId, { wielded: true })
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(
+    <>
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CurrentStatus character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/items/:itemId/sheathe - Sheathe (unwield) an item
+characterRoutes.post("/characters/:id/items/:itemId/sheathe", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char || char.user_id !== c.var.user?.id) {
+    return c.body(null, 403)
+  }
+
+  await changeItemState(getDb(c), characterId, itemId, { wielded: false })
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(
+    <>
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CurrentStatus character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/items/:itemId/drop - Drop an item
+characterRoutes.post("/characters/:id/items/:itemId/drop", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char || char.user_id !== c.var.user?.id) {
+    return c.body(null, 403)
+  }
+
+  await changeItemState(getDb(c), characterId, itemId, { dropped: true })
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(
+    <>
       <CharacterInfo character={updatedChar} swapOob={true} />
       <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />

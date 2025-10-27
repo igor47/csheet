@@ -110,9 +110,59 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
                   </div>
                 </div>
                 <div class="col-12 col-md-6">
-                  <div class="d-flex gap-2 justify-content-md-end">
-                    {/* TODO: Add edit wear/wield state button */}
-                    {/* TODO: Add drop item button */}
+                  <div class="d-flex gap-2 justify-content-md-end flex-wrap">
+                    {/* State management buttons */}
+                    {item.wearable && !item.worn && (
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        hx-post={`/characters/${character.id}/items/${item.id}/wear`}
+                        hx-swap="none"
+                      >
+                        <i class="bi bi-person-fill-up"></i> Wear
+                      </button>
+                    )}
+                    {item.wearable && item.worn && (
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        hx-post={`/characters/${character.id}/items/${item.id}/remove`}
+                        hx-swap="none"
+                      >
+                        <i class="bi bi-person-fill-dash"></i> Remove
+                      </button>
+                    )}
+                    {item.wieldable && !item.wielded && (
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        hx-post={`/characters/${character.id}/items/${item.id}/wield`}
+                        hx-swap="none"
+                      >
+                        <i class="bi bi-hand-thumbs-up"></i> Wield
+                      </button>
+                    )}
+                    {item.wieldable && item.wielded && (
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        hx-post={`/characters/${character.id}/items/${item.id}/sheathe`}
+                        hx-swap="none"
+                      >
+                        <i class="bi bi-hand-thumbs-down"></i> Sheathe
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      hx-post={`/characters/${character.id}/items/${item.id}/drop`}
+                      hx-swap="none"
+                      hx-confirm={`Are you sure you want to drop ${item.name}?`}
+                    >
+                      <i class="bi bi-trash"></i> Drop
+                    </button>
+
+                    {/* Item management buttons */}
                     <button
                       type="button"
                       class="btn btn-sm btn-outline-secondary"

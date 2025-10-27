@@ -1,9 +1,8 @@
 import { ModalContent } from "@src/components/ui/ModalContent"
 import { Select } from "@src/components/ui/Select"
-import type { ItemEffect } from "@src/db/item_effects"
 import { ItemEffectOps, ItemEffectTargets } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
+import type { EquippedComputedItem, ItemEffect } from "@src/services/computeCharacterItems"
 import { clsx } from "clsx"
 
 export interface ItemEffectsEditorProps {
@@ -12,6 +11,7 @@ export interface ItemEffectsEditorProps {
   effects: ItemEffect[]
   values?: Record<string, string>
   errors?: Record<string, string>
+  successMessage?: string
 }
 
 export const ItemEffectsEditor = ({
@@ -20,6 +20,7 @@ export const ItemEffectsEditor = ({
   effects,
   values = {},
   errors = {},
+  successMessage,
 }: ItemEffectsEditorProps) => {
   const selectedOp = values.op || ""
   const showValueField = selectedOp === "add" || selectedOp === "set"
@@ -53,6 +54,13 @@ export const ItemEffectsEditor = ({
           </div>
         )}
 
+        {/* Success Message */}
+        {successMessage && (
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {successMessage}
+          </div>
+        )}
+
         {/* Current Effects List */}
         <div class="mb-4">
           <h6 class="mb-3">Current Effects</h6>
@@ -63,7 +71,10 @@ export const ItemEffectsEditor = ({
               {effects.map((effect) => (
                 <div class="list-group-item d-flex justify-content-between align-items-start">
                   <div class="flex-grow-1">
-                    <div class="fw-bold text-capitalize">{effect.target}</div>
+                    <div class="fw-bold text-capitalize d-flex align-items-center gap-2">
+                      {effect.target}
+                      {effect.isActive && <span class="badge bg-success">Active</span>}
+                    </div>
                     <div class="small text-muted">
                       <span class="text-capitalize">{effect.op}</span>
                       {effect.value !== null && <span> {effect.value}</span>}

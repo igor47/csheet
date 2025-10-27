@@ -137,6 +137,11 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
                       {item.effects.length > 0 && (
                         <span class="badge bg-secondary ms-1">{item.effects.length}</span>
                       )}
+                      {item.effects.filter((e) => e.isActive).length > 0 && (
+                        <span class="badge bg-success ms-1">
+                          {item.effects.filter((e) => e.isActive).length} active
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>

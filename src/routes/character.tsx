@@ -617,7 +617,12 @@ characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
   item = updatedChar.equippedItems.find((i) => i.id === itemId)!
   return c.html(
     <>
-      <ItemEffectsEditor character={updatedChar} item={item} effects={item.effects} />
+      <ItemEffectsEditor
+        character={updatedChar}
+        item={item}
+        effects={item.effects}
+        successMessage="Effect added successfully!"
+      />
       <CharacterInfo character={updatedChar} swapOob={true} />
       <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />

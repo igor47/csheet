@@ -7,7 +7,6 @@ import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { type CharTrait, findByCharacterId as findTraits } from "@src/db/char_traits"
 import { type Character, findById } from "@src/db/characters"
-import type { ItemEffect } from "@src/db/item_effects"
 import {
   Abilities,
   type AbilityType,
@@ -26,6 +25,7 @@ import {
 import {
   computeCharacterItems,
   type EquippedComputedItem,
+  type ItemEffect,
 } from "@src/services/computeCharacterItems"
 import { computeSpells, type SpellInfoForClass } from "@src/services/computeSpells"
 import type { SQL } from "bun"
@@ -138,15 +138,16 @@ export async function computeCharacter(
   const ruleset = getRuleset(character.ruleset)
   const species = ruleset.species.find((r) => r.name === character.species)!
 
-  // Get equipped items
+  // Get equipped items (includes isActive field on effects)
   const equippedItems = await computeCharacterItems(db, characterId)
+
+  // Collect active effects using the precomputed isActive field
   const activeEffects: { effect: ItemEffect; item: EquippedComputedItem }[] = []
   for (const item of equippedItems) {
     for (const effect of item.effects) {
-      // Check if effect applies based on worn/wielded state
-      if (effect.applies === "worn" && !item.worn) continue
-      if (effect.applies === "wielded" && !item.wielded) continue
-      activeEffects.push({ effect, item })
+      if (effect.isActive) {
+        activeEffects.push({ effect, item })
+      }
     }
   }
 

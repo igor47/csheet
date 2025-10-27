@@ -1,7 +1,12 @@
 import type { ItemDamage } from "@src/db/item_damage"
-import type { ItemEffect } from "@src/db/item_effects"
+import type { ItemEffect as DbItemEffect } from "@src/db/item_effects"
 import type { ArmorTypeType, ItemCategoryType, WeaponMasteryType } from "@src/lib/dnd"
 import type { SQL } from "bun"
+
+// Extended ItemEffect with isActive computed field
+export interface ItemEffect extends DbItemEffect {
+  isActive: boolean
+}
 
 export interface EquippedComputedItem {
   // Base item fields
@@ -134,11 +139,20 @@ export async function computeCharacterItems(
       useVerb = "throw"
     }
 
-    // Parse effects with proper date handling
-    const effects: ItemEffect[] = row.effects.map((e: any) => ({
-      ...e,
-      created_at: new Date(e.created_at),
-    }))
+    // Parse effects with proper date handling and compute isActive
+    const effects: ItemEffect[] = row.effects.map((e: any) => {
+      // Determine if effect is active based on item state
+      const isActive =
+        e.applies === null || // Always active
+        (e.applies === "worn" && row.worn) || // Active when worn and item is worn
+        (e.applies === "wielded" && row.wielded) // Active when wielded and item is wielded
+
+      return {
+        ...e,
+        created_at: new Date(e.created_at),
+        isActive,
+      }
+    })
 
     // Parse damage with proper date handling
     const damage: ItemDamage[] = row.damage.map((d: any) => ({

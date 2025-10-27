@@ -1,12 +1,16 @@
 import { ModalContent } from "@src/components/ui/ModalContent"
 import { Select } from "@src/components/ui/Select"
-import { ArmorTypes, DamageTypes, ItemCategories, WeaponMasteries } from "@src/lib/dnd"
+import type { ItemDamage } from "@src/db/item_damage"
+import type { Item } from "@src/db/items"
+import { ArmorTypes, DamageTypes, WeaponMasteries } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 
-export interface CreateItemFormProps {
+export interface EditItemFormProps {
   character: ComputedCharacter
-  values: Record<string, string>
+  item: Item
+  damages: ItemDamage[]
+  values?: Record<string, string>
   errors?: Record<string, string>
 }
 
@@ -14,7 +18,69 @@ const DIE_VALUES = [4, 6, 8, 10, 12, 20, 100] as const
 
 const MAX_DAMAGE_ROWS = 10
 
-export const CreateItemForm = ({ character, values, errors }: CreateItemFormProps) => {
+function buildFormValues(item: Item, damages: ItemDamage[]): Record<string, string> {
+  const values: Record<string, string> = {
+    name: item.name,
+    description: item.description || "",
+    category: item.category,
+  }
+
+  if (item.category === "armor") {
+    values.armor_type = item.armor_type || ""
+    values.armor_class = String(item.armor_class || "")
+    values.armor_class_dex = item.armor_class_dex ? "true" : "false"
+    if (item.armor_class_dex_max !== null) {
+      values.armor_class_dex_max = String(item.armor_class_dex_max)
+    }
+  }
+
+  if (item.category === "shield") {
+    values.armor_modifier = String(item.armor_modifier || "")
+  }
+
+  if (item.category === "weapon") {
+    // Determine weapon type from item properties
+    values.weapon_type = item.thrown ? "thrown" : item.normal_range ? "ranged" : "melee"
+    values.finesse = item.finesse ? "true" : "false"
+    values.mastery = item.mastery || ""
+    values.martial = item.martial ? "true" : "false"
+
+    if (item.normal_range !== null) {
+      values.normal_range = String(item.normal_range)
+    }
+    if (item.long_range !== null) {
+      values.long_range = String(item.long_range)
+    }
+
+    // Populate damage rows
+    values.damage_row_count = String(damages.length || 1)
+    for (let i = 0; i < damages.length; i++) {
+      const damage = damages[i]
+      if (!damage) continue
+
+      // damage.dice is an array like [6, 6] meaning 2d6
+      const numDice = damage.dice.length
+      const dieValue = damage.dice[0] // All dice in the array should be the same value
+      values[`damage_num_dice_${i}`] = String(numDice)
+      values[`damage_die_value_${i}`] = String(dieValue)
+      values[`damage_type_${i}`] = damage.type
+    }
+  }
+
+  return values
+}
+
+export const EditItemForm = ({
+  character,
+  item,
+  damages,
+  values: valuesProp,
+  errors,
+}: EditItemFormProps) => {
+  // Build form values from item only on initial load (when values is undefined)
+  // Otherwise use the provided values (from user input during validation)
+  const values = valuesProp !== undefined ? valuesProp : buildFormValues(item, damages)
+
   const selectedCategory = values.category || ""
   const selectedWeaponType = values.weapon_type || "melee"
   const damageRowCount = Math.min(
@@ -44,10 +110,10 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
   }))
 
   return (
-    <ModalContent title="Add Item to Inventory">
+    <ModalContent title="Edit Item">
       <form
-        id="create-item-form"
-        hx-post={`/characters/${character.id}/edit/newitem`}
+        id="edit-item-form"
+        hx-post={`/characters/${character.id}/items/${item.id}/edit`}
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
@@ -76,22 +142,20 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           {errors?.name && <div class="invalid-feedback d-block">{errors.name}</div>}
         </div>
 
-        {/* Category */}
+        {/* Category (read-only) */}
         <div class="mb-3">
           <label for="item-category" class="form-label">
-            Category <span class="text-danger">*</span>
+            Category
           </label>
-          <Select
+          <input
+            type="text"
+            class="form-control"
             id="item-category"
-            name="category"
-            placeholder="Select category..."
-            options={ItemCategories.map((cat) => ({
-              value: cat,
-              label: cat.charAt(0).toUpperCase() + cat.slice(1),
-            }))}
-            value={values.category}
-            error={errors?.category}
+            value={selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}
+            disabled
           />
+          <input type="hidden" name="category" value={selectedCategory} />
+          <div class="form-text">Category cannot be changed</div>
         </div>
 
         {/* Description */}
@@ -293,27 +357,6 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             </div>
           )}
 
-          {/* Starting ammo - only for ranged */}
-          {selectedWeaponType === "ranged" && (
-            <div class="mb-3">
-              <label for="starting-ammo" class="form-label">
-                Starting Ammunition
-              </label>
-              <input
-                type="number"
-                class={clsx("form-control", { "is-invalid": errors?.starting_ammo })}
-                id="starting-ammo"
-                name="starting_ammo"
-                min="0"
-                value={values.starting_ammo || "0"}
-              />
-              {errors?.starting_ammo && (
-                <div class="invalid-feedback d-block">{errors.starting_ammo}</div>
-              )}
-              <div class="form-text">Number of arrows, bolts, etc. you start with</div>
-            </div>
-          )}
-
           {/* Damage Rows */}
           <div class="mb-3">
             <label class="form-label" for="damage_row_count">
@@ -380,7 +423,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
               <button
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
-                onclick={`document.getElementById('damage_row_count').value = ${damageRowCount + 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
+                onclick={`document.getElementById('damage_row_count').value = ${damageRowCount + 1}; document.getElementById('edit-item-form').dispatchEvent(new Event('change'));`}
                 disabled={damageRowCount >= MAX_DAMAGE_ROWS}
               >
                 <i class="bi bi-plus"></i> Add Damage
@@ -389,7 +432,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-secondary"
-                  onclick={`document.getElementById('damage_row_count').value = ${damageRowCount - 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
+                  onclick={`document.getElementById('damage_row_count').value = ${damageRowCount - 1}; document.getElementById('edit-item-form').dispatchEvent(new Event('change'));`}
                 >
                   <i class="bi bi-dash"></i> Remove
                 </button>
@@ -444,26 +487,14 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           </div>
         </div>
 
-        {/* Note */}
-        <div class="mb-3">
-          <label for="item-note" class="form-label">
-            Note
-          </label>
-          <textarea
-            class={clsx("form-control", { "is-invalid": errors?.note })}
-            id="item-note"
-            name="note"
-            rows={2}
-            value={values.note || ""}
-            placeholder="Where or how you acquired this item"
-          />
-          {errors?.note && <div class="invalid-feedback d-block">{errors.note}</div>}
-        </div>
-
         {/* Helper text */}
         <div class="alert alert-info">
           <small>
-            <i class="bi bi-info-circle"></i> Item effects can be configured after item creation.
+            <i class="bi bi-info-circle"></i>
+            &nbsp; Use the Effects editor to manage effects.
+            {selectedCategory === "weapon" && selectedWeaponType === "ranged" && (
+              <span>&nbsp; Use the Charges editor to manage ammunition for this weapon.</span>
+            )}
           </small>
         </div>
 
@@ -475,12 +506,12 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           <button
             type="submit"
             class="btn btn-primary"
-            hx-post={`/characters/${character.id}/edit/newitem`}
+            hx-post={`/characters/${character.id}/items/${item.id}/edit`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
             hx-swap="innerHTML"
           >
-            Add Item
+            Update Item
           </button>
         </div>
       </form>

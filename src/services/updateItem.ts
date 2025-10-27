@@ -1,7 +1,9 @@
 import { create as createCharItemDb } from "@src/db/char_items"
-import { create as createItemChargeDb } from "@src/db/item_charges"
-import { create as createItemDamageDb } from "@src/db/item_damage"
-import { create as createItemDb } from "@src/db/items"
+import {
+  create as createItemDamageDb,
+  deleteByItemId as deleteItemDamageDb,
+} from "@src/db/item_damage"
+import { findById as findItemById, type UpdateItem, update as updateItemDb } from "@src/db/items"
 import {
   ArmorTypeSchema,
   DamageTypeSchema,
@@ -21,27 +23,29 @@ import {
 import type { SQL } from "bun"
 import { z } from "zod"
 
-// Base schema for all items
-const BaseItemSchema = z.object({
+// Base schema for item updates (category is NOT editable)
+const BaseItemUpdateSchema = z.object({
+  item_id: z.string(),
   character_id: z.string(),
   name: z.string().min(1, "Item name is required"),
   description: OptionalNullStringSchema,
-  category: ItemCategorySchema,
-  note: OptionalNullStringSchema,
+  category: ItemCategorySchema, // For identification only, not editable
   is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
-export const BasicItemSchema = z.object({
+// Basic item (no special fields)
+export const BasicItemUpdateSchema = z.object({
   category: ItemCategorySchema.exclude(["armor", "shield", "weapon"]),
 })
 
 // Shield-specific fields
-const ShieldItemSchema = z.object({
+const ShieldItemUpdateSchema = z.object({
   category: ItemCategorySchema.extract(["shield"]),
   armor_modifier: NumberFormFieldSchema.int(),
 })
 
-const ArmorItemSchema = z.object({
+// Armor-specific fields
+const ArmorItemUpdateSchema = z.object({
   category: ItemCategorySchema.extract(["armor"]),
   armor_type: ArmorTypeSchema,
   armor_class: NumberFormFieldSchema.int().min(0),
@@ -54,7 +58,7 @@ const NumDiceField = NumberFormFieldSchema.int().min(1)
 const DieValueField = StringNumberEnum(DamageDice)
 
 // Weapon-specific fields
-const WeaponItemBaseSchema = z.object({
+const WeaponItemBaseUpdateSchema = z.object({
   category: ItemCategorySchema.extract(["weapon"]),
 
   finesse: BooleanFormFieldSchema.optional().default(false),
@@ -105,52 +109,69 @@ const WeaponItemBaseSchema = z.object({
   damage_type_9: UnsetEnumSchema(DamageTypeSchema),
 })
 
-const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
-  WeaponItemBaseSchema.extend({
+const WeaponItemUpdateSchema = z.discriminatedUnion("weapon_type", [
+  WeaponItemBaseUpdateSchema.extend({
     weapon_type: z.literal("melee"),
   }),
-  WeaponItemBaseSchema.extend({
+  WeaponItemBaseUpdateSchema.extend({
     weapon_type: z.literal("thrown"),
     normal_range: RequiredStringNumberSchema((n) => n.int().positive()),
     long_range: RequiredStringNumberSchema((n) => n.int().positive()),
   }),
-  WeaponItemBaseSchema.extend({
+  WeaponItemBaseUpdateSchema.extend({
     weapon_type: z.literal("ranged"),
     normal_range: RequiredStringNumberSchema((n) => n.int().positive()),
     long_range: RequiredStringNumberSchema((n) => n.int().positive()),
-    starting_ammo: RequiredStringNumberSchema((n) => n.int().min(0))
-      .optional()
-      .default(0),
   }),
 ])
 
-const ItemTypeSchemas = z.discriminatedUnion("category", [
-  BasicItemSchema,
-  ShieldItemSchema,
-  ArmorItemSchema,
-  WeaponItemSchema,
+const ItemTypeUpdateSchemas = z.union([
+  BasicItemUpdateSchema,
+  ShieldItemUpdateSchema,
+  ArmorItemUpdateSchema,
+  WeaponItemUpdateSchema,
 ])
 
-export const CreateItemApiSchema = ItemTypeSchemas.and(BaseItemSchema)
+export const UpdateItemApiSchema = ItemTypeUpdateSchemas.and(BaseItemUpdateSchema)
 
-export type CreateItemData = z.infer<typeof CreateItemApiSchema>
+export type UpdateItemData = z.infer<typeof UpdateItemApiSchema>
 
-export type CreateItemResult =
+export type UpdateItemResult =
   | { complete: true }
   | { complete: false; values: Record<string, string>; errors?: Record<string, string> }
 
 const MAX_DAMAGE_ROWS = 10 as const
 
 /**
- * Creates a new item and adds it to the character's inventory
+ * Updates an existing item
  */
-export async function createItem(
+export async function updateItem(
   db: SQL,
-  userId: string,
+  itemId: string,
+  characterId: string,
   data: Record<string, string>
-): Promise<CreateItemResult> {
+): Promise<UpdateItemResult> {
   const errors: Record<string, string> = {}
-  const partial = ItemTypeSchemas.and(BaseItemSchema.partial()).safeParse(data)
+
+  // Get the existing item to determine its category
+  const existingItem = await findItemById(db, itemId)
+  if (!existingItem) {
+    return {
+      complete: false,
+      values: data,
+      errors: { general: "Item not found" },
+    }
+  }
+
+  // Add item_id, character_id, and category to data
+  data.item_id = itemId
+  data.character_id = characterId
+  data.category = existingItem.category
+
+  const isCheck = data.is_check === "true"
+
+  // Partial validation for check mode
+  const partial = ItemTypeUpdateSchemas.and(BaseItemUpdateSchema.partial()).safeParse(data)
   if (!partial.success) {
     return {
       complete: false,
@@ -160,7 +181,6 @@ export async function createItem(
   }
 
   const values = partial.data
-  const isCheck = data.is_check === "true"
 
   // Soft validation for check mode
   if (!values.name) {
@@ -171,13 +191,9 @@ export async function createItem(
     errors.name = "Item name is required"
   }
 
-  if (!values.category) {
-    if (!isCheck) {
-      errors.category = "Category is required"
-    }
-  }
-
   // Category-specific validation
+  const damages: { dice: number[]; type: DamageType }[] = []
+
   if (values.category === "armor") {
     if (!values.armor_type && !isCheck) {
       errors.armor_type = "Armor type is required for armor"
@@ -193,8 +209,6 @@ export async function createItem(
     }
   }
 
-  const damages: { dice: number[]; type: DamageType }[] = []
-
   if (values.category === "weapon") {
     const weaponType = values.weapon_type
 
@@ -202,13 +216,6 @@ export async function createItem(
     if (weaponType === "ranged" || weaponType === "thrown") {
       if (!values.normal_range && !isCheck) {
         errors.normal_range = `Normal range is required for ${weaponType} weapons`
-      }
-    }
-
-    // Validate starting ammo for ranged weapons
-    if (weaponType === "ranged") {
-      if (values.starting_ammo === undefined && !isCheck) {
-        values.starting_ammo = 0 // Default to 0
       }
     }
 
@@ -235,18 +242,18 @@ export async function createItem(
         // Some but not all damage fields provided
       } else if (damageVals.some((v) => v !== undefined)) {
         if (numDice === undefined) {
-          errors[numDiceField] = `Number of dice is required`
+          errors[numDiceField] = "Number of dice is required"
         }
         if (dieValue === undefined) {
-          errors[dieValueField] = `Die value is required`
+          errors[dieValueField] = "Die value is required"
         }
         if (damageType === undefined) {
-          errors[damageTypeField] = `Damage type is required`
+          errors[damageTypeField] = "Damage type is required"
         }
 
         // No damage fields provided on row 0
       } else if (i === 0 && !isCheck) {
-        errors[numDiceField] = `At least one damage entry is required for weapons`
+        errors[numDiceField] = "At least one damage entry is required for weapons"
       }
     }
   }
@@ -260,7 +267,7 @@ export async function createItem(
   const preparedData = { ...values }
 
   // Full Zod validation
-  const result = CreateItemApiSchema.safeParse(preparedData)
+  const result = UpdateItemApiSchema.safeParse(preparedData)
 
   if (!result.success) {
     return { complete: false, values: parsedToForm(values), errors: zodToFormErrors(result.error) }
@@ -276,67 +283,104 @@ export async function createItem(
     long_range = result.data.long_range
   }
 
-  // Create the item and related records in a transaction
+  // Update the item in a transaction
   try {
-    // Create the base item
-    const newItem = await createItemDb(db, {
+    // Build updates object
+    const updates: Partial<UpdateItem> = {
       name: result.data.name,
       description: result.data.description,
-      category: result.data.category,
-      armor_type: result.data.category === "armor" ? result.data.armor_type : null,
-      armor_class: result.data.category === "armor" ? result.data.armor_class : null,
-      armor_class_dex: result.data.category === "armor" ? result.data.armor_class_dex : null,
-      armor_class_dex_max:
-        result.data.category === "armor" ? result.data.armor_class_dex_max : null,
-
-      armor_modifier: result.data.category === "shield" ? result.data.armor_modifier : null,
-
-      thrown: result.data.category === "weapon" ? result.data.weapon_type === "thrown" : false,
-      finesse: result.data.category === "weapon" ? result.data.finesse : false,
-      mastery: result.data.category === "weapon" ? result.data.mastery : null,
-      martial: result.data.category === "weapon" ? result.data.martial : false,
-
-      normal_range,
-      long_range,
-
-      created_by: userId,
-    })
-
-    // Create damage records for weapons
-    for (const dmg of damages) {
-      await createItemDamageDb(db, {
-        item_id: newItem.id,
-        dice: dmg.dice,
-        type: dmg.type,
-      })
     }
 
-    // Create starting ammo charges if applicable
-    if (result.data.category === "weapon" && result.data.weapon_type === "ranged") {
-      await createItemChargeDb(db, {
-        item_id: newItem.id,
-        delta: result.data.starting_ammo,
-        note: "Starting ammunition",
-      })
+    if (result.data.category === "armor") {
+      updates.armor_type = result.data.armor_type
+      updates.armor_class = result.data.armor_class
+      updates.armor_class_dex = result.data.armor_class_dex
+      updates.armor_class_dex_max = result.data.armor_class_dex_max
     }
 
-    // Add item to character's inventory
-    await createCharItemDb(db, {
-      character_id: result.data.character_id,
-      item_id: newItem.id,
-      worn: false,
-      wielded: false,
-      dropped_at: null,
-      note: result.data.note,
-    })
+    if (result.data.category === "shield") {
+      updates.armor_modifier = result.data.armor_modifier
+    }
+
+    if (result.data.category === "weapon") {
+      updates.thrown = result.data.weapon_type === "thrown"
+      updates.finesse = result.data.finesse
+      updates.mastery = result.data.mastery
+      updates.martial = result.data.martial
+      updates.normal_range = normal_range
+      updates.long_range = long_range
+    }
+
+    // Update the base item
+    await updateItemDb(db, itemId, updates)
+
+    // Update damage records for weapons
+    if (existingItem.category === "weapon") {
+      // Delete existing damage records
+      await deleteItemDamageDb(db, itemId)
+
+      // Create new damage records
+      for (const dmg of damages) {
+        await createItemDamageDb(db, {
+          item_id: itemId,
+          dice: dmg.dice,
+          type: dmg.type,
+        })
+      }
+    }
+
+    // Create a char_items entry to track this update in history
+    const changedFields: string[] = []
+    if (updates.name !== existingItem.name) changedFields.push("name")
+    if (updates.description !== existingItem.description) changedFields.push("description")
+    if (existingItem.category === "armor") {
+      if (updates.armor_type !== existingItem.armor_type) changedFields.push("armor type")
+      if (updates.armor_class !== existingItem.armor_class) changedFields.push("armor class")
+      if (updates.armor_class_dex !== existingItem.armor_class_dex)
+        changedFields.push("dex modifier")
+      if (updates.armor_class_dex_max !== existingItem.armor_class_dex_max)
+        changedFields.push("max dex")
+    }
+    if (existingItem.category === "shield") {
+      if (updates.armor_modifier !== existingItem.armor_modifier)
+        changedFields.push("armor modifier")
+    }
+    if (existingItem.category === "weapon") {
+      if (updates.thrown !== existingItem.thrown) changedFields.push("thrown")
+      if (updates.finesse !== existingItem.finesse) changedFields.push("finesse")
+      if (updates.mastery !== existingItem.mastery) changedFields.push("mastery")
+      if (updates.martial !== existingItem.martial) changedFields.push("martial")
+      if (updates.normal_range !== existingItem.normal_range) changedFields.push("range")
+      if (damages.length > 0) changedFields.push("damage")
+    }
+
+    // Get current worn/wielded state
+    const currentState = await db`
+      SELECT worn, wielded
+      FROM char_items
+      WHERE character_id = ${characterId} AND item_id = ${itemId}
+      ORDER BY created_at DESC
+      LIMIT 1
+    `
+
+    if (changedFields.length > 0) {
+      await createCharItemDb(db, {
+        character_id: characterId,
+        item_id: itemId,
+        worn: currentState[0]?.worn || false,
+        wielded: currentState[0]?.wielded || false,
+        dropped_at: null,
+        note: `Updated ${changedFields.join(", ")}`,
+      })
+    }
 
     return { complete: true }
   } catch (error) {
-    console.error("Error creating item:", error)
+    console.error("Error updating item:", error)
     return {
       complete: false,
       values: data,
-      errors: { general: "Failed to create item. Please try again." },
+      errors: { general: "Failed to update item. Please try again." },
     }
   }
 }

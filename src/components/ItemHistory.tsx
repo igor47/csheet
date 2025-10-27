@@ -96,7 +96,10 @@ export const ItemHistory = ({ events }: ItemHistoryProps) => {
                         {event.worn && <span class="badge bg-secondary">Worn</span>}
                         {event.wielded && <span class="badge bg-primary">Wielded</span>}
                         {event.dropped_at && (
-                          <span class="badge bg-danger" title={`Dropped on ${new Date(event.dropped_at).toLocaleDateString()}`}>
+                          <span
+                            class="badge bg-danger"
+                            title={`Dropped on ${new Date(event.dropped_at).toLocaleDateString()}`}
+                          >
                             Dropped
                           </span>
                         )}

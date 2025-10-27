@@ -42,8 +42,25 @@ export const CreateItemSchema = ItemSchema.omit({
   updated_at: true,
 })
 
+export const UpdateItemSchema = ItemSchema.pick({
+  name: true,
+  description: true,
+  armor_type: true,
+  armor_class: true,
+  armor_class_dex: true,
+  armor_class_dex_max: true,
+  armor_modifier: true,
+  normal_range: true,
+  long_range: true,
+  thrown: true,
+  finesse: true,
+  mastery: true,
+  martial: true,
+})
+
 export type Item = z.infer<typeof ItemSchema>
 export type CreateItem = z.infer<typeof CreateItemSchema>
+export type UpdateItem = z.infer<typeof UpdateItemSchema>
 
 function parseItem(row: any): Item {
   return ItemSchema.parse({
@@ -128,4 +145,33 @@ export async function findByCategory(
       `
 
   return result.map(parseItem)
+}
+
+export async function update(db: SQL, id: string, updates: Partial<UpdateItem>): Promise<Item> {
+  const result = await db`
+    UPDATE items
+    SET
+      name = COALESCE(${updates.name}, name),
+      description = COALESCE(${updates.description}, description),
+      armor_type = COALESCE(${updates.armor_type}, armor_type),
+      armor_class = COALESCE(${updates.armor_class}, armor_class),
+      armor_class_dex = COALESCE(${updates.armor_class_dex}, armor_class_dex),
+      armor_class_dex_max = COALESCE(${updates.armor_class_dex_max}, armor_class_dex_max),
+      armor_modifier = COALESCE(${updates.armor_modifier}, armor_modifier),
+      normal_range = COALESCE(${updates.normal_range}, normal_range),
+      long_range = COALESCE(${updates.long_range}, long_range),
+      thrown = COALESCE(${updates.thrown}, thrown),
+      finesse = COALESCE(${updates.finesse}, finesse),
+      mastery = COALESCE(${updates.mastery}, mastery),
+      martial = COALESCE(${updates.martial}, martial),
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+    RETURNING *
+  `
+
+  if (!result[0]) {
+    throw new Error(`Item not found: ${id}`)
+  }
+
+  return parseItem(result[0])
 }

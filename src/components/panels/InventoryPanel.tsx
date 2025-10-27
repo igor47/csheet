@@ -93,61 +93,55 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
         {character.equippedItems.length === 0 ? (
           <p class="text-muted small">No items in inventory.</p>
         ) : (
-          <div class="table-responsive">
-            <table class="table table-sm table-hover small">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Category</th>
-                  <th>Status</th>
-                  <th style="width: 80px;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {character.equippedItems.map((item) => (
-                  <tr>
-                    <td>
-                      {item.name}
-                      {item.description && (
-                        <span
-                          class="ms-1"
-                          title={item.description}
-                          data-bs-toggle="tooltip"
-                        >
-                          <i class="bi bi-info-circle text-muted"></i>
-                        </span>
+          <div class="d-flex flex-column gap-2">
+            {character.equippedItems.map((item) => (
+              <div class="row g-2 align-items-center border-bottom pb-2">
+                <div class="col-12 col-md-6">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <strong>{item.name}</strong>
+                    {item.worn && <span class="badge bg-secondary">Worn</span>}
+                    {item.wielded && <span class="badge bg-primary">Wielded</span>}
+                    <span class="badge bg-light text-dark text-capitalize">{item.category}</span>
+                    {item.description && (
+                      <span title={item.description} data-bs-toggle="tooltip">
+                        <i class="bi bi-info-circle text-muted"></i>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="d-flex gap-2 justify-content-md-end">
+                    {/* TODO: Add edit wear/wield state button */}
+                    {/* TODO: Add drop item button */}
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary"
+                      hx-get={`/characters/${character.id}/items/${item.id}/edit`}
+                      hx-target="#editModalContent"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editModal"
+                    >
+                      <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary"
+                      hx-get={`/characters/${character.id}/items/${item.id}/effects`}
+                      hx-target="#editModalContent"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editModal"
+                    >
+                      <i class="bi bi-stars"></i> Effects
+                      {item.effects.length > 0 && (
+                        <span class="badge bg-secondary ms-1">{item.effects.length}</span>
                       )}
-                    </td>
-                    <td class="text-capitalize">{item.category}</td>
-                    <td>
-                      <div class="d-flex gap-1">
-                        {item.worn && <span class="badge bg-secondary">Worn</span>}
-                        {item.wielded && <span class="badge bg-primary">Wielded</span>}
-                        {!item.worn && !item.wielded && (
-                          <span class="text-muted small">In pack</span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <div class="d-flex gap-1">
-                        {/* TODO: Add edit wear/wield state button */}
-                        {/* TODO: Add drop item button */}
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-outline-secondary border p-0"
-                          style="width: 24px; height: 24px; line-height: 1;"
-                          aria-label="Item details"
-                          title="Item details (coming soon)"
-                          disabled
-                        >
-                          <i class="bi bi-eye"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

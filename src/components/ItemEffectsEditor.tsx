@@ -54,13 +54,6 @@ export const ItemEffectsEditor = ({
           </div>
         )}
 
-        {/* Success Message */}
-        {successMessage && (
-          <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {successMessage}
-          </div>
-        )}
-
         {/* Current Effects List */}
         <div class="mb-4">
           <h6 class="mb-3">Current Effects</h6>
@@ -101,6 +94,13 @@ export const ItemEffectsEditor = ({
         </div>
 
         <hr />
+
+        {/* Success Message */}
+        {successMessage && (
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {successMessage}
+          </div>
+        )}
 
         {/* Add New Effect Form */}
         <div>

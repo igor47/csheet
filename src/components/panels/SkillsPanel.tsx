@@ -1,12 +1,21 @@
+import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import { type ProficiencyLevel, Skills, type SkillType } from "@src/lib/dnd"
 import type { ComputedCharacter, SkillScore } from "@src/services/computeCharacter"
+import { clsx } from "clsx"
 
 interface SkillRowProps {
   skill: SkillType
   skillScore: SkillScore
+  hasEffect?: boolean
+  effectTooltip?: string
 }
 
-const SkillRow = ({ skill, skillScore }: SkillRowProps) => {
+const SkillRow = ({
+  skill,
+  skillScore,
+  hasEffect = false,
+  effectTooltip,
+}: SkillRowProps) => {
   const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
 
   const getProficiencyIcon = (proficiency: ProficiencyLevel): string => {
@@ -24,8 +33,18 @@ const SkillRow = ({ skill, skillScore }: SkillRowProps) => {
 
   const abilityAbbr = skillScore.ability.slice(0, 3).toUpperCase()
 
+  const tooltipAttrs =
+    hasEffect && effectTooltip
+      ? { "data-bs-toggle": "tooltip", "data-bs-placement": "top", title: effectTooltip }
+      : {}
+
   return (
-    <div class="list-group-item d-flex align-items-center gap-2 py-1 px-2">
+    <div
+      class={clsx("list-group-item d-flex align-items-center gap-2 py-1 px-2", {
+        "border-primary border-2": hasEffect,
+      })}
+      {...tooltipAttrs}
+    >
       <i
         class={`bi ${getProficiencyIcon(skillScore.proficiency)} text-muted`}
         style="width: 16px;"
@@ -75,7 +94,12 @@ export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
         <div class="col-12 col-md-6">
           <div class="list-group small">
             {Skills.map((skill) => (
-              <SkillRow skill={skill} skillScore={character.skills[skill]} />
+              <SkillRow
+                skill={skill}
+                skillScore={character.skills[skill]}
+                hasEffect={hasEffect(skill, character.affectedAttributes)}
+                effectTooltip={getEffectTooltip(skill, character.affectedAttributes) || undefined}
+              />
             ))}
           </div>
         </div>

@@ -88,6 +88,7 @@ export const srd51Armor: TemplateItem[] = [
     armor_type: "heavy",
     armor_class: 16,
     armor_class_dex: false,
+    min_strength: 13,
     stealth_disadvantage: true,
   },
   {
@@ -96,6 +97,7 @@ export const srd51Armor: TemplateItem[] = [
     armor_type: "heavy",
     armor_class: 17,
     armor_class_dex: false,
+    min_strength: 15,
     stealth_disadvantage: true,
   },
   {
@@ -104,6 +106,7 @@ export const srd51Armor: TemplateItem[] = [
     armor_type: "heavy",
     armor_class: 18,
     armor_class_dex: false,
+    min_strength: 15,
     stealth_disadvantage: true,
   },
 

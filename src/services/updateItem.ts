@@ -192,7 +192,7 @@ export async function updateItem(
   }
 
   // Category-specific validation
-  const damages: { dice: number[]; type: DamageType }[] = []
+  const damages: { dice: number[]; type: DamageType; versatile: boolean }[] = []
 
   if (values.category === "armor") {
     if (!values.armor_type && !isCheck) {
@@ -230,6 +230,9 @@ export async function updateItem(
       const damageTypeField = `damage_type_${i}` as keyof typeof values
       const damageType = values[damageTypeField] as DamageType | undefined
 
+      const versatileField = `damage_versatile_${i}` as keyof typeof values
+      const versatile = (values[versatileField] as boolean | undefined) || false
+
       const damageVals = [numDice, dieValue, damageType]
 
       // All damage fields provided
@@ -237,6 +240,7 @@ export async function updateItem(
         damages.push({
           dice: Array(numDice!).fill(dieValue!),
           type: damageType!,
+          versatile,
         })
 
         // Some but not all damage fields provided
@@ -325,6 +329,7 @@ export async function updateItem(
           item_id: itemId,
           dice: dmg.dice,
           type: dmg.type,
+          versatile: dmg.versatile,
         })
       }
     }

@@ -165,6 +165,7 @@ export interface WeaponDamage {
   num_dice: number
   die_value: number
   type: DamageTypeType
+  versatile?: boolean
 }
 
 export interface TemplateItem {
@@ -180,13 +181,12 @@ export interface TemplateItem {
   mastery?: WeaponMasteryType
   finesse?: boolean
   martial?: boolean
-  // Weapon properties (for potential future use)
+  // Weapon properties
   light?: boolean
   heavy?: boolean
   two_handed?: boolean
   reach?: boolean
   loading?: boolean
-  versatile?: string
   ammunition?: boolean
 
   // Armor-specific fields

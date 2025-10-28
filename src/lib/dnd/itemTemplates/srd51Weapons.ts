@@ -65,9 +65,11 @@ export const srd51Weapons: TemplateItem[] = [
     name: "Quarterstaff",
     category: "weapon",
     weapon_type: "melee",
-    damage: [{ num_dice: 1, die_value: 6, type: "bludgeoning" }],
+    damage: [
+      { num_dice: 1, die_value: 6, type: "bludgeoning" },
+      { num_dice: 1, die_value: 8, type: "bludgeoning", versatile: true },
+    ],
     martial: false,
-    versatile: "1d8",
   },
   {
     name: "Sickle",
@@ -81,9 +83,11 @@ export const srd51Weapons: TemplateItem[] = [
     name: "Spear",
     category: "weapon",
     weapon_type: "thrown",
-    damage: [{ num_dice: 1, die_value: 6, type: "piercing" }],
+    damage: [
+      { num_dice: 1, die_value: 6, type: "piercing" },
+      { num_dice: 1, die_value: 8, type: "piercing", versatile: true },
+    ],
     martial: false,
-    versatile: "1d8",
   },
 
   // Simple Ranged Weapons
@@ -132,9 +136,11 @@ export const srd51Weapons: TemplateItem[] = [
     name: "Battleaxe",
     category: "weapon",
     weapon_type: "melee",
-    damage: [{ num_dice: 1, die_value: 8, type: "slashing" }],
+    damage: [
+      { num_dice: 1, die_value: 8, type: "slashing" },
+      { num_dice: 1, die_value: 10, type: "slashing", versatile: true },
+    ],
     martial: true,
-    versatile: "1d10",
   },
   {
     name: "Flail",
@@ -193,9 +199,11 @@ export const srd51Weapons: TemplateItem[] = [
     name: "Longsword",
     category: "weapon",
     weapon_type: "melee",
-    damage: [{ num_dice: 1, die_value: 8, type: "slashing" }],
+    damage: [
+      { num_dice: 1, die_value: 8, type: "slashing" },
+      { num_dice: 1, die_value: 10, type: "slashing", versatile: true },
+    ],
     martial: true,
-    versatile: "1d10",
   },
   {
     name: "Maul",
@@ -251,11 +259,13 @@ export const srd51Weapons: TemplateItem[] = [
     name: "Trident",
     category: "weapon",
     weapon_type: "thrown",
-    damage: [{ num_dice: 1, die_value: 6, type: "piercing" }],
+    damage: [
+      { num_dice: 1, die_value: 6, type: "piercing" },
+      { num_dice: 1, die_value: 8, type: "piercing", versatile: true },
+    ],
     normal_range: 20,
     long_range: 60,
     martial: true,
-    versatile: "1d8",
   },
   {
     name: "War pick",
@@ -268,9 +278,11 @@ export const srd51Weapons: TemplateItem[] = [
     name: "Warhammer",
     category: "weapon",
     weapon_type: "melee",
-    damage: [{ num_dice: 1, die_value: 8, type: "bludgeoning" }],
+    damage: [
+      { num_dice: 1, die_value: 8, type: "bludgeoning" },
+      { num_dice: 1, die_value: 10, type: "bludgeoning", versatile: true },
+    ],
     martial: true,
-    versatile: "1d10",
   },
   {
     name: "Whip",

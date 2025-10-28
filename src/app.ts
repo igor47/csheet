@@ -18,7 +18,10 @@ import { uploadsRoutes } from "./routes/uploads"
 // biome-ignore-start lint/style/useShorthandFunctionType: this is how the hono docs show it
 declare module "hono" {
   interface ContextRenderer {
-    (content: string | Promise<string>, props: { title: string }): Response
+    (
+      content: string | Promise<string>,
+      props: { title: string; description?: string; ogImage?: string; ogUrl?: string }
+    ): Response
   }
 }
 // biome-ignore-end lint/style/useShorthandFunctionType: this is how the hono docs show it

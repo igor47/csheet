@@ -7,31 +7,65 @@ import type { Child } from "hono/jsx"
 export interface LayoutProps {
   children?: Child[] | Child
   title?: string
+  description?: string
+  ogImage?: string
+  ogUrl?: string
   user?: User
   currentPage?: string
   flash: Flash
 }
 
-export const Layout = ({ children, title = "CSheet", user, currentPage, flash }: LayoutProps) => {
+export const Layout = ({
+  children,
+  title = "CSheet",
+  description,
+  ogImage,
+  ogUrl,
+  user,
+  currentPage,
+  flash,
+}: LayoutProps) => {
   const flashClass = clsx(
     "alert alert-dismissible fade show",
     flash ? `alert-${flash.level}` : null
   )
+
+  // Default metadata values
+  const defaultDescription =
+    "Open-source, self-hostable D&D 5e character sheet supporting both 2014 and 2024 rulesets"
+  const defaultOgImage = "/static/logo-original.svg"
+  const finalDescription = description || defaultDescription
+  const finalOgImage = ogImage || defaultOgImage
 
   return (
     <html lang="en">
       <head>
         <title>{title}</title>
 
+        {/* Standard meta tags */}
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content={finalDescription} />
+
+        {/* Open Graph meta tags */}
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={finalDescription} />
+        <meta property="og:type" content="website" />
+        {ogUrl && <meta property="og:url" content={ogUrl} />}
+        <meta property="og:image" content={finalOgImage} />
+        <meta property="og:site_name" content="CSheet" />
+
+        {/* Twitter Card meta tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={finalDescription} />
+        <meta name="twitter:image" content={finalOgImage} />
+
         {/* favicon stuff */}
         <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png" />
         <link rel="manifest" href="/static/site.webmanifest" />
-
-        {/* bootstrap settings */}
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
 
         {/* dependencies */}
         <link

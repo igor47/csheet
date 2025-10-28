@@ -1,7 +1,27 @@
 # CSheet
 
-A D&D character sheet manager with support for multiple rulesets.
-Track your character's abilities, skills, spells, hit points, and more with a clean web interface.
+**For Players:** Visit **[www.csheet.net](https://www.csheet.net)** to create and manage your D&D characters.
+
+**For Developers:** This README contains instructions for setting up a local development environment and self-hosting CSheet.
+
+---
+
+## About CSheet
+
+CSheet is an open-source, self-hostable D&D 5th Edition character sheet application that supports both the 2014 (SRD 5.1) and 2024 (SRD 5.2) rulesets.
+
+**What CSheet Is:**
+- A companion tool for managing your D&D characters
+- Support for tracking ability scores, skills, spells, hit points, and progression
+- Open-source software you can run on your own server
+- Designed for use alongside traditional tabletop play
+
+**What CSheet Is NOT:**
+- A virtual tabletop (VTT) platform
+- A dice rolling simulator
+- A replacement for sitting at the table with your friends
+
+CSheet is designed to help you track your character while you roll your own physical dice and engage with your fellow players around the table (or video call).
 
 ## Prerequisites
 

@@ -1,5 +1,13 @@
 {
   "name": "csheet",
+  "version": "0.1.0",
+  "description": "Open-source, self-hostable D&D 5e character sheet supporting both 2014 and 2024 rulesets",
+  "homepage": "https://www.csheet.net",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/igor47/csheet"
+  },
+  "license": "FSL-1.1-MIT",
   "module": "index.ts",
   "type": "module",
   "private": true,

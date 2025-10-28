@@ -89,7 +89,18 @@ export const Navbar = ({ currentPage, user }: NavbarProps) => {
               </li>
             ))}
           </ul>
-          {user ? <LoggedInContent user={user} /> : <LoggedOutContent />}
+          <div class="d-flex align-items-center gap-3">
+            <a
+              href="https://github.com/igor47/csheet"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-decoration-none"
+              title="View source on GitHub"
+            >
+              <i class="bi bi-github" style="font-size: 1.5rem;"></i>
+            </a>
+            {user ? <LoggedInContent user={user} /> : <LoggedOutContent />}
+          </div>
         </div>
       </div>
     </nav>

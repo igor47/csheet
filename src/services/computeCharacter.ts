@@ -172,6 +172,10 @@ export async function computeCharacter(
           effectDescription = "Grant proficiency"
         } else if (effect.op === "expertise") {
           effectDescription = "Grant expertise"
+        } else if (effect.op === "advantage") {
+          effectDescription = "Grant advantage"
+        } else if (effect.op === "disadvantage") {
+          effectDescription = "Grant disadvantage"
         }
 
         affectedAttributes[target].push({

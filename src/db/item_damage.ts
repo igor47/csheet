@@ -8,6 +8,7 @@ export const ItemDamageSchema = z.object({
   item_id: z.string(),
   dice: z.array(z.number().int().positive()),
   type: DamageTypeSchema,
+  versatile: z.boolean().default(false),
   created_at: z.date(),
 })
 
@@ -36,12 +37,13 @@ export async function create(db: SQL, itemDamage: CreateItemDamage): Promise<Ite
   const diceArray = `{${itemDamage.dice.join(",")}}`
 
   const result = await db`
-    INSERT INTO item_damage (id, item_id, dice, type, created_at)
+    INSERT INTO item_damage (id, item_id, dice, type, versatile, created_at)
     VALUES (
       ${id},
       ${itemDamage.item_id},
       ${diceArray}::integer[],
       ${itemDamage.type},
+      ${itemDamage.versatile},
       CURRENT_TIMESTAMP
     )
     RETURNING *

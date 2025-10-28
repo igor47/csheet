@@ -302,6 +302,7 @@ CREATE TABLE public.item_damage (
     dice integer[] NOT NULL,
     type text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    versatile boolean DEFAULT false,
     CONSTRAINT item_damage_type_check CHECK ((type = ANY (ARRAY['slashing'::text, 'piercing'::text, 'bludgeoning'::text, 'fire'::text, 'cold'::text, 'lightning'::text, 'thunder'::text, 'acid'::text, 'radiant'::text, 'necrotic'::text, 'force'::text, 'poison'::text, 'psychic'::text])))
 );
 
@@ -346,6 +347,12 @@ CREATE TABLE public.items (
     created_by character varying(26) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    light boolean DEFAULT false,
+    heavy boolean DEFAULT false,
+    two_handed boolean DEFAULT false,
+    reach boolean DEFAULT false,
+    loading boolean DEFAULT false,
+    min_strength integer,
     CONSTRAINT items_armor_class_check CHECK ((armor_class >= 0)),
     CONSTRAINT items_armor_class_dex_max_check CHECK ((armor_class_dex_max >= 0)),
     CONSTRAINT items_armor_type_check CHECK ((armor_type = ANY (ARRAY['light'::text, 'medium'::text, 'heavy'::text]))),
@@ -1075,4 +1082,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251025215908'),
     ('20251025220018'),
     ('20251025220128'),
-    ('20251027195737');
+    ('20251027195737'),
+    ('20251028010531');

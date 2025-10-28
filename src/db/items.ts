@@ -30,6 +30,14 @@ export const ItemSchema = z.object({
   finesse: z.boolean().default(false),
   mastery: WeaponMasterySchema.nullable().default(null),
   martial: z.boolean().default(false),
+  light: z.boolean().default(false),
+  heavy: z.boolean().default(false),
+  two_handed: z.boolean().default(false),
+  reach: z.boolean().default(false),
+  loading: z.boolean().default(false),
+
+  // Armor property fields
+  min_strength: z.number().int().positive().nullable().default(null),
 
   created_by: z.string(),
   created_at: z.date(),
@@ -56,6 +64,12 @@ export const UpdateItemSchema = ItemSchema.pick({
   finesse: true,
   mastery: true,
   martial: true,
+  light: true,
+  heavy: true,
+  two_handed: true,
+  reach: true,
+  loading: true,
+  min_strength: true,
 })
 
 export type Item = z.infer<typeof ItemSchema>
@@ -77,8 +91,9 @@ export async function create(db: SQL, item: CreateItem): Promise<Item> {
     INSERT INTO items (
       id, name, description, category,
       armor_type, armor_class, armor_class_dex, armor_class_dex_max,
-      armor_modifier,
+      armor_modifier, min_strength,
       normal_range, long_range, thrown, finesse, mastery, martial,
+      light, heavy, two_handed, reach, loading,
       created_by
     )
     VALUES (
@@ -91,12 +106,18 @@ export async function create(db: SQL, item: CreateItem): Promise<Item> {
       ${item.armor_class_dex},
       ${item.armor_class_dex_max},
       ${item.armor_modifier},
+      ${item.min_strength},
       ${item.normal_range},
       ${item.long_range},
       ${item.thrown},
       ${item.finesse},
       ${item.mastery},
       ${item.martial},
+      ${item.light},
+      ${item.heavy},
+      ${item.two_handed},
+      ${item.reach},
+      ${item.loading},
       ${item.created_by}
     )
     RETURNING *
@@ -158,12 +179,18 @@ export async function update(db: SQL, id: string, updates: Partial<UpdateItem>):
       armor_class_dex = COALESCE(${updates.armor_class_dex}, armor_class_dex),
       armor_class_dex_max = COALESCE(${updates.armor_class_dex_max}, armor_class_dex_max),
       armor_modifier = COALESCE(${updates.armor_modifier}, armor_modifier),
+      min_strength = COALESCE(${updates.min_strength}, min_strength),
       normal_range = COALESCE(${updates.normal_range}, normal_range),
       long_range = COALESCE(${updates.long_range}, long_range),
       thrown = COALESCE(${updates.thrown}, thrown),
       finesse = COALESCE(${updates.finesse}, finesse),
       mastery = COALESCE(${updates.mastery}, mastery),
       martial = COALESCE(${updates.martial}, martial),
+      light = COALESCE(${updates.light}, light),
+      heavy = COALESCE(${updates.heavy}, heavy),
+      two_handed = COALESCE(${updates.two_handed}, two_handed),
+      reach = COALESCE(${updates.reach}, reach),
+      loading = COALESCE(${updates.loading}, loading),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
     RETURNING *

@@ -1,6 +1,7 @@
 import { create as createCharItemDb } from "@src/db/char_items"
 import { create as createItemChargeDb } from "@src/db/item_charges"
 import { create as createItemDamageDb } from "@src/db/item_damage"
+import { create as createItemEffectDb } from "@src/db/item_effects"
 import { create as createItemDb } from "@src/db/items"
 import {
   ArmorTypeSchema,
@@ -57,6 +58,8 @@ const ArmorItemSchema = z.object({
   armor_class: NumberFormFieldSchema.int().min(0),
   armor_class_dex: BooleanFormFieldSchema.optional().default(false),
   armor_class_dex_max: NumberFormFieldSchema.int().positive().nullable().default(null),
+  min_strength: NumberFormFieldSchema.int().positive().nullable().default(null),
+  stealth_disadvantage: BooleanFormFieldSchema.optional().default(false),
 })
 
 const DamageDice = [4, 6, 8, 10, 12, 20, 100] as const
@@ -70,6 +73,11 @@ const WeaponItemBaseSchema = z.object({
   finesse: BooleanFormFieldSchema.optional().default(false),
   mastery: WeaponMasterySchema.nullable().default(null),
   martial: BooleanFormFieldSchema.optional().default(false),
+  light: BooleanFormFieldSchema.optional().default(false),
+  heavy: BooleanFormFieldSchema.optional().default(false),
+  two_handed: BooleanFormFieldSchema.optional().default(false),
+  reach: BooleanFormFieldSchema.optional().default(false),
+  loading: BooleanFormFieldSchema.optional().default(false),
 
   damage_row_count: NumberFormFieldSchema.int().min(1).max(10).optional().default(1),
 
@@ -77,42 +85,52 @@ const WeaponItemBaseSchema = z.object({
   damage_num_dice_0: NumDiceField,
   damage_die_value_0: DieValueField,
   damage_type_0: DamageTypeSchema,
+  damage_versatile_0: BooleanFormFieldSchema.optional().default(false),
   // Row 1
   damage_num_dice_1: NumDiceField.optional(),
   damage_die_value_1: DieValueField.optional(),
   damage_type_1: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_1: BooleanFormFieldSchema.optional().default(false),
   // Row 2
   damage_num_dice_2: NumDiceField.optional(),
   damage_die_value_2: DieValueField.optional(),
   damage_type_2: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_2: BooleanFormFieldSchema.optional().default(false),
   // Row 3
   damage_num_dice_3: NumDiceField.optional(),
   damage_die_value_3: DieValueField.optional(),
   damage_type_3: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_3: BooleanFormFieldSchema.optional().default(false),
   // Row 4
   damage_num_dice_4: NumDiceField.optional(),
   damage_die_value_4: DieValueField.optional(),
   damage_type_4: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_4: BooleanFormFieldSchema.optional().default(false),
   // Row 5
   damage_num_dice_5: NumDiceField.optional(),
   damage_die_value_5: DieValueField.optional(),
   damage_type_5: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_5: BooleanFormFieldSchema.optional().default(false),
   // Row 6
   damage_num_dice_6: NumDiceField.optional(),
   damage_die_value_6: DieValueField.optional(),
   damage_type_6: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_6: BooleanFormFieldSchema.optional().default(false),
   // Row 7
   damage_num_dice_7: NumDiceField.optional(),
   damage_die_value_7: DieValueField.optional(),
   damage_type_7: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_7: BooleanFormFieldSchema.optional().default(false),
   // Row 8
   damage_num_dice_8: NumDiceField.optional(),
   damage_die_value_8: DieValueField.optional(),
   damage_type_8: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_8: BooleanFormFieldSchema.optional().default(false),
   // Row 9
   damage_num_dice_9: NumDiceField.optional(),
   damage_die_value_9: DieValueField.optional(),
   damage_type_9: UnsetEnumSchema(DamageTypeSchema),
+  damage_versatile_9: BooleanFormFieldSchema.optional().default(false),
 })
 
 const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
@@ -204,7 +222,7 @@ export async function createItem(
     }
   }
 
-  const damages: { dice: number[]; type: DamageType }[] = []
+  const damages: { dice: number[]; type: DamageType; versatile: boolean }[] = []
 
   if (values.category === "weapon") {
     const weaponType = values.weapon_type
@@ -234,6 +252,9 @@ export async function createItem(
       const damageTypeField = `damage_type_${i}` as keyof typeof values
       const damageType = values[damageTypeField] as DamageType | undefined
 
+      const versatileField = `damage_versatile_${i}` as keyof typeof values
+      const versatile = (values[versatileField] as boolean | undefined) || false
+
       const damageVals = [numDice, dieValue, damageType]
 
       // All damage fields provided
@@ -241,6 +262,7 @@ export async function createItem(
         damages.push({
           dice: Array(numDice!).fill(dieValue!),
           type: damageType!,
+          versatile,
         })
 
         // Some but not all damage fields provided
@@ -299,6 +321,7 @@ export async function createItem(
       armor_class_dex: result.data.category === "armor" ? result.data.armor_class_dex : null,
       armor_class_dex_max:
         result.data.category === "armor" ? result.data.armor_class_dex_max : null,
+      min_strength: result.data.category === "armor" ? result.data.min_strength : null,
 
       armor_modifier: result.data.category === "shield" ? result.data.armor_modifier : null,
 
@@ -306,6 +329,11 @@ export async function createItem(
       finesse: result.data.category === "weapon" ? result.data.finesse : false,
       mastery: result.data.category === "weapon" ? result.data.mastery : null,
       martial: result.data.category === "weapon" ? result.data.martial : false,
+      light: result.data.category === "weapon" ? result.data.light : false,
+      heavy: result.data.category === "weapon" ? result.data.heavy : false,
+      two_handed: result.data.category === "weapon" ? result.data.two_handed : false,
+      reach: result.data.category === "weapon" ? result.data.reach : false,
+      loading: result.data.category === "weapon" ? result.data.loading : false,
 
       normal_range,
       long_range,
@@ -319,6 +347,7 @@ export async function createItem(
         item_id: newItem.id,
         dice: dmg.dice,
         type: dmg.type,
+        versatile: dmg.versatile,
       })
     }
 
@@ -328,6 +357,17 @@ export async function createItem(
         item_id: newItem.id,
         delta: result.data.starting_ammo,
         note: "Starting ammunition",
+      })
+    }
+
+    // Create stealth disadvantage effect if applicable
+    if (result.data.category === "armor" && result.data.stealth_disadvantage) {
+      await createItemEffectDb(db, {
+        item_id: newItem.id,
+        target: "stealth",
+        op: "disadvantage",
+        value: null,
+        applies: "worn",
       })
     }
 

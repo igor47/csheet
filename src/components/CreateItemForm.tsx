@@ -21,8 +21,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
   const groupedTemplates = getGroupedTemplates(rulesetId)
 
   // Build template select options with grouped headers
-  const templateOptions: Array<{ value: string; label: string; disabled?: boolean }> = [
-  ]
+  const templateOptions: Array<{ value: string; label: string; disabled?: boolean }> = []
 
   if (groupedTemplates.weapons.length > 0) {
     templateOptions.push({ value: "weapons_header", label: "— Weapons —", disabled: true })
@@ -79,11 +78,15 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
     if (template.weapon_type) values.weapon_type = template.weapon_type
     if (template.normal_range) values.normal_range = String(template.normal_range)
     if (template.long_range) values.long_range = String(template.long_range)
-    if (template.starting_ammo !== undefined)
-      values.starting_ammo = String(template.starting_ammo)
+    if (template.starting_ammo !== undefined) values.starting_ammo = String(template.starting_ammo)
     if (template.mastery) values.mastery = template.mastery
     if (template.finesse) values.finesse = "true"
     if (template.martial !== undefined) values.martial = template.martial ? "true" : "false"
+    if (template.light) values.light = "true"
+    if (template.heavy) values.heavy = "true"
+    if (template.two_handed) values.two_handed = "true"
+    if (template.reach) values.reach = "true"
+    if (template.loading) values.loading = "true"
 
     // Damage arrays
     if (template.damage) {
@@ -94,6 +97,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           values[`damage_num_dice_${i}`] = String(dmg.num_dice)
           values[`damage_die_value_${i}`] = String(dmg.die_value)
           values[`damage_type_${i}`] = dmg.type
+          if (dmg.versatile) values[`damage_versatile_${i}`] = "true"
         }
       }
     }
@@ -105,11 +109,15 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
       values.armor_class_dex = template.armor_class_dex ? "true" : "false"
     if (template.armor_class_dex_max !== undefined)
       values.armor_class_dex_max = String(template.armor_class_dex_max)
+    if (template.min_strength !== undefined) values.min_strength = String(template.min_strength)
+    if (template.stealth_disadvantage) values.stealth_disadvantage = "true"
 
     // Shield-specific fields
     if (template.armor_modifier !== undefined)
       values.armor_modifier = String(template.armor_modifier)
   }
+
+  console.dir(values)
 
   if (values.category === "weapon" && !values.weapon_type) {
     values.weapon_type = "melee"
@@ -273,6 +281,39 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
               )}
             </div>
           )}
+
+          <div class="mb-3">
+            <label for="min-strength" class="form-label">
+              Minimum Strength
+            </label>
+            <input
+              type="number"
+              class={clsx("form-control", { "is-invalid": errors?.min_strength })}
+              id="min-strength"
+              name="min_strength"
+              min="0"
+              value={values.min_strength || ""}
+              placeholder="None"
+            />
+            {errors?.min_strength && (
+              <div class="invalid-feedback d-block">{errors.min_strength}</div>
+            )}
+            <div class="form-text">Minimum Strength required to wear this armor</div>
+          </div>
+
+          <div class="form-check mb-3">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="stealth-disadvantage"
+              name="stealth_disadvantage"
+              value="true"
+              checked={values.stealth_disadvantage === "true"}
+            />
+            <label class="form-check-label" for="stealth-disadvantage">
+              Imposes disadvantage on Stealth checks
+            </label>
+          </div>
         </div>
 
         {/* Shield-specific fields */}
@@ -425,44 +466,59 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
               const damageTypeError = errors?.[`damage_type_${i}`]
 
               return (
-                <div class="row mb-2">
-                  <div class="col-3">
+                <div class="mb-3">
+                  <div class="row mb-1">
+                    <div class="col-3">
+                      <input
+                        type="number"
+                        class={clsx("form-control form-control-sm", { "is-invalid": numDiceError })}
+                        name={`damage_num_dice_${i}`}
+                        placeholder="# dice"
+                        min="1"
+                        value={values[`damage_num_dice_${i}`] || "1"}
+                      />
+                      {numDiceError && (
+                        <div class="invalid-feedback d-block small">{numDiceError}</div>
+                      )}
+                    </div>
+                    <div class="col-1 d-flex align-items-top justify-content-center">
+                      <span class="text-muted">d</span>
+                    </div>
+                    <div class="col-3">
+                      <Select
+                        class="form-select-sm"
+                        name={`damage_die_value_${i}`}
+                        placeholder="Die"
+                        options={dieValueOptions}
+                        value={values[`damage_die_value_${i}`]}
+                        error={dieValueError}
+                        hideErrorMsg={true}
+                      />
+                    </div>
+                    <div class="col-5">
+                      <Select
+                        class="form-select-sm"
+                        name={`damage_type_${i}`}
+                        placeholder="Type"
+                        options={damageTypeOptions}
+                        value={values[`damage_type_${i}`]}
+                        error={damageTypeError}
+                        hideErrorMsg={true}
+                      />
+                    </div>
+                  </div>
+                  <div class="form-check ms-1">
                     <input
-                      type="number"
-                      class={clsx("form-control form-control-sm", { "is-invalid": numDiceError })}
-                      name={`damage_num_dice_${i}`}
-                      placeholder="# dice"
-                      min="1"
-                      value={values[`damage_num_dice_${i}`] || "1"}
+                      class="form-check-input form-check-input-sm"
+                      type="checkbox"
+                      id={`damage-versatile-${i}`}
+                      name={`damage_versatile_${i}`}
+                      value="true"
+                      checked={values[`damage_versatile_${i}`] === "true"}
                     />
-                    {numDiceError && (
-                      <div class="invalid-feedback d-block small">{numDiceError}</div>
-                    )}
-                  </div>
-                  <div class="col-1 d-flex align-items-top justify-content-center">
-                    <span class="text-muted">d</span>
-                  </div>
-                  <div class="col-3">
-                    <Select
-                      class="form-select-sm"
-                      name={`damage_die_value_${i}`}
-                      placeholder="Die"
-                      options={dieValueOptions}
-                      value={values[`damage_die_value_${i}`]}
-                      error={dieValueError}
-                      hideErrorMsg={true}
-                    />
-                  </div>
-                  <div class="col-5">
-                    <Select
-                      class="form-select-sm"
-                      name={`damage_type_${i}`}
-                      placeholder="Type"
-                      options={damageTypeOptions}
-                      value={values[`damage_type_${i}`]}
-                      error={damageTypeError}
-                      hideErrorMsg={true}
-                    />
+                    <label class="form-check-label small" for={`damage-versatile-${i}`}>
+                      Versatile
+                    </label>
                   </div>
                 </div>
               )
@@ -522,7 +578,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             </label>
           </div>
 
-          <div class="form-check mb-3">
+          <div class="form-check mb-2">
             <input
               class="form-check-input"
               type="checkbox"
@@ -533,6 +589,76 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             />
             <label class="form-check-label" for="martial">
               Martial Weapon
+            </label>
+          </div>
+
+          <div class="form-check mb-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="light"
+              name="light"
+              value="true"
+              checked={values.light === "true"}
+            />
+            <label class="form-check-label" for="light">
+              Light
+            </label>
+          </div>
+
+          <div class="form-check mb-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="heavy"
+              name="heavy"
+              value="true"
+              checked={values.heavy === "true"}
+            />
+            <label class="form-check-label" for="heavy">
+              Heavy
+            </label>
+          </div>
+
+          <div class="form-check mb-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="two-handed"
+              name="two_handed"
+              value="true"
+              checked={values.two_handed === "true"}
+            />
+            <label class="form-check-label" for="two-handed">
+              Two-Handed
+            </label>
+          </div>
+
+          <div class="form-check mb-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="reach"
+              name="reach"
+              value="true"
+              checked={values.reach === "true"}
+            />
+            <label class="form-check-label" for="reach">
+              Reach
+            </label>
+          </div>
+
+          <div class="form-check mb-3">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="loading"
+              name="loading"
+              value="true"
+              checked={values.loading === "true"}
+            />
+            <label class="form-check-label" for="loading">
+              Loading
             </label>
           </div>
         </div>

@@ -100,6 +100,8 @@ export const srd51Weapons: TemplateItem[] = [
     martial: false,
     ammunition: true,
     two_handed: true,
+    normal_range: 80,
+    long_range: 320,
   },
   {
     name: "Dart",
@@ -120,6 +122,8 @@ export const srd51Weapons: TemplateItem[] = [
     martial: false,
     ammunition: true,
     two_handed: true,
+    normal_range: 80,
+    long_range: 320,
   },
   {
     name: "Sling",
@@ -129,6 +133,8 @@ export const srd51Weapons: TemplateItem[] = [
     starting_ammo: 20,
     martial: false,
     ammunition: true,
+    normal_range: 30,
+    long_range: 120,
   },
 
   // Martial Melee Weapons

@@ -17,6 +17,7 @@ import { HitDiceEditForm } from "@src/components/HitDiceEditForm"
 import { HitDiceHistory } from "@src/components/HitDiceHistory"
 import { HitPointsEditForm } from "@src/components/HitPointsEditForm"
 import { HitPointsHistory, type HPHistoryEvent } from "@src/components/HitPointsHistory"
+import { ItemDetail } from "@src/components/ItemDetail"
 import { ItemEffectsEditor } from "@src/components/ItemEffectsEditor"
 import { ItemHistory } from "@src/components/ItemHistory"
 import { LearnSpellForm } from "@src/components/LearnSpellForm"
@@ -464,6 +465,34 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
+})
+
+characterRoutes.get("/characters/:id/items/:itemId", async (c) => {
+  const characterId = c.req.param("id") as string
+  const itemId = c.req.param("itemId") as string
+
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  if (char.user_id !== c.var.user?.id) {
+    await setFlashMsg(c, "You do not have permission to view this character")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 403)
+  }
+
+  // Find the item in the computed character's items
+  const item = char.equippedItems.find((i) => i.id === itemId)
+  if (!item) {
+    await setFlashMsg(c, "Item not found", "error")
+    c.header("HX-Redirect", `/characters/${characterId}`)
+    return c.body(null, 204)
+  }
+
+  return c.html(<ItemDetail item={item} />)
 })
 
 characterRoutes.get("/characters/:id/items/:itemId/edit", async (c) => {

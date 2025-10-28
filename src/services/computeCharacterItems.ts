@@ -36,6 +36,7 @@ export interface EquippedComputedItem {
   useVerb: string
   currentCharges: number
   chargeLabel: "ammunition" | "charges" | null
+  humanReadableDamage: string[]
 
   // Equipment state
   worn: boolean
@@ -103,6 +104,7 @@ export async function computeCharacterItems(
             'item_id', dmgs.item_id,
             'dice', dmgs.dice,
             'type', dmgs.type,
+            'versatile', dmgs.versatile,
             'created_at', dmgs.created_at
           )
         ) FILTER (WHERE dmgs.id IS NOT NULL),
@@ -169,6 +171,24 @@ export async function computeCharacterItems(
       created_at: new Date(d.created_at),
     }))
 
+    // Compute human-readable damage strings
+    const humanReadableDamage: string[] = damage.map((d) => {
+      // Convert dice array to string (e.g., [8] -> "1d8", [6, 6] -> "2d6")
+      const diceCount = d.dice.length
+      const diceSize = d.dice[0] // Assume all dice in array are same size
+      const diceString = `${diceCount}d${diceSize}`
+
+      // Add damage type
+      let result = `${diceString} ${d.type}`
+
+      // Add versatile indicator
+      if (d.versatile) {
+        result += " (2-handed)"
+      }
+
+      return result
+    })
+
     return {
       id: row.id,
       name: row.name,
@@ -194,6 +214,7 @@ export async function computeCharacterItems(
       useVerb,
       currentCharges: row.current_charges,
       chargeLabel,
+      humanReadableDamage,
       worn: row.worn,
       wielded: row.wielded,
       damage,

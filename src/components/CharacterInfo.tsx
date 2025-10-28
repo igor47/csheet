@@ -1,5 +1,6 @@
 import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 import { HitDiceDisplay } from "./ui/HitDiceDisplay"
 import { HitPointsBar } from "./ui/HitPointsBar"
 import { LabeledValue } from "./ui/LabeledValue"
@@ -7,6 +8,56 @@ import { LabeledValue } from "./ui/LabeledValue"
 export interface CharacterInfoProps {
   character: ComputedCharacter
   swapOob?: boolean
+}
+
+interface WieldedWeaponRowProps {
+  item: EquippedComputedItem
+  characterId: string
+}
+
+const WieldedWeaponRow = ({ item, characterId }: WieldedWeaponRowProps) => {
+  // Use pre-computed human-readable damage
+  const damageDisplay =
+    item.humanReadableDamage.length > 0 ? item.humanReadableDamage.join(", ") : null
+
+  return (
+    <div class="d-flex align-items-center justify-content-between gap-2">
+      <div class="d-flex flex-column">
+        <button
+          type="button"
+          class="btn btn-link p-0 text-start fw-bold"
+          data-bs-toggle="modal"
+          data-bs-target="#editModal"
+          hx-get={`/characters/${characterId}/items/${item.id}`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+        >
+          {item.name}
+        </button>
+        {damageDisplay && <span class="text-muted small d-md-none">({damageDisplay})</span>}
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        {damageDisplay && (
+          <span class="text-muted small d-none d-md-inline">({damageDisplay})</span>
+        )}
+        {item.chargeLabel && (
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-info"
+            hx-get={`/characters/${characterId}/items/${item.id}/charges`}
+            hx-target="#editModalContent"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#editModal"
+          >
+            <i class="bi bi-lightning-charge"></i>{" "}
+            {item.chargeLabel === "ammunition" ? "Ammo" : "Charges"}
+            <span class="badge bg-info ms-1">{item.currentCharges}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function numToOrdinal(n: number): string {
@@ -194,6 +245,25 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                 />
               </div>
             </div>
+
+            {/* Weapons in Hand */}
+            {(() => {
+              const wieldedWeapons = character.equippedItems.filter((item) => item.wielded)
+              if (wieldedWeapons.length === 0) return null
+
+              return (
+                <div class="row g-2 h-auto mt-2">
+                  <div class="col-12">
+                    <div class="text-muted small mb-1">Weapons in Hand</div>
+                    <div class="d-flex flex-column gap-1">
+                      {wieldedWeapons.map((weapon) => (
+                        <WieldedWeaponRow item={weapon} characterId={character.id} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Hit Points Progress Bar */}
             <div class="row g-2 h-auto mt-2">

@@ -1,5 +1,4 @@
-import type { ClassNameType } from "@src/lib/dnd"
-import { Skills, type SkillType } from "@src/lib/dnd"
+import type { ClassNameType, SkillType } from "@src/lib/dnd"
 import { getRuleset, type RulesetId } from "@src/lib/dnd/rulesets"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"

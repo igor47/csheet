@@ -119,6 +119,7 @@ export async function computeCharacterItems(
   `
 
   // Parse and compute derived fields
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return result.map((row: any) => {
     const category = row.category as ItemCategoryType
 
@@ -151,6 +152,7 @@ export async function computeCharacterItems(
     }
 
     // Parse effects with proper date handling and compute isActive
+    // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
     const effects: ItemEffect[] = row.effects.map((e: any) => {
       // Determine if effect is active based on item state
       const isActive =
@@ -166,6 +168,7 @@ export async function computeCharacterItems(
     })
 
     // Parse damage with proper date handling
+    // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
     const damage: ItemDamage[] = row.damage.map((d: any) => ({
       ...d,
       created_at: new Date(d.created_at),

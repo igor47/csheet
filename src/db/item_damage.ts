@@ -21,6 +21,7 @@ export const CreateItemDamageSchema = ItemDamageSchema.omit({
 export type ItemDamage = z.infer<typeof ItemDamageSchema>
 export type CreateItemDamage = z.infer<typeof CreateItemDamageSchema>
 
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
 function parseItemDamage(row: any): ItemDamage {
   return ItemDamageSchema.parse({
     ...row,

@@ -83,6 +83,7 @@ export async function listCharacters(
 
   const results = await query
 
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return results.map((row: any): ListCharacter => {
     const classes: CharacterClass[] = Array.isArray(row.classes) ? row.classes : []
     const totalLevel = classes.reduce((sum, c) => sum + c.level, 0)

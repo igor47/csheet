@@ -70,6 +70,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     ORDER BY created_at ASC
   `
 
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return result.map((row: any) =>
     CharTraitSchema.parse({
       ...row,

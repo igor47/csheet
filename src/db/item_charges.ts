@@ -20,6 +20,7 @@ export const CreateItemChargeSchema = ItemChargeSchema.omit({
 export type ItemCharge = z.infer<typeof ItemChargeSchema>
 export type CreateItemCharge = z.infer<typeof CreateItemChargeSchema>
 
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
 function parseItemCharge(row: any): ItemCharge {
   return ItemChargeSchema.parse({
     ...row,
@@ -100,6 +101,7 @@ export async function getChargeHistoryByCharacter(
     ORDER BY ic.created_at DESC
   `
 
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return result.map((row: any) => ({
     id: row.id,
     item_id: row.item_id,

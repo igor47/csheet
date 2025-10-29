@@ -78,11 +78,37 @@ const Background2024Schema = z.object({
 })
 
 /**
+ * Class Skill Proficiency Selections
+ * Each skill that can be selected from class has a corresponding field
+ */
+const ClassSkillProficiencySchema = z.object({
+  class_proficiency_acrobatics: BooleanFormFieldSchema.optional(),
+  class_proficiency_animal_handling: BooleanFormFieldSchema.optional(),
+  class_proficiency_arcana: BooleanFormFieldSchema.optional(),
+  class_proficiency_athletics: BooleanFormFieldSchema.optional(),
+  class_proficiency_deception: BooleanFormFieldSchema.optional(),
+  class_proficiency_history: BooleanFormFieldSchema.optional(),
+  class_proficiency_insight: BooleanFormFieldSchema.optional(),
+  class_proficiency_intimidation: BooleanFormFieldSchema.optional(),
+  class_proficiency_investigation: BooleanFormFieldSchema.optional(),
+  class_proficiency_medicine: BooleanFormFieldSchema.optional(),
+  class_proficiency_nature: BooleanFormFieldSchema.optional(),
+  class_proficiency_perception: BooleanFormFieldSchema.optional(),
+  class_proficiency_performance: BooleanFormFieldSchema.optional(),
+  class_proficiency_persuasion: BooleanFormFieldSchema.optional(),
+  class_proficiency_religion: BooleanFormFieldSchema.optional(),
+  class_proficiency_sleight_of_hand: BooleanFormFieldSchema.optional(),
+  class_proficiency_stealth: BooleanFormFieldSchema.optional(),
+  class_proficiency_survival: BooleanFormFieldSchema.optional(),
+})
+
+/**
  * Combined Create Character API Schema
  */
 export const CreateCharacterApiSchema = BaseCharacterSchema.and(BaseAbilityScoresSchema)
   .and(AbilityScoreMethodSchemas)
   .and(Background2024Schema)
+  .and(ClassSkillProficiencySchema)
 
 export type CreateCharacterResult =
   | { complete: true; character: Character }
@@ -356,6 +382,56 @@ export async function createCharacter(
       const finalScoreErrors = validateFinalScores(baseScores, modifiers)
       Object.assign(errors, finalScoreErrors)
     }
+
+    // Validate class skill proficiency selections
+    if (data.class) {
+      const classDef = ruleset.classes[data.class as ClassNameType]
+      if (classDef) {
+        const skillChoices = classDef.skillChoices
+        const selectedSkills: SkillType[] = []
+
+        // Parse selected skills from form data
+        for (const skill of skillChoices.from) {
+          const fieldName = `class_proficiency_${skill.replace(/\s+/g, "_")}`
+          const value = data[fieldName]
+          if (value === "true" || value === "on") {
+            selectedSkills.push(skill)
+          }
+        }
+
+        // Check if exactly the required number of skills are selected
+        if (selectedSkills.length !== skillChoices.choose) {
+          errors.class_skills = `Must select exactly ${skillChoices.choose} skill${
+            skillChoices.choose > 1 ? "s" : ""
+          } (currently selected ${selectedSkills.length})`
+        }
+
+        // Check for conflicts with background skills
+        if (data.background) {
+          const background = ruleset.backgrounds[data.background]
+          const backgroundSkills = background?.skillProficiencies || []
+          for (const skill of selectedSkills) {
+            if (backgroundSkills.includes(skill)) {
+              const fieldName = `class_proficiency_${skill.replace(/\s+/g, "_")}`
+              errors[fieldName] = `Already granted by ${background?.name} background`
+            }
+          }
+        }
+
+        // Check for any class_proficiency_* fields that aren't in the allowed list
+        for (const key of Object.keys(data)) {
+          const value = data[key]
+          if (key.startsWith("class_proficiency_") && (value === "true" || value === "on")) {
+            // Convert field name back to skill name
+            const skillName = key.replace("class_proficiency_", "").replace(/_/g, " ")
+            // Check if this skill is in the allowed list for this class
+            if (!skillChoices.from.includes(skillName as SkillType)) {
+              errors[key] = `${skillName} is not available for ${classDef.name}`
+            }
+          }
+        }
+      }
+    }
   }
 
   if (isCheck || Object.keys(errors).length > 0) {
@@ -479,13 +555,8 @@ export async function createCharacter(
     const background = ruleset.backgrounds[validated.background]
     const backgroundSkillProficiencies = new Set<SkillType>()
 
-    if (background?.skillProficiencies) {
-      for (const skill of background.skillProficiencies) {
-        // Only handle fixed skills (not Choice objects)
-        if (typeof skill === "string") {
-          backgroundSkillProficiencies.add(skill as SkillType)
-        }
-      }
+    for (const skill of background?.skillProficiencies || []) {
+      backgroundSkillProficiencies.add(skill)
     }
 
     // Only create skill entries for proficient skills
@@ -495,6 +566,29 @@ export async function createCharacter(
         skill,
         proficiency: "proficient",
         note: `Proficiency as ${background?.name}`,
+      })
+    }
+
+    // Get class skill proficiency selections
+    const skillChoices = classDef.skillChoices
+    const classSkillProficiencies: SkillType[] = []
+    const validatedData = validated as unknown as Record<string, string | number | boolean | null>
+
+    for (const skill of skillChoices.from) {
+      const fieldName = `class_proficiency_${skill.replace(/\s+/g, "_")}`
+      // After Zod parsing, BooleanFormFieldSchema converts "true"/"on" to true
+      if (validatedData[fieldName]) {
+        classSkillProficiencies.push(skill)
+      }
+    }
+
+    // Create skill entries for class proficiencies
+    for (const skill of classSkillProficiencies) {
+      await createSkillDb(tx, {
+        character_id: character.id,
+        skill,
+        proficiency: "proficient",
+        note: `Proficiency from ${classDef.name}`,
       })
     }
 

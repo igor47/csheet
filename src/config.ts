@@ -31,6 +31,8 @@ export const config = {
   otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || "15", 10),
   otpRateLimitPerHour: parseInt(process.env.OTP_RATE_LIMIT_PER_HOUR || "3", 10),
 
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+
   nodeEnv: process.env.NODE_ENV || "development",
 
   isProd: process.env.NODE_ENV === "production",
@@ -40,6 +42,11 @@ export const config = {
 // Helper to check if SMTP is configured
 export function isSmtpConfigured(): boolean {
   return config.isTest || !!config.smtpHost
+}
+
+// Helper to check if AI features are enabled
+export function isAiEnabled(): boolean {
+  return !!config.anthropicApiKey
 }
 
 // Print config as JSON when run directly

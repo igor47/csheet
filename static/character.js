@@ -9,6 +9,15 @@ document.body.addEventListener('closeEditModal', function() {
   }
 });
 
+// Open edit modal when backend triggers openEditModal event
+document.body.addEventListener('openEditModal', function() {
+  const modalElement = document.getElementById('editModal');
+  if (modalElement) {
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+  }
+});
+
 // scroll position restore
 document.body.addEventListener('htmx:afterSwap', (e) => {
   const container = e.target;

@@ -1,3 +1,8 @@
+\restrict ELRYEllzgERsiV4l7JhasXJTPmeatB0eNXTllLbpb7Zue2jrzquGINTlUxO5fUc
+
+-- Dumped from database version 16.10
+-- Dumped by pg_dump version 17.6
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -279,6 +284,22 @@ COMMENT ON COLUMN public.characters.archived_at IS 'Timestamp when the character
 
 
 --
+-- Name: chat_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.chat_messages (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    role text NOT NULL,
+    content text NOT NULL,
+    tool_calls jsonb,
+    tool_results jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT chat_messages_role_check CHECK ((role = ANY (ARRAY['user'::text, 'assistant'::text, 'system'::text])))
+);
+
+
+--
 -- Name: item_charges; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -515,6 +536,14 @@ ALTER TABLE ONLY public.characters
 
 
 --
+-- Name: chat_messages chat_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chat_messages
+    ADD CONSTRAINT chat_messages_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: item_charges item_charges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -708,6 +737,13 @@ CREATE INDEX idx_characters_user_id ON public.characters USING btree (user_id);
 --
 
 CREATE INDEX idx_characters_user_id_archived_at ON public.characters USING btree (user_id, archived_at);
+
+
+--
+-- Name: idx_chat_messages_character_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_chat_messages_character_created ON public.chat_messages USING btree (character_id, created_at DESC);
 
 
 --
@@ -1007,6 +1043,14 @@ ALTER TABLE ONLY public.characters
 
 
 --
+-- Name: chat_messages chat_messages_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chat_messages
+    ADD CONSTRAINT chat_messages_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
 -- Name: uploads fk_user; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1050,6 +1094,8 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
+\unrestrict ELRYEllzgERsiV4l7JhasXJTPmeatB0eNXTllLbpb7Zue2jrzquGINTlUxO5fUc
+
 
 --
 -- Dbmate schema migrations
@@ -1083,4 +1129,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251025220018'),
     ('20251025220128'),
     ('20251027195737'),
-    ('20251028010531');
+    ('20251028010531'),
+    ('20251029183629');

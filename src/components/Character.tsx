@@ -1,5 +1,6 @@
 import type { CharNote } from "@src/db/char_notes"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import type { ChatMessage } from "./ChatBox"
 import { CharacterInfo } from "./CharacterInfo"
 import { CurrentStatus } from "./CurrentStatus"
 import { AbilitiesPanel } from "./panels/AbilitiesPanel"
@@ -12,9 +13,10 @@ import { SessionNotes } from "./SessionNotes"
 type CharacterProps = {
   character: ComputedCharacter
   currentNote: CharNote | null
+  chatMessages?: ChatMessage[]
 }
 
-export const Character = ({ character, currentNote }: CharacterProps) => {
+export const Character = ({ character, currentNote, chatMessages }: CharacterProps) => {
   return (
     <>
       {/* Content */}
@@ -23,7 +25,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
           <CharacterInfo character={character} />
 
           <div class="character-main-view d-lg-flex flex-lg-column" id="character-main-view">
-            <CurrentStatus character={character} />
+            <CurrentStatus character={character} chatMessages={chatMessages} />
 
             <SessionNotes characterId={character.id} currentNote={currentNote} />
           </div>

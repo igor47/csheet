@@ -47,6 +47,7 @@ import { findByCharacterId as findCoinChanges } from "@src/db/char_coins"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
 import { getCharItemHistory } from "@src/db/char_items"
+import { findByCharacterId as getChatHistory } from "@src/db/chat_messages"
 import { findByCharacterId } from "@src/db/char_levels"
 import {
   create as createNote,
@@ -149,7 +150,14 @@ characterRoutes.get("/characters/:id", async (c) => {
 
   const currentNote = await getCurrentNote(getDb(c), id)
 
-  return c.render(<Character character={char} currentNote={currentNote} />, {
+  // Load chat history for AI assistant
+  const chatHistory = await getChatHistory(getDb(c), id, 20)
+  const chatMessages = chatHistory.map((msg) => ({
+    role: msg.role as "user" | "assistant",
+    content: msg.content,
+  }))
+
+  return c.render(<Character character={char} currentNote={currentNote} chatMessages={chatMessages} />, {
     title: "Character Sheet",
   })
 })

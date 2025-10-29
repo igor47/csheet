@@ -494,4 +494,109 @@ export function getTraits(ruleset: Ruleset, forWhom: ForWhom): TraitWithSource[]
   }
 }
 
+/**
+ * D&D 5E Coin Conversion Utilities
+ * 1pp = 1000cp, 1gp = 100cp, 1ep = 50cp, 1sp = 10cp
+ */
+
+export type CoinPurse = {
+  pp: number
+  gp: number
+  ep: number
+  sp: number
+  cp: number
+}
+
+/**
+ * Convert all coins to copper pieces for calculation
+ */
+export function toCopper(coins: CoinPurse): number {
+  return coins.pp * 1000 + coins.gp * 100 + coins.ep * 50 + coins.sp * 10 + coins.cp
+}
+
+/**
+ * Apply deltas to coins with change-making
+ * Only breaks down larger coins when necessary, doesn't consolidate smaller coins into larger ones
+ */
+export function applyDeltasWithChange(currentCoins: CoinPurse, deltas: CoinPurse): CoinPurse {
+  // Start by applying deltas directly
+  let pp = currentCoins.pp + deltas.pp
+  let gp = currentCoins.gp + deltas.gp
+  let ep = currentCoins.ep + deltas.ep
+  let sp = currentCoins.sp + deltas.sp
+  let cp = currentCoins.cp + deltas.cp
+
+  // Handle negative values by cascading upwards and making change
+  // We need to process from smallest to largest repeatedly until all negatives are resolved
+  let iterations = 0
+  const maxIterations = 10 // Safety guard
+
+  while ((cp < 0 || sp < 0 || ep < 0 || gp < 0) && iterations < maxIterations) {
+    iterations++
+
+    // Handle negative copper
+    if (cp < 0) {
+      if (sp > 0) {
+        const spNeeded = Math.ceil(-cp / 10)
+        const spToBreak = Math.min(sp, spNeeded)
+        sp -= spToBreak
+        cp += spToBreak * 10
+      } else if (ep > 0) {
+        ep -= 1
+        sp += 5
+      } else if (gp > 0) {
+        gp -= 1
+        sp += 10
+      } else if (pp > 0) {
+        pp -= 1
+        gp += 10
+      }
+      continue
+    }
+
+    // Handle negative silver
+    if (sp < 0) {
+      if (ep > 0) {
+        const epNeeded = Math.ceil(-sp / 5)
+        const epToBreak = Math.min(ep, epNeeded)
+        ep -= epToBreak
+        sp += epToBreak * 5
+      } else if (gp > 0) {
+        gp -= 1
+        ep += 2
+      } else if (pp > 0) {
+        pp -= 1
+        gp += 10
+      }
+      continue
+    }
+
+    // Handle negative electrum
+    if (ep < 0) {
+      if (gp > 0) {
+        const gpNeeded = Math.ceil(-ep / 2)
+        const gpToBreak = Math.min(gp, gpNeeded)
+        gp -= gpToBreak
+        ep += gpToBreak * 2
+      } else if (pp > 0) {
+        pp -= 1
+        gp += 10
+      }
+      continue
+    }
+
+    // Handle negative gold
+    if (gp < 0) {
+      if (pp > 0) {
+        const ppNeeded = Math.ceil(-gp / 10)
+        const ppToBreak = Math.min(pp, ppNeeded)
+        pp -= ppToBreak
+        gp += ppToBreak * 10
+      }
+    }
+  }
+
+  return { pp, gp, ep, sp, cp }
+}
+
 export { getRuleset } from "./dnd/rulesets"

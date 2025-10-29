@@ -1,11 +1,13 @@
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import { ChatBox, type ChatMessage } from "./ChatBox"
 
 export interface CurrentStatusProps {
   character: ComputedCharacter
   swapOob?: boolean
+  chatMessages?: ChatMessage[]
 }
 
-export const CurrentStatus = ({ character, swapOob }: CurrentStatusProps) => {
+export const CurrentStatus = ({ character, swapOob, chatMessages }: CurrentStatusProps) => {
   // Calculate HP deficit
   const hpLost = character.maxHitPoints - character.currentHP
 
@@ -46,30 +48,36 @@ export const CurrentStatus = ({ character, swapOob }: CurrentStatusProps) => {
     : `You are ${statusParts.join(", ")}.`
 
   return (
-    <div class="card shadow-sm mb-3" id="current-status-card" hx-swap-oob={swapOob && "true"}>
-      <div class="card-header">
-        <h5 class="mb-0">Current Status</h5>
+    <>
+      {/* AI Chat Box - rendered first if enabled */}
+      <ChatBox character={character} messages={chatMessages} />
+
+      {/* Current Status Card */}
+      <div class="card shadow-sm mb-3" id="current-status-card" hx-swap-oob={swapOob && "true"}>
+        <div class="card-header">
+          <h5 class="mb-0">Current Status</h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-3">{statusMessage}</p>
+          <button
+            type="button"
+            class="btn btn-primary w-100"
+            disabled={fullStatus}
+            hx-post={`/characters/${character.id}/longrest`}
+            hx-target="#current-status-card"
+            hx-swap="outerHTML"
+            hx-confirm="Are you ready to take a long rest? This will require at least 8 in-game hours of downtime."
+          >
+            <i class="bi bi-moon-stars me-2"></i>
+            Take Long Rest
+          </button>
+          {fullStatus && (
+            <small class="text-muted d-block mt-2">
+              No rest needed - all resources are available
+            </small>
+          )}
+        </div>
       </div>
-      <div class="card-body">
-        <p class="mb-3">{statusMessage}</p>
-        <button
-          type="button"
-          class="btn btn-primary w-100"
-          disabled={fullStatus}
-          hx-post={`/characters/${character.id}/longrest`}
-          hx-target="#current-status-card"
-          hx-swap="outerHTML"
-          hx-confirm="Are you ready to take a long rest? This will require at least 8 in-game hours of downtime."
-        >
-          <i class="bi bi-moon-stars me-2"></i>
-          Take Long Rest
-        </button>
-        {fullStatus && (
-          <small class="text-muted d-block mt-2">
-            No rest needed - all resources are available
-          </small>
-        )}
-      </div>
-    </div>
+    </>
   )
 }

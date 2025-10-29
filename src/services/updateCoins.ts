@@ -1,4 +1,5 @@
 import { create as createCoinsDb } from "@src/db/char_coins"
+import { applyDeltasWithChange, toCopper } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import {
   BooleanFormFieldSchema,
@@ -9,14 +10,27 @@ import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
-// Schema for the entire form
+// Schema for the coin update API
 export const UpdateCoinsApiSchema = z.object({
-  pp: NumberFormFieldSchema.int().min(0),
-  gp: NumberFormFieldSchema.int().min(0),
-  ep: NumberFormFieldSchema.int().min(0),
-  sp: NumberFormFieldSchema.int().min(0),
-  cp: NumberFormFieldSchema.int().min(0),
-  note: OptionalNullStringSchema,
+  pp: NumberFormFieldSchema.int().describe(
+    "Change in platinum pieces (positive for gain, negative for loss)"
+  ).default(0),
+  gp: NumberFormFieldSchema.int().describe(
+    "Change in gold pieces (positive for gain, negative for loss)"
+  ).default(0),
+  ep: NumberFormFieldSchema.int().describe(
+    "Change in electrum pieces (positive for gain, negative for loss)"
+  ).default(0),
+  sp: NumberFormFieldSchema.int().describe(
+    "Change in silver pieces (positive for gain, negative for loss)"
+  ).default(0),
+  cp: NumberFormFieldSchema.int().describe(
+    "Change in copper pieces (positive for gain, negative for loss)"
+  ).default(0),
+  note: OptionalNullStringSchema.describe("Note describing the transaction"),
+  make_change: BooleanFormFieldSchema.optional()
+    .default(true)
+    .describe("Allow making change from larger denominations"),
   is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
@@ -25,54 +39,39 @@ export type UpdateCoinsResult =
   | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
- * Update coin values
+ * Update coin values using deltas (changes)
  */
 export async function updateCoins(
   db: SQL,
   char: ComputedCharacter,
   data: Record<string, string>
 ): Promise<UpdateCoinsResult> {
-  // go on with validating fields
+  // Validate with partial schema for check mode
   const checkD = UpdateCoinsApiSchema.partial().safeParse(data)
   if (!checkD.success) {
     return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
   }
 
+  // Parse full data
+  const result = UpdateCoinsApiSchema.safeParse(data)
+  if (!result.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
+  }
+
   const errors: Record<string, string> = {}
 
-  // Validate each coin field
-  const coinFields = ["pp", "gp", "ep", "sp", "cp"] as const
-  for (const field of coinFields) {
-    if (data[field]) {
-      const value = parseInt(data[field], 10)
-      if (Number.isNaN(value) || value < 0) {
-        errors[field] = "Must be a non-negative number"
-      }
-    } else if (!checkD.data.is_check) {
-      errors[field] = "Value is required"
-    }
+  // Get parsed deltas from Zod
+  const deltas = {
+    pp: result.data.pp || 0,
+    gp: result.data.gp || 0,
+    ep: result.data.ep || 0,
+    sp: result.data.sp || 0,
+    cp: result.data.cp || 0,
   }
 
-  // Get new values or use current
-  const currentCoins = char.coins || { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }
-  const newCoins = {
-    pp: data.pp ? parseInt(data.pp, 10) : currentCoins.pp,
-    gp: data.gp ? parseInt(data.gp, 10) : currentCoins.gp,
-    ep: data.ep ? parseInt(data.ep, 10) : currentCoins.ep,
-    sp: data.sp ? parseInt(data.sp, 10) : currentCoins.sp,
-    cp: data.cp ? parseInt(data.cp, 10) : currentCoins.cp,
-  }
-
-  // Check if any coin value has changed
-  const changed =
-    newCoins.pp !== currentCoins.pp ||
-    newCoins.gp !== currentCoins.gp ||
-    newCoins.ep !== currentCoins.ep ||
-    newCoins.sp !== currentCoins.sp ||
-    newCoins.cp !== currentCoins.cp
-
-  // Validate that at least one coin value has changed
-  if (!checkD.data.is_check && !changed) {
+  // Check if any coin value is changing
+  const hasChange = Object.values(deltas).some((v) => v !== 0)
+  if (!checkD.data.is_check && !hasChange) {
     errors.general = "Must change at least one coin value"
   }
 
@@ -80,16 +79,51 @@ export async function updateCoins(
     return { complete: false, values: data, errors }
   }
 
-  // Parse and validate with Zod
-  const result = UpdateCoinsApiSchema.safeParse(data)
-  if (!result.success) {
-    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
+  // Get current coins
+  const currentCoins = char.coins || { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }
+
+  // Calculate new coin totals
+  let newCoins: { pp: number; gp: number; ep: number; sp: number; cp: number }
+
+  if (result.data.make_change) {
+    // Apply deltas with automatic change-making
+    newCoins = applyDeltasWithChange(currentCoins, deltas)
+
+    // Verify we have sufficient funds
+    const currentCopper = toCopper(currentCoins)
+    const deltaCopper = toCopper(deltas)
+    const resultCopper = toCopper(newCoins)
+
+    if (resultCopper < 0 || currentCopper + deltaCopper < 0) {
+      return {
+        complete: false,
+        values: data,
+        errors: {
+          general: `Insufficient funds: need ${Math.abs(deltaCopper)}cp but only have ${currentCopper}cp total`,
+        },
+      }
+    }
+  } else {
+    // Simple addition without conversion
+    newCoins = {
+      pp: currentCoins.pp + deltas.pp,
+      gp: currentCoins.gp + deltas.gp,
+      ep: currentCoins.ep + deltas.ep,
+      sp: currentCoins.sp + deltas.sp,
+      cp: currentCoins.cp + deltas.cp,
+    }
+
+    // Check for negative values
+    for (const [key, value] of Object.entries(newCoins)) {
+      if (value < 0) {
+        errors[key] = `Insufficient ${key}: would result in ${value}`
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return { complete: false, values: data, errors }
+    }
   }
-
-  //////////////////////////
-  // Actually update coins
-
-  const note = result.data.note || null
 
   // Create a new record with the updated coin values
   await createCoinsDb(db, {
@@ -99,7 +133,7 @@ export async function updateCoins(
     ep: newCoins.ep,
     sp: newCoins.sp,
     cp: newCoins.cp,
-    note,
+    note: result.data.note || null,
   })
 
   return {

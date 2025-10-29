@@ -57,6 +57,9 @@ describe("createCharacter", () => {
       ability_int: "12",
       ability_wis: "10",
       ability_cha: "8",
+      // Default class skill proficiencies for cleric (2 skills)
+      class_proficiency_history: "true",
+      class_proficiency_medicine: "true",
       ...overrides,
     }
 
@@ -407,6 +410,160 @@ describe("createCharacter", () => {
     })
   })
 
+  describe("class skill proficiency selection", () => {
+    it("applies class skill proficiency selections", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      // Cleric can choose 2 skills from: history, medicine, persuasion, religion
+      const data = buildCharacterData({
+        class_proficiency_history: "true",
+        class_proficiency_medicine: "true",
+      })
+
+      const result = await createCharacter(testCtx.db, user, data)
+      assertSuccess(result)
+
+      const skills = await findSkills(testCtx.db, result.character.id)
+
+      // Should have background skills (insight, religion)
+      const insight = skills.find((s) => s.skill === "insight")
+      expect(insight).toBeTruthy()
+      expect(insight?.note).toContain("acolyte")
+
+      const religion = skills.find((s) => s.skill === "religion")
+      expect(religion).toBeTruthy()
+      expect(religion?.note).toContain("acolyte")
+
+      // Should have class skill selections
+      const history = skills.find((s) => s.skill === "history")
+      expect(history).toBeTruthy()
+      expect(history?.proficiency).toBe("proficient")
+      expect(history?.note).toContain("cleric")
+
+      const medicine = skills.find((s) => s.skill === "medicine")
+      expect(medicine).toBeTruthy()
+      expect(medicine?.proficiency).toBe("proficient")
+      expect(medicine?.note).toContain("cleric")
+
+      // Should have exactly 4 skills total (2 from background + 2 from class)
+      expect(skills.length).toBe(4)
+    })
+
+    it("fails when too few skills selected", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      // Cleric requires 2 skills, only selecting 1
+      const data = buildCharacterData({
+        class_proficiency_history: "true",
+        class_proficiency_medicine: undefined, // Override default
+      })
+
+      const result = await createCharacter(testCtx.db, user, data)
+      expect(result.complete).toBe(false)
+      if (result.complete) return // Type guard
+
+      expect(result.errors.class_skills).toContain("Must select exactly 2 skills")
+      expect(result.errors.class_skills).toContain("currently selected 1")
+    })
+
+    it("fails when too many skills selected", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      // Cleric requires 2 skills, selecting 3
+      const data = buildCharacterData({
+        class_proficiency_history: "true",
+        class_proficiency_medicine: "true",
+        class_proficiency_persuasion: "true",
+      })
+
+      const result = await createCharacter(testCtx.db, user, data)
+      expect(result.complete).toBe(false)
+      if (result.complete) return // Type guard
+
+      expect(result.errors.class_skills).toContain("Must select exactly 2 skills")
+      expect(result.errors.class_skills).toContain("currently selected 3")
+    })
+
+    it("fails when selecting a skill already granted by background", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      // Acolyte background already grants religion, trying to select it from class too
+      const data = buildCharacterData({
+        class_proficiency_religion: "true",
+        class_proficiency_history: "true",
+      })
+
+      const result = await createCharacter(testCtx.db, user, data)
+      expect(result.complete).toBe(false)
+      if (result.complete) return // Type guard
+
+      expect(result.errors.class_proficiency_religion).toContain(
+        "Already granted by acolyte background"
+      )
+    })
+
+    it("fails when selecting a skill not available for the class", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      // Cleric cannot select athletics (not in their list)
+      const data = buildCharacterData({
+        class_proficiency_athletics: "true",
+        class_proficiency_history: "true",
+      })
+
+      const result = await createCharacter(testCtx.db, user, data)
+      expect(result.complete).toBe(false)
+      if (result.complete) return // Type guard
+
+      expect(result.errors.class_proficiency_athletics).toContain(
+        "athletics is not available for cleric"
+      )
+    })
+
+    describe("with different classes", () => {
+      it("allows rogue to select 4 skills", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        // Rogue can choose 4 skills from their list
+        const data = buildCharacterData({
+          class: "rogue",
+          subclass: "", // Rogue gets subclass at level 3
+          // Override cleric defaults and set rogue skills
+          class_proficiency_history: undefined,
+          class_proficiency_medicine: undefined,
+          class_proficiency_acrobatics: "true",
+          class_proficiency_athletics: "true",
+          class_proficiency_perception: "true",
+          class_proficiency_stealth: "true",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        assertSuccess(result)
+
+        const skills = await findSkills(testCtx.db, result.character.id)
+        const classSkills = skills.filter((s) => s.note?.toLowerCase().includes("rogue"))
+
+        expect(classSkills.length).toBe(4)
+      })
+
+      it("allows barbarian to select 2 skills", async () => {
+        const user = await userFactory.create({}, testCtx.db)
+        // Barbarian can choose 2 skills from their list
+        const data = buildCharacterData({
+          class: "barbarian",
+          subclass: "",
+          // Override cleric defaults and set barbarian skills
+          class_proficiency_history: undefined,
+          class_proficiency_medicine: undefined,
+          class_proficiency_athletics: "true",
+          class_proficiency_perception: "true",
+        })
+
+        const result = await createCharacter(testCtx.db, user, data)
+        assertSuccess(result)
+
+        const skills = await findSkills(testCtx.db, result.character.id)
+        const classSkills = skills.filter((s) => s.note?.toLowerCase().includes("barbarian"))
+
+        expect(classSkills.length).toBe(2)
+      })
+    })
+  })
+
   describe("initial class level", () => {
     it("creates a level 1 class entry", async () => {
       const user = await userFactory.create({}, testCtx.db)
@@ -475,6 +632,11 @@ describe("createCharacter", () => {
           const data = buildCharacterData({
             class: "fighter",
             subclass: undefined,
+            // Override cleric defaults with fighter skills
+            class_proficiency_history: undefined,
+            class_proficiency_medicine: undefined,
+            class_proficiency_athletics: "true",
+            class_proficiency_perception: "true",
           })
 
           const result = await createCharacter(testCtx.db, user, data)

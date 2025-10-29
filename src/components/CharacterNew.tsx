@@ -1,5 +1,6 @@
 import { AbilityScoreSelector } from "@src/components/AbilityScoreSelector"
 import { FinalAbilityScores } from "@src/components/FinalAbilityScores"
+import { SkillProficiencySelector } from "@src/components/SkillProficiencySelector"
 import { Select } from "@src/components/ui/Select"
 import { ClassNames, type ClassNameType, getTraits, type Trait } from "@src/lib/dnd"
 import { getRuleset, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
@@ -248,6 +249,17 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
 
   // Add final ability scores display
   fields.push(<FinalAbilityScores values={values} rulesetId={rulesetId} errors={errors} />)
+
+  // Add skill proficiency selection
+  fields.push(
+    <SkillProficiencySelector
+      values={values}
+      selectedClass={values?.class as ClassNameType}
+      selectedBackground={values?.background}
+      rulesetId={rulesetId}
+      errors={errors}
+    />
+  )
 
   fields.push(
     <div class="mb-3">

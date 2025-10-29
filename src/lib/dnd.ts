@@ -340,7 +340,7 @@ export interface Background {
   name: string
   description: string
 
-  skillProficiencies?: SkillType[]
+  skillProficiencies: SkillType[]
   abilityScoresModified?: AbilityType[]
   additionalLanguages?: number
   toolProficiencies?: (string | Choice<string>)[]

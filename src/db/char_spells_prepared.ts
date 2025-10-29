@@ -69,6 +69,7 @@ export async function findByCharacterId(
     ORDER BY created_at ASC
   `
 
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return result.map((row: any) =>
     CharSpellPreparedSchema.parse({
       ...row,

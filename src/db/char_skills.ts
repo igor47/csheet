@@ -58,6 +58,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     ORDER BY created_at ASC
   `
 
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return result.map((row: any) =>
     CharSkillSchema.parse({
       ...row,
@@ -90,6 +91,7 @@ export async function currentByCharacterId(
   `
 
   return result.reduce(
+    // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
     (acc: Record<SkillType, CurrentSkill>, row: any) => {
       acc[row.skill as SkillType] = {
         proficiency: row.proficiency as ProficiencyLevel,

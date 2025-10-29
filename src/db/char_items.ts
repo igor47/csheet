@@ -23,6 +23,7 @@ export const CreateCharItemSchema = CharItemSchema.omit({
 export type CharItem = z.infer<typeof CharItemSchema>
 export type CreateCharItem = z.infer<typeof CreateCharItemSchema>
 
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
 function parseCharItem(row: any): CharItem {
   return CharItemSchema.parse({
     ...row,
@@ -79,6 +80,7 @@ export async function getCurrentInventory(
     WHERE rn = 1 AND dropped_at IS NULL
   `
 
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return result.map((row: any) => ({
     item_id: row.item_id,
     worn: row.worn,
@@ -119,6 +121,7 @@ export async function getCharItemHistory(
     ORDER BY ci.created_at DESC
   `
 
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
   return result.map((row: any) => ({
     id: row.id,
     character_id: row.character_id,

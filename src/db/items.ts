@@ -76,6 +76,7 @@ export type Item = z.infer<typeof ItemSchema>
 export type CreateItem = z.infer<typeof CreateItemSchema>
 export type UpdateItem = z.infer<typeof UpdateItemSchema>
 
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
 function parseItem(row: any): Item {
   return ItemSchema.parse({
     ...row,

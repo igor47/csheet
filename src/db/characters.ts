@@ -29,6 +29,7 @@ export const CreateCharacterSchema = CharacterSchema.omit({
 export type Character = z.infer<typeof CharacterSchema>
 export type CreateCharacter = z.infer<typeof CreateCharacterSchema>
 
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
 function parseCharacter(row: any): Character {
   return CharacterSchema.parse({
     ...row,

@@ -22,6 +22,7 @@ export const CreateItemEffectSchema = ItemEffectSchema.omit({
 export type ItemEffect = z.infer<typeof ItemEffectSchema>
 export type CreateItemEffect = z.infer<typeof CreateItemEffectSchema>
 
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
 function parseItemEffect(row: any): ItemEffect {
   return ItemEffectSchema.parse({
     ...row,

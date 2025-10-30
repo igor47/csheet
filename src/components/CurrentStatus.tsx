@@ -1,13 +1,12 @@
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { ChatBox, type ChatMessage } from "./ChatBox"
+import { ChatBox } from "./ChatBox"
 
 export interface CurrentStatusProps {
   character: ComputedCharacter
   swapOob?: boolean
-  chatMessages?: ChatMessage[]
 }
 
-export const CurrentStatus = ({ character, swapOob, chatMessages }: CurrentStatusProps) => {
+export const CurrentStatus = ({ character, swapOob }: CurrentStatusProps) => {
   // Calculate HP deficit
   const hpLost = character.maxHitPoints - character.currentHP
 
@@ -49,11 +48,15 @@ export const CurrentStatus = ({ character, swapOob, chatMessages }: CurrentStatu
 
   return (
     <>
-      {/* AI Chat Box - rendered first if enabled */}
-      <ChatBox character={character} messages={chatMessages} />
+      {/* AI Chat Box - rendered first if enabled, always starts with new chat */}
+      <ChatBox character={character} />
 
       {/* Current Status Card */}
-      <div class="card shadow-sm mb-3" id="current-status-card" {...(swapOob && { "hx-swap-oob": "true" })}>
+      <div
+        class="card shadow-sm mb-3"
+        id="current-status-card"
+        {...(swapOob && { "hx-swap-oob": "true" })}
+      >
         <div class="card-header">
           <h5 class="mb-0">Current Status</h5>
         </div>

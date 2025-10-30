@@ -60,7 +60,6 @@ import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spell
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
 import { countArchivedByUserId } from "@src/db/characters"
-import { findByCharacterId as getChatHistory } from "@src/db/chat_messages"
 import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
 import { findById as findItemById } from "@src/db/items"
@@ -150,20 +149,11 @@ characterRoutes.get("/characters/:id", async (c) => {
 
   const currentNote = await getCurrentNote(getDb(c), id)
 
-  // Load chat history for AI assistant
-  const chatHistory = await getChatHistory(getDb(c), id, 20)
-  const chatMessages = chatHistory.map((msg) => ({
-    id: msg.id,
-    chatRole: msg.role as "user" | "assistant",
-    content: msg.content,
-  }))
-
-  return c.render(
-    <Character character={char} currentNote={currentNote} chatMessages={chatMessages} />,
-    {
-      title: "Character Sheet",
-    }
-  )
+  // ChatBox always starts with a new chat (chatId=null)
+  // Users can load old chats via the history button
+  return c.render(<Character character={char} currentNote={currentNote} />, {
+    title: "Character Sheet",
+  })
 })
 
 characterRoutes.post("/characters/:id/archive", async (c) => {

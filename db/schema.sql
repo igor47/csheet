@@ -1,4 +1,4 @@
-\restrict ELRYEllzgERsiV4l7JhasXJTPmeatB0eNXTllLbpb7Zue2jrzquGINTlUxO5fUc
+\restrict pvjOXl9YLIvZIpwIY4SpsjlLg6SdnGsubpkeBvXexBkbo3eJ75tXDZIElIyU7Rk
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 17.6
@@ -295,6 +295,7 @@ CREATE TABLE public.chat_messages (
     tool_calls jsonb,
     tool_results jsonb,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    chat_id character varying(26) NOT NULL,
     CONSTRAINT chat_messages_role_check CHECK ((role = ANY (ARRAY['user'::text, 'assistant'::text, 'system'::text])))
 );
 
@@ -747,6 +748,13 @@ CREATE INDEX idx_chat_messages_character_created ON public.chat_messages USING b
 
 
 --
+-- Name: idx_chat_messages_chat_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_chat_messages_chat_created ON public.chat_messages USING btree (character_id, chat_id, created_at DESC);
+
+
+--
 -- Name: idx_item_charges_item_id_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1094,7 +1102,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ELRYEllzgERsiV4l7JhasXJTPmeatB0eNXTllLbpb7Zue2jrzquGINTlUxO5fUc
+\unrestrict pvjOXl9YLIvZIpwIY4SpsjlLg6SdnGsubpkeBvXexBkbo3eJ75tXDZIElIyU7Rk
 
 
 --
@@ -1130,4 +1138,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251025220128'),
     ('20251027195737'),
     ('20251028010531'),
-    ('20251029183629');
+    ('20251029183629'),
+    ('20251030232843');

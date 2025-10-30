@@ -10,22 +10,57 @@ export interface ChatMessage {
 export interface ChatBoxProps {
   character: ComputedCharacter
   messages?: ChatMessage[]
+  chatId?: string | null
   swapOob?: boolean
 }
 
-export const ChatBox = ({ character, messages = [], swapOob = false }: ChatBoxProps) => {
+export const ChatBox = ({
+  character,
+  messages = [],
+  chatId = null,
+  swapOob = false,
+}: ChatBoxProps) => {
   // Don't render if AI is not enabled
   if (!isAiEnabled()) {
     return null
   }
 
+  // Check if we're waiting for a response (last message is from user)
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
+  const isWaitingForResponse = lastMessage && lastMessage.chatRole === "user"
+
   return (
-    <div class="card shadow-sm mb-3" id="chat-box-card" {...(swapOob ? { "hx-swap-oob": "true" } : {})}>
-      <div class="card-header">
+    <div
+      class="card shadow-sm mb-3"
+      id="chat-box-card"
+      {...(swapOob ? { "hx-swap-oob": "true" } : {})}
+    >
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-robot me-2"></i>
           AI Assistant
         </h5>
+        <div class="d-flex gap-2">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            hx-get={`/characters/${character.id}/chat/new`}
+            hx-target="#chat-box-card"
+            hx-swap="outerHTML"
+          >
+            <i class="bi bi-plus-lg"></i> New
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary"
+            hx-get={`/characters/${character.id}/chats`}
+            hx-target="#editModalContent"
+            data-bs-toggle="modal"
+            data-bs-target="#editModal"
+          >
+            <i class="bi bi-clock-history"></i> History
+          </button>
+        </div>
       </div>
       <div class="card-body">
         {/* Chat messages container */}
@@ -39,22 +74,28 @@ export const ChatBox = ({ character, messages = [], swapOob = false }: ChatBoxPr
               <small>Ask me to help manage your character sheet!</small>
             </div>
           ) : (
-            messages.map((msg, index) => {
-              // Check if this is the last message and it's an empty assistant message
-              const isLastMessage = index === messages.length - 1
-              //const shouldStream = isLastMessage && msg.chatRole === "assistant" && msg.content === ""
-              const shouldStream = false;
+            messages.map((msg) => (
+              <ChatMessageBubble id={msg.id} chatRole={msg.chatRole} content={msg.content} />
+            ))
+          )}
 
-              return (
-                <ChatMessageBubble
-                  id={msg.id}
-                  chatRole={msg.chatRole}
-                  content={msg.content}
-                  enableStreaming={shouldStream}
-                  characterId={character.id}
-                />
-              )
-            })
+          {/* Response box - shown when waiting for AI response */}
+          {chatId && isWaitingForResponse && (
+            <div class="row mb-2">
+              <div class="col-10">
+                <div class="rounded px-3 py-2 bg-secondary text-white">
+                  <i class="bi bi-robot me-1"></i>
+                  <span
+                    id={`response-box-${chatId}`}
+                    hx-ext="sse"
+                    sse-connect={`/characters/${character.id}/chat/${chatId}/stream`}
+                    sse-swap="message"
+                  >
+                    Thinking...
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
@@ -65,6 +106,7 @@ export const ChatBox = ({ character, messages = [], swapOob = false }: ChatBoxPr
           hx-target="#chat-box-card"
           hx-swap="outerHTML"
         >
+          {chatId && <input type="hidden" name="chat_id" value={chatId} />}
           <div class="input-group">
             <input
               type="text"
@@ -74,9 +116,18 @@ export const ChatBox = ({ character, messages = [], swapOob = false }: ChatBoxPr
               placeholder="e.g., I spent 50 gold on a sword"
               required
               autocomplete="off"
+              {...(isWaitingForResponse ? { disabled: true } : {})}
             />
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-send"></i>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              {...(isWaitingForResponse ? { disabled: true } : {})}
+            >
+              {isWaitingForResponse ? (
+                <output class="spinner-border spinner-border-sm" aria-hidden="true" />
+              ) : (
+                <i class="bi bi-send"></i>
+              )}
             </button>
           </div>
         </form>
@@ -92,21 +143,10 @@ export interface ChatMessageBubbleProps {
   id: string
   chatRole: "user" | "assistant"
   content: string
-  enableStreaming?: boolean
-  characterId?: string
 }
 
-export const ChatMessageBubble = ({
-  id,
-  chatRole,
-  content,
-  enableStreaming = false,
-  characterId,
-}: ChatMessageBubbleProps) => {
+export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubbleProps) => {
   const isUser = chatRole === "user"
-  const displayContent = enableStreaming && content === "" ? "Processing..." : content
-  // Prefix IDs to ensure valid CSS selectors (can't start with digit)
-  const contentId = `msg-${id}-content`
 
   return (
     <div class="row mb-2" id={`msg-${id}`}>
@@ -115,14 +155,7 @@ export const ChatMessageBubble = ({
           class={`rounded px-3 py-2 ${isUser ? "bg-primary text-white" : "bg-secondary text-white"}`}
         >
           {!isUser && <i class="bi bi-robot me-1"></i>}
-          <span id={contentId}>{displayContent}</span>
-          {enableStreaming && characterId && (
-            <div
-              hx-ext="sse"
-              sse-connect={`/characters/${characterId}/chat/${id}/stream`}
-              sse-swap="response"
-            />
-          )}
+          <span>{content}</span>
         </div>
       </div>
     </div>
@@ -157,7 +190,12 @@ export const ChatConfirmModal = ({
   )
 
   return (
-    <div class="modal-content" id="editModalContent" {...(swapOob && { "hx-swap-oob": "true" })}>
+    <div
+      class="modal-content"
+      id="editModalContent"
+      data-show-modal="true"
+      {...(swapOob && { "hx-swap-oob": "true" })}
+    >
       <div class="modal-header">
         <h5 class="modal-title">
           <i class="bi bi-check-circle me-2"></i>

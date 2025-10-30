@@ -1,21 +1,16 @@
 import {
-  findByCharacterId as getChatHistory,
-  create as saveChatMessage,
-  updateById as updateChatMessage,
   type ChatMessage,
+  findByChatId as getChatHistory,
+  create as saveChatMessage,
 } from "@src/db/chat_messages"
 import { getChatModel } from "@src/lib/ai"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { updateCoinsTool, updateCoinsToolName } from "@src/services/updateCoins"
-import type {
-  AssistantModelMessage,
-  StreamTextOnFinishCallback,
-  SystemModelMessage,
-  UserModelMessage,
-} from "ai"
+import type { AssistantModelMessage, SystemModelMessage, UserModelMessage } from "ai"
 import { streamText } from "ai"
 import type { SQL } from "bun"
+import { ulid } from "ulid"
 import { buildSystemPrompt } from "./prompts"
 
 export interface ToolCall {
@@ -37,69 +32,57 @@ type StreamChunk = { type: "text"; text: string } | ({ type: "tool" } & ToolCall
 type StreamHandler = (chunk: StreamChunk) => Promise<void> | void
 
 /**
- * Prepare a chat request by saving user message and creating empty assistant message
- * Returns the assistant message ID
+ * Prepare a chat request by saving user message
+ * Returns the chat ID
  */
 export async function prepareChatRequest(
   db: SQL,
   character: ComputedCharacter,
-  userMessage: string
-): Promise<string> {
-  // Save both messages in a transaction
-  return await db.begin(async (tx) => {
-    // Save user message
-    await saveChatMessage(tx, {
-      character_id: character.id,
-      role: "user",
-      content: userMessage,
-      tool_calls: null,
-      tool_results: null,
-    })
+  userMessage: string,
+  chatId?: string | null
+): Promise<{ chatId: string }> {
+  // Generate new chat ID if not provided
+  const finalChatId = chatId || ulid()
 
-    // Create empty assistant message as placeholder
-    const assistantMsg = await saveChatMessage(tx, {
-      character_id: character.id,
-      role: "assistant",
-      content: "",
-      tool_calls: null,
-      tool_results: null,
-    })
-
-    return assistantMsg.id
+  // Save user message
+  await saveChatMessage(db, {
+    character_id: character.id,
+    chat_id: finalChatId,
+    role: "user",
+    content: userMessage,
+    tool_calls: null,
+    tool_results: null,
   })
+
+  return { chatId: finalChatId }
 }
 
 /**
- * Execute a chat request by streaming AI response and updating assistant message
- * Returns a Promise that resolves when streaming is complete and message is updated in DB
+ * Execute a chat request by streaming AI response and creating assistant message after completion
+ * Returns the ID of the newly created assistant message
  */
 export async function executeChatRequest(
   db: SQL,
   character: ComputedCharacter,
-  assistantMessageId: string,
+  chatId: string,
   onMessage?: StreamHandler
-): Promise<void> {
-
+): Promise<string> {
   // Build system prompt with character context
   const systemPrompt = buildSystemPrompt(character)
 
-  // Load chat history up to (but not including) the assistant message we're about to populate
-  const allHistory = await getChatHistory(db, character.id, 50)
-  const assistantMsgIndex = allHistory.findIndex((msg) => msg.id === assistantMessageId)
-
-  if (assistantMsgIndex === -1) {
-    throw new Error(`Assistant message ${assistantMessageId} not found in history`)
-  }
-
-  // Take only messages before this assistant message
-  const history = allHistory.slice(0, assistantMsgIndex)
+  // Load full chat history for this chat
+  const history = await getChatHistory(db, chatId, 50)
 
   // Format previous messages for Vercel AI SDK
   const messages = history.map((msg) => {
     if (msg.role === "assistant") {
+      const toolsCalled = msg.tool_calls ? Object.keys(msg.tool_calls).join(",") : null
       const assistantMsg: AssistantModelMessage = {
         role: "assistant",
-        content: msg.content,
+        content:
+          msg.content || msg.tool_calls
+            ? `requested tool calls to ${toolsCalled}`
+            : "<empty response>",
       }
       return assistantMsg
     } else if (msg.role === "system") {
@@ -144,10 +127,10 @@ export async function executeChatRequest(
     for await (const data of result.textStream) {
       messageAggregator.push(data)
       const streamChunk: StreamChunk = { type: "text", text: messageAggregator.join("") }
-      onMessage && onMessage(streamChunk)
+      onMessage?.(streamChunk)
     }
 
-    const toolCalls: ChatMessage['tool_calls'] = {};
+    const toolCalls: ChatMessage["tool_calls"] = {}
     for (const toolCall of await result.toolCalls) {
       const streamChunk: StreamChunk = {
         type: "tool",
@@ -159,13 +142,19 @@ export async function executeChatRequest(
       toolCalls[toolCall.toolName] = toolCall.input
     }
 
-    // Update the existing assistant message
-    await updateChatMessage(db, assistantMessageId, {
+    // Create assistant message with final content after streaming completes
+    const assistantMsg = await saveChatMessage(db, {
+      character_id: character.id,
+      chat_id: chatId,
+      role: "assistant",
       content: messageAggregator.join(""),
       tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
+      tool_results: null,
     })
 
+    return assistantMsg.id
   } catch (err) {
-    logger.info("AI stream error", { err })
+    logger.error("AI stream error", err as Error, { chatId, character_id: character.id })
+    throw err
   }
 }

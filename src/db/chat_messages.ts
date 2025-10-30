@@ -5,6 +5,7 @@ import { z } from "zod"
 export const ChatMessageSchema = z.object({
   id: z.string(),
   character_id: z.string(),
+  chat_id: z.string(),
   role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
   tool_calls: z.record(z.string(), z.any()).nullable().default(null),
@@ -24,10 +25,11 @@ export async function create(db: SQL, message: CreateChatMessage): Promise<ChatM
   const id = ulid()
 
   const result = await db`
-    INSERT INTO chat_messages (id, character_id, role, content, tool_calls, tool_results, created_at)
+    INSERT INTO chat_messages (id, character_id, chat_id, role, content, tool_calls, tool_results, created_at)
     VALUES (
       ${id},
       ${message.character_id},
+      ${message.chat_id},
       ${message.role},
       ${message.content},
       ${message.tool_calls ? JSON.stringify(message.tool_calls) : null},
@@ -46,14 +48,11 @@ export async function create(db: SQL, message: CreateChatMessage): Promise<ChatM
   })
 }
 
-export async function findByCharacterId(
-  db: SQL,
-  characterId: string,
-  limit = 50
-): Promise<ChatMessage[]> {
+// Chat-specific functions
+export async function findByChatId(db: SQL, chatId: string, limit = 50): Promise<ChatMessage[]> {
   const result = await db`
     SELECT * FROM chat_messages
-    WHERE character_id = ${characterId}
+    WHERE chat_id = ${chatId}
     ORDER BY created_at DESC
     LIMIT ${limit}
   `
@@ -73,51 +72,47 @@ export async function findByCharacterId(
   ) // Return in chronological order (oldest first)
 }
 
-export async function clearHistory(db: SQL, characterId: string): Promise<void> {
-  await db`
-    DELETE FROM chat_messages
+export interface ChatPreview {
+  chat_id: string
+  character_id: string
+  message_count: number
+  last_message: string
+  last_message_at: Date
+}
+
+export async function getChatsByCharacterId(db: SQL, characterId: string): Promise<ChatPreview[]> {
+  const result = await db`
+    SELECT
+      chat_id,
+      character_id,
+      COUNT(*) as message_count,
+      (
+        SELECT content
+        FROM chat_messages cm2
+        WHERE cm2.chat_id = cm.chat_id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) as last_message,
+      MAX(created_at) as last_message_at
+    FROM chat_messages cm
     WHERE character_id = ${characterId}
+    GROUP BY chat_id, character_id
+    ORDER BY last_message_at DESC
   `
+
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
+  return result.map((row: any) => ({
+    chat_id: row.chat_id,
+    character_id: row.character_id,
+    message_count: Number(row.message_count),
+    last_message: row.last_message,
+    last_message_at: new Date(row.last_message_at),
+  }))
 }
 
-export async function deleteById(db: SQL, id: string): Promise<void> {
+export async function clearChat(db: SQL, chatId: string): Promise<void> {
   await db`
     DELETE FROM chat_messages
-    WHERE id = ${id}
+    WHERE chat_id = ${chatId}
   `
-}
-
-export async function updateById(
-  db: SQL,
-  id: string,
-  updates: Partial<Pick<ChatMessage, "content" | "tool_calls" | "tool_results">>
-): Promise<void> {
-  const setClauses: string[] = []
-  const values: unknown[] = []
-
-  if (updates.content !== undefined) {
-    setClauses.push(`content = $${values.length + 1}`)
-    values.push(updates.content)
-  }
-
-  if (updates.tool_calls !== undefined) {
-    setClauses.push(`tool_calls = $${values.length + 1}`)
-    values.push(updates.tool_calls ? JSON.stringify(updates.tool_calls) : null)
-  }
-
-  if (updates.tool_results !== undefined) {
-    setClauses.push(`tool_results = $${values.length + 1}`)
-    values.push(updates.tool_results ? JSON.stringify(updates.tool_results) : null)
-  }
-
-  if (setClauses.length === 0) {
-    return // Nothing to update
-  }
-
-  values.push(id)
-
-  await db.unsafe(
-    `UPDATE chat_messages SET ${setClauses.join(", ")} WHERE id = $${values.length}`,
-    values
-  )
 }

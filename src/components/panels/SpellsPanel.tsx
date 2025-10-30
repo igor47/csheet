@@ -13,7 +13,7 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
   const formatBonus = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
 
   return (
-    <div class="accordion-body" id="spells-panel"  {...(swapOob ? { "hx-swap-oob": "true" } : {})}>
+    <div class="accordion-body" id="spells-panel" {...(swapOob ? { "hx-swap-oob": "true" } : {})}>
       {/* Spellcasting stats per class */}
       {character.spells.map((spellInfo) => {
         const spellCountText = `${spellInfo.cantripSlots.length} / ${spellInfo.preparedSpells.length}`

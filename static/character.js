@@ -18,9 +18,22 @@ document.body.addEventListener('openEditModal', function() {
   }
 });
 
-// scroll position restore
+// scroll position restore and modal opening
 document.body.addEventListener('htmx:afterSwap', (e) => {
   const container = e.target;
+  console.dir(container)
+  console.dir(container.dataset.showModal)
+
+  // Open modal if content has data-show-modal attribute (e.g., from tool confirmations)
+  if (container.id === 'editModalContent' && container.dataset.showModal === 'true') {
+    const modalElement = document.getElementById('editModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+      // Clean up the flag
+      delete container.dataset.showModal;
+    }
+  }
 
   // bring selected spell into view if any
   const selectedSpell = container.querySelector('input[name="spell_id"]:checked');

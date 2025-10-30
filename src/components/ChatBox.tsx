@@ -2,7 +2,8 @@ import { isAiEnabled } from "@src/config"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 
 export interface ChatMessage {
-  role: "user" | "assistant"
+  id: string
+  chatRole: "user" | "assistant"
   content: string
 }
 
@@ -37,16 +38,18 @@ export const ChatBox = ({ character, messages = [] }: ChatBoxProps) => {
               <small>Ask me to help manage your character sheet!</small>
             </div>
           ) : (
-            messages.map((msg) => <ChatMessageBubble role={msg.role} content={msg.content} />)
+            messages.map((msg) => (
+              <ChatMessageBubble id={msg.id} chatRole={msg.chatRole} content={msg.content} />
+            ))
           )}
         </div>
 
         {/* Input form */}
         <form
           id="chat-form"
+          hx-ext="sse"
           hx-post={`/characters/${character.id}/chat`}
-          hx-target="#chat-box-card"
-          hx-swap="outerHTML"
+          sse-swap="message,tool"
           hx-on="htmx:afterRequest: document.getElementById('chat-input').value = ''"
         >
           <div class="input-group">
@@ -73,15 +76,16 @@ export const ChatBox = ({ character, messages = [] }: ChatBoxProps) => {
  * Component for displaying a single chat message bubble
  */
 export interface ChatMessageBubbleProps {
-  role: "user" | "assistant"
+  id: string
+  chatRole: "user" | "assistant"
   content: string
 }
 
-export const ChatMessageBubble = ({ role, content }: ChatMessageBubbleProps) => {
-  const isUser = role === "user"
+export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubbleProps) => {
+  const isUser = chatRole === "user"
 
   return (
-    <div class="row mb-2">
+    <div class="row mb-2" id={id}>
       <div class={isUser ? "col-10 offset-2" : "col-10"}>
         <div
           class={`rounded px-3 py-2 ${isUser ? "bg-primary text-white" : "bg-secondary text-white"}`}
@@ -169,7 +173,7 @@ export const ChatConfirmModal = ({
           hx-post={`/characters/${characterId}/chat/execute-tool`}
           hx-vals={JSON.stringify({
             tool_name: toolName,
-            parameters: JSON.stringify(parameters)
+            parameters: JSON.stringify(parameters),
           })}
           hx-target="#editModalContent"
         >

@@ -28,9 +28,10 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.68.0",
+    "@ai-sdk/anthropic": "^2.0.39",
     "@aws-sdk/client-s3": "^3.913.0",
     "@aws-sdk/s3-request-presigner": "^3.913.0",
+    "ai": "^5.0.82",
     "clsx": "^2.1.1",
     "hono": "^4.9.6",
     "nodemailer": "^7.0.10",

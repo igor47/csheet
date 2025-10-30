@@ -6,32 +6,51 @@ import {
   NumberFormFieldSchema,
   OptionalNullStringSchema,
 } from "@src/lib/schemas"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 // Schema for the coin update API
 export const UpdateCoinsApiSchema = z.object({
-  pp: NumberFormFieldSchema.int().describe(
-    "Change in platinum pieces (positive for gain, negative for loss)"
-  ).default(0),
-  gp: NumberFormFieldSchema.int().describe(
-    "Change in gold pieces (positive for gain, negative for loss)"
-  ).default(0),
-  ep: NumberFormFieldSchema.int().describe(
-    "Change in electrum pieces (positive for gain, negative for loss)"
-  ).default(0),
-  sp: NumberFormFieldSchema.int().describe(
-    "Change in silver pieces (positive for gain, negative for loss)"
-  ).default(0),
-  cp: NumberFormFieldSchema.int().describe(
-    "Change in copper pieces (positive for gain, negative for loss)"
-  ).default(0),
+  pp: NumberFormFieldSchema.int()
+    .describe("Change in platinum pieces (positive for gain, negative for loss)")
+    .default(0),
+  gp: NumberFormFieldSchema.int()
+    .describe("Change in gold pieces (positive for gain, negative for loss)")
+    .default(0),
+  ep: NumberFormFieldSchema.int()
+    .describe("Change in electrum pieces (positive for gain, negative for loss)")
+    .default(0),
+  sp: NumberFormFieldSchema.int()
+    .describe("Change in silver pieces (positive for gain, negative for loss)")
+    .default(0),
+  cp: NumberFormFieldSchema.int()
+    .describe("Change in copper pieces (positive for gain, negative for loss)")
+    .default(0),
   note: OptionalNullStringSchema.describe("Note describing the transaction"),
   make_change: BooleanFormFieldSchema.optional()
     .default(true)
     .describe("Allow making change from larger denominations"),
   is_check: BooleanFormFieldSchema.optional().default(false),
+})
+
+// Vercel AI SDK tool definition
+export const updateCoinsToolName = "update_coins" as const
+export const updateCoinsTool = tool({
+  name: updateCoinsToolName,
+  description: `Update the character's coin purse. Used whenever the character gains or spends coins.
+
+Each field represents the change (delta) in that coin type (positive for gains, negative for losses).
+The note field should contain a description of the transaction.
+
+Examples:
+- Character pays 5gp for room and board → pass gp: -5, note: "Paid for room and board"
+- Character finds a treasure chest with 150gp and 20sp → pass gp: 150, sp: 20, note: "Found treasure chest"
+
+Only include coin types that changed (don't need to specify coins that didn't change).
+`,
+  inputSchema: UpdateCoinsApiSchema.omit({ make_change: true, is_check: true }),
 })
 
 export type UpdateCoinsResult =

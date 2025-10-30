@@ -1,7 +1,7 @@
 import type { CharNote } from "@src/db/char_notes"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import type { ChatMessage } from "./ChatBox"
 import { CharacterInfo } from "./CharacterInfo"
+import type { ChatMessage } from "./ChatBox"
 import { CurrentStatus } from "./CurrentStatus"
 import { AbilitiesPanel } from "./panels/AbilitiesPanel"
 import { InventoryPanel } from "./panels/InventoryPanel"

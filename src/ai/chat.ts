@@ -1,13 +1,22 @@
-import type { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs"
 import {
+  type CreateChatMessage,
   findByCharacterId as getChatHistory,
   create as saveChatMessage,
 } from "@src/db/chat_messages"
-import { chatModel, getAnthropic } from "@src/lib/anthropic"
+import { getChatModel } from "@src/lib/ai"
+import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import { updateCoinsTool, updateCoinsToolName } from "@src/services/updateCoins"
+import type {
+  AssistantModelMessage,
+  StreamTextOnChunkCallback,
+  StreamTextOnFinishCallback,
+  SystemModelMessage,
+  UserModelMessage,
+} from "ai"
+import { streamText } from "ai"
 import type { SQL } from "bun"
 import { buildSystemPrompt } from "./prompts"
-import { updateCoinsTool } from "./tools/updateCoins"
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system"
@@ -25,14 +34,23 @@ export interface ChatResponse {
   tool_call?: ToolCall
 }
 
+const ALL_TOOLS = {
+  [updateCoinsToolName]: updateCoinsTool,
+}
+
+type StreamChunk = { type: "text"; text: string } | ({ type: "tool" } & ToolCall)
+type StreamHandler = (chunk: StreamChunk) => Promise<void> | void
+
 /**
  * Process a user message and get AI response
+ * Returns a Promise that resolves when streaming is complete and message is saved to DB
  */
 export async function processUserMessage(
   db: SQL,
   character: ComputedCharacter,
-  userMessage: string
-): Promise<ChatResponse> {
+  userMessage: string,
+  onMessage?: StreamHandler
+): Promise<void> {
   // Save user message to database
   await saveChatMessage(db, {
     character_id: character.id,
@@ -45,113 +63,116 @@ export async function processUserMessage(
   // Build system prompt with character context
   const systemPrompt = buildSystemPrompt(character)
 
-  // Load chat history (excluding the message we just saved)
-  const history = await getChatHistory(db, character.id, 20)
-  const previousMessages = history.slice(0, -1)
+  // Load chat history (including the message we just saved)
+  const history = await getChatHistory(db, character.id, 10)
 
-  // Format previous messages for Anthropic
-  const messages: MessageParam[] = previousMessages.map((msg) => ({
-    role: msg.role === "assistant" ? "assistant" : "user",
-    content: msg.content,
-  }))
-
-  // Add current user message
-  messages.push({
-    role: "user",
-    content: userMessage,
+  // Format previous messages for Vercel AI SDK
+  const messages = history.map((msg) => {
+    if (msg.role === "assistant") {
+      const assistantMsg: AssistantModelMessage = {
+        role: "assistant",
+        content: msg.content,
+      }
+      return assistantMsg
+    } else if (msg.role === "system") {
+      const systemMsg: SystemModelMessage = {
+        role: "system",
+        content: msg.content,
+      }
+      return systemMsg
+    } else {
+      const userMsg: UserModelMessage = {
+        role: "user" as const,
+        content: msg.content,
+      }
+      return userMsg
+    }
   })
 
-  // Get Anthropic client and call API
-  const anthropic = await getAnthropic()
+  const model = getChatModel()
 
-  const requestBody = {
-    model: chatModel,
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages,
-    tools: [updateCoinsTool],
-  }
-
-  // Log the request for debugging
-  console.log("Anthropic request:", JSON.stringify(requestBody, null, 2))
-
-  const response = await anthropic.messages.create(requestBody)
-
-  // Log the response for debugging
-  console.log("Anthropic response:", JSON.stringify(response, null, 2))
-
-  // Check if there are tool use blocks in the response
-  const toolUseBlock = response.content.find((block) => block.type === "tool_use")
-
-  if (toolUseBlock && toolUseBlock.type === "tool_use") {
-    // Extract text content (if any) before the tool use
-    const textBlocks = response.content.filter((block) => block.type === "text")
-    const messageText =
-      textBlocks.length > 0
-        ? textBlocks.map((block) => (block.type === "text" ? block.text : "")).join(" ")
-        : "I'd like to help you with that."
-
-    // Save assistant message with tool call
-    await saveChatMessage(db, {
-      character_id: character.id,
-      role: "assistant",
-      content: messageText,
-      tool_calls: {
-        tool_name: toolUseBlock.name,
-        // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-        parameters: toolUseBlock.input as Record<string, any>,
-      },
-      tool_results: null,
-    })
-
-    return {
-      message: messageText,
-      tool_call: {
-        tool_name: toolUseBlock.name,
-        // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-        parameters: toolUseBlock.input as Record<string, any>,
+  // Wrap streamText in a Promise that resolves when streaming completes
+  return new Promise<void>((resolve, reject) => {
+    const requestBody = {
+      model,
+      maxOutputTokens: 1024,
+      system: systemPrompt,
+      messages,
+      tools: ALL_TOOLS,
+      onChunk: makeOnChunk(onMessage),
+      onFinish: makeOnFinish(db, character, resolve, reject),
+      onError: ({ error }: { error: unknown }) => {
+        // Handle errors that occur during streaming (before onFinish)
+        logger.error("AI streaming error", error as Error, {
+          character_id: character.id,
+        })
+        reject(error as Error)
       },
     }
-  }
 
-  // No tool call, just a text response
-  const textContent = response.content
-    .filter((block) => block.type === "text")
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join(" ")
-
-  await saveChatMessage(db, {
-    character_id: character.id,
-    role: "assistant",
-    content: textContent,
-    tool_calls: null,
-    tool_results: null,
+    // Log the request for debugging
+    logger.info("AI request", { requestBody })
+    streamText(requestBody)
   })
-
-  return {
-    message: textContent,
-  }
 }
 
-/**
- * Save tool execution result to chat history
- */
-export async function saveToolResult(
+function makeOnFinish(
   db: SQL,
-  characterId: string,
-  _toolName: string,
-  result: { success: boolean; message?: string; error?: string }
-): Promise<void> {
-  // Find the last assistant message with this tool call
-  const history = await getChatHistory(db, characterId, 5)
-  const lastMessage = history[history.length - 1]
+  character: ComputedCharacter,
+  resolve: () => void,
+  reject: (error: Error) => void
+): StreamTextOnFinishCallback<typeof ALL_TOOLS> {
+  const onFinish: StreamTextOnFinishCallback<typeof ALL_TOOLS> = async (result) => {
+    try {
+      // Log the finish result for debugging
+      logger.info("AI stream finished", { result })
 
-  if (lastMessage && lastMessage.role === "assistant" && lastMessage.tool_calls) {
-    // Update the message with tool results
-    await db`
-      UPDATE chat_messages
-      SET tool_results = ${JSON.stringify(result)}
-      WHERE id = ${lastMessage.id}
-    `
+      const msg: CreateChatMessage = {
+        role: "assistant",
+        character_id: character.id,
+        content: result.text,
+        tool_calls: {},
+        tool_results: {},
+      }
+
+      for (const toolCall of result.toolCalls) {
+        msg.tool_calls![toolCall.toolName] = toolCall.input
+      }
+
+      await saveChatMessage(db, msg)
+
+      // Resolve the promise only after successful DB save
+      resolve()
+    } catch (error) {
+      logger.error("Error saving AI response to database", error as Error, {
+        character_id: character.id,
+      })
+      reject(error as Error)
+    }
   }
+  return onFinish
+}
+
+function makeOnChunk(onMessage?: StreamHandler): StreamTextOnChunkCallback<typeof ALL_TOOLS> {
+  const messageAggregator: string[] = []
+
+  const wrappedOnChunk: StreamTextOnChunkCallback<typeof ALL_TOOLS> = async ({ chunk }) => {
+    let streamChunk: StreamChunk | null = null
+    if (chunk.type === "text-delta") {
+      messageAggregator.push(chunk.text)
+      streamChunk = { type: "text", text: messageAggregator.join("") }
+    } else if (chunk.type === "tool-call") {
+      streamChunk = {
+        type: "tool",
+        tool_name: chunk.toolName,
+        parameters: chunk.input as ToolCall["parameters"],
+      }
+    }
+
+    // call onChunk callback
+    logger.info("AI stream chunk", { streamChunk })
+    onMessage && streamChunk && onMessage(streamChunk)
+  }
+
+  return wrappedOnChunk
 }

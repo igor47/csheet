@@ -27,7 +27,12 @@ RUN chmod +x /usr/local/bin/run-migrations.sh
 
 # pull node modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application files first
 COPY . .
+
+# Then overlay the generated htmx files from deps stage (after postinstall)
+COPY --from=deps /app/static/htmx.min.js /app/static/htmx-ext-sse.js ./static/
 
 ENV NODE_ENV=production \
     PORT=3000

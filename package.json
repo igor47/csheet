@@ -11,6 +11,9 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "postinstall": "mkdir -p static && cp node_modules/htmx.org/dist/htmx.min.js static/ && cp node_modules/htmx-ext-sse/sse.js static/htmx-ext-sse.js"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",
     "@faker-js/faker": "^10.1.0",
@@ -34,6 +37,8 @@
     "ai": "^5.0.82",
     "clsx": "^2.1.1",
     "hono": "^4.9.6",
+    "htmx-ext-sse": "^2.2.4",
+    "htmx.org": "^2.0.8",
     "nodemailer": "^7.0.10",
     "ulid": "^3.0.1",
     "zod": "^4.1.11"

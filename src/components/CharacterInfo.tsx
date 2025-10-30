@@ -83,7 +83,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
     <div
       class="card shadow-sm mb-3"
       id="character-info"
-      hx-swap-oob={swapOob && "true"}
+      {...(swapOob && { "hx-swap-oob": "true" })}
       data-character-id={character.id}
     >
       <div class="card-body">

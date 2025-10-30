@@ -82,7 +82,7 @@ interface AbilitiesPanelProps {
 
 export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
   return (
-    <div class="accordion-body" id="abilities-panel" hx-swap-oob={swapOob && "true"}>
+    <div class="accordion-body" id="abilities-panel" {...(swapOob && { "hx-swap-oob": "true" })}>
       <div class="d-flex justify-content-end gap-2 mb-3">
         <button
           type="button"

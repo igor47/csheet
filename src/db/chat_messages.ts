@@ -86,3 +86,38 @@ export async function deleteById(db: SQL, id: string): Promise<void> {
     WHERE id = ${id}
   `
 }
+
+export async function updateById(
+  db: SQL,
+  id: string,
+  updates: Partial<Pick<ChatMessage, "content" | "tool_calls" | "tool_results">>
+): Promise<void> {
+  const setClauses: string[] = []
+  const values: unknown[] = []
+
+  if (updates.content !== undefined) {
+    setClauses.push(`content = $${values.length + 1}`)
+    values.push(updates.content)
+  }
+
+  if (updates.tool_calls !== undefined) {
+    setClauses.push(`tool_calls = $${values.length + 1}`)
+    values.push(updates.tool_calls ? JSON.stringify(updates.tool_calls) : null)
+  }
+
+  if (updates.tool_results !== undefined) {
+    setClauses.push(`tool_results = $${values.length + 1}`)
+    values.push(updates.tool_results ? JSON.stringify(updates.tool_results) : null)
+  }
+
+  if (setClauses.length === 0) {
+    return // Nothing to update
+  }
+
+  values.push(id)
+
+  await db.unsafe(
+    `UPDATE chat_messages SET ${setClauses.join(", ")} WHERE id = $${values.length}`,
+    values
+  )
+}

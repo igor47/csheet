@@ -153,7 +153,7 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
   const coins = character.coins || { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }
 
   return (
-    <div class="accordion-body" id="inventory-panel" hx-swap-oob={swapOob && "true"}>
+    <div class="accordion-body" id="inventory-panel" {...(swapOob && { "hx-swap-oob": "true" })}>
       {/* Coins Section */}
       <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center mb-2">

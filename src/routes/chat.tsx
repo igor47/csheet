@@ -1,10 +1,9 @@
-import { processUserMessage } from "@src/ai/chat"
+import { prepareChatRequest, executeChatRequest } from "@src/ai/chat"
 import { CharacterInfo } from "@src/components/CharacterInfo"
 import {
   ChatBox,
   ChatConfirmModal,
   type ChatMessage,
-  ChatMessageBubble,
 } from "@src/components/ChatBox"
 import { CurrentStatus } from "@src/components/CurrentStatus"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
@@ -16,13 +15,12 @@ import { computeCharacter } from "@src/services/computeCharacter"
 import { updateCoins } from "@src/services/updateCoins"
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
-import { ulid } from "ulid"
 
 export const chatRoutes = new Hono()
 
 /**
  * POST /characters/:id/chat
- * Process a user message and stream AI response via SSE
+ * Save user message and create empty assistant message, return updated ChatBox
  */
 chatRoutes.post("/characters/:id/chat", async (c) => {
   if (!isAiEnabled()) {
@@ -47,61 +45,72 @@ chatRoutes.post("/characters/:id/chat", async (c) => {
     return c.json({ error: "Message is required" }, 400)
   }
 
-  // Generate unique message ID for this response
-  const messageId = ulid()
+  // Prepare chat request: save user message and create empty assistant message
+  const assistantMessageId = await prepareChatRequest(db, char, userMessage.trim())
 
-  // Load chat history (not including the message we're about to process)
+  logger.info("Prepared chat request", {
+    characterId,
+    userId: user.id,
+    assistantMessageId,
+  })
+
+  // Load updated chat history including the new messages
   const history = await getChatHistory(db, characterId, 20)
   const messages: ChatMessage[] = history.map((msg) => ({
-    id: ulid(),
+    id: msg.id,
     chatRole: msg.role as "user" | "assistant",
     content: msg.content,
   }))
 
-  // Add user message to display
-  messages.push({
-    id: ulid(),
-    chatRole: "user",
-    content: userMessage.trim(),
-  })
+  // Return updated ChatBox with all messages (last assistant message has empty content)
+  return c.html(<ChatBox character={char} messages={messages} />)
+})
 
-  // Add processing message with generated ID
-  messages.push({
-    id: messageId,
-    chatRole: "assistant",
-    content: "Processing...",
-  })
+/**
+ * GET /characters/:id/chat/:messageId/stream
+ * Stream AI response for a specific assistant message via SSE
+ */
+chatRoutes.get("/characters/:id/chat/:messageId/stream", async (c) => {
+  if (!isAiEnabled()) {
+    logger.error("AI not enabled for SSE stream")
+    return c.json({ error: "AI features are not enabled" }, 503)
+  }
+
+  const user = c.var.user!
+  const characterId = c.req.param("id")
+  const messageId = c.req.param("messageId")
+  const db = getDb(c)
+
+  logger.info("SSE stream request received", { characterId, messageId, userId: user.id })
+
+  // Verify character belongs to user
+  const char = await computeCharacter(db, characterId)
+  if (!char || char.user_id !== user.id) {
+    return c.json({ error: "Character not found" }, 404)
+  }
 
   return streamSSE(c, async (stream) => {
     try {
-      // Send initial response: ChatBox with all messages including processing message
-      const firstMsg = {
-        event: "message",
-        data: (<ChatBox character={char} messages={messages} />).toString(),
-      }
-      logger.info("Starting chat stream", { characterId, userId: user.id, firstMsg })
-      await stream.writeSSE(firstMsg)
+      logger.info("Starting chat stream", {
+        characterId,
+        userId: user.id,
+        messageId,
+      })
 
-      // Process message with AI and stream updates
-      await processUserMessage(db, char, userMessage.trim(), async (chunk) => {
+      logger.info("Initiating chat stream...", { characterId, userId: user.id, messageId })
+
+      // Execute chat request and stream updates
+      const result = await executeChatRequest(db, char, messageId, async (chunk) => {
         logger.info("Processing chat chunk", { chunk })
         if (chunk.type === "text") {
-          // Stream text updates - replace the processing message by ID
+          // Stream text updates as "response" events
           await stream.writeSSE({
-            event: "message",
-            data: (
-              <ChatMessageBubble
-                id={messageId}
-                chatRole="assistant"
-                content={chunk.text}
-                hx-swap-oob="true"
-              />
-            ).toString(),
+            event: "response",
+            data: chunk.text,
           })
         } else if (chunk.type === "tool") {
           // Send tool confirmation modal
           await stream.writeSSE({
-            event: "tool",
             data: (
               <>
                 <ChatConfirmModal
@@ -127,7 +136,18 @@ chatRoutes.post("/characters/:id/chat", async (c) => {
         }
       })
 
-      logger.info("Chat stream completed", { characterId, userId: user.id, messageId })
+      const history = await getChatHistory(db, characterId, 20)
+      const messages: ChatMessage[] = history.map((msg) => ({
+        id: msg.id,
+        chatRole: msg.role as "user" | "assistant",
+        content: msg.content,
+      }))
+
+      await stream.writeSSE({
+        data: (<ChatBox character={char} messages={messages} swapOob={true} />)
+      })
+
+      logger.info("Chat stream completed", { characterId, userId: user.id, messageId, result })
     } catch (error) {
       logger.error("Error processing chat message", error as Error, {
         characterId,
@@ -135,17 +155,10 @@ chatRoutes.post("/characters/:id/chat", async (c) => {
         messageId,
       })
 
-      // Send error message
+      // Send error message as response event
       await stream.writeSSE({
-        event: "message",
-        data: (
-          <ChatMessageBubble
-            id={messageId}
-            chatRole="assistant"
-            content="Sorry, I encountered an error processing your message. Please try again."
-            hx-swap-oob="true"
-          />
-        ).toString(),
+        event: "response",
+        data: "Sorry, I encountered an error processing your message. Please try again.",
       })
     }
   })

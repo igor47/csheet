@@ -82,7 +82,7 @@ export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
   }
 
   return (
-    <div class="accordion-body" id="traits-panel" hx-swap-oob={swapOob && "true"}>
+    <div class="accordion-body" id="traits-panel" {...(swapOob && { "hx-swap-oob": "true" })}>
       <div class="d-flex justify-content-end gap-2 mb-3">
         <button
           type="button"

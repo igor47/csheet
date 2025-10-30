@@ -1,7 +1,8 @@
 import {
-  type CreateChatMessage,
   findByCharacterId as getChatHistory,
   create as saveChatMessage,
+  updateById as updateChatMessage,
+  type ChatMessage,
 } from "@src/db/chat_messages"
 import { getChatModel } from "@src/lib/ai"
 import { logger } from "@src/lib/logger"
@@ -9,7 +10,6 @@ import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { updateCoinsTool, updateCoinsToolName } from "@src/services/updateCoins"
 import type {
   AssistantModelMessage,
-  StreamTextOnChunkCallback,
   StreamTextOnFinishCallback,
   SystemModelMessage,
   UserModelMessage,
@@ -17,11 +17,6 @@ import type {
 import { streamText } from "ai"
 import type { SQL } from "bun"
 import { buildSystemPrompt } from "./prompts"
-
-export interface ChatMessage {
-  role: "user" | "assistant" | "system"
-  content: string
-}
 
 export interface ToolCall {
   tool_name: string
@@ -42,29 +37,62 @@ type StreamChunk = { type: "text"; text: string } | ({ type: "tool" } & ToolCall
 type StreamHandler = (chunk: StreamChunk) => Promise<void> | void
 
 /**
- * Process a user message and get AI response
- * Returns a Promise that resolves when streaming is complete and message is saved to DB
+ * Prepare a chat request by saving user message and creating empty assistant message
+ * Returns the assistant message ID
  */
-export async function processUserMessage(
+export async function prepareChatRequest(
   db: SQL,
   character: ComputedCharacter,
-  userMessage: string,
+  userMessage: string
+): Promise<string> {
+  // Save both messages in a transaction
+  return await db.begin(async (tx) => {
+    // Save user message
+    await saveChatMessage(tx, {
+      character_id: character.id,
+      role: "user",
+      content: userMessage,
+      tool_calls: null,
+      tool_results: null,
+    })
+
+    // Create empty assistant message as placeholder
+    const assistantMsg = await saveChatMessage(tx, {
+      character_id: character.id,
+      role: "assistant",
+      content: "",
+      tool_calls: null,
+      tool_results: null,
+    })
+
+    return assistantMsg.id
+  })
+}
+
+/**
+ * Execute a chat request by streaming AI response and updating assistant message
+ * Returns a Promise that resolves when streaming is complete and message is updated in DB
+ */
+export async function executeChatRequest(
+  db: SQL,
+  character: ComputedCharacter,
+  assistantMessageId: string,
   onMessage?: StreamHandler
 ): Promise<void> {
-  // Save user message to database
-  await saveChatMessage(db, {
-    character_id: character.id,
-    role: "user",
-    content: userMessage,
-    tool_calls: null,
-    tool_results: null,
-  })
 
   // Build system prompt with character context
   const systemPrompt = buildSystemPrompt(character)
 
-  // Load chat history (including the message we just saved)
-  const history = await getChatHistory(db, character.id, 10)
+  // Load chat history up to (but not including) the assistant message we're about to populate
+  const allHistory = await getChatHistory(db, character.id, 50)
+  const assistantMsgIndex = allHistory.findIndex((msg) => msg.id === assistantMessageId)
+
+  if (assistantMsgIndex === -1) {
+    throw new Error(`Assistant message ${assistantMessageId} not found in history`)
+  }
+
+  // Take only messages before this assistant message
+  const history = allHistory.slice(0, assistantMsgIndex)
 
   // Format previous messages for Vercel AI SDK
   const messages = history.map((msg) => {
@@ -92,87 +120,52 @@ export async function processUserMessage(
   const model = getChatModel()
 
   // Wrap streamText in a Promise that resolves when streaming completes
-  return new Promise<void>((resolve, reject) => {
-    const requestBody = {
-      model,
-      maxOutputTokens: 1024,
-      system: systemPrompt,
-      messages,
-      tools: ALL_TOOLS,
-      onChunk: makeOnChunk(onMessage),
-      onFinish: makeOnFinish(db, character, resolve, reject),
-      onError: ({ error }: { error: unknown }) => {
-        // Handle errors that occur during streaming (before onFinish)
-        logger.error("AI streaming error", error as Error, {
-          character_id: character.id,
-        })
-        reject(error as Error)
-      },
-    }
-
-    // Log the request for debugging
-    logger.info("AI request", { requestBody })
-    streamText(requestBody)
-  })
-}
-
-function makeOnFinish(
-  db: SQL,
-  character: ComputedCharacter,
-  resolve: () => void,
-  reject: (error: Error) => void
-): StreamTextOnFinishCallback<typeof ALL_TOOLS> {
-  const onFinish: StreamTextOnFinishCallback<typeof ALL_TOOLS> = async (result) => {
-    try {
-      // Log the finish result for debugging
-      logger.info("AI stream finished", { result })
-
-      const msg: CreateChatMessage = {
-        role: "assistant",
-        character_id: character.id,
-        content: result.text,
-        tool_calls: {},
-        tool_results: {},
-      }
-
-      for (const toolCall of result.toolCalls) {
-        msg.tool_calls![toolCall.toolName] = toolCall.input
-      }
-
-      await saveChatMessage(db, msg)
-
-      // Resolve the promise only after successful DB save
-      resolve()
-    } catch (error) {
-      logger.error("Error saving AI response to database", error as Error, {
+  const requestBody = {
+    model,
+    maxOutputTokens: 1024,
+    system: systemPrompt,
+    messages,
+    tools: ALL_TOOLS,
+    onError: ({ error }: { error: unknown }) => {
+      // Handle errors that occur during streaming (before onFinish)
+      logger.error("AI streaming error", error as Error, {
         character_id: character.id,
       })
-      reject(error as Error)
-    }
+    },
   }
-  return onFinish
-}
 
-function makeOnChunk(onMessage?: StreamHandler): StreamTextOnChunkCallback<typeof ALL_TOOLS> {
+  // Log the request for debugging
+  logger.info("AI request", { requestBody })
+
+  // Start streaming - result is returned synchronously, streaming happens via callbacks
   const messageAggregator: string[] = []
-
-  const wrappedOnChunk: StreamTextOnChunkCallback<typeof ALL_TOOLS> = async ({ chunk }) => {
-    let streamChunk: StreamChunk | null = null
-    if (chunk.type === "text-delta") {
-      messageAggregator.push(chunk.text)
-      streamChunk = { type: "text", text: messageAggregator.join("") }
-    } else if (chunk.type === "tool-call") {
-      streamChunk = {
-        type: "tool",
-        tool_name: chunk.toolName,
-        parameters: chunk.input as ToolCall["parameters"],
-      }
+  try {
+    const result = streamText(requestBody)
+    for await (const data of result.textStream) {
+      messageAggregator.push(data)
+      const streamChunk: StreamChunk = { type: "text", text: messageAggregator.join("") }
+      onMessage && onMessage(streamChunk)
     }
 
-    // call onChunk callback
-    logger.info("AI stream chunk", { streamChunk })
-    onMessage && streamChunk && onMessage(streamChunk)
-  }
+    const toolCalls: ChatMessage['tool_calls'] = {};
+    for (const toolCall of await result.toolCalls) {
+      const streamChunk: StreamChunk = {
+        type: "tool",
+        tool_name: toolCall.toolName,
+        parameters: toolCall.input as ToolCall["parameters"],
+      }
+      onMessage && Object.keys(toolCalls).length === 0 && onMessage(streamChunk)
 
-  return wrappedOnChunk
+      toolCalls[toolCall.toolName] = toolCall.input
+    }
+
+    // Update the existing assistant message
+    await updateChatMessage(db, assistantMessageId, {
+      content: messageAggregator.join(""),
+      tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
+    })
+
+  } catch (err) {
+    logger.info("AI stream error", { err })
+  }
 }

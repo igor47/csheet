@@ -53,7 +53,7 @@ export const CurrentStatus = ({ character, swapOob, chatMessages }: CurrentStatu
       <ChatBox character={character} messages={chatMessages} />
 
       {/* Current Status Card */}
-      <div class="card shadow-sm mb-3" id="current-status-card" hx-swap-oob={swapOob && "true"}>
+      <div class="card shadow-sm mb-3" id="current-status-card" {...(swapOob && { "hx-swap-oob": "true" })}>
         <div class="card-header">
           <h5 class="mb-0">Current Status</h5>
         </div>

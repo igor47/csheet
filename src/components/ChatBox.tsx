@@ -10,16 +10,17 @@ export interface ChatMessage {
 export interface ChatBoxProps {
   character: ComputedCharacter
   messages?: ChatMessage[]
+  swapOob?: boolean
 }
 
-export const ChatBox = ({ character, messages = [] }: ChatBoxProps) => {
+export const ChatBox = ({ character, messages = [], swapOob = false }: ChatBoxProps) => {
   // Don't render if AI is not enabled
   if (!isAiEnabled()) {
     return null
   }
 
   return (
-    <div class="card shadow-sm mb-3" id="chat-box-card">
+    <div class="card shadow-sm mb-3" id="chat-box-card" {...(swapOob ? { "hx-swap-oob": "true" } : {})}>
       <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-robot me-2"></i>
@@ -38,19 +39,31 @@ export const ChatBox = ({ character, messages = [] }: ChatBoxProps) => {
               <small>Ask me to help manage your character sheet!</small>
             </div>
           ) : (
-            messages.map((msg) => (
-              <ChatMessageBubble id={msg.id} chatRole={msg.chatRole} content={msg.content} />
-            ))
+            messages.map((msg, index) => {
+              // Check if this is the last message and it's an empty assistant message
+              const isLastMessage = index === messages.length - 1
+              //const shouldStream = isLastMessage && msg.chatRole === "assistant" && msg.content === ""
+              const shouldStream = false;
+
+              return (
+                <ChatMessageBubble
+                  id={msg.id}
+                  chatRole={msg.chatRole}
+                  content={msg.content}
+                  enableStreaming={shouldStream}
+                  characterId={character.id}
+                />
+              )
+            })
           )}
         </div>
 
         {/* Input form */}
         <form
           id="chat-form"
-          hx-ext="sse"
           hx-post={`/characters/${character.id}/chat`}
-          sse-swap="message,tool"
-          hx-on="htmx:afterRequest: document.getElementById('chat-input').value = ''"
+          hx-target="#chat-box-card"
+          hx-swap="outerHTML"
         >
           <div class="input-group">
             <input
@@ -79,19 +92,37 @@ export interface ChatMessageBubbleProps {
   id: string
   chatRole: "user" | "assistant"
   content: string
+  enableStreaming?: boolean
+  characterId?: string
 }
 
-export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubbleProps) => {
+export const ChatMessageBubble = ({
+  id,
+  chatRole,
+  content,
+  enableStreaming = false,
+  characterId,
+}: ChatMessageBubbleProps) => {
   const isUser = chatRole === "user"
+  const displayContent = enableStreaming && content === "" ? "Processing..." : content
+  // Prefix IDs to ensure valid CSS selectors (can't start with digit)
+  const contentId = `msg-${id}-content`
 
   return (
-    <div class="row mb-2" id={id}>
+    <div class="row mb-2" id={`msg-${id}`}>
       <div class={isUser ? "col-10 offset-2" : "col-10"}>
         <div
           class={`rounded px-3 py-2 ${isUser ? "bg-primary text-white" : "bg-secondary text-white"}`}
         >
           {!isUser && <i class="bi bi-robot me-1"></i>}
-          <span>{content}</span>
+          <span id={contentId}>{displayContent}</span>
+          {enableStreaming && characterId && (
+            <div
+              hx-ext="sse"
+              sse-connect={`/characters/${characterId}/chat/${id}/stream`}
+              sse-swap="response"
+            />
+          )}
         </div>
       </div>
     </div>
@@ -126,7 +157,7 @@ export const ChatConfirmModal = ({
   )
 
   return (
-    <div class="modal-content" id="editModalContent" hx-swap-oob={swapOob && "true"}>
+    <div class="modal-content" id="editModalContent" {...(swapOob && { "hx-swap-oob": "true" })}>
       <div class="modal-header">
         <h5 class="modal-title">
           <i class="bi bi-check-circle me-2"></i>

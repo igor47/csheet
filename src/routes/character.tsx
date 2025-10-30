@@ -47,7 +47,6 @@ import { findByCharacterId as findCoinChanges } from "@src/db/char_coins"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
 import { getCharItemHistory } from "@src/db/char_items"
-import { findByCharacterId as getChatHistory } from "@src/db/chat_messages"
 import { findByCharacterId } from "@src/db/char_levels"
 import {
   create as createNote,
@@ -61,6 +60,7 @@ import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spell
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
 import { countArchivedByUserId } from "@src/db/characters"
+import { findByCharacterId as getChatHistory } from "@src/db/chat_messages"
 import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
 import { findById as findItemById } from "@src/db/items"
@@ -153,13 +153,17 @@ characterRoutes.get("/characters/:id", async (c) => {
   // Load chat history for AI assistant
   const chatHistory = await getChatHistory(getDb(c), id, 20)
   const chatMessages = chatHistory.map((msg) => ({
-    role: msg.role as "user" | "assistant",
+    id: msg.id,
+    chatRole: msg.role as "user" | "assistant",
     content: msg.content,
   }))
 
-  return c.render(<Character character={char} currentNote={currentNote} chatMessages={chatMessages} />, {
-    title: "Character Sheet",
-  })
+  return c.render(
+    <Character character={char} currentNote={currentNote} chatMessages={chatMessages} />,
+    {
+      title: "Character Sheet",
+    }
+  )
 })
 
 characterRoutes.post("/characters/:id/archive", async (c) => {

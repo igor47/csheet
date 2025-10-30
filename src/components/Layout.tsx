@@ -80,6 +80,7 @@ export const Layout = ({
         />
         <link href="/static/styles.css" rel="stylesheet" />
         <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+        <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
       </head>
       <body data-bs-theme="dark">
         <Navbar user={user} currentPage={currentPage} />

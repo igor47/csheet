@@ -1,21 +1,28 @@
-import { processUserMessage, saveToolResult } from "@src/ai/chat"
+import { processUserMessage } from "@src/ai/chat"
 import { CharacterInfo } from "@src/components/CharacterInfo"
-import { ChatBox, ChatConfirmModal, type ChatMessage } from "@src/components/ChatBox"
+import {
+  ChatBox,
+  ChatConfirmModal,
+  type ChatMessage,
+  ChatMessageBubble,
+} from "@src/components/ChatBox"
 import { CurrentStatus } from "@src/components/CurrentStatus"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { isAiEnabled } from "@src/config"
-import { findByCharacterId as getChatHistory } from "@src/db/chat_messages"
 import { getDb } from "@src/db"
+import { findByCharacterId as getChatHistory } from "@src/db/chat_messages"
 import { logger } from "@src/lib/logger"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { updateCoins } from "@src/services/updateCoins"
 import { Hono } from "hono"
+import { streamSSE } from "hono/streaming"
+import { ulid } from "ulid"
 
 export const chatRoutes = new Hono()
 
 /**
  * POST /characters/:id/chat
- * Process a user message and return AI response
+ * Process a user message and stream AI response via SSE
  */
 chatRoutes.post("/characters/:id/chat", async (c) => {
   if (!isAiEnabled()) {
@@ -40,51 +47,105 @@ chatRoutes.post("/characters/:id/chat", async (c) => {
     return c.json({ error: "Message is required" }, 400)
   }
 
-  try {
-    // Process message with AI
-    const response = await processUserMessage(db, char, userMessage.trim())
+  // Generate unique message ID for this response
+  const messageId = ulid()
 
-    logger.info("Chat response", {
-      hasToolCall: !!response.tool_call,
-      toolName: response.tool_call?.tool_name,
-      message: response.message
-    })
+  // Load chat history (not including the message we're about to process)
+  const history = await getChatHistory(db, characterId, 20)
+  const messages: ChatMessage[] = history.map((msg) => ({
+    id: ulid(),
+    chatRole: msg.role as "user" | "assistant",
+    content: msg.content,
+  }))
 
-    // Load recent chat history
-    const history = await getChatHistory(db, characterId, 20)
-    const messages: ChatMessage[] = history.map((msg) => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-    }))
+  // Add user message to display
+  messages.push({
+    id: ulid(),
+    chatRole: "user",
+    content: userMessage.trim(),
+  })
 
-    // If there's a tool call, trigger the modal to open
-    if (response.tool_call) {
-      c.header("HX-Trigger", "openEditModal")
-      logger.info("Setting HX-Trigger header to openEditModal")
+  // Add processing message with generated ID
+  messages.push({
+    id: messageId,
+    chatRole: "assistant",
+    content: "Processing...",
+  })
 
-      // Return ChatBox + modal
-      return c.html(
-        <>
-          <ChatBox character={char} messages={messages} />
-          <ChatConfirmModal
-            characterId={characterId}
-            toolName={response.tool_call.tool_name}
-            parameters={response.tool_call.parameters}
-            swapOob={true}
+  return streamSSE(c, async (stream) => {
+    try {
+      // Send initial response: ChatBox with all messages including processing message
+      await stream.writeSSE({
+        event: "message",
+        data: (<ChatBox character={char} messages={messages} />).toString(),
+      })
+
+      // Process message with AI and stream updates
+      await processUserMessage(db, char, userMessage.trim(), async (chunk) => {
+        if (chunk.type === "text") {
+          // Stream text updates - replace the processing message by ID
+          await stream.writeSSE({
+            event: "message",
+            data: (
+              <ChatMessageBubble
+                id={messageId}
+                chatRole="assistant"
+                content={chunk.text}
+                hx-swap-oob="true"
+              />
+            ).toString(),
+          })
+        } else if (chunk.type === "tool") {
+          // Send tool confirmation modal
+          await stream.writeSSE({
+            event: "tool",
+            data: (
+              <>
+                <ChatConfirmModal
+                  characterId={characterId}
+                  toolName={chunk.tool_name}
+                  parameters={chunk.parameters}
+                  swapOob={true}
+                />
+                <script type="text/javascript" hx-swap-oob="true">
+                  {`
+                    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+                    modal.show();
+                  `}
+                </script>
+              </>
+            ).toString(),
+          })
+
+          logger.info("Sent tool call modal", {
+            toolName: chunk.tool_name,
+            messageId,
+          })
+        }
+      })
+
+      logger.info("Chat stream completed", { characterId, userId: user.id, messageId })
+    } catch (error) {
+      logger.error("Error processing chat message", error as Error, {
+        characterId,
+        userId: user.id,
+        messageId,
+      })
+
+      // Send error message
+      await stream.writeSSE({
+        event: "message",
+        data: (
+          <ChatMessageBubble
+            id={messageId}
+            chatRole="assistant"
+            content="Sorry, I encountered an error processing your message. Please try again."
+            hx-swap-oob="true"
           />
-        </>
-      )
+        ).toString(),
+      })
     }
-
-    // No tool call, just return updated ChatBox
-    return c.html(<ChatBox character={char} messages={messages} />)
-  } catch (error) {
-    logger.error("Error processing chat message", error as Error, {
-      characterId,
-      userId: user.id,
-    })
-    return c.json({ error: "Failed to process message. Please try again." }, 500)
-  }
+  })
 })
 
 /**
@@ -97,7 +158,12 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
       <div class="modal-content" id="editModalContent">
         <div class="modal-header">
           <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-danger">AI features are not enabled</div>
@@ -118,7 +184,12 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
       <div class="modal-content" id="editModalContent">
         <div class="modal-header">
           <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-danger">Character not found</div>
@@ -138,7 +209,12 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
       <div class="modal-content" id="editModalContent">
         <div class="modal-header">
           <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-danger">Invalid tool call data</div>
@@ -157,7 +233,12 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
       <div class="modal-content" id="editModalContent">
         <div class="modal-header">
           <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-danger">Invalid parameters JSON</div>
@@ -181,12 +262,6 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
       const result = await updateCoins(db, char, data)
 
       if (!result.complete) {
-        // Save error result
-        await saveToolResult(db, characterId, toolName, {
-          success: false,
-          error: Object.values(result.errors).join(", "),
-        })
-
         // Re-render modal with errors
         return c.html(
           <ChatConfirmModal
@@ -197,12 +272,6 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
           />
         )
       }
-
-      // Save success result
-      await saveToolResult(db, characterId, toolName, {
-        success: true,
-        message: "Coins updated successfully",
-      })
 
       // Get updated character
       const updatedChar = (await computeCharacter(db, characterId))!
@@ -223,7 +292,12 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
       <div class="modal-content" id="editModalContent">
         <div class="modal-header">
           <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-danger">Unknown tool: {toolName}</div>
@@ -238,16 +312,16 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
       userId: user.id,
     })
 
-    await saveToolResult(db, characterId, toolName, {
-      success: false,
-      error: "Execution failed",
-    })
-
     return c.html(
       <div class="modal-content" id="editModalContent">
         <div class="modal-header">
           <h5 class="modal-title">Error</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-danger">Failed to execute tool. Please try again.</div>

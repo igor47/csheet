@@ -1,6 +1,10 @@
 # dependencies (bun install)
 node_modules/
 
+# statically served FE dependencies
+static/htmx.min.js
+static/htmx-ext-sse.js
+
 # output
 out
 dist

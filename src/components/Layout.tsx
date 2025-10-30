@@ -79,8 +79,8 @@ export const Layout = ({
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         />
         <link href="/static/styles.css" rel="stylesheet" />
-        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-        <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+        <script src="/static/htmx.min.js"></script>
+        <script src="/static/htmx-ext-sse.js"></script>
       </head>
       <body data-bs-theme="dark">
         <Navbar user={user} currentPage={currentPage} />

@@ -75,13 +75,16 @@ chatRoutes.post("/characters/:id/chat", async (c) => {
   return streamSSE(c, async (stream) => {
     try {
       // Send initial response: ChatBox with all messages including processing message
-      await stream.writeSSE({
+      const firstMsg = {
         event: "message",
         data: (<ChatBox character={char} messages={messages} />).toString(),
-      })
+      }
+      logger.info("Starting chat stream", { characterId, userId: user.id, firstMsg })
+      await stream.writeSSE(firstMsg)
 
       // Process message with AI and stream updates
       await processUserMessage(db, char, userMessage.trim(), async (chunk) => {
+        logger.info("Processing chat chunk", { chunk })
         if (chunk.type === "text") {
           // Stream text updates - replace the processing message by ID
           await stream.writeSSE({

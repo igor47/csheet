@@ -159,3 +159,38 @@ export async function updateCoins(
     complete: true,
   }
 }
+
+export interface ToolExecutorResult {
+  success: boolean
+  errors?: Record<string, string>
+}
+
+/**
+ * Execute the update_coins tool from AI assistant
+ * Converts AI parameters to service format and calls updateCoins
+ */
+export async function executeUpdateCoins(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    ...parameters,
+    make_change: "true", // Always enable make_change for AI tool calls
+  }
+
+  const result = await updateCoins(db, char, data)
+
+  if (!result.complete) {
+    return {
+      success: false,
+      errors: result.errors,
+    }
+  }
+
+  return {
+    success: true,
+  }
+}

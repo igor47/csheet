@@ -1,4 +1,4 @@
-import { executeChatRequest, prepareChatRequest } from "@src/ai/chat"
+import { ALL_TOOL_EXECUTORS, executeChatRequest, prepareChatRequest } from "@src/ai/chat"
 import { CharacterInfo } from "@src/components/CharacterInfo"
 import { ChatBox, ChatConfirmModal, type ChatMessage } from "@src/components/ChatBox"
 import { CurrentStatus } from "@src/components/CurrentStatus"
@@ -12,7 +12,6 @@ import {
 } from "@src/db/chat_messages"
 import { logger } from "@src/lib/logger"
 import { computeCharacter } from "@src/services/computeCharacter"
-import { updateCoins } from "@src/services/updateCoins"
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 
@@ -253,60 +252,56 @@ chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
   }
 
   try {
-    // Execute the appropriate service based on tool name
-    if (toolName === "update_coins") {
-      // Convert parameters to string format for service
-      const data: Record<string, string> = {
-        ...parameters,
-        make_change: "true", // Always enable make_change for AI tool calls
-      }
+    // Look up the tool executor
+    const executor = ALL_TOOL_EXECUTORS[toolName]
 
-      logger.info("Calling updateCoins with data", { data })
-
-      const result = await updateCoins(db, char, data)
-
-      if (!result.complete) {
-        // Re-render modal with errors
-        return c.html(
-          <ChatConfirmModal
-            characterId={characterId}
-            toolName={toolName}
-            parameters={parameters}
-            errors={result.errors}
-          />
-        )
-      }
-
-      // Get updated character
-      const updatedChar = (await computeCharacter(db, characterId))!
-
-      // Return updated UI components with OOB swaps and close modal
-      c.header("HX-Trigger", "closeEditModal")
+    if (!executor) {
+      // Unknown tool
       return c.html(
-        <>
-          <CharacterInfo character={updatedChar} swapOob={true} />
-          <CurrentStatus character={updatedChar} swapOob={true} />
-          <InventoryPanel character={updatedChar} swapOob={true} />
-        </>
+        <div class="modal-content" id="editModalContent">
+          <div class="modal-header">
+            <h5 class="modal-title">Error</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-danger">Unknown tool: {toolName}</div>
+          </div>
+        </div>
       )
     }
 
-    // Unknown tool
+    // Execute the tool
+    logger.info("Executing tool", { toolName, parameters })
+    const result = await executor(db, char, parameters)
+
+    if (!result.success) {
+      // Re-render modal with errors
+      return c.html(
+        <ChatConfirmModal
+          characterId={characterId}
+          toolName={toolName}
+          parameters={parameters}
+          errors={result.errors}
+        />
+      )
+    }
+
+    // Get updated character
+    const updatedChar = (await computeCharacter(db, characterId))!
+
+    // Return updated UI components with OOB swaps and close modal
+    c.header("HX-Trigger", "closeEditModal")
     return c.html(
-      <div class="modal-content" id="editModalContent">
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Unknown tool: {toolName}</div>
-        </div>
-      </div>
+      <>
+        <CharacterInfo character={updatedChar} swapOob={true} />
+        <CurrentStatus character={updatedChar} swapOob={true} />
+        <InventoryPanel character={updatedChar} swapOob={true} />
+      </>
     )
   } catch (error) {
     logger.error("Error executing tool", error as Error, {

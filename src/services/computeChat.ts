@@ -72,7 +72,7 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
 
       messages.push({
         role: "assistant",
-        content
+        content,
       })
 
       if (hasAllToolResults(msg)) {
@@ -103,10 +103,9 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
 
         messages.push({
           role: "tool" as const,
-          content
+          content,
         })
       }
-
     } else if (msg.role === "system") {
       messages.push({
         role: "system",
@@ -124,7 +123,7 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
 }
 
 /**
-* If a message has tool calls, check if all have results
+ * If a message has tool calls, check if all have results
  */
 function hasAllToolResults(msg: DbChatMessage) {
   if (!msg.tool_calls) return false
@@ -136,7 +135,7 @@ function hasAllToolResults(msg: DbChatMessage) {
     }
   }
 
-  return true;
+  return true
 }
 
 /**

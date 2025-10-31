@@ -1,7 +1,6 @@
-import { ALL_TOOL_EXECUTORS } from "@src/ai/chat"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { UnresolvedToolCall } from "@src/services/computeChat"
-import type { ToolExecutorResult } from "@src/services/updateCoins"
+import { TOOL_EXECUTORS, type ToolExecutorResult } from "@src/tools"
 import type { SQL } from "bun"
 
 /**
@@ -46,7 +45,7 @@ export async function executeTool(
   char: ComputedCharacter,
   unresolvedTool: UnresolvedToolCall
 ): Promise<ToolExecutorResult> {
-  const executor = ALL_TOOL_EXECUTORS[unresolvedTool.toolName]
+  const executor = TOOL_EXECUTORS[unresolvedTool.toolName]
 
   if (!executor) {
     throw new Error(`Unknown tool: ${unresolvedTool.toolName}`)

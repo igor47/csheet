@@ -1,6 +1,7 @@
 import { isAiEnabled } from "@src/config"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat, UnresolvedToolCall } from "@src/services/computeChat"
+import { TOOL_FORMATTERS } from "@src/tools"
 
 export interface ChatBoxProps {
   character: ComputedCharacter
@@ -86,7 +87,7 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
 
           {/* Response box - shown when waiting for AI response */}
           {computedChat.shouldStream && (
-            <div class="row mb-2 chat-message">
+            <div class="row g-0 mb-2 chat-message">
               <div class="col-10">
                 <div class="rounded px-3 py-2 bg-secondary text-white">
                   <i class="bi bi-book me-1"></i>
@@ -156,7 +157,7 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
   const isUser = chatRole === "user"
 
   return (
-    <div class="row mb-2 chat-message" id={`msg-${id}`}>
+    <div class="row g-0 mb-2 chat-message" id={`msg-${id}`}>
       <div class={isUser ? "col-10 offset-2" : "col-10"}>
         <div
           class={`rounded px-3 py-2 ${isUser ? "bg-primary text-white" : "bg-secondary text-white"}`}
@@ -174,30 +175,21 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
  * Shows a pending tool call with approve/reject buttons
  */
 export const ToolCallApproval = ({ characterId, chatId, toolCall }: ToolCallApprovalProps) => {
-  // Format tool name for display
-  const displayName = toolCall.toolName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-
-  // Format parameters for display
-  const paramEntries = Object.entries(toolCall.parameters).filter(
-    ([_key, value]) => value !== undefined && value !== null && value !== ""
-  )
+  // Get formatter for this tool and generate user-friendly message
+  const formatter = TOOL_FORMATTERS[toolCall.toolName]
+  const approvalMessage = formatter
+    ? formatter(toolCall.parameters)
+    : `${toolCall.toolName}: ${JSON.stringify(toolCall.parameters)}`
 
   return (
-    <div class="row mb-2 chat-message" id={`tool-${toolCall.messageId}-${toolCall.toolCallId}`}>
+    <div class="row g-0 mb-2 chat-message" id={`tool-${toolCall.messageId}-${toolCall.toolCallId}`}>
       <div class="col-10">
         <div class="card border-warning">
           <div class="card-body p-2">
             <div class="d-flex align-items-start">
               <i class="bi bi-exclamation-triangle text-warning me-2 mt-1"></i>
-              <div class="flex-grow-1">
-                <strong>Approve Tool Call:</strong> {displayName}
-                <div class="small text-muted mt-1">
-                  {paramEntries.map(([key, value]) => (
-                    <div>
-                      <strong>{key}:</strong> {String(value)}
-                    </div>
-                  ))}
-                </div>
+              <div class="flex-grow-1" style="white-space: pre-line;">
+                {approvalMessage}
               </div>
               <div class="btn-group btn-group-sm ms-2">
                 <button

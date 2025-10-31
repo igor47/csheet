@@ -194,3 +194,37 @@ export async function executeUpdateCoins(
     success: true,
   }
 }
+
+/**
+ * Format approval message for update_coins tool calls
+ */
+export function formatUpdateCoinsApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { pp = 0, gp = 0, ep = 0, sp = 0, cp = 0, note } = parameters
+
+  // Build list of coin changes
+  const changes: string[] = []
+  if (pp !== 0) changes.push(`${Math.abs(pp)} platinum`)
+  if (gp !== 0) changes.push(`${Math.abs(gp)} gold`)
+  if (ep !== 0) changes.push(`${Math.abs(ep)} electrum`)
+  if (sp !== 0) changes.push(`${Math.abs(sp)} silver`)
+  if (cp !== 0) changes.push(`${Math.abs(cp)} copper`)
+
+  if (changes.length === 0) {
+    return "No coin changes"
+  }
+
+  // Determine if this is a gain or loss based on copper value
+  const totalCopper = pp * 1000 + gp * 100 + ep * 50 + sp * 10 + cp
+  const isGain = totalCopper > 0
+  const action = isGain ? "Gain" : "Spend"
+
+  let message = `${action} ${changes.join(", ")}`
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
+}

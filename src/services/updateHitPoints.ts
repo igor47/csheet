@@ -143,3 +143,23 @@ export async function executeUpdateHitPoints(
     success: true,
   }
 }
+
+/**
+ * Format approval message for update_hit_points tool calls
+ */
+export function formatUpdateHitPointsApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { action, amount, note } = parameters
+
+  const verb = action === "restore" ? "Restore" : "Take"
+  const suffix = action === "restore" ? "hit points" : "damage"
+
+  let message = `${verb} ${amount} ${suffix}`
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
+}

@@ -3,17 +3,7 @@ import { getChatModel } from "@src/lib/ai"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat } from "@src/services/computeChat"
-import {
-  executeUpdateCoins,
-  type ToolExecutorResult,
-  updateCoinsTool,
-  updateCoinsToolName,
-} from "@src/services/updateCoins"
-import {
-  executeUpdateHitPoints,
-  updateHitPointsTool,
-  updateHitPointsToolName,
-} from "@src/services/updateHitPoints"
+import { TOOL_DEFINITIONS } from "@src/tools"
 import { streamText } from "ai"
 import type { SQL } from "bun"
 import { ulid } from "ulid"
@@ -21,23 +11,6 @@ import { buildSystemPrompt } from "./prompts"
 
 export interface ChatResponse {
   message: string
-}
-
-const ALL_TOOLS = {
-  [updateCoinsToolName]: updateCoinsTool,
-  [updateHitPointsToolName]: updateHitPointsTool,
-}
-
-type ToolExecutor = (
-  db: SQL,
-  char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
-) => Promise<ToolExecutorResult>
-
-export const ALL_TOOL_EXECUTORS: Record<string, ToolExecutor> = {
-  [updateCoinsToolName]: executeUpdateCoins,
-  [updateHitPointsToolName]: executeUpdateHitPoints,
 }
 
 type StreamChunk = { type: "text"; text: string }
@@ -95,7 +68,7 @@ export async function executeChatRequest(
     maxOutputTokens: 1024,
     system: systemPrompt,
     messages: computedChat.llmMessages,
-    tools: ALL_TOOLS,
+    tools: TOOL_DEFINITIONS,
     onError: ({ error }: { error: unknown }) => {
       // Handle errors that occur during streaming (before onFinish)
       logger.error("AI streaming error", error as Error, {

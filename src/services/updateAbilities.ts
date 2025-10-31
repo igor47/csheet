@@ -33,11 +33,9 @@ export const UpdateAbilitiesApiSchema = z.object({
   is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
-export type UpdateAbilitiesInput = z.infer<typeof UpdateAbilitiesApiSchema>
-
 export type UpdateAbilitiesResult =
   | { complete: true; changedCount: number }
-  | { complete: false; values: UpdateAbilitiesInput | null; errors: Record<string, string> }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 interface AbilityChange {
   ability: AbilityType
@@ -51,20 +49,14 @@ interface AbilityChange {
 export async function updateAbilities(
   db: SQL,
   char: ComputedCharacter,
-  data: Record<string, string | boolean>
+  data: Record<string, string>
 ): Promise<UpdateAbilitiesResult> {
   // go on with validating remaining fields
   const checkD = UpdateAbilitiesApiSchema.partial().safeParse(data)
   if (!checkD.success) {
-    const errors = zodToFormErrors(checkD.error)
-    const badFields = Object.keys(errors)
-    const functionalSchema = UpdateAbilitiesApiSchema.partial().omit(
-      Object.fromEntries(badFields.map((f) => [f, true]))
-    )
-    const functionalData = functionalSchema.parse(data)
     return {
       complete: false,
-      values: functionalData as unknown as UpdateAbilitiesInput,
+      values: data,
       errors: zodToFormErrors(checkD.error),
     }
   }
@@ -109,7 +101,7 @@ export async function updateAbilities(
   }
 
   if (values.is_check || Object.keys(errors).length > 0) {
-    return { complete: false, values: values as UpdateAbilitiesInput, errors }
+    return { complete: false, values: data, errors }
   }
 
   // Parse and validate with Zod
@@ -117,7 +109,7 @@ export async function updateAbilities(
   if (!result.success) {
     return {
       complete: false,
-      values: values as UpdateAbilitiesInput,
+      values: data,
       errors: zodToFormErrors(result.error),
     }
   }

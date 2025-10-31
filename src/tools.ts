@@ -38,6 +38,12 @@ import {
   longRestToolName,
 } from "./services/longRest"
 import {
+  executeLookupSpell,
+  formatLookupSpellApproval,
+  lookupSpellTool,
+  lookupSpellToolName,
+} from "./services/lookupSpell"
+import {
   executePrepareSpell,
   formatPrepareSpellApproval,
   prepareSpellTool,
@@ -124,6 +130,8 @@ export interface ToolRegistration {
   executor: ToolExecutor
   /** Formatter function that generates user-friendly approval messages */
   formatApprovalMessage: ToolFormatter
+  /** Whether this tool requires user approval (defaults to true) */
+  requiresApproval?: boolean
 }
 
 /**
@@ -164,6 +172,13 @@ export const TOOLS: ToolRegistration[] = [
   },
 
   // Spellcasting
+  {
+    name: lookupSpellToolName,
+    tool: lookupSpellTool,
+    executor: executeLookupSpell,
+    formatApprovalMessage: formatLookupSpellApproval,
+    requiresApproval: false,
+  },
   {
     name: prepareSpellToolName,
     tool: prepareSpellTool,

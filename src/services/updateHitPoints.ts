@@ -5,6 +5,7 @@ import {
   NumberFormFieldSchema,
   OptionalNullStringSchema,
 } from "@src/lib/schemas"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -14,6 +15,24 @@ export const UpdateHitPointsApiSchema = z.object({
   amount: NumberFormFieldSchema.int().min(1),
   note: OptionalNullStringSchema,
   is_check: BooleanFormFieldSchema.optional().default(false),
+})
+
+// Vercel AI SDK tool definition
+export const updateHitPointsToolName = "update_hit_points" as const
+export const updateHitPointsTool = tool({
+  name: updateHitPointsToolName,
+  description: `Update the character's hit points. Used when the character takes damage or receives healing.
+
+Specify the action ("restore" for healing, "lose" for damage) and the amount of hit points to change.
+The note field should describe what caused the HP change.
+
+Examples:
+- Character takes 10 damage from a goblin attack → action: "lose", amount: 10, note: "Goblin attack"
+- Character drinks a healing potion restoring 8 HP → action: "restore", amount: 8, note: "Potion of healing"
+- Character receives healing spell for 15 HP → action: "restore", amount: 15, note: "Cure wounds spell"
+
+The system will prevent healing above max HP or reducing below 0 HP.`,
+  inputSchema: UpdateHitPointsApiSchema.omit({ is_check: true }),
 })
 
 export type UpdateHitPointsResult =
@@ -86,5 +105,41 @@ export async function updateHitPoints(
   return {
     complete: true,
     newHP: currentHP + delta,
+  }
+}
+
+export interface ToolExecutorResult {
+  success: boolean
+  errors?: Record<string, string>
+}
+
+/**
+ * Execute the update_hit_points tool from AI assistant
+ * Converts AI parameters to service format and calls updateHitPoints
+ */
+export async function executeUpdateHitPoints(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    action: parameters.action?.toString() || "",
+    amount: parameters.amount?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await updateHitPoints(db, char, data)
+
+  if (!result.complete) {
+    return {
+      success: false,
+      errors: result.errors,
+    }
+  }
+
+  return {
+    success: true,
   }
 }

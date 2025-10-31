@@ -1,5 +1,6 @@
 import type { ChatMessage as DbChatMessage } from "@src/db/chat_messages"
 import { findByChatId as getChatHistory } from "@src/db/chat_messages"
+import { TOOLS } from "@src/tools"
 import type { JSONValue, ModelMessage, TextPart, ToolCallPart, ToolResultPart } from "ai"
 import type { SQL } from "bun"
 
@@ -176,6 +177,7 @@ function shouldInitiateStream(dbMessages: DbChatMessage[]): boolean {
 
 /**
  * Find unresolved tool calls (tool calls where tool_results[id] is null)
+ * Only returns tools that require approval - read-only tools are filtered out
  */
 function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCall[] {
   const unresolved: UnresolvedToolCall[] = []
@@ -188,12 +190,19 @@ function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCal
       // Find IDs where tool_results is null
       for (const [id, call] of Object.entries(msg.tool_calls)) {
         if (!msg.tool_results[id]) {
-          unresolved.push({
-            messageId: msg.id,
-            toolCallId: id,
-            toolName: call.name,
-            parameters: call.parameters,
-          })
+          // Check if this tool requires approval
+          const toolRegistration = TOOLS.find((t) => t.name === call.name)
+          const requiresApproval = toolRegistration?.requiresApproval !== false
+
+          // Only include tools that require approval
+          if (requiresApproval) {
+            unresolved.push({
+              messageId: msg.id,
+              toolCallId: id,
+              toolName: call.name,
+              parameters: call.parameters,
+            })
+          }
         }
       }
     }

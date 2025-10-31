@@ -3,7 +3,8 @@ import { getChatModel } from "@src/lib/ai"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat } from "@src/services/computeChat"
-import { TOOL_DEFINITIONS } from "@src/tools"
+import { executeTool } from "@src/services/toolExecution"
+import { TOOL_DEFINITIONS, TOOLS } from "@src/tools"
 import { streamText } from "ai"
 import type { SQL } from "bun"
 import { ulid } from "ulid"
@@ -40,6 +41,51 @@ export async function prepareChatRequest(
   })
 
   return { chatId: finalChatId }
+}
+
+/**
+ * Auto-execute read-only tools in a newly created assistant message
+ * Finds tool calls that don't require approval and executes them immediately
+ */
+async function autoExecuteReadOnlyTools(
+  db: SQL,
+  character: ComputedCharacter,
+  assistantMsg: ChatMessage
+): Promise<void> {
+  // Check if message has tool calls
+  if (!assistantMsg.tool_calls || !assistantMsg.tool_results) {
+    return
+  }
+
+  // Find read-only tools that haven't been executed yet
+  for (const [toolCallId, call] of Object.entries(assistantMsg.tool_calls)) {
+    // Skip if already executed
+    if (assistantMsg.tool_results[toolCallId]) {
+      continue
+    }
+
+    // Check if this tool is read-only (doesn't require approval)
+    const toolRegistration = TOOLS.find((t) => t.name === call.name)
+    if (toolRegistration && toolRegistration.requiresApproval === false) {
+      try {
+        // Execute the tool immediately
+        await executeTool(db, character, {
+          messageId: assistantMsg.id,
+          toolCallId,
+          toolName: call.name,
+          parameters: call.parameters,
+        })
+      } catch (error) {
+        // Log errors but don't throw - tool execution is best-effort
+        logger.error("Auto-execution of read-only tool failed", error as Error, {
+          character_id: character.id,
+          message_id: assistantMsg.id,
+          tool_name: call.name,
+          tool_call_id: toolCallId,
+        })
+      }
+    }
+  }
 }
 
 /**
@@ -110,6 +156,9 @@ export async function executeChatRequest(
       tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
       tool_results: Object.keys(toolResults).length > 0 ? toolResults : null,
     })
+
+    // Auto-execute any read-only tools immediately
+    await autoExecuteReadOnlyTools(db, character, assistantMsg)
 
     return assistantMsg.id
   } catch (err) {

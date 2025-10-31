@@ -1,6 +1,6 @@
 import type { ChatMessage as DbChatMessage } from "@src/db/chat_messages"
 import { findByChatId as getChatHistory } from "@src/db/chat_messages"
-import type { AssistantModelMessage, CoreMessage, SystemModelMessage, UserModelMessage } from "ai"
+import type { ModelMessage, TextPart, ToolCallPart, ToolResultPart } from "ai"
 import type { SQL } from "bun"
 
 /**
@@ -17,6 +17,7 @@ export interface UiChatMessage {
  */
 export interface UnresolvedToolCall {
   messageId: string
+  toolCallId: string
   toolName: string
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>
@@ -28,7 +29,7 @@ export interface UnresolvedToolCall {
 export interface ComputedChat {
   chatId: string
   messages: UiChatMessage[]
-  llmMessages: CoreMessage[]
+  llmMessages: ModelMessage[]
   shouldStream: boolean
   unresolvedToolCalls: UnresolvedToolCall[]
 }
@@ -48,69 +49,134 @@ function toUiMessages(dbMessages: DbChatMessage[]): UiChatMessage[] {
 
 /**
  * Convert database messages to LLM-compatible message format
+ * Includes tool messages for resolved tool calls
  */
-function toLlmMessages(dbMessages: DbChatMessage[]): CoreMessage[] {
-  return dbMessages.map((msg) => {
+function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
+  const messages: ModelMessage[] = []
+
+  for (const msg of dbMessages) {
     if (msg.role === "assistant") {
-      const toolsCalled = msg.tool_calls ? Object.keys(msg.tool_calls).join(",") : null
-      const assistantMsg: AssistantModelMessage = {
-        role: "assistant",
-        content:
-          msg.content || msg.tool_calls
-            ? `requested tool calls to ${toolsCalled}`
-            : "<empty response>",
+      const content: (TextPart | ToolCallPart)[] = []
+      if (msg.content) {
+        content.push({ type: "text", text: msg.content })
       }
-      return assistantMsg
+
+      for (const [id, call] of Object.entries(msg.tool_calls || {})) {
+        content.push({
+          type: "tool-call" as const,
+          toolCallId: id,
+          toolName: call.name,
+          input: call.parameters,
+        })
+      }
+
+      messages.push({
+        role: "assistant",
+        content
+      })
+
+      if (hasAllToolResults(msg)) {
+        const content: ToolResultPart[] = []
+        for (const [id, call] of Object.entries(msg.tool_calls || {})) {
+          // must be present due to hasAllToolResults check
+          const result = msg.tool_results?.[id]!
+
+          let outputType: "text" | "error-text"
+          let outputValue: string
+          if (result.success) {
+            outputType = "text"
+            outputValue = "Completed successfully"
+          } else {
+            outputType = "error-text"
+            outputValue = result.error || "Failed with unknown error"
+          }
+          content.push({
+            type: "tool-result" as const,
+            toolCallId: id,
+            toolName: call.name,
+            output: {
+              type: outputType,
+              value: outputValue,
+            },
+          })
+        }
+
+        messages.push({
+          role: "tool" as const,
+          content
+        })
+      }
+
     } else if (msg.role === "system") {
-      const systemMsg: SystemModelMessage = {
+      messages.push({
         role: "system",
         content: msg.content,
-      }
-      return systemMsg
+      })
     } else {
-      const userMsg: UserModelMessage = {
+      messages.push({
         role: "user" as const,
         content: msg.content,
-      }
-      return userMsg
+      })
     }
-  })
+  }
+
+  return messages
 }
 
 /**
- * Detect if streaming should be initiated (last message is user without assistant response)
+* If a message has tool calls, check if all have results
+ */
+function hasAllToolResults(msg: DbChatMessage) {
+  if (!msg.tool_calls) return false
+  if (!msg.tool_results) return false
+
+  for (const id of Object.keys(msg.tool_calls)) {
+    if (!msg.tool_results[id]) {
+      return false
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Detect if streaming should be initiated
+ * Requirements:
+ * 1. Last message is from user
+ * 2. No unresolved tool calls in any message
  */
 function shouldInitiateStream(dbMessages: DbChatMessage[]): boolean {
   if (dbMessages.length === 0) return false
+
+  // last message is from the user, so we can ask LLM to respond
   const lastMessage = dbMessages[dbMessages.length - 1]
-  return lastMessage?.role === "user"
+  if (lastMessage?.role === "user") return true
+
+  // Check if there are any unresolved tool calls
+  if (lastMessage?.role === "assistant" && hasAllToolResults(lastMessage)) return true
+
+  return false
 }
 
 /**
- * Find unresolved tool calls (assistant messages with tool_calls but no subsequent user response)
+ * Find unresolved tool calls (tool calls where tool_results[id] is null)
  */
 function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCall[] {
   const unresolved: UnresolvedToolCall[] = []
 
-  for (let i = 0; i < dbMessages.length; i++) {
-    const msg = dbMessages[i]
+  for (const msg of dbMessages) {
     if (!msg) continue
 
     // Check if this is an assistant message with tool calls
-    if (msg.role === "assistant" && msg.tool_calls && Object.keys(msg.tool_calls).length > 0) {
-      // Check if there's a subsequent user message (which would mean it's been resolved)
-      const hasSubsequentUserMessage = dbMessages
-        .slice(i + 1)
-        .some((m) => m.role === "user" || m.role === "assistant")
-
-      if (!hasSubsequentUserMessage) {
-        // This tool call is unresolved - extract all tool calls from this message
-        for (const [toolName, parameters] of Object.entries(msg.tool_calls)) {
+    if (msg.role === "assistant" && msg.tool_calls && msg.tool_results) {
+      // Find IDs where tool_results is null
+      for (const [id, call] of Object.entries(msg.tool_calls)) {
+        if (!msg.tool_results[id]) {
           unresolved.push({
             messageId: msg.id,
-            toolName,
-            // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-            parameters: parameters as Record<string, any>,
+            toolCallId: id,
+            toolName: call.name,
+            parameters: call.parameters,
           })
         }
       }

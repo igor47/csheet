@@ -1,6 +1,6 @@
-import { ALL_TOOL_EXECUTORS, executeChatRequest, prepareChatRequest } from "@src/ai/chat"
+import { executeChatRequest, prepareChatRequest } from "@src/ai/chat"
 import { CharacterInfo } from "@src/components/CharacterInfo"
-import { ChatBox, ChatConfirmModal } from "@src/components/ChatBox"
+import { ChatBox } from "@src/components/ChatBox"
 import { CurrentStatus } from "@src/components/CurrentStatus"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { isAiEnabled } from "@src/config"
@@ -9,6 +9,7 @@ import { clearChat, getChatsByCharacterId } from "@src/db/chat_messages"
 import { logger } from "@src/lib/logger"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { computeChat } from "@src/services/computeChat"
+import { executeTool, rejectTool } from "@src/services/toolExecution"
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 
@@ -101,23 +102,6 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
             event: "message",
             data: chunk.text,
           })
-        } else if (chunk.type === "tool") {
-          // Send tool confirmation modal (will be opened by htmx:afterSwap listener)
-          await stream.writeSSE({
-            data: (
-              <ChatConfirmModal
-                characterId={characterId}
-                toolName={chunk.tool_name}
-                parameters={chunk.parameters}
-                swapOob={true}
-              />
-            ).toString(),
-          })
-
-          logger.info("Sent tool call modal", {
-            toolName: chunk.tool_name,
-            chatId,
-          })
         }
       })
 
@@ -146,181 +130,111 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
 })
 
 /**
- * POST /characters/:id/chat/execute-tool
- * Execute a tool after user confirmation
+ * POST /characters/:id/chat/:chatId/tool/:toolCallId/approve
+ * Approve and execute a specific tool call
  */
-chatRoutes.post("/characters/:id/chat/execute-tool", async (c) => {
+chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (c) => {
   if (!isAiEnabled()) {
-    return c.html(
-      <div class="modal-content" id="editModalContent">
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">AI features are not enabled</div>
-        </div>
-      </div>,
-      503
-    )
+    return c.json({ error: "AI features are not enabled" }, 503)
   }
 
   const user = c.var.user!
   const characterId = c.req.param("id")
+  const chatId = c.req.param("chatId")
+  const toolCallId = c.req.param("toolCallId")
   const db = getDb(c)
 
   // Verify character belongs to user
   const char = await computeCharacter(db, characterId)
   if (!char || char.user_id !== user.id) {
-    return c.html(
-      <div class="modal-content" id="editModalContent">
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Character not found</div>
-        </div>
-      </div>,
-      404
-    )
+    return c.json({ error: "Character not found" }, 404)
   }
 
-  // Get tool details from request
-  const body = await c.req.parseBody()
-  const toolName = body.tool_name as string
-  const parametersJson = body.parameters as string
+  // Get computed chat to find the unresolved tool call
+  const computedChat = await computeChat(db, chatId)
+  const unresolvedTool = computedChat.unresolvedToolCalls.find((tc) => tc.toolCallId === toolCallId)
 
-  if (!toolName || !parametersJson) {
-    return c.html(
-      <div class="modal-content" id="editModalContent">
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Invalid tool call data</div>
-        </div>
-      </div>,
-      400
-    )
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  let parameters: Record<string, any>
-  try {
-    parameters = JSON.parse(parametersJson)
-  } catch {
-    return c.html(
-      <div class="modal-content" id="editModalContent">
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Invalid parameters JSON</div>
-        </div>
-      </div>,
-      400
-    )
+  if (!unresolvedTool) {
+    return c.json({ error: "Tool call not found or already resolved" }, 404)
   }
 
   try {
-    // Look up the tool executor
-    const executor = ALL_TOOL_EXECUTORS[toolName]
+    // Execute the tool via service
+    logger.info("Executing tool", {
+      toolName: unresolvedTool.toolName,
+      parameters: unresolvedTool.parameters,
+    })
+    const result = await executeTool(db, char, unresolvedTool)
 
-    if (!executor) {
-      // Unknown tool
-      return c.html(
-        <div class="modal-content" id="editModalContent">
-          <div class="modal-header">
-            <h5 class="modal-title">Error</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="alert alert-danger">Unknown tool: {toolName}</div>
-          </div>
-        </div>
-      )
-    }
+    logger.info("Tool executed and result saved", {
+      messageId: unresolvedTool.messageId,
+      toolCallId,
+      success: result.success,
+    })
 
-    // Execute the tool
-    logger.info("Executing tool", { toolName, parameters })
-    const result = await executor(db, char, parameters)
-
-    if (!result.success) {
-      // Re-render modal with errors
-      return c.html(
-        <ChatConfirmModal
-          characterId={characterId}
-          toolName={toolName}
-          parameters={parameters}
-          errors={result.errors}
-        />
-      )
-    }
-
-    // Get updated character
+    // Get updated character and chat
     const updatedChar = (await computeCharacter(db, characterId))!
+    const updatedChat = await computeChat(db, chatId)
 
-    // Return updated UI components with OOB swaps and close modal
-    c.header("HX-Trigger", "closeEditModal")
+    // Return updated UI components with OOB swaps
     return c.html(
       <>
         <CharacterInfo character={updatedChar} swapOob={true} />
         <CurrentStatus character={updatedChar} swapOob={true} />
         <InventoryPanel character={updatedChar} swapOob={true} />
+        <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />
       </>
     )
   } catch (error) {
     logger.error("Error executing tool", error as Error, {
-      toolName,
+      toolName: unresolvedTool.toolName,
       characterId,
       userId: user.id,
     })
 
-    return c.html(
-      <div class="modal-content" id="editModalContent">
-        <div class="modal-header">
-          <h5 class="modal-title">Error</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">Failed to execute tool. Please try again.</div>
-        </div>
-      </div>
-    )
+    return c.json({ error: "Failed to execute tool" }, 500)
   }
+})
+
+/**
+ * POST /characters/:id/chat/:chatId/tool/:toolCallId/reject
+ * Reject a specific tool call
+ */
+chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/reject", async (c) => {
+  if (!isAiEnabled()) {
+    return c.json({ error: "AI features are not enabled" }, 503)
+  }
+
+  const user = c.var.user!
+  const characterId = c.req.param("id")
+  const chatId = c.req.param("chatId")
+  const toolCallId = c.req.param("toolCallId")
+  const db = getDb(c)
+
+  // Verify character belongs to user
+  const char = await computeCharacter(db, characterId)
+  if (!char || char.user_id !== user.id) {
+    return c.json({ error: "Character not found" }, 404)
+  }
+
+  // Get computed chat to find the unresolved tool call
+  const computedChat = await computeChat(db, chatId)
+  const unresolvedTool = computedChat.unresolvedToolCalls.find((tc) => tc.toolCallId === toolCallId)
+
+  if (!unresolvedTool) {
+    return c.json({ error: "Tool call not found or already resolved" }, 404)
+  }
+
+  // Reject the tool via service
+  await rejectTool(db, unresolvedTool)
+
+  logger.info("Tool rejected by user", { messageId: unresolvedTool.messageId, toolCallId })
+
+  // Get updated chat
+  const updatedChat = await computeChat(db, chatId)
+
+  // Return updated ChatBox
+  return c.html(<ChatBox character={char} computedChat={updatedChat} />)
 })
 
 /**

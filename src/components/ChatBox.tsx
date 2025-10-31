@@ -1,11 +1,17 @@
 import { isAiEnabled } from "@src/config"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import type { ComputedChat } from "@src/services/computeChat"
+import type { ComputedChat, UnresolvedToolCall } from "@src/services/computeChat"
 
 export interface ChatBoxProps {
   character: ComputedCharacter
   computedChat: ComputedChat
   swapOob?: boolean
+}
+
+export interface ToolCallApprovalProps {
+  characterId: string
+  chatId: string
+  toolCall: UnresolvedToolCall
 }
 
 export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxProps) => {
@@ -53,6 +59,7 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
           id="chat-messages"
           class="mb-3"
           style="max-height: 300px; overflow-y: auto; min-height: 100px;"
+          data-scroll-bottom="true"
         >
           {computedChat.messages.length === 0 ? (
             <div class="text-muted text-center py-3">
@@ -60,13 +67,26 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
             </div>
           ) : (
             computedChat.messages.map((msg) => (
-              <ChatMessageBubble id={msg.id} chatRole={msg.chatRole} content={msg.content} />
+              <>
+                <ChatMessageBubble id={msg.id} chatRole={msg.chatRole} content={msg.content} />
+                {/* Show tool approvals after assistant messages */}
+                {msg.chatRole === "assistant" &&
+                  computedChat.unresolvedToolCalls
+                    .filter((tc) => tc.messageId === msg.id)
+                    .map((tc) => (
+                      <ToolCallApproval
+                        characterId={character.id}
+                        chatId={computedChat.chatId}
+                        toolCall={tc}
+                      />
+                    ))}
+              </>
             ))
           )}
 
           {/* Response box - shown when waiting for AI response */}
           {computedChat.shouldStream && (
-            <div class="row mb-2">
+            <div class="row mb-2 chat-message">
               <div class="col-10">
                 <div class="rounded px-3 py-2 bg-secondary text-white">
                   <i class="bi bi-robot me-1"></i>
@@ -136,7 +156,7 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
   const isUser = chatRole === "user"
 
   return (
-    <div class="row mb-2" id={`msg-${id}`}>
+    <div class="row mb-2 chat-message" id={`msg-${id}`}>
       <div class={isUser ? "col-10 offset-2" : "col-10"}>
         <div
           class={`rounded px-3 py-2 ${isUser ? "bg-primary text-white" : "bg-secondary text-white"}`}
@@ -150,92 +170,58 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
 }
 
 /**
- * Confirmation modal for tool execution
+ * Inline tool call approval component
+ * Shows a pending tool call with approve/reject buttons
  */
-export interface ChatConfirmModalProps {
-  characterId: string
-  toolName: string
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
-  swapOob?: boolean
-  errors?: Record<string, string>
-}
-
-export const ChatConfirmModal = ({
-  characterId,
-  toolName,
-  parameters,
-  swapOob,
-  errors,
-}: ChatConfirmModalProps) => {
+export const ToolCallApproval = ({ characterId, chatId, toolCall }: ToolCallApprovalProps) => {
   // Format tool name for display
-  const displayName = toolName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+  const displayName = toolCall.toolName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
 
   // Format parameters for display
-  const paramEntries = Object.entries(parameters).filter(
+  const paramEntries = Object.entries(toolCall.parameters).filter(
     ([_key, value]) => value !== undefined && value !== null && value !== ""
   )
 
   return (
-    <div
-      class="modal-content"
-      id="editModalContent"
-      data-show-modal="true"
-      {...(swapOob && { "hx-swap-oob": "true" })}
-    >
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="bi bi-check-circle me-2"></i>
-          Confirm Action
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        {errors && Object.keys(errors).length > 0 && (
-          <div class="alert alert-danger mb-3">
-            <strong>Errors:</strong>
-            <ul class="mb-0 mt-2">
-              {Object.entries(errors).map(([field, error]) => (
-                <li>
-                  <strong>{field}:</strong> {error}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <p>
-          The AI wants to <strong>{displayName}</strong>:
-        </p>
-
-        <div class="bg-dark border border-secondary p-3 rounded mb-3">
-          {paramEntries.map(([key, value]) => (
-            <div class="mb-1">
-              <strong>{key}:</strong> {String(value)}
+    <div class="row mb-2 chat-message" id={`tool-${toolCall.messageId}-${toolCall.toolCallId}`}>
+      <div class="col-10">
+        <div class="card border-warning">
+          <div class="card-body p-2">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-exclamation-triangle text-warning me-2 mt-1"></i>
+              <div class="flex-grow-1">
+                <strong>Approve Tool Call:</strong> {displayName}
+                <div class="small text-muted mt-1">
+                  {paramEntries.map(([key, value]) => (
+                    <div>
+                      <strong>{key}:</strong> {String(value)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div class="btn-group btn-group-sm ms-2">
+                <button
+                  type="button"
+                  class="btn btn-success"
+                  hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/approve`}
+                  hx-target="#chat-box-card"
+                  hx-swap="outerHTML"
+                >
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/reject`}
+                  hx-target="#chat-box-card"
+                  hx-swap="outerHTML"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
-
-        <p class="text-muted mb-0">
-          <small>Review the details above and confirm to proceed.</small>
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          hx-post={`/characters/${characterId}/chat/execute-tool`}
-          hx-vals={JSON.stringify({
-            tool_name: toolName,
-            parameters: JSON.stringify(parameters),
-          })}
-          hx-target="#editModalContent"
-        >
-          <i class="bi bi-check-lg me-1"></i>
-          Confirm
-        </button>
       </div>
     </div>
   )

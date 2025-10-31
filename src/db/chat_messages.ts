@@ -2,14 +2,24 @@ import type { SQL } from "bun"
 import { ulid } from "ulid"
 import { z } from "zod"
 
+export const ToolCallSchema = z.object({
+  name: z.string(),
+  parameters: z.record(z.string(), z.any()),
+})
+
+export const ToolResultSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+})
+
 export const ChatMessageSchema = z.object({
   id: z.string(),
   character_id: z.string(),
   chat_id: z.string(),
   role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
-  tool_calls: z.record(z.string(), z.any()).nullable().default(null),
-  tool_results: z.record(z.string(), z.any()).nullable().default(null),
+  tool_calls: z.record(z.string(), ToolCallSchema).nullable().default(null),
+  tool_results: z.record(z.string(), ToolResultSchema.nullable()).nullable().default(null),
   created_at: z.date(),
 })
 
@@ -18,6 +28,8 @@ export const CreateChatMessageSchema = ChatMessageSchema.omit({
   created_at: true,
 })
 
+export type ToolCall = z.infer<typeof ToolCallSchema>
+export type ToolResult = z.infer<typeof ToolResultSchema>
 export type ChatMessage = z.infer<typeof ChatMessageSchema>
 export type CreateChatMessage = z.infer<typeof CreateChatMessageSchema>
 

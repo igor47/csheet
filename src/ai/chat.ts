@@ -19,15 +19,8 @@ import type { SQL } from "bun"
 import { ulid } from "ulid"
 import { buildSystemPrompt } from "./prompts"
 
-export interface ToolCall {
-  tool_name: string
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
-}
-
 export interface ChatResponse {
   message: string
-  tool_call?: ToolCall
 }
 
 const ALL_TOOLS = {
@@ -47,7 +40,7 @@ export const ALL_TOOL_EXECUTORS: Record<string, ToolExecutor> = {
   [updateHitPointsToolName]: executeUpdateHitPoints,
 }
 
-type StreamChunk = { type: "text"; text: string } | ({ type: "tool" } & ToolCall)
+type StreamChunk = { type: "text"; text: string }
 type StreamHandler = (chunk: StreamChunk) => Promise<void> | void
 
 /**
@@ -125,15 +118,17 @@ export async function executeChatRequest(
     }
 
     const toolCalls: ChatMessage["tool_calls"] = {}
-    for (const toolCall of await result.toolCalls) {
-      const streamChunk: StreamChunk = {
-        type: "tool",
-        tool_name: toolCall.toolName,
-        parameters: toolCall.input as ToolCall["parameters"],
-      }
-      onMessage && Object.keys(toolCalls).length === 0 && onMessage(streamChunk)
+    const toolResults: ChatMessage["tool_results"] = {}
 
-      toolCalls[toolCall.toolName] = toolCall.input
+    for (const toolCall of await result.toolCalls) {
+      const id = toolCall.toolCallId
+      toolCalls[id] = {
+        name: toolCall.toolName,
+        // biome-ignore lint/suspicious/noExplicitAny: Tool input can be any valid JSON
+        parameters: toolCall.input as Record<string, any>,
+      }
+      // Initialize result as null (pending approval)
+      toolResults[id] = null
     }
 
     // Create assistant message with final content after streaming completes
@@ -143,7 +138,7 @@ export async function executeChatRequest(
       role: "assistant",
       content: messageAggregator.join(""),
       tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
-      tool_results: null,
+      tool_results: Object.keys(toolResults).length > 0 ? toolResults : null,
     })
 
     return assistantMsg.id

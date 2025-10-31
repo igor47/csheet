@@ -2,16 +2,28 @@ import { create as createSpellPrepared } from "@src/db/char_spells_prepared"
 import { ClassNames, ClassNamesSchema } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const PrepareSpellApiSchema = z.object({
-  class: ClassNamesSchema,
-  spell_type: z.enum(["cantrip", "spell"]),
-  spell_id: z.string(),
-  current_spell_id: z.string().optional(),
-  note: z.string().nullable().optional().default(null),
+  class: ClassNamesSchema.describe("The spellcasting class (e.g., 'wizard', 'cleric', 'druid')"),
+  spell_type: z.enum(["cantrip", "spell"]).describe("Whether preparing a cantrip or leveled spell"),
+  spell_id: z
+    .string()
+    .describe("The ID of the spell to prepare (e.g., 'fire-bolt', 'cure-wounds')"),
+  current_spell_id: z
+    .string()
+    .optional()
+    .describe("The ID of the spell currently in this slot, if swapping an existing prepared spell"),
+  note: z
+    .string()
+    .nullable()
+    .optional()
+    .default(null)
+    .describe("Optional note about why this spell is being prepared"),
 })
 
 type PrepareSpellData = Partial<z.infer<typeof PrepareSpellApiSchema>>
@@ -162,4 +174,73 @@ export async function prepareSpell(
   })
 
   return { complete: true }
+}
+
+// Vercel AI SDK tool definition
+export const prepareSpellToolName = "prepare_spell" as const
+export const prepareSpellTool = tool({
+  name: prepareSpellToolName,
+  description: `Prepare a spell in a slot, or swap an existing prepared spell. For classes that prepare spells (like Clerics, Druids, Paladins), this changes which spells are available to cast. For Wizards, leveled spells must be in the spellbook before they can be prepared.`,
+  inputSchema: PrepareSpellApiSchema.omit({ note: true }).extend({
+    note: z.string().optional().describe("Optional note about why this spell is being prepared"),
+  }),
+})
+
+/**
+ * Execute the prepare_spell tool from AI assistant
+ * Converts AI parameters to service format and calls prepareSpell
+ */
+export async function executePrepareSpell(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    class: parameters.class?.toString() || "",
+    spell_type: parameters.spell_type?.toString() || "",
+    spell_id: parameters.spell_id?.toString() || "",
+    current_spell_id: parameters.current_spell_id?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await prepareSpell(db, char, data)
+
+  if (!result.complete) {
+    // Convert errors object to single error message
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to prepare spell",
+    }
+  }
+
+  return {
+    status: "success",
+  }
+}
+
+/**
+ * Format approval message for prepare_spell tool calls
+ */
+export function formatPrepareSpellApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { class: className, spell_id, spell_type, current_spell_id, note } = parameters
+
+  const spell = spells.find((s) => s.id === spell_id)
+  const spellName = spell?.name || spell_id
+  const isSwap = !!current_spell_id
+
+  let message = isSwap
+    ? `Swap ${className} ${spell_type} to ${spellName}`
+    : `Prepare ${spellName} as ${className} ${spell_type}`
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

@@ -6,16 +6,26 @@ import {
   NumberFormFieldSchema,
   OptionalNullStringSchema,
 } from "@src/lib/schemas"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 import { updateSpellSlots } from "./updateSpellSlots"
 
 export const CastSpellApiSchema = z.object({
-  spell_id: z.string(),
-  as_ritual: BooleanFormFieldSchema.optional().default(false),
-  slot_level: NumberFormFieldSchema.int().min(1).max(9).optional(),
-  note: OptionalNullStringSchema,
+  spell_id: z.string().describe("The ID of the spell to cast (e.g., 'fire-bolt', 'magic-missile')"),
+  as_ritual: BooleanFormFieldSchema.optional()
+    .default(false)
+    .describe("True if casting as a ritual (for ritual spells only, doesn't consume spell slot)"),
+  slot_level: NumberFormFieldSchema.int()
+    .min(1)
+    .max(9)
+    .optional()
+    .describe(
+      "The level of spell slot to use (required for non-cantrip, non-ritual spells). Can be higher than spell level to upcast."
+    ),
+  note: OptionalNullStringSchema.describe("Optional additional notes about the casting"),
   is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
@@ -169,4 +179,77 @@ export async function castSpell(
     note: `You cast ${spell.name} using a level ${result.data.slot_level} spell slot.`,
     spellId: spell.id,
   }
+}
+
+// Vercel AI SDK tool definition
+export const castSpellToolName = "cast_spell" as const
+export const castSpellTool = tool({
+  name: castSpellToolName,
+  description: `Cast a spell, consuming a spell slot (unless cast as a ritual or cantrip). The spell must be prepared or known. Wizards can cast ritual spells from their spellbook without preparing them.`,
+  inputSchema: CastSpellApiSchema.omit({ note: true, is_check: true }).extend({
+    note: z.string().optional().describe("Optional additional notes about the casting"),
+  }),
+})
+
+/**
+ * Execute the cast_spell tool from AI assistant
+ * Converts AI parameters to service format and calls castSpell
+ */
+export async function executeCastSpell(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    spell_id: parameters.spell_id?.toString() || "",
+    as_ritual: parameters.as_ritual?.toString() || "false",
+    slot_level: parameters.slot_level?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await castSpell(db, char, data)
+
+  if (!result.complete) {
+    // Convert errors object to single error message
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to cast spell",
+    }
+  }
+
+  return {
+    status: "success",
+    data: { note: result.note, spellId: result.spellId },
+  }
+}
+
+/**
+ * Format approval message for cast_spell tool calls
+ */
+export function formatCastSpellApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { spell_id, as_ritual, slot_level, note } = parameters
+
+  const spell = spells.find((s) => s.id === spell_id)
+  const spellName = spell?.name || spell_id
+  const isCantrip = spell?.level === 0
+
+  let message = `Cast ${spellName}`
+
+  if (as_ritual) {
+    message += " as a ritual"
+  } else if (!isCantrip && slot_level) {
+    message += ` using level ${slot_level} slot`
+  }
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

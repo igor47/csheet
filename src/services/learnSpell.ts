@@ -1,13 +1,26 @@
 import { create as createSpellLearned } from "@src/db/char_spells_learned"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const LearnSpellApiSchema = z.object({
-  spell_id: z.string(),
-  note: z.string().nullable().optional().default(null),
+  spell_id: z
+    .string()
+    .describe(
+      "The ID of the spell to add to the wizard's spellbook (e.g., 'fireball', 'shield'). Must be a wizard spell and not a cantrip."
+    ),
+  note: z
+    .string()
+    .nullable()
+    .optional()
+    .default(null)
+    .describe(
+      "Optional note about how the spell was learned (e.g., 'Copied from scroll', 'Learned at level 5')"
+    ),
 })
 
 type LearnSpellData = Partial<z.infer<typeof LearnSpellApiSchema>>
@@ -91,4 +104,65 @@ export async function learnSpell(
   })
 
   return { complete: true }
+}
+
+// Vercel AI SDK tool definition
+export const learnSpellToolName = "learn_spell" as const
+export const learnSpellTool = tool({
+  name: learnSpellToolName,
+  description: `Add a spell to a wizard's spellbook. Used when a wizard learns a new spell by copying it from a scroll, another spellbook, or as part of leveling up. Only wizards can use this tool.`,
+  inputSchema: LearnSpellApiSchema,
+})
+
+/**
+ * Execute the learn_spell tool from AI assistant
+ * Converts AI parameters to service format and calls learnSpell
+ */
+export async function executeLearnSpell(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    spell_id: parameters.spell_id?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await learnSpell(db, char, data)
+
+  if (!result.complete) {
+    // Convert errors object to single error message
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to learn spell",
+    }
+  }
+
+  return {
+    status: "success",
+  }
+}
+
+/**
+ * Format approval message for learn_spell tool calls
+ */
+export function formatLearnSpellApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { spell_id, note } = parameters
+
+  const spell = spells.find((s) => s.id === spell_id)
+  const spellName = spell?.name || spell_id
+
+  let message = `Add ${spellName} to spellbook`
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

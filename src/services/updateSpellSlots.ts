@@ -1,15 +1,23 @@
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { SpellSlotsType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const UpdateSpellSlotsApiSchema = z.object({
   character_id: z.string(),
-  action: z.enum(["use", "restore"]),
-  slot_level: z.number().int().min(1).max(9),
-  note: z.string().nullable().optional(),
+  action: z
+    .enum(["use", "restore"])
+    .describe("Whether to use (consume) a spell slot or restore (regain) a spell slot"),
+  slot_level: z.number().int().min(1).max(9).describe("The level of the spell slot (1-9)"),
+  note: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Optional note about why the slot is being used or restored"),
 })
 
 export type UpdateSpellSlotsApi = z.infer<typeof UpdateSpellSlotsApiSchema>
@@ -145,4 +153,64 @@ export async function updateSpellSlots(
   }
 
   return { complete: true }
+}
+
+// Vercel AI SDK tool definition
+export const updateSpellSlotsToolName = "update_spell_slots" as const
+export const updateSpellSlotsTool = tool({
+  name: updateSpellSlotsToolName,
+  description: `Manually use or restore a spell slot. This is useful for features that restore spell slots (like Arcane Recovery) or consume them for non-spell purposes. For casting spells, use the cast_spell tool instead.`,
+  inputSchema: UpdateSpellSlotsApiSchema.omit({ character_id: true }),
+})
+
+/**
+ * Execute the update_spell_slots tool from AI assistant
+ * Converts AI parameters to service format and calls updateSpellSlots
+ */
+export async function executeUpdateSpellSlots(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    action: parameters.action?.toString() || "",
+    slot_level: parameters.slot_level?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await updateSpellSlots(db, char, data)
+
+  if (!result.complete) {
+    // Convert errors object to single error message
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to update spell slots",
+    }
+  }
+
+  return {
+    status: "success",
+  }
+}
+
+/**
+ * Format approval message for update_spell_slots tool calls
+ */
+export function formatUpdateSpellSlotsApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { action, slot_level, note } = parameters
+
+  const verb = action === "use" ? "Use" : "Restore"
+  let message = `${verb} level ${slot_level} spell slot`
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

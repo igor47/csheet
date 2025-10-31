@@ -5,16 +5,39 @@ import type { Character } from "@src/db/characters"
 import { ClassNames, ClassNamesSchema, type ClassNameType, getTraits } from "@src/lib/dnd"
 import { getRuleset } from "@src/lib/dnd/rulesets"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 
 export const AddLevelApiSchema = z.object({
   character_id: z.string(),
-  class: ClassNamesSchema,
-  level: z.number().int().min(1).max(20),
-  subclass: z.string().nullable().optional(),
-  hit_die_roll: z.number().int().min(1).max(12),
-  note: z.string().nullable().optional(),
+  class: ClassNamesSchema.describe("The class to add a level in (e.g., 'fighter', 'wizard')"),
+  level: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .describe(
+      "The new class level (automatically determined, typically you don't need to specify this)"
+    ),
+  subclass: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      "The subclass name (required at subclass level, e.g., 'Evocation' for wizards at level 3)"
+    ),
+  hit_die_roll: z
+    .number()
+    .int()
+    .min(1)
+    .max(12)
+    .describe(
+      "The HP rolled on the hit die for this level. Ask the user to roll their hit die and provide the result."
+    ),
+  note: z.string().nullable().optional().describe("Optional note about this level gain"),
 })
 
 export type AddLevelApi = z.infer<typeof AddLevelApiSchema>
@@ -208,4 +231,65 @@ export async function addLevel(
   })
 
   return { complete: true }
+}
+
+// Vercel AI SDK tool definition
+export const addLevelToolName = "add_level" as const
+export const addLevelTool = tool({
+  name: addLevelToolName,
+  description: `Add a level to the character (level up). Automatically adds class traits/features for the new level. Ask the user to roll their hit die for HP.`,
+  inputSchema: AddLevelApiSchema.omit({ character_id: true, level: true }),
+})
+
+/**
+ * Execute the add_level tool from AI assistant
+ */
+export async function executeAddLevel(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  const data: Record<string, string> = {
+    class: parameters.class?.toString() || "",
+    subclass: parameters.subclass?.toString() || "",
+    hit_die_roll: parameters.hit_die_roll?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await addLevel(db, char, data)
+
+  if (!result.complete) {
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to add level",
+    }
+  }
+
+  return {
+    status: "success",
+  }
+}
+
+/**
+ * Format approval message for add_level tool calls
+ */
+export function formatAddLevelApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { class: className, subclass, hit_die_roll, note } = parameters
+
+  let message = `Add level in ${className}`
+  if (subclass) {
+    message += ` (${subclass} subclass)`
+  }
+  message += `, rolled ${hit_die_roll} HP`
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

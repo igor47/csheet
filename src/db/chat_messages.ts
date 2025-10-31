@@ -7,10 +7,11 @@ export const ToolCallSchema = z.object({
   parameters: z.record(z.string(), z.any()),
 })
 
-export const ToolResultSchema = z.object({
-  success: z.boolean(),
-  error: z.string().optional(),
-})
+export const ToolResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("rejected") }),
+  z.object({ status: z.literal("failed"), error: z.string().optional() }),
+  z.object({ status: z.literal("success"), data: z.record(z.string(), z.any()).optional() }),
+])
 
 export const ChatMessageSchema = z.object({
   id: z.string(),

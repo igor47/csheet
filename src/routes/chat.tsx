@@ -169,7 +169,7 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
     logger.info("Tool executed and result saved", {
       messageId: unresolvedTool.messageId,
       toolCallId,
-      success: result.success,
+      status: result.status,
     })
 
     // Get updated character and chat

@@ -1,6 +1,6 @@
 import type { ChatMessage as DbChatMessage } from "@src/db/chat_messages"
 import { findByChatId as getChatHistory } from "@src/db/chat_messages"
-import type { ModelMessage, TextPart, ToolCallPart, ToolResultPart } from "ai"
+import type { JSONValue, ModelMessage, TextPart, ToolCallPart, ToolResultPart } from "ai"
 import type { SQL } from "bun"
 
 /**
@@ -77,30 +77,47 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
 
       if (hasAllToolResults(msg)) {
         const content: ToolResultPart[] = []
+
         for (const [id, call] of Object.entries(msg.tool_calls || {})) {
           // must be present due to hasAllToolResults check
           const result = msg.tool_results?.[id]!
 
-          let outputType: "text" | "error-text"
-          let outputValue: string
-          if (result.success) {
-            outputType = "text"
-            outputValue = "Completed successfully"
+          // compute the output
+          let output: ToolResultPart["output"]
+          if (result.status === "rejected") {
+            output = {
+              type: "error-text",
+              value: "User declined this action",
+            }
+          } else if (result.status === "failed") {
+            output = {
+              type: "error-text",
+              value: result.error || "Failed with unknown error",
+            }
           } else {
-            outputType = "error-text"
-            outputValue = result.error || "Failed with unknown error"
+            if (result.data) {
+              output = {
+                type: "json",
+                value: { ...result.data, success: true } as JSONValue,
+              }
+            } else {
+              output = {
+                type: "text",
+                value: "Completed successfully",
+              }
+            }
           }
+
+          // add the tool result to the message
           content.push({
             type: "tool-result" as const,
             toolCallId: id,
             toolName: call.name,
-            output: {
-              type: outputType,
-              value: outputValue,
-            },
+            output,
           })
         }
 
+        // add message to messages
         messages.push({
           role: "tool" as const,
           content,

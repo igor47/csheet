@@ -46,10 +46,18 @@ export const CurrentStatus = ({ character, swapOob }: CurrentStatusProps) => {
     ? "You are at full health with all spell slots and hit dice available."
     : `You are ${statusParts.join(", ")}.`
 
+  const emptyChat = {
+    chatId: "",
+    messages: [],
+    llmMessages: [],
+    shouldStream: false,
+    unresolvedToolCalls: [],
+  }
+
   return (
     <>
       {/* AI Chat Box - rendered first if enabled, always starts with new chat */}
-      <ChatBox character={character} />
+      <ChatBox character={character} computedChat={emptyChat} />
 
       {/* Current Status Card */}
       <div

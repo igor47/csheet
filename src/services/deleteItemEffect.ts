@@ -1,4 +1,5 @@
 import { deleteById as deleteItemEffectDb, findById } from "@src/db/item_effects"
+import { logger } from "@src/lib/logger"
 import type { SQL } from "bun"
 
 /**
@@ -26,7 +27,7 @@ export async function deleteItemEffect(
 
     return { success: true }
   } catch (error) {
-    console.error("Error deleting item effect:", error)
+    logger.error("Error deleting item effect:", error as Error)
     return { success: false, error: "Failed to delete effect. Please try again." }
   }
 }

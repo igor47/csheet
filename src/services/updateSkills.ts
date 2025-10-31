@@ -16,7 +16,6 @@ const ProficiencyFormFieldSchema = z
     z.literal("expert"),
     z.undefined(),
   ])
-  .transform((v) => v || "none")
   .default("none")
 
 // Proficiency fields are special since we want them to default to "none" if not present

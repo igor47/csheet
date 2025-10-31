@@ -11,6 +11,7 @@ import {
 } from "@src/lib/dnd"
 import type { DamageType } from "@src/lib/dnd/spells"
 import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
+import { logger } from "@src/lib/logger"
 import {
   BooleanFormFieldSchema,
   NumberFormFieldSchema,
@@ -180,7 +181,6 @@ export async function createItem(
   const errors: Record<string, string> = {}
   const partial = ItemTypeSchemas.and(BaseItemCheckSchema).safeParse(data)
   if (!partial.success) {
-    console.log("Partial validation failed:", partial.error)
     return {
       complete: false,
       values: data,
@@ -383,7 +383,7 @@ export async function createItem(
 
     return { complete: true }
   } catch (error) {
-    console.error("Error creating item:", error)
+    logger.error("Error creating item:", error as Error)
     return {
       complete: false,
       values: data,

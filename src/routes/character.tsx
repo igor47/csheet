@@ -460,7 +460,6 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   }
 
   if (!result.complete) {
-    console.dir(result)
     return c.html(<CreateItemForm character={char} values={result.values} errors={result.errors} />)
   }
 
@@ -1121,7 +1120,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "abilities") {
-    return c.html(<AbilitiesEditForm character={char} values={{}} />)
+    return c.html(<AbilitiesEditForm character={char} />)
   }
 
   if (field === "skills") {
@@ -1154,7 +1153,11 @@ characterRoutes.post("/characters/:id/edit/abilities", async (c) => {
 
   if (!result.complete) {
     return c.html(
-      <AbilitiesEditForm character={char} values={result.values} errors={result.errors} />
+      <AbilitiesEditForm
+        character={char}
+        values={result.values || undefined}
+        errors={result.errors}
+      />
     )
   }
 

@@ -12,6 +12,7 @@ import {
 } from "@src/lib/dnd"
 import type { DamageType } from "@src/lib/dnd/spells"
 import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
+import { logger } from "@src/lib/logger"
 import {
   BooleanFormFieldSchema,
   NumberFormFieldSchema,
@@ -381,7 +382,7 @@ export async function updateItem(
 
     return { complete: true }
   } catch (error) {
-    console.error("Error updating item:", error)
+    logger.error("Error updating item:", error as Error)
     return {
       complete: false,
       values: data,

@@ -1,6 +1,7 @@
 import { create as createItemEffectDb } from "@src/db/item_effects"
 import { ItemEffectAppliesSchema, ItemEffectOpSchema, ItemEffectTargetSchema } from "@src/lib/dnd"
 import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
+import { logger } from "@src/lib/logger"
 import { BooleanFormFieldSchema, NumberFormFieldSchema, UnsetEnumSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -14,7 +15,10 @@ const BaseItemEffectSchema = z.object({
     .refine((val) => val !== 0, { message: "Value cannot be 0" })
     .nullable()
     .default(null),
-  applies: ItemEffectAppliesSchema.or(z.literal("").transform(() => null)),
+  applies: z.preprocess(
+    (val) => (val === "" ? null : val),
+    ItemEffectAppliesSchema.nullable().default(null)
+  ),
   is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
@@ -44,7 +48,7 @@ export async function createItemEffect(
   // Partial validation for check mode
   const partial = CheckSchema.safeParse(data)
   if (!partial.success) {
-    console.log("Partial validation failed:", partial.error)
+    logger.error("Partial validation failed:", partial.error)
     return {
       complete: false,
       values: data,
@@ -99,7 +103,7 @@ export async function createItemEffect(
 
     return { complete: true }
   } catch (error) {
-    console.error("Error creating item effect:", error)
+    logger.error("Error creating item effect:", error as Error)
     return {
       complete: false,
       values: data,

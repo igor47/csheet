@@ -77,9 +77,6 @@ export async function executeChatRequest(
     },
   }
 
-  // Log the request for debugging
-  logger.info("AI request", { requestBody })
-
   // Start streaming - result is returned synchronously, streaming happens via callbacks
   const messageAggregator: string[] = []
   try {

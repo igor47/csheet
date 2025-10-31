@@ -28,8 +28,8 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
     >
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
-          <i class="bi bi-robot me-2"></i>
-          AI Assistant
+          <i class="bi bi-book me-2"></i>
+          Reed
         </h5>
         <div class="d-flex gap-2">
           <button
@@ -57,13 +57,13 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
         {/* Chat messages container */}
         <div
           id="chat-messages"
-          class="mb-3"
+          class="container-fluid mb-3"
           style="max-height: 300px; overflow-y: auto; min-height: 100px;"
           data-scroll-bottom="true"
         >
           {computedChat.messages.length === 0 ? (
             <div class="text-muted text-center py-3">
-              <small>Ask me to help manage your character sheet!</small>
+              <small>Reed here! What can I help you with today?</small>
             </div>
           ) : (
             computedChat.messages.map((msg) => (
@@ -89,7 +89,7 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
             <div class="row mb-2 chat-message">
               <div class="col-10">
                 <div class="rounded px-3 py-2 bg-secondary text-white">
-                  <i class="bi bi-robot me-1"></i>
+                  <i class="bi bi-book me-1"></i>
                   <span
                     id={`response-box-${computedChat.chatId}`}
                     hx-ext="sse"
@@ -161,7 +161,7 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
         <div
           class={`rounded px-3 py-2 ${isUser ? "bg-primary text-white" : "bg-secondary text-white"}`}
         >
-          {!isUser && <i class="bi bi-robot me-1"></i>}
+          {!isUser && <i class="bi bi-book me-1"></i>}
           <span>{content}</span>
         </div>
       </div>

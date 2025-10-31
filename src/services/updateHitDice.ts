@@ -7,17 +7,26 @@ import {
   NumberFormFieldSchema,
   OptionalNullStringSchema,
 } from "@src/lib/schemas"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const UpdateHitDiceApiSchema = z.object({
-  action: z.enum(["restore", "spend"]),
+  action: z
+    .enum(["restore", "spend"])
+    .describe("Whether to spend a hit die (during short rest) or restore a hit die"),
   die_value: NumberFormFieldSchema.int()
     .refine((val): val is HitDieType => [6, 8, 10, 12].includes(val))
-    .optional(),
-  hp_rolled: NumberFormFieldSchema.int().min(1).max(12).optional(),
-  note: OptionalNullStringSchema,
+    .optional()
+    .describe("The type of hit die (6, 8, 10, or 12)"),
+  hp_rolled: NumberFormFieldSchema.int()
+    .min(1)
+    .max(12)
+    .optional()
+    .describe("The HP rolled when spending a hit die (required for spend action)"),
+  note: OptionalNullStringSchema.describe("Optional note about the hit die use or restoration"),
   is_check: BooleanFormFieldSchema.optional().default(false),
 })
 
@@ -154,4 +163,124 @@ export async function updateHitDice(
   }
 
   return { complete: true, newHP }
+}
+
+// Vercel AI SDK tool definitions
+export const useHitDieToolName = "use_hit_die" as const
+export const useHitDieTool = tool({
+  name: useHitDieToolName,
+  description: `Spend a hit die during a short rest to regain HP. The character rolls the hit die and regains that much HP (plus Constitution modifier). Ask the user to roll the die and provide the result.`,
+  inputSchema: UpdateHitDiceApiSchema.omit({ action: true, is_check: true }).required({
+    die_value: true,
+    hp_rolled: true,
+  }),
+})
+
+export const restoreHitDieToolName = "restore_hit_die" as const
+export const restoreHitDieTool = tool({
+  name: restoreHitDieToolName,
+  description: `Restore a spent hit die. This can happen from features like the Durable feat or certain class abilities. Long rests automatically restore half of spent hit dice.`,
+  inputSchema: UpdateHitDiceApiSchema.omit({
+    action: true,
+    hp_rolled: true,
+    is_check: true,
+  }).required({ die_value: true }),
+})
+
+/**
+ * Execute the use_hit_die tool from AI assistant
+ */
+export async function executeUseHitDie(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  const data: Record<string, string> = {
+    action: "spend",
+    die_value: parameters.die_value?.toString() || "",
+    hp_rolled: parameters.hp_rolled?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await updateHitDice(db, char, data)
+
+  if (!result.complete) {
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to use hit die",
+    }
+  }
+
+  return {
+    status: "success",
+    data: { newHP: result.newHP },
+  }
+}
+
+/**
+ * Execute the restore_hit_die tool from AI assistant
+ */
+export async function executeRestoreHitDie(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  const data: Record<string, string> = {
+    action: "restore",
+    die_value: parameters.die_value?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await updateHitDice(db, char, data)
+
+  if (!result.complete) {
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to restore hit die",
+    }
+  }
+
+  return {
+    status: "success",
+  }
+}
+
+/**
+ * Format approval message for use_hit_die tool calls
+ */
+export function formatUseHitDieApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { die_value, hp_rolled, note } = parameters
+
+  let message = `Spend D${die_value} hit die (rolled ${hp_rolled} HP)`
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
+}
+
+/**
+ * Format approval message for restore_hit_die tool calls
+ */
+export function formatRestoreHitDieApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { die_value, note } = parameters
+
+  let message = `Restore D${die_value} hit die`
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

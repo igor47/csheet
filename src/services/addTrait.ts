@@ -1,16 +1,38 @@
 import { create as createTrait, TraitSourceSchema } from "@src/db/char_traits"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 
 export const AddTraitApiSchema = z.object({
   character_id: z.string(),
-  name: z.string().min(1, "Trait name is required"),
-  description: z.string().min(1, "Trait description is required"),
-  source: TraitSourceSchema,
-  source_detail: z.string().nullable().optional().default(null),
-  level: z.number().int().nullable().optional().default(null),
-  note: z.string().nullable().optional().default(null),
+  name: z
+    .string()
+    .min(1, "Trait name is required")
+    .describe("The name of the trait/feature (e.g., 'Darkvision', 'Action Surge')"),
+  description: z
+    .string()
+    .min(1, "Trait description is required")
+    .describe("The description of what the trait does"),
+  source: TraitSourceSchema.describe(
+    "The source of the trait: 'species', 'lineage', 'background', 'class', 'subclass', or 'feat'"
+  ),
+  source_detail: z
+    .string()
+    .nullable()
+    .optional()
+    .default(null)
+    .describe("Additional detail about the source (e.g., the class name, feat name)"),
+  level: z
+    .number()
+    .int()
+    .nullable()
+    .optional()
+    .default(null)
+    .describe("The level at which this trait was gained (optional)"),
+  note: z.string().nullable().optional().default(null).describe("Optional note about the trait"),
 })
 
 type AddTraitData = Partial<z.infer<typeof AddTraitApiSchema>>
@@ -71,4 +93,69 @@ export async function addTrait(db: SQL, data: Record<string, string>): Promise<A
   await createTrait(db, result.data)
 
   return { complete: true }
+}
+
+// Vercel AI SDK tool definition
+export const addTraitToolName = "add_trait" as const
+export const addTraitTool = tool({
+  name: addTraitToolName,
+  description: `Add a trait, feature, or feat to the character. This can be used for custom traits, feats gained, or features from magic items.`,
+  inputSchema: AddTraitApiSchema.omit({ character_id: true }),
+})
+
+/**
+ * Execute the add_trait tool from AI assistant
+ */
+export async function executeAddTrait(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): Promise<ToolExecutorResult> {
+  const data: Record<string, string> = {
+    character_id: char.id,
+    name: parameters.name?.toString() || "",
+    description: parameters.description?.toString() || "",
+    source: parameters.source?.toString() || "",
+    source_detail: parameters.source_detail?.toString() || "",
+    level: parameters.level?.toString() || "",
+    note: parameters.note?.toString() || "",
+  }
+
+  const result = await addTrait(db, data)
+
+  if (!result.complete) {
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to add trait",
+    }
+  }
+
+  return {
+    status: "success",
+  }
+}
+
+/**
+ * Format approval message for add_trait tool calls
+ */
+export function formatAddTraitApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { name, source, source_detail, note } = parameters
+
+  let message = `Add trait: ${name}`
+  if (source_detail) {
+    message += ` (from ${source_detail})`
+  } else if (source) {
+    message += ` (from ${source})`
+  }
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

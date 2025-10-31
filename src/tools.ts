@@ -1,6 +1,54 @@
 import type { Tool } from "ai"
 import type { SQL } from "bun"
+import {
+  addLevelTool,
+  addLevelToolName,
+  executeAddLevel,
+  formatAddLevelApproval,
+} from "./services/addLevel"
+import {
+  addTraitTool,
+  addTraitToolName,
+  executeAddTrait,
+  formatAddTraitApproval,
+} from "./services/addTrait"
+import {
+  castSpellTool,
+  castSpellToolName,
+  executeCastSpell,
+  formatCastSpellApproval,
+} from "./services/castSpell"
 import type { ComputedCharacter } from "./services/computeCharacter"
+import {
+  equipItemTool,
+  equipItemToolName,
+  executeEquipItem,
+  formatEquipItemApproval,
+} from "./services/equipItem"
+import {
+  executeLearnSpell,
+  formatLearnSpellApproval,
+  learnSpellTool,
+  learnSpellToolName,
+} from "./services/learnSpell"
+import {
+  executeLongRest,
+  formatLongRestApproval,
+  longRestTool,
+  longRestToolName,
+} from "./services/longRest"
+import {
+  executePrepareSpell,
+  formatPrepareSpellApproval,
+  prepareSpellTool,
+  prepareSpellToolName,
+} from "./services/prepareSpell"
+import {
+  executeRestoreCharge,
+  formatRestoreChargeApproval,
+  restoreChargeTool,
+  restoreChargeToolName,
+} from "./services/restoreCharge"
 import {
   executeUpdateCoins,
   formatUpdateCoinsApproval,
@@ -8,11 +56,33 @@ import {
   updateCoinsToolName,
 } from "./services/updateCoins"
 import {
+  executeRestoreHitDie,
+  executeUseHitDie,
+  formatRestoreHitDieApproval,
+  formatUseHitDieApproval,
+  restoreHitDieTool,
+  restoreHitDieToolName,
+  useHitDieTool,
+  useHitDieToolName,
+} from "./services/updateHitDice"
+import {
   executeUpdateHitPoints,
   formatUpdateHitPointsApproval,
   updateHitPointsTool,
   updateHitPointsToolName,
 } from "./services/updateHitPoints"
+import {
+  executeUpdateSpellSlots,
+  formatUpdateSpellSlotsApproval,
+  updateSpellSlotsTool,
+  updateSpellSlotsToolName,
+} from "./services/updateSpellSlots"
+import {
+  executeUseCharge,
+  formatUseChargeApproval,
+  useChargeTool,
+  useChargeToolName,
+} from "./services/useCharge"
 
 /**
  * Result type for tool executors
@@ -61,6 +131,7 @@ export interface ToolRegistration {
  * Add new tools here to make them available throughout the application
  */
 export const TOOLS: ToolRegistration[] = [
+  // Resource Management
   {
     name: updateCoinsToolName,
     tool: updateCoinsTool,
@@ -72,6 +143,84 @@ export const TOOLS: ToolRegistration[] = [
     tool: updateHitPointsTool,
     executor: executeUpdateHitPoints,
     formatApprovalMessage: formatUpdateHitPointsApproval,
+  },
+  {
+    name: useHitDieToolName,
+    tool: useHitDieTool,
+    executor: executeUseHitDie,
+    formatApprovalMessage: formatUseHitDieApproval,
+  },
+  {
+    name: restoreHitDieToolName,
+    tool: restoreHitDieTool,
+    executor: executeRestoreHitDie,
+    formatApprovalMessage: formatRestoreHitDieApproval,
+  },
+  {
+    name: longRestToolName,
+    tool: longRestTool,
+    executor: executeLongRest,
+    formatApprovalMessage: formatLongRestApproval,
+  },
+
+  // Spellcasting
+  {
+    name: prepareSpellToolName,
+    tool: prepareSpellTool,
+    executor: executePrepareSpell,
+    formatApprovalMessage: formatPrepareSpellApproval,
+  },
+  {
+    name: castSpellToolName,
+    tool: castSpellTool,
+    executor: executeCastSpell,
+    formatApprovalMessage: formatCastSpellApproval,
+  },
+  {
+    name: learnSpellToolName,
+    tool: learnSpellTool,
+    executor: executeLearnSpell,
+    formatApprovalMessage: formatLearnSpellApproval,
+  },
+  {
+    name: updateSpellSlotsToolName,
+    tool: updateSpellSlotsTool,
+    executor: executeUpdateSpellSlots,
+    formatApprovalMessage: formatUpdateSpellSlotsApproval,
+  },
+
+  // Items
+  {
+    name: equipItemToolName,
+    tool: equipItemTool,
+    executor: executeEquipItem,
+    formatApprovalMessage: formatEquipItemApproval,
+  },
+  {
+    name: useChargeToolName,
+    tool: useChargeTool,
+    executor: executeUseCharge,
+    formatApprovalMessage: formatUseChargeApproval,
+  },
+  {
+    name: restoreChargeToolName,
+    tool: restoreChargeTool,
+    executor: executeRestoreCharge,
+    formatApprovalMessage: formatRestoreChargeApproval,
+  },
+
+  // Character Advancement
+  {
+    name: addLevelToolName,
+    tool: addLevelTool,
+    executor: executeAddLevel,
+    formatApprovalMessage: formatAddLevelApproval,
+  },
+  {
+    name: addTraitToolName,
+    tool: addTraitTool,
+    executor: executeAddTrait,
+    formatApprovalMessage: formatAddTraitApproval,
   },
 ]
 

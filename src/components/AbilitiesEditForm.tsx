@@ -1,23 +1,22 @@
 import { Abilities, type AbilityType } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import type { UpdateAbilitiesInput } from "@src/services/updateAbilities"
 import clsx from "clsx"
 import { ModalContent } from "./ui/ModalContent"
 
 export interface AbilitiesEditFormProps {
   character: ComputedCharacter
-  values?: UpdateAbilitiesInput
-  errors?: Record<string, string>
+  values: Record<string, string>
+  errors: Record<string, string>
 }
 
 interface AbilityEditBoxProps {
   ability: AbilityType
   character: ComputedCharacter
-  values?: UpdateAbilitiesInput
-  errors?: Record<string, string>
+  values: Record<string, string>
+  errors: Record<string, string>
 }
 
-const AbilityEditBox = ({ ability, character, values, errors = {} }: AbilityEditBoxProps) => {
+const AbilityEditBox = ({ ability, character, values, errors }: AbilityEditBoxProps) => {
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
   const formatModifier = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
 
@@ -29,13 +28,13 @@ const AbilityEditBox = ({ ability, character, values, errors = {} }: AbilityEdit
   const currentProficient = abilityScore.proficient
   const proficiencyBonus = character.proficiencyBonus
 
-  const scoreValue = values?.[scoreFieldName as keyof UpdateAbilitiesInput] as number | undefined
-  const newScore = scoreValue ? parseInt(String(scoreValue), 10) : currentScore
-  // If proficientFieldName exists in values, use it as a boolean; otherwise use current
+  // Parse form values (all come as strings)
+  const scoreValue = values[scoreFieldName]
+  const newScore = scoreValue ? parseInt(scoreValue, 10) : currentScore
+
+  // Checkbox: if field exists in values, it's "on" (checked), otherwise it's unchecked
   const newProficient =
-    proficientFieldName in (values || {})
-      ? values?.[proficientFieldName as keyof UpdateAbilitiesInput] === true
-      : currentProficient
+    proficientFieldName in values ? values[proficientFieldName] === "on" : currentProficient
 
   const changed = newScore !== currentScore || newProficient !== currentProficient
 
@@ -70,7 +69,7 @@ const AbilityEditBox = ({ ability, character, values, errors = {} }: AbilityEdit
             })}
             id={scoreFieldName}
             name={scoreFieldName}
-            value={String(values?.[scoreFieldName as keyof UpdateAbilitiesInput] ?? currentScore)}
+            value={values[scoreFieldName] ?? String(currentScore)}
             min="1"
             max="30"
             required
@@ -163,12 +162,12 @@ export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesE
               name="note"
               rows={2}
               placeholder="Add a note about these ability changes..."
-              value={String(values?.note ?? "")}
+              value={values.note ?? ""}
             />
           </div>
 
           {/* General Errors */}
-          {errors?.general && (
+          {errors.general && (
             <div class="alert alert-danger" role="alert">
               {errors.general}
             </div>

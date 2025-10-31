@@ -1,17 +1,14 @@
 import { ALL_TOOL_EXECUTORS, executeChatRequest, prepareChatRequest } from "@src/ai/chat"
 import { CharacterInfo } from "@src/components/CharacterInfo"
-import { ChatBox, ChatConfirmModal, type ChatMessage } from "@src/components/ChatBox"
+import { ChatBox, ChatConfirmModal } from "@src/components/ChatBox"
 import { CurrentStatus } from "@src/components/CurrentStatus"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { isAiEnabled } from "@src/config"
 import { getDb } from "@src/db"
-import {
-  clearChat,
-  findByChatId as getChatHistory,
-  getChatsByCharacterId,
-} from "@src/db/chat_messages"
+import { clearChat, getChatsByCharacterId } from "@src/db/chat_messages"
 import { logger } from "@src/lib/logger"
 import { computeCharacter } from "@src/services/computeCharacter"
+import { computeChat } from "@src/services/computeChat"
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 
@@ -54,16 +51,11 @@ chatRoutes.post("/characters/:id/chat", async (c) => {
     chatId: finalChatId,
   })
 
-  // Load updated chat history (just the user message at this point)
-  const history = await getChatHistory(db, finalChatId, 50)
-  const messages: ChatMessage[] = history.map((msg) => ({
-    id: msg.id,
-    chatRole: msg.role as "user" | "assistant",
-    content: msg.content,
-  }))
+  // Compute chat data structure
+  const computedChat = await computeChat(db, finalChatId)
 
-  // Return updated ChatBox - will auto-initiate streaming since last message is from user
-  return c.html(<ChatBox character={char} messages={messages} chatId={finalChatId} />)
+  // Return updated ChatBox - will auto-initiate streaming since shouldStream will be true
+  return c.html(<ChatBox character={char} computedChat={computedChat} />)
 })
 
 /**
@@ -89,10 +81,19 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
     return c.json({ error: "Character not found" }, 404)
   }
 
+  // Compute chat data structure
+  const computedChat = await computeChat(db, chatId)
+
+  // Check if chat is ready to stream
+  if (!computedChat.shouldStream) {
+    logger.warn("Stream requested for chat not ready to stream", { chatId, characterId })
+    return c.json({ error: "Chat is not ready to stream" }, 400)
+  }
+
   return streamSSE(c, async (stream) => {
     try {
       // Execute chat request and stream updates
-      await executeChatRequest(db, char, chatId, async (chunk) => {
+      await executeChatRequest(db, char, computedChat, async (chunk) => {
         logger.info("Processing chat chunk", { chunk })
         if (chunk.type === "text") {
           // Stream text updates as "message" events
@@ -135,18 +136,11 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
       })
     }
 
-    // After streaming completes, load full chat history and return complete ChatBox
-    const history = await getChatHistory(db, chatId, 50)
-    const messages: ChatMessage[] = history.map((msg) => ({
-      id: msg.id,
-      chatRole: msg.role as "user" | "assistant",
-      content: msg.content,
-    }))
+    // After streaming completes, reload chat and return complete ChatBox
+    const updatedChat = await computeChat(db, chatId)
 
     await stream.writeSSE({
-      data: (
-        <ChatBox character={char} messages={messages} chatId={chatId} swapOob={true} />
-      ).toString(),
+      data: (<ChatBox character={char} computedChat={updatedChat} swapOob={true} />).toString(),
     })
   })
 })
@@ -348,8 +342,17 @@ chatRoutes.get("/characters/:id/chat/new", async (c) => {
     return c.json({ error: "Character not found" }, 404)
   }
 
-  // Return empty ChatBox with no messages and null chatId
-  return c.html(<ChatBox character={char} messages={[]} chatId={null} />)
+  // Create empty computed chat for new conversation
+  const emptyChat = {
+    chatId: "",
+    messages: [],
+    llmMessages: [],
+    shouldStream: false,
+    unresolvedToolCalls: [],
+  }
+
+  // Return empty ChatBox
+  return c.html(<ChatBox character={char} computedChat={emptyChat} />)
 })
 
 /**
@@ -372,16 +375,11 @@ chatRoutes.get("/characters/:id/chat/:chatId/load", async (c) => {
     return c.json({ error: "Character not found" }, 404)
   }
 
-  // Load chat messages
-  const history = await getChatHistory(db, chatId, 50)
-  const messages: ChatMessage[] = history.map((msg) => ({
-    id: msg.id,
-    chatRole: msg.role as "user" | "assistant",
-    content: msg.content,
-  }))
+  // Compute chat data structure
+  const computedChat = await computeChat(db, chatId)
 
-  // Return ChatBox with loaded messages
-  return c.html(<ChatBox character={char} messages={messages} chatId={chatId} />)
+  // Return ChatBox with loaded chat
+  return c.html(<ChatBox character={char} computedChat={computedChat} />)
 })
 
 /**

@@ -1,33 +1,18 @@
 import { isAiEnabled } from "@src/config"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-
-export interface ChatMessage {
-  id: string
-  chatRole: "user" | "assistant"
-  content: string
-}
+import type { ComputedChat } from "@src/services/computeChat"
 
 export interface ChatBoxProps {
   character: ComputedCharacter
-  messages?: ChatMessage[]
-  chatId?: string | null
+  computedChat: ComputedChat
   swapOob?: boolean
 }
 
-export const ChatBox = ({
-  character,
-  messages = [],
-  chatId = null,
-  swapOob = false,
-}: ChatBoxProps) => {
+export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxProps) => {
   // Don't render if AI is not enabled
   if (!isAiEnabled()) {
     return null
   }
-
-  // Check if we're waiting for a response (last message is from user)
-  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
-  const isWaitingForResponse = lastMessage && lastMessage.chatRole === "user"
 
   return (
     <div
@@ -69,26 +54,26 @@ export const ChatBox = ({
           class="mb-3"
           style="max-height: 300px; overflow-y: auto; min-height: 100px;"
         >
-          {messages.length === 0 ? (
+          {computedChat.messages.length === 0 ? (
             <div class="text-muted text-center py-3">
               <small>Ask me to help manage your character sheet!</small>
             </div>
           ) : (
-            messages.map((msg) => (
+            computedChat.messages.map((msg) => (
               <ChatMessageBubble id={msg.id} chatRole={msg.chatRole} content={msg.content} />
             ))
           )}
 
           {/* Response box - shown when waiting for AI response */}
-          {chatId && isWaitingForResponse && (
+          {computedChat.shouldStream && (
             <div class="row mb-2">
               <div class="col-10">
                 <div class="rounded px-3 py-2 bg-secondary text-white">
                   <i class="bi bi-robot me-1"></i>
                   <span
-                    id={`response-box-${chatId}`}
+                    id={`response-box-${computedChat.chatId}`}
                     hx-ext="sse"
-                    sse-connect={`/characters/${character.id}/chat/${chatId}/stream`}
+                    sse-connect={`/characters/${character.id}/chat/${computedChat.chatId}/stream`}
                     sse-swap="message"
                   >
                     Thinking...
@@ -106,7 +91,9 @@ export const ChatBox = ({
           hx-target="#chat-box-card"
           hx-swap="outerHTML"
         >
-          {chatId && <input type="hidden" name="chat_id" value={chatId} />}
+          {computedChat.chatId && (
+            <input type="hidden" name="chat_id" value={computedChat.chatId} />
+          )}
           <div class="input-group">
             <input
               type="text"
@@ -116,14 +103,14 @@ export const ChatBox = ({
               placeholder="e.g., I spent 50 gold on a sword"
               required
               autocomplete="off"
-              {...(isWaitingForResponse ? { disabled: true } : {})}
+              {...(computedChat.shouldStream ? { disabled: true } : {})}
             />
             <button
               type="submit"
               class="btn btn-primary"
-              {...(isWaitingForResponse ? { disabled: true } : {})}
+              {...(computedChat.shouldStream ? { disabled: true } : {})}
             >
-              {isWaitingForResponse ? (
+              {computedChat.shouldStream ? (
                 <output class="spinner-border spinner-border-sm" aria-hidden="true" />
               ) : (
                 <i class="bi bi-send"></i>

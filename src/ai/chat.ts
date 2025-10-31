@@ -1,11 +1,8 @@
-import {
-  type ChatMessage,
-  findByChatId as getChatHistory,
-  create as saveChatMessage,
-} from "@src/db/chat_messages"
+import { type ChatMessage, create as saveChatMessage } from "@src/db/chat_messages"
 import { getChatModel } from "@src/lib/ai"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import type { ComputedChat } from "@src/services/computeChat"
 import {
   executeUpdateCoins,
   type ToolExecutorResult,
@@ -17,7 +14,6 @@ import {
   updateHitPointsTool,
   updateHitPointsToolName,
 } from "@src/services/updateHitPoints"
-import type { AssistantModelMessage, SystemModelMessage, UserModelMessage } from "ai"
 import { streamText } from "ai"
 import type { SQL } from "bun"
 import { ulid } from "ulid"
@@ -87,41 +83,16 @@ export async function prepareChatRequest(
 export async function executeChatRequest(
   db: SQL,
   character: ComputedCharacter,
-  chatId: string,
+  computedChat: ComputedChat,
   onMessage?: StreamHandler
 ): Promise<string> {
+  // Only execute if the chat is ready to stream
+  if (!computedChat.shouldStream) {
+    throw new Error("Chat is not ready to stream - shouldStream flag is false")
+  }
+
   // Build system prompt with character context
   const systemPrompt = buildSystemPrompt(character)
-
-  // Load full chat history for this chat
-  const history = await getChatHistory(db, chatId, 50)
-
-  // Format previous messages for Vercel AI SDK
-  const messages = history.map((msg) => {
-    if (msg.role === "assistant") {
-      const toolsCalled = msg.tool_calls ? Object.keys(msg.tool_calls).join(",") : null
-      const assistantMsg: AssistantModelMessage = {
-        role: "assistant",
-        content:
-          msg.content || msg.tool_calls
-            ? `requested tool calls to ${toolsCalled}`
-            : "<empty response>",
-      }
-      return assistantMsg
-    } else if (msg.role === "system") {
-      const systemMsg: SystemModelMessage = {
-        role: "system",
-        content: msg.content,
-      }
-      return systemMsg
-    } else {
-      const userMsg: UserModelMessage = {
-        role: "user" as const,
-        content: msg.content,
-      }
-      return userMsg
-    }
-  })
 
   const model = getChatModel()
 
@@ -130,7 +101,7 @@ export async function executeChatRequest(
     model,
     maxOutputTokens: 1024,
     system: systemPrompt,
-    messages,
+    messages: computedChat.llmMessages,
     tools: ALL_TOOLS,
     onError: ({ error }: { error: unknown }) => {
       // Handle errors that occur during streaming (before onFinish)
@@ -168,7 +139,7 @@ export async function executeChatRequest(
     // Create assistant message with final content after streaming completes
     const assistantMsg = await saveChatMessage(db, {
       character_id: character.id,
-      chat_id: chatId,
+      chat_id: computedChat.chatId,
       role: "assistant",
       content: messageAggregator.join(""),
       tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
@@ -177,7 +148,10 @@ export async function executeChatRequest(
 
     return assistantMsg.id
   } catch (err) {
-    logger.error("AI stream error", err as Error, { chatId, character_id: character.id })
+    logger.error("AI stream error", err as Error, {
+      chatId: computedChat.chatId,
+      character_id: character.id,
+    })
     throw err
   }
 }

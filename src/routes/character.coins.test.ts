@@ -56,7 +56,8 @@ describe("GET /characters/:id/edit/coins", () => {
       for (const coinType of coinTypes) {
         const input = expectElement(document, `#${coinType}`)
         expect(input.getAttribute("type")).toBe("number")
-        expect(input.getAttribute("min")).toBe("0")
+        // No min="0" attribute since we accept negative deltas
+        expect(input.getAttribute("min")).toBeNull()
       }
     })
 
@@ -188,7 +189,8 @@ describe("POST /characters/:id/edit/coins", () => {
     })
 
     describe("with invalid data", () => {
-      test("rejects negative coin values", async () => {
+      test("rejects spending more coins than available", async () => {
+        // Character starts with no coins
         const formData = new FormData()
         formData.append("pp", "0")
         formData.append("gp", "-10")
@@ -209,9 +211,10 @@ describe("POST /characters/:id/edit/coins", () => {
         const title = expectElement(document, ".modal-title")
         expect(title.textContent).toBe("Edit Coins")
 
-        // Check for error in DOM
-        const errorFeedback = document.querySelector(".invalid-feedback")
-        expect(errorFeedback).toBeTruthy()
+        // Check for error in DOM (general errors show in alert-danger)
+        const errorAlert = document.querySelector(".alert-danger")
+        expect(errorAlert).toBeTruthy()
+        expect(errorAlert?.textContent).toContain("Insufficient funds")
       })
 
       test("rejects when no coins are changed", async () => {
@@ -222,11 +225,11 @@ describe("POST /characters/:id/edit/coins", () => {
         `
 
         const formData = new FormData()
-        formData.append("pp", "10")
-        formData.append("gp", "50")
-        formData.append("ep", "5")
-        formData.append("sp", "20")
-        formData.append("cp", "100")
+        formData.append("pp", "0")
+        formData.append("gp", "0")
+        formData.append("ep", "0")
+        formData.append("sp", "0")
+        formData.append("cp", "0")
 
         const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/coins`, {
           user,

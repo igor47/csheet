@@ -1,18 +1,19 @@
 import { Abilities, type AbilityType } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import type { UpdateAbilitiesInput } from "@src/services/updateAbilities"
 import clsx from "clsx"
 import { ModalContent } from "./ui/ModalContent"
 
 export interface AbilitiesEditFormProps {
   character: ComputedCharacter
-  values?: Record<string, string>
+  values?: UpdateAbilitiesInput
   errors?: Record<string, string>
 }
 
 interface AbilityEditBoxProps {
   ability: AbilityType
   character: ComputedCharacter
-  values: Record<string, string>
+  values?: UpdateAbilitiesInput
   errors?: Record<string, string>
 }
 
@@ -28,11 +29,13 @@ const AbilityEditBox = ({ ability, character, values, errors = {} }: AbilityEdit
   const currentProficient = abilityScore.proficient
   const proficiencyBonus = character.proficiencyBonus
 
-  const scoreValue = values[scoreFieldName]
-  const newScore = scoreValue ? parseInt(scoreValue, 10) : currentScore
-  // If proficientFieldName exists in values (even as ""), use it; otherwise use current
+  const scoreValue = values?.[scoreFieldName as keyof UpdateAbilitiesInput] as number | undefined
+  const newScore = scoreValue ? parseInt(String(scoreValue), 10) : currentScore
+  // If proficientFieldName exists in values, use it as a boolean; otherwise use current
   const newProficient =
-    proficientFieldName in values ? values[proficientFieldName] === "on" : currentProficient
+    proficientFieldName in (values || {})
+      ? values?.[proficientFieldName as keyof UpdateAbilitiesInput] === true
+      : currentProficient
 
   const changed = newScore !== currentScore || newProficient !== currentProficient
 
@@ -67,7 +70,7 @@ const AbilityEditBox = ({ ability, character, values, errors = {} }: AbilityEdit
             })}
             id={scoreFieldName}
             name={scoreFieldName}
-            value={values[scoreFieldName] || currentScore}
+            value={String(values?.[scoreFieldName as keyof UpdateAbilitiesInput] ?? currentScore)}
             min="1"
             max="30"
             required
@@ -124,11 +127,7 @@ const AbilityEditBox = ({ ability, character, values, errors = {} }: AbilityEdit
   )
 }
 
-export const AbilitiesEditForm = ({
-  character,
-  values = {},
-  errors = {},
-}: AbilitiesEditFormProps) => {
+export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesEditFormProps) => {
   return (
     <ModalContent title="Edit Abilities">
       <form
@@ -164,7 +163,7 @@ export const AbilitiesEditForm = ({
               name="note"
               rows={2}
               placeholder="Add a note about these ability changes..."
-              value={values?.note || ""}
+              value={String(values?.note ?? "")}
             />
           </div>
 

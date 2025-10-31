@@ -1,78 +1,213 @@
+import { ItemCategories } from "@src/lib/dnd"
+import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 
 /**
  * Build the system prompt for the AI assistant based on the character's current state
  */
-export function buildSystemPrompt(character: ComputedCharacter): string {
-  const className = character.classes.map((c) => `${c.class} ${c.level}`).join(", ")
 
+const PREAMBLE =
+  `Greetings! I'm Reed, your devoted scribe and keeper of records. *adjusts spectacles* I take great pride in maintaining your character sheet with the utmost precision. After years of study in the great libraries and countless hours poring over the Player's Handbook, I know D&D 5th Edition rules quite thoroughly!
+
+I'm here to answer questions about your character, explain game mechanics, and help track your adventures. Just tell me what you need - whether it's checking your stats, spending gold, tracking damage, or managing your spells. I'll handle the paperwork!
+` as const
+
+function formatClasses(character: ComputedCharacter): string {
+  return character.classes
+    .map((c) => `level ${c.level} ${c.class} ${c.subclass ? ` (${c.subclass})` : ""}`)
+    .join(", ")
+}
+
+function formatAbilities(character: ComputedCharacter): string {
+  const abilityLines: string[] = []
+  // Ability scores with modifiers and saves
+  for (const [ability, score] of Object.entries(character.abilityScores)) {
+    const modStr = score.modifier >= 0 ? `+${score.modifier}` : `${score.modifier}`
+    const saveStr = score.savingThrow >= 0 ? `+${score.savingThrow}` : `${score.savingThrow}`
+    const profMark = score.proficient ? "*" : ""
+    abilityLines.push(
+      `${ability.toUpperCase()}: ${score.score} (${modStr}, save ${saveStr}${profMark})`
+    )
+  }
+
+  return abilityLines.join(",")
+}
+
+function formatSkills(character: ComputedCharacter): string {
+  // Skills - only show proficient/expert
+  const proficientSkills: string[] = []
+  for (const [skill, skillScore] of Object.entries(character.skills)) {
+    if (skillScore.proficiency !== "none") {
+      const modStr = skillScore.modifier >= 0 ? `+${skillScore.modifier}` : `${skillScore.modifier}`
+      const profLevel =
+        skillScore.proficiency === "expert"
+          ? "**"
+          : skillScore.proficiency === "proficient"
+            ? "*"
+            : ""
+      proficientSkills.push(`${skill} ${modStr}${profLevel}`)
+    }
+  }
+  const skillsDesc =
+    proficientSkills.length > 0 ? proficientSkills.join(", ") : "no proficient skills"
+
+  return skillsDesc
+}
+
+function formatCombat(character: ComputedCharacter): string {
+  const hpDesc = `${character.currentHP}/${character.maxHitPoints}`
+  const initStr = character.initiative >= 0 ? `+${character.initiative}` : `${character.initiative}`
+
+  return `HP: ${hpDesc} • AC: ${character.armorClass} • Initiative: ${initStr} • Passive Perception: ${character.passivePerception}`
+}
+
+function formatResources(character: ComputedCharacter): string {
   const coinsDesc = character.coins
-    ? `${character.coins.pp}pp, ${character.coins.gp}gp, ${character.coins.ep}ep, ${character.coins.sp}sp, ${character.coins.cp}cp`
+    ? `${character.coins.pp}pp ${character.coins.gp}gp ${character.coins.ep}ep ${character.coins.sp}sp ${character.coins.cp}cp`
     : "no coins"
-
-  const hpDesc = `${character.currentHP}/${character.maxHitPoints} HP`
 
   const availableSlots = character.availableSpellSlots.filter((slot) => slot > 0)
   const slotsDesc =
     availableSlots.length > 0
-      ? `Available spell slots: ${availableSlots
+      ? availableSlots
           .map((count, level) => `${count}×L${level + 1}`)
           .filter((s) => !s.startsWith("0"))
-          .join(", ")}`
-      : "No spell slots available"
+          .join(", ")
+      : "none"
 
-  const hitDiceDesc = `${character.availableHitDice.length}/${character.hitDice.length} hit dice available`
+  const hitDiceDesc = `${character.availableHitDice.length}/${character.hitDice.length}`
 
-  return `I'm Reed, your personal scribe! I maintain meticulous records of your adventures and help manage your character sheet. Think of me as that bookish assistant who's always flipping through notes and double-checking the rulebooks. I'm quite knowledgeable about D&D 5th Edition - after all, I've transcribed countless character sheets in my time.
+  return [`Coins: ${coinsDesc}`, `Spell Slots: ${slotsDesc}`, `Hit Dice: ${hitDiceDesc}`].join("\n")
+}
 
-I'm here to answer your questions about DnD rules, your character's current status, or help you track changes to your sheet. If you ask me about things outside the realm of adventuring... well, I'll have to consult a different tome for that! Now, let me pull up your current records:
+function formatEquipment(character: ComputedCharacter): string {
+  const itemLines: string[] = []
 
-# Current Character
-- **Name**: ${character.name}
-- **Class & Level**: ${className} (Level ${character.totalLevel})
-- **Species**: ${character.species}${character.lineage ? ` (${character.lineage})` : ""}
-- **Background**: ${character.background}
+  for (const cat of ItemCategories) {
+    const itemsInCat = character.equippedItems.filter((item) => item.category === cat)
+    if (itemsInCat.length === 0) {
+      continue
+    }
 
-# Current Status
-- **Hit Points**: ${hpDesc}
-- **Armor Class**: ${character.armorClass}
-- **Coins**: ${coinsDesc}
-- **${slotsDesc}**
-- **Hit Dice**: ${hitDiceDesc}
+    itemLines.push(`## ${cat} items`)
 
-# Examples
-- User: "How many hit points do I have?" → Answer with current HP
-- User: "What does the arcana skill do?" → Explain arcana skill
+    for (const item of itemsInCat) {
+      const itemParts: string[] = [
+        `Item ID: ${item.id} -- ${item.name}`,
+        item.wearable ? (item.worn ? " (worn)" : " (not worn)") : "",
+        item.wieldable ? (item.wielded ? " (wielded)" : " (not wielded)") : "",
+        ":",
+        item.humanReadableDamage.length > 0
+          ? ` Damage: ${item.humanReadableDamage.join(", ")}.`
+          : "",
+        item.chargeLabel && item.currentCharges > 0
+          ? ` ${item.currentCharges} ${item.chargeLabel} remaining.`
+          : "",
+      ]
 
-Besides answering questions, you can help players manage their character by executing actions through tool calls.
+      itemLines.push(itemParts.join(" "))
+    }
+  }
 
-# Your Capabilities
-You can help the player by:
-1. **Updating coins** - When they spend or earn money (e.g., "I bought a sword for 50gp", "Found 100gp in treasure")
-2. **Managing hit points** - Track damage taken or healing received
-3. **Managing spell slots** - Track spell casting and restoration
-4. **Managing hit dice** - Track usage during short rests
-5. **Preparing spells** - Swap prepared spells
-6. **Casting spells** - Execute spell casts with proper slot consumption
-7. **Creating items** - Help create custom items with properties
-8. **Managing inventory** - Track equipment states
+  // Active item effects
+  const itemEffects: string[] = []
+  for (const [attr, effectInfo] of Object.entries(character.affectedAttributes)) {
+    for (const effect of effectInfo) {
+      itemEffects.push(`${effect.itemName} affects ${attr}: ${effect.effectDescription}`)
+    }
+  }
 
-If you cannot perform an action due to missing information, ask the player for clarification before proceeding.
+  if (itemEffects.length > 0) {
+    itemLines.push("## Active Item Effects")
+    for (const effectLine of itemEffects) {
+      itemLines.push(`- ${effectLine}`)
+    }
+  }
 
-# Guidelines
-- Always be concise and direct
-- When the player describes an action, determine the appropriate tool to call
-- For coin transactions, infer whether it's adding (positive) or spending (negative) based on context
-- When information is missing, ask clarifying questions before calling tools
-- Use D&D terminology naturally (e.g., "short rest", "spell slot", "hit die")
-- Remember that all tool calls require user confirmation before execution
-- Be helpful and supportive, but don't be overly verbose
+  return itemLines.join("\n")
+}
 
-# Examples
-- User: "I spent 50 gold on a sword" → Call update_coins with gp: -50
-- User: "I take 10 damage" → Call update_hit_points with delta: -10
-- User: "I cast fireball at 3rd level" → Call cast_spell
-- User: "Found 200 gold pieces" → Call update_coins with gp: 200
+function formatSpellcasting(character: ComputedCharacter): string {
+  if (character.spells.length === 0) {
+    return "No spellcasting abilities"
+  }
 
-When you call a tool, the system will show a confirmation dialog to the user. After they confirm, the action will be executed and you'll receive the result.`
+  let spellcastingSection = ""
+
+  for (const spellInfo of character.spells) {
+    const atkStr =
+      spellInfo.spellAttackBonus >= 0
+        ? `+${spellInfo.spellAttackBonus}`
+        : `${spellInfo.spellAttackBonus}`
+    spellcastingSection += `\n**${spellInfo.class}** (${spellInfo.ability.toUpperCase()}): Spell Attack ${atkStr}, Save DC ${spellInfo.spellSaveDC}`
+
+    // Prepared cantrips
+    const preparedCantrips = spellInfo.cantripSlots
+      .filter((slot) => slot.spell_id)
+      .map((slot) => spells.find((s) => s.id === slot.spell_id)?.name || slot.spell_id)
+    if (preparedCantrips.length > 0) {
+      spellcastingSection += `\nCantrips: ${preparedCantrips.join(", ")}`
+    }
+
+    // Prepared leveled spells
+    const preparedSpells = spellInfo.preparedSpells
+      .filter((slot) => slot.spell_id)
+      .map((slot) => {
+        const spell = spells.find((s) => s.id === slot.spell_id)
+        const lockMark = slot.alwaysPrepared ? "🔒" : ""
+        return spell ? `${spell.name} (L${spell.level})${lockMark}` : slot.spell_id
+      })
+    if (preparedSpells.length > 0) {
+      spellcastingSection += `\nPrepared: ${preparedSpells.join(", ")}`
+    }
+
+    // Wizard spellbook
+    if (spellInfo.knownSpells && spellInfo.knownSpells.length > 0) {
+      const spellbookSpells = spellInfo.knownSpells
+        .map((spellId) => spells.find((s) => s.id === spellId))
+        .filter((s) => s && s.level > 0) // Don't list cantrips in spellbook
+        .map((s) => `${s?.name} (L${s?.level})`)
+      if (spellbookSpells.length > 0) {
+        spellcastingSection += `\nSpellbook: ${spellbookSpells.join(", ")}`
+      }
+    }
+  }
+
+  return spellcastingSection
+}
+
+const FOOTER = `
+# Working with You
+
+When you describe actions (spending gold, taking damage, casting spells, etc.), I'll determine what needs updating and propose the changes. The tools I use require your confirmation before making any changes to your sheet - think of it as you signing off on my record-keeping!
+
+If I need more details (which spell level? how much healing?), I'll ask before proceeding. I speak fluent D&D - short rests, spell slots, hit dice, saving throws - it's all in a day's work.
+
+Keep your requests clear and I'll handle the rest. Whether you're haggling with merchants, battling dragons, or recovering at camp, I'll keep your sheet accurate and up to date!` as const
+
+export function buildSystemPrompt(character: ComputedCharacter): string {
+  const prompt = [
+    PREAMBLE,
+    "Your character sheet is as follows:",
+    "\n# Character Overview",
+    `Name: ${character.name}`,
+    `Species: ${character.species} ${character.lineage || ""}`,
+    `Background: ${character.background || "none"}`,
+    `Classes: total level ${character.totalLevel}, as a ${formatClasses(character)}`,
+    "\n# Ability Scores",
+    formatAbilities(character),
+    "\n# Skills",
+    formatSkills(character),
+    "\n# Combat Stats",
+    formatCombat(character),
+    "\n# Resources",
+    formatResources(character),
+    "\n# Equipment",
+    formatEquipment(character),
+    "\n# Spellcasting",
+    formatSpellcasting(character),
+    FOOTER,
+  ].join("\n")
+
+  return prompt
 }

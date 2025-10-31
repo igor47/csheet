@@ -2,7 +2,10 @@ import { executeChatRequest, prepareChatRequest } from "@src/ai/chat"
 import { CharacterInfo } from "@src/components/CharacterInfo"
 import { ChatBox } from "@src/components/ChatBox"
 import { CurrentStatus } from "@src/components/CurrentStatus"
+import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
+import { SkillsPanel } from "@src/components/panels/SkillsPanel"
+import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { isAiEnabled } from "@src/config"
 import { getDb } from "@src/db"
 import { clearChat, getChatsByCharacterId } from "@src/db/chat_messages"
@@ -46,12 +49,6 @@ chatRoutes.post("/characters/:id/chat", async (c) => {
   // Prepare chat request: save user message only
   const { chatId: finalChatId } = await prepareChatRequest(db, char, userMessage.trim(), chatId)
 
-  logger.info("Prepared chat request", {
-    characterId,
-    userId: user.id,
-    chatId: finalChatId,
-  })
-
   // Compute chat data structure
   const computedChat = await computeChat(db, finalChatId)
 
@@ -74,8 +71,6 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
   const chatId = c.req.param("chatId")
   const db = getDb(c)
 
-  logger.info("SSE stream request received", { characterId, chatId, userId: user.id })
-
   // Verify character belongs to user
   const char = await computeCharacter(db, characterId)
   if (!char || char.user_id !== user.id) {
@@ -87,7 +82,6 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
 
   // Check if chat is ready to stream
   if (!computedChat.shouldStream) {
-    logger.warn("Stream requested for chat not ready to stream", { chatId, characterId })
     return c.json({ error: "Chat is not ready to stream" }, 400)
   }
 
@@ -95,7 +89,6 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
     try {
       // Execute chat request and stream updates
       await executeChatRequest(db, char, computedChat, async (chunk) => {
-        logger.info("Processing chat chunk", { chunk })
         if (chunk.type === "text") {
           // Stream text updates as "message" events
           await stream.writeSSE({
@@ -104,8 +97,6 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
           })
         }
       })
-
-      logger.info("Chat stream completed", { characterId, userId: user.id, chatId })
     } catch (error) {
       logger.error("Error processing chat message", error as Error, {
         characterId,
@@ -159,18 +150,7 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
   }
 
   try {
-    // Execute the tool via service
-    logger.info("Executing tool", {
-      toolName: unresolvedTool.toolName,
-      parameters: unresolvedTool.parameters,
-    })
-    const result = await executeTool(db, char, unresolvedTool)
-
-    logger.info("Tool executed and result saved", {
-      messageId: unresolvedTool.messageId,
-      toolCallId,
-      status: result.status,
-    })
+    await executeTool(db, char, unresolvedTool)
 
     // Get updated character and chat
     const updatedChar = (await computeCharacter(db, characterId))!
@@ -180,6 +160,9 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
     return c.html(
       <>
         <CharacterInfo character={updatedChar} swapOob={true} />
+        <SpellsPanel character={updatedChar} swapOob={true} />
+        <AbilitiesPanel character={updatedChar} swapOob={true} />
+        <SkillsPanel character={updatedChar} swapOob={true} />
         <CurrentStatus character={updatedChar} swapOob={true} />
         <InventoryPanel character={updatedChar} swapOob={true} />
         <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />
@@ -227,8 +210,6 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/reject", async (c
 
   // Reject the tool via service
   await rejectTool(db, unresolvedTool)
-
-  logger.info("Tool rejected by user", { messageId: unresolvedTool.messageId, toolCallId })
 
   // Get updated chat
   const updatedChat = await computeChat(db, chatId)
@@ -345,8 +326,6 @@ chatRoutes.delete("/characters/:id/chat/:chatId", async (c) => {
 
   // Delete the chat
   await clearChat(db, chatId)
-
-  logger.info("Deleted chat", { characterId, userId: user.id, chatId })
 
   // Return updated chat list
   const chats = await getChatsByCharacterId(db, characterId)

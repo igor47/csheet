@@ -1,24 +1,17 @@
 import { z } from "zod"
 
-export const BooleanFormFieldSchema = z
-  .union([z.boolean(), z.enum(["true", "false"])])
-  .transform((v) => v === true || v === "true")
-
-export const CheckboxFormFieldSchema = z
-  .union([z.literal("on"), z.literal("off"), z.undefined()])
-  .transform((v) => (v === "on" ? "on" : "off"))
-  .default("off")
+export const BooleanFormFieldSchema = z.preprocess((val) => {
+  if (val === "true" || val === "on") return true
+  if (val === "false" || val === "off") return false
+  if (val === undefined || val === null || val === "") return false
+  return val
+}, z.boolean())
 
 export const OptionalNullStringSchema = z.string().nullable().optional().default(null)
 
 export const NumberFormFieldSchema = z.coerce
   .number()
   .refine((n) => !Number.isNaN(n), { message: "must be a number" })
-
-export const NumericSelectFormFieldSchema = z
-  .literal("")
-  .transform(() => undefined)
-  .or(NumberFormFieldSchema)
 
 export function EmptyIsUndefined(v: unknown) {
   if (typeof v === "string" && v.trim() === "") {

@@ -117,8 +117,6 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
       values.armor_modifier = String(template.armor_modifier)
   }
 
-  console.dir(values)
-
   if (values.category === "weapon" && !values.weapon_type) {
     values.weapon_type = "melee"
   }

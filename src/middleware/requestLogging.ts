@@ -29,7 +29,7 @@ export const requestLoggingMiddleware = createMiddleware<{
   } else if (config.isTest) {
     // nothing!
   } else {
-    console.log(
+    logger.info(
       `${data.method} ${data.path} - ${data.status} - ${data.duration}ms${data.user ? ` - user: ${data.user}` : ""}`
     )
   }

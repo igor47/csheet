@@ -5,6 +5,7 @@ import {
   NumberFormFieldSchema,
   OptionalNullStringSchema,
 } from "@src/lib/schemas"
+import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -108,11 +109,6 @@ export async function updateHitPoints(
   }
 }
 
-export interface ToolExecutorResult {
-  success: boolean
-  errors?: Record<string, string>
-}
-
 /**
  * Execute the update_hit_points tool from AI assistant
  * Converts AI parameters to service format and calls updateHitPoints
@@ -133,14 +129,17 @@ export async function executeUpdateHitPoints(
   const result = await updateHitPoints(db, char, data)
 
   if (!result.complete) {
+    // Convert errors object to single error message
+    const errorMessage = Object.values(result.errors).join(", ")
     return {
-      success: false,
-      errors: result.errors,
+      status: "failed",
+      error: errorMessage || "Failed to update hit points",
     }
   }
 
   return {
-    success: true,
+    status: "success",
+    data: { newHP: result.newHP },
   }
 }
 

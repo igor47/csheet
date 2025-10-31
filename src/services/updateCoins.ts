@@ -6,6 +6,7 @@ import {
   NumberFormFieldSchema,
   OptionalNullStringSchema,
 } from "@src/lib/schemas"
+import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -54,7 +55,7 @@ Only include coin types that changed (don't need to specify coins that didn't ch
 })
 
 export type UpdateCoinsResult =
-  | { complete: true }
+  | { complete: true; newCoins: { pp: number; gp: number; ep: number; sp: number; cp: number } }
   | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
@@ -157,12 +158,8 @@ export async function updateCoins(
 
   return {
     complete: true,
+    newCoins,
   }
-}
-
-export interface ToolExecutorResult {
-  success: boolean
-  errors?: Record<string, string>
 }
 
 /**
@@ -184,14 +181,17 @@ export async function executeUpdateCoins(
   const result = await updateCoins(db, char, data)
 
   if (!result.complete) {
+    // Convert errors object to single error message
+    const errorMessage = Object.values(result.errors).join(", ")
     return {
-      success: false,
-      errors: result.errors,
+      status: "failed",
+      error: errorMessage || "Failed to update coins",
     }
   }
 
   return {
-    success: true,
+    status: "success",
+    data: { newCoins: result.newCoins },
   }
 }
 

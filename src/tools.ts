@@ -16,11 +16,13 @@ import {
 
 /**
  * Result type for tool executors
+ * Matches the ToolResult schema from database
  */
-export interface ToolExecutorResult {
-  success: boolean
-  errors?: Record<string, string>
-}
+export type ToolExecutorResult =
+  | { status: "rejected" }
+  | { status: "failed"; error?: string }
+  // biome-ignore lint/suspicious/noExplicitAny: Tool result data can be any valid JSON
+  | { status: "success"; data?: Record<string, any> }
 
 /**
  * Function signature for tool executors

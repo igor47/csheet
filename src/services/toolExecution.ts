@@ -1,3 +1,4 @@
+import type { ToolResult } from "@src/db/chat_messages"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { UnresolvedToolCall } from "@src/services/computeChat"
 import { TOOL_EXECUTORS, type ToolExecutorResult } from "@src/tools"
@@ -11,7 +12,7 @@ async function updateToolResult(
   db: SQL,
   messageId: string,
   toolCallId: string,
-  result: { success: boolean; error?: string }
+  result: ToolResult
 ): Promise<void> {
   // Load the message to update tool_results
   const messages = await db`
@@ -54,12 +55,8 @@ export async function executeTool(
   // Execute the tool
   const result = await executor(db, char, unresolvedTool.parameters)
 
-  // Save the result to database
-  const dbResult = result.success
-    ? { success: true }
-    : { success: false, error: result.errors ? JSON.stringify(result.errors) : "Tool failed" }
-
-  await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, dbResult)
+  // Save the result to database (result already matches ToolResult format)
+  await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
 
   return result
 }
@@ -73,12 +70,9 @@ export async function rejectTool(
   unresolvedTool: UnresolvedToolCall
 ): Promise<ToolExecutorResult> {
   // Mark as rejected
-  const result = { success: false, error: "Rejected by user" }
+  const result: ToolExecutorResult = { status: "rejected" }
 
   await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
 
-  return {
-    success: false,
-    errors: { _: "Rejected by user" },
-  }
+  return result
 }

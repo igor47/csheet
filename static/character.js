@@ -21,17 +21,20 @@ document.body.addEventListener('openEditModal', function() {
 // scroll position restore and modal opening
 document.body.addEventListener('htmx:afterSwap', (e) => {
   const container = e.target;
-  console.dir(container)
-  console.dir(container.dataset.showModal)
 
-  // Open modal if content has data-show-modal attribute (e.g., from tool confirmations)
-  if (container.id === 'editModalContent' && container.dataset.showModal === 'true') {
-    const modalElement = document.getElementById('editModal');
-    if (modalElement) {
-      const modal = new bootstrap.Modal(modalElement);
-      modal.show();
-      // Clean up the flag
-      delete container.dataset.showModal;
+  // chat box was updated
+  if (container.id === 'chat-box-card') {
+    // Scroll chat messages to bottom if present
+    const messages = container.querySelectorAll('.chat-message');
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage) {
+      lastMessage.scrollIntoView({ behavior: 'instant', block: 'end', container: 'nearest' });
+    }
+
+    // Focus chat input
+    const chatInput = container.querySelector('#chat-input');
+    if (chatInput && !chatInput.disabled) {
+      chatInput.focus();
     }
   }
 

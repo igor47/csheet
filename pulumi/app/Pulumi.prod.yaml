@@ -24,3 +24,5 @@ config:
   csheet-app:SMTP_PASSWORD:
     secure: v1:Yan4ODxM5OSTA6Oj:fs2zBjfKLF5VU55go/vL7nkYLk4w7eX90XlKPwTqA80=
   csheet-app:SMTP_FROM: CSheet <noreply@csheet.net>
+  csheet-app:ANTHROPIC_API_KEY:
+    secure: v1:OjFxYdlxOio27ICe:U68UPcX3YW7PA61LSbbAoboaXjPhWUb4k5pWdoKw+4EBz8/oplO76IH6YUo1JXN1fFB4lhn/GtL0arYHvEgt66jFrv5G0pjCeUiGmq4AAmGJ0HOmzOjHvgFolAiySUC8xqbF68UejOmKDknwdTXNm25xOw5jbcG1U3EvbQ==

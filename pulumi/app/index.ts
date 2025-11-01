@@ -40,7 +40,6 @@ const s3BucketName = config.require("s3BucketName")
 const smtpHost = config.get("SMTP_HOST") ?? ""
 const smtpPort = config.get("SMTP_PORT") ?? "25"
 const smtpUser = config.get("SMTP_USER") ?? ""
-const smtpPassword = config.getSecret("SMTP_PASSWORD") ?? ""
 const smtpFrom = config.get("SMTP_FROM") ?? "CSheet <noreply@csheet.net>"
 
 // Secrets - created in app stack for easier updates without touching infra
@@ -83,7 +82,8 @@ const secrets = {
   postgresDb: createSecret("postgres-db", databaseName),
   s3AccessKeyId: createSecret("s3-access-key-id", s3AccessKeyId),
   s3SecretAccessKey: createSecret("s3-secret-access-key", s3SecretAccessKey),
-  smtpPassword: createSecret("smtp-password", smtpPassword),
+  smtpPassword: createSecret("smtp-password", config.getSecret("SMTP_PASSWORD") || ""),
+  anthropicApiKey: createSecret("anthropic-api-key", config.getSecret("ANTHROPIC_API_KEY") || ""),
 }
 
 // Helper to reference a secret in environment variables
@@ -121,6 +121,7 @@ const env: pulumi.Input<gcp.types.input.cloudrunv2.JobTemplateTemplateContainerE
   { name: "SMTP_USER", value: smtpUser },
   secretEnv("SMTP_PASSWORD", secrets.smtpPassword),
   { name: "SMTP_FROM", value: smtpFrom },
+  secretEnv("ANTHROPIC_API_KEY", secrets.anthropicApiKey),
 ]
 
 // Migration job - runs dbmate migrate

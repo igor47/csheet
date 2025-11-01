@@ -21,7 +21,8 @@ export const CastSpellApiSchema = z.object({
   slot_level: NumberFormFieldSchema.int()
     .min(1)
     .max(9)
-    .optional()
+    .nullable()
+    .default(null)
     .describe(
       "The level of spell slot to use (required for non-cantrip, non-ritual spells). Can be higher than spell level to upcast."
     ),

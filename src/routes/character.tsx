@@ -20,6 +20,7 @@ import { ItemDetail } from "@src/components/ItemDetail"
 import { ItemEffectsEditor } from "@src/components/ItemEffectsEditor"
 import { ItemHistory } from "@src/components/ItemHistory"
 import { LearnSpellForm } from "@src/components/LearnSpellForm"
+import { LongRestForm } from "@src/components/LongRestForm"
 import { NotesHistory } from "@src/components/NotesHistory"
 import { NotesSaveIndicator } from "@src/components/NotesSaveIndicator"
 import { PreparedSpellsHistory } from "@src/components/PreparedSpellsHistory"
@@ -30,6 +31,7 @@ import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
 import { SessionNotes } from "@src/components/SessionNotes"
+import { ShortRestForm } from "@src/components/ShortRestForm"
 import { SkillsEditForm } from "@src/components/SkillsEditForm"
 import { SkillsHistory } from "@src/components/SkillsHistory"
 import { SpellbookHistory } from "@src/components/SpellbookHistory"
@@ -76,11 +78,11 @@ import { deleteItemEffect } from "@src/services/deleteItemEffect"
 import { changeItemState } from "@src/services/itemState"
 import { learnSpell } from "@src/services/learnSpell"
 import { listCharacters } from "@src/services/listCharacters"
-import { LongRestApiSchema, longRest } from "@src/services/longRest"
+import { longRest } from "@src/services/longRest"
 import { manageCharge } from "@src/services/manageCharge"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { saveNotes } from "@src/services/saveNotes"
-import { ShortRestApiSchema, shortRest } from "@src/services/shortRest"
+import { shortRest } from "@src/services/shortRest"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
 import { updateAbilities } from "@src/services/updateAbilities"
 import { updateAvatar } from "@src/services/updateAvatar"
@@ -959,7 +961,8 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
   )
 })
 
-characterRoutes.post("/characters/:id/longrest", async (c) => {
+// GET /characters/:id/rest/short - Show short rest modal
+characterRoutes.get("/characters/:id/rest/short", async (c) => {
   const characterId = c.req.param("id") as string
   const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
@@ -968,21 +971,86 @@ characterRoutes.post("/characters/:id/longrest", async (c) => {
     return c.body(null, 204)
   }
 
-  // Parse with Zod
-  const result = LongRestApiSchema.safeParse({
-    character_id: characterId,
-    note: null,
-  })
+  return c.html(<ShortRestForm character={char} values={{}} errors={{}} />)
+})
 
-  if (!result.success) {
-    await setFlashMsg(c, "Failed to take long rest", "error")
-    return c.html(<CharacterInfo character={char} />)
+// GET /characters/:id/rest/long - Show long rest modal
+characterRoutes.get("/characters/:id/rest/long", async (c) => {
+  const characterId = c.req.param("id") as string
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
   }
 
+  return c.html(<LongRestForm character={char} values={{}} errors={{}} />)
+})
+
+// POST /characters/:id/rest/short - Process short rest
+characterRoutes.post("/characters/:id/rest/short", async (c) => {
+  const characterId = c.req.param("id") as string
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await shortRest({
+    character_id: characterId,
+    note: body.note || null,
+  })
+
+  // Check if this is a validation request
+  const isCheck = body.is_check === "true"
+  if (isCheck) {
+    // Just return the form with any validation errors
+    return c.html(<ShortRestForm character={char} values={body} errors={{}} />)
+  }
+
+  // Process the short rest
+  await setFlashMsg(c, result.message, "success")
+
+  // Return updated components and close modal
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(
+    <>
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/rest/long - Process long rest
+characterRoutes.post("/characters/:id/rest/long", async (c) => {
+  const characterId = c.req.param("id") as string
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  // Check if this is a validation request
+  const isCheck = body.is_check === "true"
+  if (isCheck) {
+    // Just return the form with any validation errors
+    return c.html(<LongRestForm character={char} values={body} errors={{}} />)
+  }
+
+  // Process the long rest
   try {
     const summary = await longRest(
       getDb(c),
-      result.data,
+      {
+        character_id: characterId,
+        note: body.note || null,
+      },
       char.currentHP,
       char.maxHitPoints,
       char.hitDice,
@@ -1007,49 +1075,18 @@ characterRoutes.post("/characters/:id/longrest", async (c) => {
   } catch (error) {
     logger.error("taking long rest", error as Error, { characterId: char.id })
     await setFlashMsg(c, "Failed to take long rest", "error")
-    return c.html(<CharacterInfo character={char} />)
+    return c.html(<LongRestForm character={char} values={body} errors={{}} />)
   }
 
+  // Return updated components and close modal
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
   return c.html(
     <>
-      <CharacterInfo character={updatedChar} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
       <SpellsPanel character={updatedChar} swapOob={true} />
     </>
   )
-})
-
-characterRoutes.post("/characters/:id/shortrest", async (c) => {
-  const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
-
-  // Parse with Zod
-  const result = ShortRestApiSchema.safeParse({
-    character_id: characterId,
-    note: null,
-  })
-
-  if (!result.success) {
-    await setFlashMsg(c, "Failed to take short rest", "error")
-    return c.html(<CharacterInfo character={char} />)
-  }
-
-  try {
-    const summary = await shortRest(result.data)
-    await setFlashMsg(c, summary.message, "success")
-  } catch (error) {
-    logger.error("taking short rest", error as Error, { characterId: char.id })
-    await setFlashMsg(c, "Failed to take short rest", "error")
-    return c.html(<CharacterInfo character={char} />)
-  }
-
-  const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  return c.html(<CharacterInfo character={updatedChar} />)
 })
 
 characterRoutes.get("/characters/:id/edit/:field", async (c) => {

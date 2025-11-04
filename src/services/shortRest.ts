@@ -18,7 +18,7 @@ export interface ShortRestSummary {
  * - Some class features recharge on a short rest
  * - For now, we just acknowledge the rest and let players manually spend hit dice
  */
-export async function shortRest(data: ShortRestApi): Promise<ShortRestSummary> {
+export async function shortRest(_data: ShortRestApi): Promise<ShortRestSummary> {
   // Short rest doesn't automatically restore anything
   // Players spend hit dice manually via the edit hit dice button
   // This is just to record that a short rest was taken

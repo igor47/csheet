@@ -57,7 +57,7 @@ export async function longRest(
   }
 
   // Restore half of spent hit dice (rounded down, largest first)
-  const maxRestoration = Math.floor(allHitDice.length / 2)
+  const maxRestoration = Math.max(Math.floor(allHitDice.length / 2), 1)
   const currentlyUsed = allHitDice.length - availableHitDice.length
   const toRestore = Math.min(maxRestoration, currentlyUsed)
 

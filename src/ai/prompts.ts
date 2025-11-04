@@ -1,3 +1,4 @@
+import type { SpellSlotLevelType } from "@src/db/char_spell_slots"
 import { ItemCategories } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
@@ -68,18 +69,22 @@ function formatResources(character: ComputedCharacter): string {
     ? `${character.coins.pp}pp ${character.coins.gp}gp ${character.coins.ep}ep ${character.coins.sp}sp ${character.coins.cp}cp`
     : "no coins"
 
-  const availableSlots = character.availableSpellSlots.filter((slot) => slot > 0)
-  const slotsDesc =
-    availableSlots.length > 0
-      ? availableSlots
-          .map((count, level) => `${count}×L${level + 1}`)
-          .filter((s) => !s.startsWith("0"))
-          .join(", ")
-      : "none"
+  const slotCounts: Record<SpellSlotLevelType, { total: number; available: number }> = {}
+  for (let level = 1; level <= 9; level++) {
+    const total = character.spellSlots.filter((slot) => slot === level).length
+    const available = character.availableSpellSlots.filter((slot) => slot === level).length
+    if (total > 0) {
+      slotCounts[level as SpellSlotLevelType] = { total, available }
+    }
+  }
+
+  const slotsDesc = Object.entries(slotCounts).map(([level, counts]) => {
+    return `${counts.available}/${counts.total} L${level}`
+  }).join(", ")
 
   const hitDiceDesc = `${character.availableHitDice.length}/${character.hitDice.length}`
 
-  return [`Coins: ${coinsDesc}`, `Spell Slots: ${slotsDesc}`, `Hit Dice: ${hitDiceDesc}`].join("\n")
+  return [`Coins: ${coinsDesc}`, `Available Spell Slots: ${slotsDesc}`, `Hit Dice: ${hitDiceDesc}`].join("\n")
 }
 
 function formatEquipment(character: ComputedCharacter): string {

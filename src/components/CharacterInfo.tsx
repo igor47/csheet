@@ -357,10 +357,11 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-primary"
-                  hx-post={`/characters/${character.id}/shortrest`}
-                  hx-target="#character-info"
-                  hx-swap="outerHTML"
-                  hx-confirm="Take a short rest? You can spend hit dice to recover HP."
+                  hx-get={`/characters/${character.id}/rest/short`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal"
                 >
                   <i class="bi bi-cup-hot me-1"></i>
                   Short Rest
@@ -368,10 +369,11 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-primary"
-                  hx-post={`/characters/${character.id}/longrest`}
-                  hx-target="#character-info"
-                  hx-swap="outerHTML"
-                  hx-confirm="Take a long rest? This will require at least 8 in-game hours of downtime."
+                  hx-get={`/characters/${character.id}/rest/long`}
+                  hx-target="#editModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal"
                 >
                   <i class="bi bi-moon-stars me-1"></i>
                   Long Rest

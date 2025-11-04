@@ -1,11 +1,7 @@
 import type { SpellLevelType } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import {
-  BooleanFormFieldSchema,
-  NumberFormFieldSchema,
-  OptionalNullStringSchema,
-} from "@src/lib/schemas"
+import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -15,19 +11,23 @@ import { updateSpellSlots } from "./updateSpellSlots"
 
 export const CastSpellApiSchema = z.object({
   spell_id: z.string().describe("The ID of the spell to cast (e.g., 'fire-bolt', 'magic-missile')"),
-  as_ritual: BooleanFormFieldSchema.optional()
+  as_ritual: Checkbox()
+    .optional()
     .default(false)
     .describe("True if casting as a ritual (for ritual spells only, doesn't consume spell slot)"),
-  slot_level: NumberFormFieldSchema.int()
-    .min(1)
-    .max(9)
-    .nullable()
-    .default(null)
-    .describe(
-      "The level of spell slot to use (required for non-cantrip, non-ritual spells). Can be higher than spell level to upcast."
-    ),
-  note: OptionalNullStringSchema.describe("Optional additional notes about the casting"),
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  slot_level: NumberField(
+    z
+      .number()
+      .int({ message: "Spell slot level must be a whole number" })
+      .min(1, { message: "Spell slot level must be at least 1" })
+      .max(9, { message: "Spell slot level cannot exceed 9" })
+      .nullable()
+      .default(null)
+  ).describe(
+    "The level of spell slot to use (required for non-cantrip, non-ritual spells). Can be higher than spell level to upcast."
+  ),
+  note: OptionalString().describe("Optional additional notes about the casting"),
+  is_check: Checkbox().optional().default(false),
 })
 
 export type CastSpellResult =
@@ -67,10 +67,10 @@ export async function castSpell(
   const isCantrip = spell.level === 0
   const asRitual = checkD.data.as_ritual === true || data.as_ritual === "true"
 
-  // Wizards can cast ritual spells from their spellbook without preparing them
+  // Wizards can cast ritual spells from their spellbook without preparing them (but only as rituals)
   if (!isPrepared) {
-    if (spell.ritual && isWizard && isKnown) {
-      // ok
+    if (spell.ritual && isWizard && isKnown && asRitual) {
+      // Wizard casting known ritual spell as a ritual - allow it
     } else if (asRitual) {
       errors.spell_id = `${spell.name} is not prepared and cannot be cast as a ritual`
       return { complete: false, errors, values: data }

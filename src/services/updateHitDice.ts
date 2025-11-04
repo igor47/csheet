@@ -2,11 +2,7 @@ import { create as createHitDiceDb } from "@src/db/char_hit_dice"
 import { create as createHPDb } from "@src/db/char_hp"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import {
-  BooleanFormFieldSchema,
-  NumberFormFieldSchema,
-  OptionalNullStringSchema,
-} from "@src/lib/schemas"
+import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -17,17 +13,29 @@ export const UpdateHitDiceApiSchema = z.object({
   action: z
     .enum(["restore", "spend"])
     .describe("Whether to spend a hit die (during short rest) or restore a hit die"),
-  die_value: NumberFormFieldSchema.int()
-    .refine((val): val is HitDieType => [6, 8, 10, 12].includes(val))
+  die_value: NumberField(
+    z
+      .number()
+      .int({ message: "Must be a whole number" })
+      .refine((val): val is HitDieType => [6, 8, 10, 12].includes(val), {
+        message: "Hit die must be 6, 8, 10, or 12",
+      })
+      .nullable()
+  )
     .optional()
     .describe("The type of hit die (6, 8, 10, or 12)"),
-  hp_rolled: NumberFormFieldSchema.int()
-    .min(1)
-    .max(12)
+  hp_rolled: NumberField(
+    z
+      .number()
+      .int({ message: "Must be a whole number" })
+      .min(1, { message: "Must be at least 1" })
+      .max(12, { message: "Cannot exceed 12" })
+      .nullable()
+  )
     .optional()
     .describe("The HP rolled when spending a hit die (required for spend action)"),
-  note: OptionalNullStringSchema.describe("Optional note about the hit die use or restoration"),
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  note: OptionalString().describe("Optional note about the hit die use or restoration"),
+  is_check: Checkbox().optional().default(false),
 })
 
 export type UpdateHitDiceResult =

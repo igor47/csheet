@@ -1,11 +1,7 @@
 import { create as createCoinsDb } from "@src/db/char_coins"
 import { applyDeltasWithChange, toCopper } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import {
-  BooleanFormFieldSchema,
-  NumberFormFieldSchema,
-  OptionalNullStringSchema,
-} from "@src/lib/schemas"
+import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -14,26 +10,27 @@ import type { ComputedCharacter } from "./computeCharacter"
 
 // Schema for the coin update API
 export const UpdateCoinsApiSchema = z.object({
-  pp: NumberFormFieldSchema.int()
-    .describe("Change in platinum pieces (positive for gain, negative for loss)")
-    .default(0),
-  gp: NumberFormFieldSchema.int()
-    .describe("Change in gold pieces (positive for gain, negative for loss)")
-    .default(0),
-  ep: NumberFormFieldSchema.int()
-    .describe("Change in electrum pieces (positive for gain, negative for loss)")
-    .default(0),
-  sp: NumberFormFieldSchema.int()
-    .describe("Change in silver pieces (positive for gain, negative for loss)")
-    .default(0),
-  cp: NumberFormFieldSchema.int()
-    .describe("Change in copper pieces (positive for gain, negative for loss)")
-    .default(0),
-  note: OptionalNullStringSchema.describe("Note describing the transaction"),
-  make_change: BooleanFormFieldSchema.optional()
+  pp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
+    "Change in platinum pieces (positive for gain, negative for loss)"
+  ),
+  gp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
+    "Change in gold pieces (positive for gain, negative for loss)"
+  ),
+  ep: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
+    "Change in electrum pieces (positive for gain, negative for loss)"
+  ),
+  sp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
+    "Change in silver pieces (positive for gain, negative for loss)"
+  ),
+  cp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
+    "Change in copper pieces (positive for gain, negative for loss)"
+  ),
+  note: OptionalString().describe("Note describing the transaction"),
+  make_change: Checkbox()
+    .optional()
     .default(true)
     .describe("Allow making change from larger denominations"),
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  is_check: Checkbox().optional().default(false),
 })
 
 // Vercel AI SDK tool definition

@@ -12,15 +12,9 @@ import {
 } from "@src/lib/dnd"
 import type { DamageType } from "@src/lib/dnd/spells"
 import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
+import { Checkbox, NumberField, NumericEnumField, OptionalString } from "@src/lib/formSchemas"
 import { logger } from "@src/lib/logger"
-import {
-  BooleanFormFieldSchema,
-  NumberFormFieldSchema,
-  OptionalNullStringSchema,
-  RequiredStringNumberSchema,
-  StringNumberEnum,
-  UnsetEnumSchema,
-} from "@src/lib/schemas"
+import { UnsetEnumSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -29,9 +23,9 @@ const BaseItemUpdateSchema = z.object({
   item_id: z.string(),
   character_id: z.string(),
   name: z.string().min(1, "Item name is required"),
-  description: OptionalNullStringSchema,
+  description: OptionalString(),
   category: ItemCategorySchema, // For identification only, not editable
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  is_check: Checkbox().optional().default(false),
 })
 
 // Basic item (no special fields)
@@ -42,71 +36,102 @@ export const BasicItemUpdateSchema = z.object({
 // Shield-specific fields
 const ShieldItemUpdateSchema = z.object({
   category: ItemCategorySchema.extract(["shield"]),
-  armor_modifier: NumberFormFieldSchema.int(),
+  armor_modifier: NumberField(z.number().int({ message: "Must be a whole number" })),
 })
 
 // Armor-specific fields
 const ArmorItemUpdateSchema = z.object({
   category: ItemCategorySchema.extract(["armor"]),
   armor_type: ArmorTypeSchema,
-  armor_class: NumberFormFieldSchema.int().min(0),
-  armor_class_dex: BooleanFormFieldSchema.optional().default(false),
-  armor_class_dex_max: NumberFormFieldSchema.int().positive().nullable().default(null),
+  armor_class: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(0, { message: "Cannot be negative" })
+  ),
+  armor_class_dex: Checkbox().optional().default(false),
+  armor_class_dex_max: NumberField(
+    z.number().int({ message: "Must be a whole number" }).positive().nullable().default(null)
+  ),
 })
 
 const DamageDice = [4, 6, 8, 10, 12, 20, 100] as const
-const NumDiceField = NumberFormFieldSchema.int().min(1)
-const DieValueField = StringNumberEnum(DamageDice)
+const NumDiceField = NumberField(
+  z.number().int({ message: "Must be a whole number" }).min(1, { message: "Must be at least 1" })
+)
+const DieValueField = NumericEnumField(
+  z.union(DamageDice.map((n) => z.literal(n)) as [z.ZodLiteral<number>, ...z.ZodLiteral<number>[]])
+)
+const OptionalDieValueField = NumericEnumField(
+  z
+    .union(DamageDice.map((n) => z.literal(n)) as [z.ZodLiteral<number>, ...z.ZodLiteral<number>[]])
+    .nullable()
+)
 
 // Weapon-specific fields
 const WeaponItemBaseUpdateSchema = z.object({
   category: ItemCategorySchema.extract(["weapon"]),
 
-  finesse: BooleanFormFieldSchema.optional().default(false),
+  finesse: Checkbox().optional().default(false),
   mastery: WeaponMasterySchema.nullable().default(null),
-  martial: BooleanFormFieldSchema.optional().default(false),
+  martial: Checkbox().optional().default(false),
 
-  damage_row_count: NumberFormFieldSchema.int().min(1).max(10).optional().default(1),
+  damage_row_count: NumberField(
+    z
+      .number()
+      .int({ message: "Must be a whole number" })
+      .min(1, { message: "Must be at least 1" })
+      .max(10, { message: "Cannot exceed 10" })
+      .optional()
+      .default(1)
+  ),
 
-  // Row 0
+  // Row 0 (required)
   damage_num_dice_0: NumDiceField,
   damage_die_value_0: DieValueField,
   damage_type_0: DamageTypeSchema,
-  // Row 1
-  damage_num_dice_1: NumDiceField.optional(),
-  damage_die_value_1: DieValueField.optional(),
+  // Row 1-9 (optional)
+  damage_num_dice_1: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_1: OptionalDieValueField.optional(),
   damage_type_1: UnsetEnumSchema(DamageTypeSchema),
-  // Row 2
-  damage_num_dice_2: NumDiceField.optional(),
-  damage_die_value_2: DieValueField.optional(),
+  damage_num_dice_2: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_2: OptionalDieValueField.optional(),
   damage_type_2: UnsetEnumSchema(DamageTypeSchema),
-  // Row 3
-  damage_num_dice_3: NumDiceField.optional(),
-  damage_die_value_3: DieValueField.optional(),
+  damage_num_dice_3: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_3: OptionalDieValueField.optional(),
   damage_type_3: UnsetEnumSchema(DamageTypeSchema),
-  // Row 4
-  damage_num_dice_4: NumDiceField.optional(),
-  damage_die_value_4: DieValueField.optional(),
+  damage_num_dice_4: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_4: OptionalDieValueField.optional(),
   damage_type_4: UnsetEnumSchema(DamageTypeSchema),
-  // Row 5
-  damage_num_dice_5: NumDiceField.optional(),
-  damage_die_value_5: DieValueField.optional(),
+  damage_num_dice_5: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_5: OptionalDieValueField.optional(),
   damage_type_5: UnsetEnumSchema(DamageTypeSchema),
-  // Row 6
-  damage_num_dice_6: NumDiceField.optional(),
-  damage_die_value_6: DieValueField.optional(),
+  damage_num_dice_6: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_6: OptionalDieValueField.optional(),
   damage_type_6: UnsetEnumSchema(DamageTypeSchema),
-  // Row 7
-  damage_num_dice_7: NumDiceField.optional(),
-  damage_die_value_7: DieValueField.optional(),
+  damage_num_dice_7: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_7: OptionalDieValueField.optional(),
   damage_type_7: UnsetEnumSchema(DamageTypeSchema),
-  // Row 8
-  damage_num_dice_8: NumDiceField.optional(),
-  damage_die_value_8: DieValueField.optional(),
+  damage_num_dice_8: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_8: OptionalDieValueField.optional(),
   damage_type_8: UnsetEnumSchema(DamageTypeSchema),
-  // Row 9
-  damage_num_dice_9: NumDiceField.optional(),
-  damage_die_value_9: DieValueField.optional(),
+  damage_num_dice_9: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
+  ).optional(),
+  damage_die_value_9: OptionalDieValueField.optional(),
   damage_type_9: UnsetEnumSchema(DamageTypeSchema),
 })
 
@@ -116,13 +141,43 @@ const WeaponItemUpdateSchema = z.discriminatedUnion("weapon_type", [
   }),
   WeaponItemBaseUpdateSchema.extend({
     weapon_type: z.literal("thrown"),
-    normal_range: RequiredStringNumberSchema((n) => n.int().positive()),
-    long_range: RequiredStringNumberSchema((n) => n.int().positive()),
+    normal_range: NumberField(
+      z
+        .number({
+          error: (iss) =>
+            iss === undefined ? "Normal range is required" : "Must be a valid number",
+        })
+        .int({ message: "Must be a whole number" })
+        .positive({ message: "Must be greater than zero" })
+    ),
+    long_range: NumberField(
+      z
+        .number({
+          error: (iss) => (iss === undefined ? "Long range is required" : "Must be a valid number"),
+        })
+        .int({ message: "Must be a whole number" })
+        .positive({ message: "Must be greater than zero" })
+    ),
   }),
   WeaponItemBaseUpdateSchema.extend({
     weapon_type: z.literal("ranged"),
-    normal_range: RequiredStringNumberSchema((n) => n.int().positive()),
-    long_range: RequiredStringNumberSchema((n) => n.int().positive()),
+    normal_range: NumberField(
+      z
+        .number({
+          error: (iss) =>
+            iss === undefined ? "Normal range is required" : "Must be a valid number",
+        })
+        .int({ message: "Must be a whole number" })
+        .positive({ message: "Must be greater than zero" })
+    ),
+    long_range: NumberField(
+      z
+        .number({
+          error: (iss) => (iss === undefined ? "Long range is required" : "Must be a valid number"),
+        })
+        .int({ message: "Must be a whole number" })
+        .positive({ message: "Must be greater than zero" })
+    ),
   }),
 ])
 

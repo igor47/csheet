@@ -71,7 +71,7 @@ export async function getCurrentLevels(db: SQL, characterId: string): Promise<Ch
     WITH ranked AS (
       SELECT
         *,
-        ROW_NUMBER() OVER (PARTITION BY class ORDER BY created_at DESC) as rn
+        ROW_NUMBER() OVER (PARTITION BY class ORDER BY level DESC, created_at DESC) as rn
       FROM char_levels
       WHERE character_id = ${characterId}
     )

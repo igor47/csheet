@@ -1,10 +1,6 @@
 import { getCurrentCharges } from "@src/db/item_charges"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import {
-  BooleanFormFieldSchema,
-  NumberFormFieldSchema,
-  OptionalNullStringSchema,
-} from "@src/lib/schemas"
+import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { EquippedComputedItem } from "./computeCharacterItems"
@@ -14,10 +10,12 @@ import { useCharge } from "./useCharge"
 export const ManageChargeApiSchema = z.object({
   item_id: z.string(),
   action: z.enum(["use", "add"]),
-  amount: NumberFormFieldSchema.int().min(1),
-  note: OptionalNullStringSchema,
-  override: BooleanFormFieldSchema.optional().default(false),
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  amount: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1, { message: "Must be at least 1" })
+  ),
+  note: OptionalString(),
+  override: Checkbox().optional().default(false),
+  is_check: Checkbox().optional().default(false),
 })
 
 export type ManageChargeData = z.infer<typeof ManageChargeApiSchema>

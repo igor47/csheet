@@ -397,7 +397,7 @@ describe("POST /characters/:id/edit/abilities", () => {
         const errorFeedback = document.querySelector(".invalid-feedback")
         expect(errorFeedback).toBeTruthy()
         expect(errorFeedback?.textContent).toMatch(
-          /Too small|must be between 1 and 30|Score must be between/i
+          /Must be at least 1|must be between 1 and 30|Score must be between/i
         )
       })
 
@@ -422,7 +422,7 @@ describe("POST /characters/:id/edit/abilities", () => {
 
         expect(response.status).toBe(200)
         const html = await response.text()
-        expect(html).toMatch(/Too big|must be between 1 and 30|Score must be between/i)
+        expect(html).toMatch(/Cannot exceed 30|must be between 1 and 30|Score must be between/i)
       })
 
       test("rejects when no abilities are changed", async () => {

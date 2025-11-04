@@ -180,7 +180,7 @@ export async function prepareSpell(
 export const prepareSpellToolName = "prepare_spell" as const
 export const prepareSpellTool = tool({
   name: prepareSpellToolName,
-  description: `Prepare a spell in a slot, or swap an existing prepared spell. For classes that prepare spells (like Clerics, Druids, Paladins), this changes which spells are available to cast. For Wizards, non-cantrip spells must be in the spellbook before they can be prepared.`,
+  description: `Prepare a spell in a slot, or swap an existing prepared spell. Requires spell_id - use lookup_spell first to get it. For classes that prepare spells (like Clerics, Druids, Paladins), this changes which spells are available to cast. For Wizards, non-cantrip spells must be in the spellbook before they can be prepared.`,
   inputSchema: PrepareSpellApiSchema.omit({ note: true }).extend({
     note: z.string().optional().describe("Optional note about why this spell is being prepared"),
   }),

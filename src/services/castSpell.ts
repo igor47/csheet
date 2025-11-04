@@ -186,7 +186,7 @@ export async function castSpell(
 export const castSpellToolName = "cast_spell" as const
 export const castSpellTool = tool({
   name: castSpellToolName,
-  description: `Cast a spell, consuming a spell slot (unless cast as a ritual or cantrip). The spell must be prepared or known. Wizards can cast ritual spells from their spellbook without preparing them.`,
+  description: `Cast a spell, consuming a spell slot (unless cast as a ritual or cantrip). Requires spell_id - use lookup_spell first to get it. The spell must be prepared or known. Wizards can cast ritual spells from their spellbook without preparing them.`,
   inputSchema: CastSpellApiSchema.omit({ note: true, is_check: true }).extend({
     note: z.string().optional().describe("Optional additional notes about the casting"),
   }),

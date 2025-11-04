@@ -22,7 +22,7 @@ export const lookupSpellToolName = "lookup_spell" as const
 export const lookupSpellTool = tool({
   name: lookupSpellToolName,
   description:
-    "Look up detailed information about any D&D 5e spell from the spell catalog. Returns the spell's full description, components, casting time, range, duration, damage, and other mechanical details. Use this when players ask about spell mechanics, effects, or availability.",
+    "Look up a spell by name to get its ID and details. ALWAYS use this FIRST whenever a spell is mentioned by name, before using prepare_spell, cast_spell, or learn_spell. Returns the spell's ID, description, components, casting time, range, duration, damage, and other mechanical details.",
   inputSchema: LookupSpellApiSchema,
 })
 

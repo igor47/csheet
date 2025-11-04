@@ -1,36 +1,45 @@
 import { create as createAbilityDb } from "@src/db/char_abilities"
 import { Abilities, type AbilityType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import {
-  BooleanFormFieldSchema,
-  NumberFormFieldSchema,
-  OptionalNullStringSchema,
-} from "@src/lib/schemas"
+import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 // checkboxes are special since we want them to default to "off" if not present
 export const CheckboxFields = z.object({
-  strength_proficient: BooleanFormFieldSchema,
-  dexterity_proficient: BooleanFormFieldSchema,
-  constitution_proficient: BooleanFormFieldSchema,
-  intelligence_proficient: BooleanFormFieldSchema,
-  wisdom_proficient: BooleanFormFieldSchema,
-  charisma_proficient: BooleanFormFieldSchema,
+  strength_proficient: Checkbox(),
+  dexterity_proficient: Checkbox(),
+  constitution_proficient: Checkbox(),
+  intelligence_proficient: Checkbox(),
+  wisdom_proficient: Checkbox(),
+  charisma_proficient: Checkbox(),
 })
+
+// Helper for ability score field
+const AbilityScoreField = () =>
+  NumberField(
+    z
+      .number({
+        error: (iss) =>
+          iss === undefined ? "Ability score is required" : "Must be a valid number",
+      })
+      .int({ message: "Must be a whole number" })
+      .min(1, { message: "Must be at least 1" })
+      .max(30, { message: "Cannot exceed 30" })
+  )
 
 // Schema for the entire form
 export const UpdateAbilitiesApiSchema = z.object({
   ...CheckboxFields.shape,
-  strength_score: NumberFormFieldSchema.int().min(1).max(30),
-  dexterity_score: NumberFormFieldSchema.int().min(1).max(30),
-  constitution_score: NumberFormFieldSchema.int().min(1).max(30),
-  intelligence_score: NumberFormFieldSchema.int().min(1).max(30),
-  wisdom_score: NumberFormFieldSchema.int().min(1).max(30),
-  charisma_score: NumberFormFieldSchema.int().min(1).max(30),
-  note: OptionalNullStringSchema,
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  strength_score: AbilityScoreField(),
+  dexterity_score: AbilityScoreField(),
+  constitution_score: AbilityScoreField(),
+  intelligence_score: AbilityScoreField(),
+  wisdom_score: AbilityScoreField(),
+  charisma_score: AbilityScoreField(),
+  note: OptionalString(),
+  is_check: Checkbox().optional().default(false),
 })
 
 export type UpdateAbilitiesResult =

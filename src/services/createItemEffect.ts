@@ -1,8 +1,9 @@
 import { create as createItemEffectDb } from "@src/db/item_effects"
 import { ItemEffectAppliesSchema, ItemEffectOpSchema, ItemEffectTargetSchema } from "@src/lib/dnd"
 import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
+import { Checkbox, EnumField, NumberField } from "@src/lib/formSchemas"
 import { logger } from "@src/lib/logger"
-import { BooleanFormFieldSchema, NumberFormFieldSchema, UnsetEnumSchema } from "@src/lib/schemas"
+import { UnsetEnumSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -11,15 +12,16 @@ const BaseItemEffectSchema = z.object({
   item_id: z.string(),
   target: ItemEffectTargetSchema,
   op: ItemEffectOpSchema,
-  value: NumberFormFieldSchema.int()
-    .refine((val) => val !== 0, { message: "Value cannot be 0" })
-    .nullable()
-    .default(null),
-  applies: z.preprocess(
-    (val) => (val === "" ? null : val),
-    ItemEffectAppliesSchema.nullable().default(null)
+  value: NumberField(
+    z
+      .number()
+      .int({ message: "Must be a whole number" })
+      .refine((val) => val !== 0, { message: "Value cannot be 0" })
+      .nullable()
+      .default(null)
   ),
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  applies: EnumField(ItemEffectAppliesSchema.nullable().default(null)),
+  is_check: Checkbox().optional().default(false),
 })
 
 export const CreateItemEffectApiSchema = BaseItemEffectSchema

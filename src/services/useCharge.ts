@@ -1,5 +1,5 @@
 import { create as createChargeDb, getCurrentCharges } from "@src/db/item_charges"
-import { NumberFormFieldSchema, OptionalNullStringSchema } from "@src/lib/schemas"
+import { NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -8,11 +8,14 @@ import type { ComputedCharacter } from "./computeCharacter"
 
 export const UseChargeApiSchema = z.object({
   item_id: z.string().describe("The ID of the item with charges to use"),
-  amount: NumberFormFieldSchema.int()
-    .min(1)
-    .default(1)
-    .describe("Number of charges to use (defaults to 1)"),
-  note: OptionalNullStringSchema.describe("Optional note about using the charges"),
+  amount: NumberField(
+    z
+      .number()
+      .int({ message: "Must be a whole number" })
+      .min(1, { message: "Must use at least 1 charge" })
+      .default(1)
+  ).describe("Number of charges to use (defaults to 1)"),
+  note: OptionalString().describe("Optional note about using the charges"),
 })
 
 /**

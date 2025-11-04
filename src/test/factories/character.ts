@@ -1,8 +1,9 @@
 import { faker } from "@faker-js/faker"
 import { create as createAbilityDb } from "@src/db/char_abilities"
+import { create as createCharLevel } from "@src/db/char_levels"
 import type { Character, CreateCharacter } from "@src/db/characters"
 import { create as createCharacter } from "@src/db/characters"
-import { Abilities } from "@src/lib/dnd"
+import { Abilities, type ClassName } from "@src/lib/dnd"
 import type { RulesetId } from "@src/lib/dnd/rulesets"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import type { SQL } from "bun"
@@ -16,6 +17,8 @@ interface CharacterFactoryParams {
   background?: string
   alignment?: string | null
   ruleset?: RulesetId
+  class?: ClassName
+  level?: number
 }
 
 const species = [
@@ -75,6 +78,7 @@ const factory = Factory.define<Character, CharacterFactoryParams>(({ params }) =
  * Usage:
  *   const character = await characterFactory.create({ user_id: user.id }, testCtx.db)
  *   const character = await characterFactory.create({ user_id: user.id, name: 'Aragorn' }, testCtx.db)
+ *   const character = await characterFactory.create({ user_id: user.id, class: 'wizard', level: 3 }, testCtx.db)
  */
 export const characterFactory = {
   build: factory.build.bind(factory),
@@ -107,6 +111,20 @@ export const characterFactory = {
         proficiency: false,
         note: "Initial",
       })
+    }
+
+    // Create character levels if class and level are specified
+    if (params.class && params.level) {
+      for (let i = 1; i <= params.level; i++) {
+        await createCharLevel(db, {
+          character_id: character.id,
+          class: params.class,
+          level: i,
+          subclass: null,
+          hit_die_roll: 6, // Default to 6 for testing
+          note: null,
+        })
+      }
     }
 
     return character

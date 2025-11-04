@@ -1,10 +1,6 @@
 import { create as createCharHPDb } from "@src/db/char_hp"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import {
-  BooleanFormFieldSchema,
-  NumberFormFieldSchema,
-  OptionalNullStringSchema,
-} from "@src/lib/schemas"
+import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -13,9 +9,16 @@ import type { ComputedCharacter } from "./computeCharacter"
 
 export const UpdateHitPointsApiSchema = z.object({
   action: z.enum(["restore", "lose"]),
-  amount: NumberFormFieldSchema.int().min(1),
-  note: OptionalNullStringSchema,
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  amount: NumberField(
+    z
+      .number({
+        error: (iss) => (iss === undefined ? "Amount is required" : "Must be a valid number"),
+      })
+      .int({ message: "Must be a whole number" })
+      .min(1, { message: "Must be at least 1" })
+  ),
+  note: OptionalString(),
+  is_check: Checkbox().optional().default(false),
 })
 
 // Vercel AI SDK tool definition

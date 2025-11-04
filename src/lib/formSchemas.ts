@@ -289,17 +289,3 @@ export function RequiredString() {
 export function OptionalString() {
   return z.preprocess(coerceString, z.string().nullable())
 }
-
-// =============================================================================
-// Legacy compatibility exports (deprecated)
-// =============================================================================
-
-/**
- * @deprecated Use `Checkbox()` instead
- */
-export const BooleanFormFieldSchema = Checkbox()
-
-/**
- * @deprecated Use `OptionalString()` instead
- */
-export const OptionalNullStringSchema = OptionalString()

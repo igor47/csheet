@@ -3,7 +3,7 @@ import { create as createAbilityDb } from "@src/db/char_abilities"
 import { create as createCharLevel } from "@src/db/char_levels"
 import type { Character, CreateCharacter } from "@src/db/characters"
 import { create as createCharacter } from "@src/db/characters"
-import { Abilities, type ClassName } from "@src/lib/dnd"
+import { Abilities, type ClassNameType } from "@src/lib/dnd"
 import type { RulesetId } from "@src/lib/dnd/rulesets"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import type { SQL } from "bun"
@@ -17,7 +17,7 @@ interface CharacterFactoryParams {
   background?: string
   alignment?: string | null
   ruleset?: RulesetId
-  class?: ClassName
+  class?: ClassNameType
   level?: number
 }
 

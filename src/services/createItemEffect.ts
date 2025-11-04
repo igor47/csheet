@@ -3,7 +3,6 @@ import { ItemEffectAppliesSchema, ItemEffectOpSchema, ItemEffectTargetSchema } f
 import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, EnumField, NumberField } from "@src/lib/formSchemas"
 import { logger } from "@src/lib/logger"
-import { UnsetEnumSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -27,8 +26,8 @@ const BaseItemEffectSchema = z.object({
 export const CreateItemEffectApiSchema = BaseItemEffectSchema
 const CheckSchema = BaseItemEffectSchema.extend(
   z.object({
-    target: UnsetEnumSchema(ItemEffectTargetSchema),
-    op: UnsetEnumSchema(ItemEffectOpSchema),
+    target: EnumField(ItemEffectTargetSchema.nullable()),
+    op: EnumField(ItemEffectOpSchema.nullable()),
   }).shape
 ).partial()
 

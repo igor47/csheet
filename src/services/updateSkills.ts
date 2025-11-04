@@ -2,7 +2,7 @@ import { create as createSkillDb } from "@src/db/char_skills"
 import type { ProficiencyLevel, SkillType } from "@src/lib/dnd"
 import { Skills } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import { BooleanFormFieldSchema, OptionalNullStringSchema } from "@src/lib/schemas"
+import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -43,8 +43,8 @@ export const ProficiencyFields = z.object({
 // Schema for the entire form
 export const UpdateSkillsApiSchema = z.object({
   ...ProficiencyFields.shape,
-  note: OptionalNullStringSchema,
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  note: OptionalString(),
+  is_check: Checkbox().optional().default(false),
 })
 
 export type UpdateSkillsResult =

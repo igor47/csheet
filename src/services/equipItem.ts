@@ -1,5 +1,5 @@
 import { create as createCharItemDb, getCurrentInventory } from "@src/db/char_items"
-import { BooleanFormFieldSchema, OptionalNullStringSchema } from "@src/lib/schemas"
+import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -9,11 +9,9 @@ import type { ComputedCharacter } from "./computeCharacter"
 export const EquipItemApiSchema = z.object({
   character_id: z.string(),
   item_id: z.string().describe("The ID of the item to equip/unequip"),
-  worn: BooleanFormFieldSchema.describe("Whether the item is worn (armor, clothing, accessories)"),
-  wielded: BooleanFormFieldSchema.describe(
-    "Whether the item is wielded (weapons, shields held in hand)"
-  ),
-  note: OptionalNullStringSchema.describe("Optional note about the equipment change"),
+  worn: Checkbox().describe("Whether the item is worn (armor, clothing, accessories)"),
+  wielded: Checkbox().describe("Whether the item is wielded (weapons, shields held in hand)"),
+  note: OptionalString().describe("Optional note about the equipment change"),
 })
 
 /**

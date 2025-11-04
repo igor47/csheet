@@ -17,12 +17,7 @@ import {
   type SkillType,
 } from "@src/lib/dnd"
 import { RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets"
-import {
-  BooleanFormFieldSchema,
-  OptionalNullStringSchema,
-  RequiredStringNumberSchema,
-  StringNumberEnum,
-} from "@src/lib/schemas"
+import { Checkbox, NumberField, NumericEnumField, OptionalString } from "@src/lib/formSchemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 import { addLevel } from "./addLevel"
@@ -33,26 +28,36 @@ import { addLevel } from "./addLevel"
 const BaseCharacterSchema = z.object({
   name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
   species: z.string(),
-  lineage: OptionalNullStringSchema,
+  lineage: OptionalString(),
   class: ClassNamesSchema,
-  subclass: OptionalNullStringSchema,
+  subclass: OptionalString(),
   background: z.string(),
-  alignment: OptionalNullStringSchema,
+  alignment: OptionalString(),
   ruleset: RulesetIdSchema,
-  is_check: BooleanFormFieldSchema.optional().default(false),
+  is_check: Checkbox().optional().default(false),
 })
 
 /**
  * Ability Scores Schema - base ability scores selected by player
  */
+const AbilityScoreField = NumberField(
+  z
+    .number({
+      error: (iss) => (iss === undefined ? "Ability score is required" : "Must be a number"),
+    })
+    .int({ message: "Must be a whole number" })
+    .min(3, { message: "Must be at least 3" })
+    .max(20, { message: "Cannot exceed 20" })
+)
+
 const BaseAbilityScoresSchema = z.object({
   ability_method: z.enum(["standard-array", "point-buy", "random"]),
-  ability_str: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
-  ability_dex: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
-  ability_con: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
-  ability_int: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
-  ability_wis: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
-  ability_cha: RequiredStringNumberSchema((n) => n.int().min(3).max(20)),
+  ability_str: AbilityScoreField,
+  ability_dex: AbilityScoreField,
+  ability_con: AbilityScoreField,
+  ability_int: AbilityScoreField,
+  ability_wis: AbilityScoreField,
+  ability_cha: AbilityScoreField,
 })
 
 /**
@@ -68,13 +73,17 @@ const AbilityScoreMethodSchemas = z.discriminatedUnion("ability_method", [
  * 2024 Background Ability Score Bonuses
  * Player chooses how to distribute 3 points across 3 abilities
  */
+const AbilityBonusField = NumericEnumField(z.union([z.literal(0), z.literal(1), z.literal(2)]))
+  .optional()
+  .default(0)
+
 const Background2024Schema = z.object({
-  background_ability_str_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
-  background_ability_dex_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
-  background_ability_con_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
-  background_ability_int_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
-  background_ability_wis_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
-  background_ability_cha_bonus: StringNumberEnum([0, 1, 2]).optional().default(0),
+  background_ability_str_bonus: AbilityBonusField,
+  background_ability_dex_bonus: AbilityBonusField,
+  background_ability_con_bonus: AbilityBonusField,
+  background_ability_int_bonus: AbilityBonusField,
+  background_ability_wis_bonus: AbilityBonusField,
+  background_ability_cha_bonus: AbilityBonusField,
 })
 
 /**
@@ -82,24 +91,24 @@ const Background2024Schema = z.object({
  * Each skill that can be selected from class has a corresponding field
  */
 const ClassSkillProficiencySchema = z.object({
-  class_proficiency_acrobatics: BooleanFormFieldSchema.optional(),
-  class_proficiency_animal_handling: BooleanFormFieldSchema.optional(),
-  class_proficiency_arcana: BooleanFormFieldSchema.optional(),
-  class_proficiency_athletics: BooleanFormFieldSchema.optional(),
-  class_proficiency_deception: BooleanFormFieldSchema.optional(),
-  class_proficiency_history: BooleanFormFieldSchema.optional(),
-  class_proficiency_insight: BooleanFormFieldSchema.optional(),
-  class_proficiency_intimidation: BooleanFormFieldSchema.optional(),
-  class_proficiency_investigation: BooleanFormFieldSchema.optional(),
-  class_proficiency_medicine: BooleanFormFieldSchema.optional(),
-  class_proficiency_nature: BooleanFormFieldSchema.optional(),
-  class_proficiency_perception: BooleanFormFieldSchema.optional(),
-  class_proficiency_performance: BooleanFormFieldSchema.optional(),
-  class_proficiency_persuasion: BooleanFormFieldSchema.optional(),
-  class_proficiency_religion: BooleanFormFieldSchema.optional(),
-  class_proficiency_sleight_of_hand: BooleanFormFieldSchema.optional(),
-  class_proficiency_stealth: BooleanFormFieldSchema.optional(),
-  class_proficiency_survival: BooleanFormFieldSchema.optional(),
+  class_proficiency_acrobatics: Checkbox().optional(),
+  class_proficiency_animal_handling: Checkbox().optional(),
+  class_proficiency_arcana: Checkbox().optional(),
+  class_proficiency_athletics: Checkbox().optional(),
+  class_proficiency_deception: Checkbox().optional(),
+  class_proficiency_history: Checkbox().optional(),
+  class_proficiency_insight: Checkbox().optional(),
+  class_proficiency_intimidation: Checkbox().optional(),
+  class_proficiency_investigation: Checkbox().optional(),
+  class_proficiency_medicine: Checkbox().optional(),
+  class_proficiency_nature: Checkbox().optional(),
+  class_proficiency_perception: Checkbox().optional(),
+  class_proficiency_performance: Checkbox().optional(),
+  class_proficiency_persuasion: Checkbox().optional(),
+  class_proficiency_religion: Checkbox().optional(),
+  class_proficiency_sleight_of_hand: Checkbox().optional(),
+  class_proficiency_stealth: Checkbox().optional(),
+  class_proficiency_survival: Checkbox().optional(),
 })
 
 /**
@@ -576,7 +585,7 @@ export async function createCharacter(
 
     for (const skill of skillChoices.from) {
       const fieldName = `class_proficiency_${skill.replace(/\s+/g, "_")}`
-      // After Zod parsing, BooleanFormFieldSchema converts "true"/"on" to true
+      // After Zod parsing, Checkbox() converts "true"/"on" to true
       if (validatedData[fieldName]) {
         classSkillProficiencies.push(skill)
       }

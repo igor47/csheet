@@ -12,9 +12,14 @@ import {
 } from "@src/lib/dnd"
 import type { DamageType } from "@src/lib/dnd/spells"
 import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
-import { Checkbox, NumberField, NumericEnumField, OptionalString } from "@src/lib/formSchemas"
+import {
+  Checkbox,
+  EnumField,
+  NumberField,
+  NumericEnumField,
+  OptionalString,
+} from "@src/lib/formSchemas"
 import { logger } from "@src/lib/logger"
-import { UnsetEnumSchema } from "@src/lib/schemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -92,47 +97,47 @@ const WeaponItemBaseUpdateSchema = z.object({
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_1: OptionalDieValueField.optional(),
-  damage_type_1: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_1: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_2: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_2: OptionalDieValueField.optional(),
-  damage_type_2: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_2: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_3: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_3: OptionalDieValueField.optional(),
-  damage_type_3: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_3: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_4: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_4: OptionalDieValueField.optional(),
-  damage_type_4: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_4: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_5: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_5: OptionalDieValueField.optional(),
-  damage_type_5: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_5: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_6: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_6: OptionalDieValueField.optional(),
-  damage_type_6: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_6: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_7: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_7: OptionalDieValueField.optional(),
-  damage_type_7: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_7: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_8: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_8: OptionalDieValueField.optional(),
-  damage_type_8: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_8: EnumField(DamageTypeSchema.nullable()),
   damage_num_dice_9: NumberField(
     z.number().int({ message: "Must be a whole number" }).min(1).nullable()
   ).optional(),
   damage_die_value_9: OptionalDieValueField.optional(),
-  damage_type_9: UnsetEnumSchema(DamageTypeSchema),
+  damage_type_9: EnumField(DamageTypeSchema.nullable()),
 })
 
 const WeaponItemUpdateSchema = z.discriminatedUnion("weapon_type", [

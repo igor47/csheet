@@ -11,7 +11,6 @@ import { ClassHistory } from "@src/components/ClassHistory"
 import { CoinsEditForm } from "@src/components/CoinsEditForm"
 import { CoinsHistory } from "@src/components/CoinsHistory"
 import { CreateItemForm } from "@src/components/CreateItemForm"
-import { CurrentStatus } from "@src/components/CurrentStatus"
 import { EditItemForm } from "@src/components/EditItemForm"
 import { HitDiceEditForm } from "@src/components/HitDiceEditForm"
 import { HitDiceHistory } from "@src/components/HitDiceHistory"
@@ -81,6 +80,7 @@ import { LongRestApiSchema, longRest } from "@src/services/longRest"
 import { manageCharge } from "@src/services/manageCharge"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { saveNotes } from "@src/services/saveNotes"
+import { ShortRestApiSchema, shortRest } from "@src/services/shortRest"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
 import { updateAbilities } from "@src/services/updateAbilities"
 import { updateAvatar } from "@src/services/updateAvatar"
@@ -276,12 +276,7 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
 
   c.header("HX-Trigger", "closeEditModal")
-  return c.html(
-    <>
-      <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
-    </>
-  )
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
@@ -310,12 +305,7 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
-  return c.html(
-    <>
-      <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
-    </>
-  )
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
@@ -339,12 +329,7 @@ characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
-  return c.html(
-    <>
-      <SpellsPanel character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
-    </>
-  )
+  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.post("/characters/:id/edit/prepspell", async (c) => {
@@ -662,7 +647,6 @@ characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
         successMessage="Effect added successfully!"
       />
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
@@ -720,7 +704,6 @@ characterRoutes.delete("/characters/:id/items/:itemId/effects/:effectId", async 
     <>
       <ItemEffectsEditor character={updatedChar} item={item} effects={item.effects} />
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
@@ -744,7 +727,6 @@ characterRoutes.post("/characters/:id/items/:itemId/wear", async (c) => {
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
@@ -768,7 +750,6 @@ characterRoutes.post("/characters/:id/items/:itemId/remove", async (c) => {
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
@@ -792,7 +773,6 @@ characterRoutes.post("/characters/:id/items/:itemId/wield", async (c) => {
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
@@ -816,7 +796,6 @@ characterRoutes.post("/characters/:id/items/:itemId/sheathe", async (c) => {
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
@@ -840,7 +819,6 @@ characterRoutes.post("/characters/:id/items/:itemId/drop", async (c) => {
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
@@ -977,7 +955,6 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
     <>
       <SpellCastResult message={result.note} spellId={result.spellId} />
       <SpellsPanel character={updatedChar} swapOob={true} />
-      <CurrentStatus character={updatedChar} swapOob={true} />
     </>
   )
 })
@@ -999,7 +976,7 @@ characterRoutes.post("/characters/:id/longrest", async (c) => {
 
   if (!result.success) {
     await setFlashMsg(c, "Failed to take long rest", "error")
-    return c.html(<CurrentStatus character={char} />)
+    return c.html(<CharacterInfo character={char} />)
   }
 
   try {
@@ -1030,17 +1007,49 @@ characterRoutes.post("/characters/:id/longrest", async (c) => {
   } catch (error) {
     logger.error("taking long rest", error as Error, { characterId: char.id })
     await setFlashMsg(c, "Failed to take long rest", "error")
-    return c.html(<CurrentStatus character={char} />)
+    return c.html(<CharacterInfo character={char} />)
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   return c.html(
     <>
-      <CurrentStatus character={updatedChar} />
-      <CharacterInfo character={updatedChar} swapOob={true} />
+      <CharacterInfo character={updatedChar} />
       <SpellsPanel character={updatedChar} swapOob={true} />
     </>
   )
+})
+
+characterRoutes.post("/characters/:id/shortrest", async (c) => {
+  const characterId = c.req.param("id") as string
+  const char = await computeCharacter(getDb(c), characterId)
+  if (!char) {
+    await setFlashMsg(c, "Character not found", "error")
+    c.header("HX-Redirect", `/characters`)
+    return c.body(null, 204)
+  }
+
+  // Parse with Zod
+  const result = ShortRestApiSchema.safeParse({
+    character_id: characterId,
+    note: null,
+  })
+
+  if (!result.success) {
+    await setFlashMsg(c, "Failed to take short rest", "error")
+    return c.html(<CharacterInfo character={char} />)
+  }
+
+  try {
+    const summary = await shortRest(result.data)
+    await setFlashMsg(c, summary.message, "success")
+  } catch (error) {
+    logger.error("taking short rest", error as Error, { characterId: char.id })
+    await setFlashMsg(c, "Failed to take short rest", "error")
+    return c.html(<CharacterInfo character={char} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(<CharacterInfo character={updatedChar} />)
 })
 
 characterRoutes.get("/characters/:id/edit/:field", async (c) => {

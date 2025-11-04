@@ -1,7 +1,7 @@
 import type { CharNote } from "@src/db/char_notes"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { CharacterInfo } from "./CharacterInfo"
-import { CurrentStatus } from "./CurrentStatus"
+import { ChatBox } from "./ChatBox"
 import { AbilitiesPanel } from "./panels/AbilitiesPanel"
 import { InventoryPanel } from "./panels/InventoryPanel"
 import { SkillsPanel } from "./panels/SkillsPanel"
@@ -15,6 +15,14 @@ type CharacterProps = {
 }
 
 export const Character = ({ character, currentNote }: CharacterProps) => {
+  const emptyChat = {
+    chatId: "",
+    messages: [],
+    llmMessages: [],
+    shouldStream: false,
+    unresolvedToolCalls: [],
+  }
+
   return (
     <>
       {/* Content */}
@@ -23,7 +31,8 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
           <CharacterInfo character={character} />
 
           <div class="character-main-view d-lg-flex flex-lg-column" id="character-main-view">
-            <CurrentStatus character={character} />
+            {/* AI Chat Box - rendered first if enabled, always starts with new chat */}
+            <ChatBox character={character} computedChat={emptyChat} />
 
             <SessionNotes characterId={character.id} currentNote={currentNote} />
           </div>

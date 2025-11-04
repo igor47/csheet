@@ -134,6 +134,18 @@ export async function prepareSpell(
     }
   }
 
+  // Validate slot availability (only if not replacing an existing spell)
+  if (si && values.spell_id && !values.current_spell_id && Object.keys(errors).length === 0) {
+    const slots = isCantrip ? si.cantripSlots : si.preparedSpells
+    // Check if there are any empty slots (spell_id === null)
+    const hasEmptySlot = slots.some((slot) => slot.spell_id === null)
+
+    if (!hasEmptySlot) {
+      const spellTypeName = isCantrip ? "cantrip" : "prepared spell"
+      errors.spell_id = `No available ${spellTypeName} slots for ${si.class}. You must unprepare a spell first or replace an existing one.`
+    }
+  }
+
   if (isCheck || Object.keys(errors).length > 0) {
     return { complete: false, values: data, errors }
   }

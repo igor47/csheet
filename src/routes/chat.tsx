@@ -1,7 +1,6 @@
 import { executeChatRequest, prepareChatRequest } from "@src/ai/chat"
 import { CharacterInfo } from "@src/components/CharacterInfo"
 import { ChatBox } from "@src/components/ChatBox"
-import { CurrentStatus } from "@src/components/CurrentStatus"
 import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
@@ -163,7 +162,6 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
         <SpellsPanel character={updatedChar} swapOob={true} />
         <AbilitiesPanel character={updatedChar} swapOob={true} />
         <SkillsPanel character={updatedChar} swapOob={true} />
-        <CurrentStatus character={updatedChar} swapOob={true} />
         <InventoryPanel character={updatedChar} swapOob={true} />
         <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />
       </>

@@ -350,6 +350,34 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                 </button>
               </div>
             </div>
+
+            {/* Rest Buttons */}
+            <div class="row g-2 h-auto mt-2">
+              <div class="col-12 d-flex gap-2 justify-content-center">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  hx-post={`/characters/${character.id}/shortrest`}
+                  hx-target="#character-info"
+                  hx-swap="outerHTML"
+                  hx-confirm="Take a short rest? You can spend hit dice to recover HP."
+                >
+                  <i class="bi bi-cup-hot me-1"></i>
+                  Short Rest
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  hx-post={`/characters/${character.id}/longrest`}
+                  hx-target="#character-info"
+                  hx-swap="outerHTML"
+                  hx-confirm="Take a long rest? This will require at least 8 in-game hours of downtime."
+                >
+                  <i class="bi bi-moon-stars me-1"></i>
+                  Long Rest
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

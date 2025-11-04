@@ -78,13 +78,19 @@ function formatResources(character: ComputedCharacter): string {
     }
   }
 
-  const slotsDesc = Object.entries(slotCounts).map(([level, counts]) => {
-    return `${counts.available}/${counts.total} L${level}`
-  }).join(", ")
+  const slotsDesc = Object.entries(slotCounts)
+    .map(([level, counts]) => {
+      return `${counts.available}/${counts.total} L${level}`
+    })
+    .join(", ")
 
   const hitDiceDesc = `${character.availableHitDice.length}/${character.hitDice.length}`
 
-  return [`Coins: ${coinsDesc}`, `Available Spell Slots: ${slotsDesc}`, `Hit Dice: ${hitDiceDesc}`].join("\n")
+  return [
+    `Coins: ${coinsDesc}`,
+    `Available Spell Slots: ${slotsDesc}`,
+    `Hit Dice: ${hitDiceDesc}`,
+  ].join("\n")
 }
 
 function formatEquipment(character: ComputedCharacter): string {

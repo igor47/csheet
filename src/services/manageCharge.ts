@@ -1,11 +1,12 @@
-import { getCurrentCharges } from "@src/db/item_charges"
+import { create as createChargeDb, getCurrentCharges } from "@src/db/item_charges"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import type { ToolExecutorResult } from "@src/tools"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 import type { EquippedComputedItem } from "./computeCharacterItems"
-import { restoreCharge } from "./restoreCharge"
-import { useCharge } from "./useCharge"
 
 export const ManageChargeApiSchema = z.object({
   item_id: z.string(),
@@ -29,6 +30,7 @@ export type ManageChargeResult =
  */
 export async function manageCharge(
   db: SQL,
+  char: ComputedCharacter,
   item: EquippedComputedItem,
   data: Record<string, string>
 ): Promise<ManageChargeResult> {
@@ -39,6 +41,11 @@ export async function manageCharge(
 
   const errors: Record<string, string> = {}
   const currentCharges = item.currentCharges
+
+  // Verify character owns the item
+  if (item.character_id !== char.id) {
+    errors.item_id = "Character does not have this item"
+  }
 
   // Check if item is equipped (unless override is checked)
   if (!checkD.data.override && checkD.data.action === "use") {
@@ -79,11 +86,13 @@ export async function manageCharge(
   //////////////////////////
   // actually manage charges
 
-  if (result.data.action === "use") {
-    await useCharge(db, result.data.item_id, result.data.amount, result.data.note || undefined)
-  } else {
-    await restoreCharge(db, result.data.item_id, result.data.amount, result.data.note || undefined)
-  }
+  const delta = result.data.action === "use" ? -result.data.amount : result.data.amount
+
+  await createChargeDb(db, {
+    item_id: result.data.item_id,
+    delta,
+    note: result.data.note || null,
+  })
 
   // Get updated charge count
   const newCharges = await getCurrentCharges(db, result.data.item_id)
@@ -92,4 +101,77 @@ export async function manageCharge(
     complete: true,
     newCharges,
   }
+}
+
+// Vercel AI SDK tool definition
+export const manageChargeToolName = "manage_item_charge" as const
+export const manageChargeTool = tool({
+  name: manageChargeToolName,
+  description: `Manage charges on a charged item (wands, staffs, ammunition, etc.). Use action="use" to consume charges or action="add" to restore charges. The item must have enough charges available when using. Many magical items regain charges at dawn or after a rest.`,
+  inputSchema: ManageChargeApiSchema.omit({ override: true, is_check: true }),
+})
+
+/**
+ * Execute the manage_item_charge tool from AI assistant
+ */
+export async function executeManageCharge(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>,
+  isCheck?: boolean
+): Promise<ToolExecutorResult> {
+  // Find the item in character's inventory
+  const itemId = parameters.item_id?.toString() || ""
+  const item = char.equippedItems.find((i) => i.id === itemId)
+
+  if (!item) {
+    return {
+      status: "failed",
+      error: "Item not found in character's inventory",
+    }
+  }
+
+  const data: Record<string, string> = {
+    item_id: itemId,
+    action: parameters.action?.toString() || "",
+    amount: parameters.amount?.toString() || "1",
+    note: parameters.note?.toString() || "",
+    override: "false", // LLM never overrides equipment check
+    is_check: isCheck ? "true" : "false",
+  }
+
+  const result = await manageCharge(db, char, item, data)
+
+  if (!result.complete) {
+    const errorMessage = Object.values(result.errors).join(", ")
+    return {
+      status: "failed",
+      error: errorMessage || "Failed to manage charges",
+    }
+  }
+
+  return {
+    status: "success",
+    data: { newCharges: result.newCharges },
+  }
+}
+
+/**
+ * Format approval message for manage_item_charge tool calls
+ */
+export function formatManageChargeApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { item_id, action, amount = 1, note } = parameters
+
+  const verb = action === "use" ? "Use" : "Restore"
+  let message = `${verb} ${amount} charge${amount > 1 ? "s" : ""} ${action === "use" ? "from" : "to"} ${item_id}`
+
+  if (note) {
+    message += `\n${note}`
+  }
+
+  return message
 }

@@ -84,12 +84,36 @@ function formatResources(character: ComputedCharacter): string {
     })
     .join(", ")
 
-  const hitDiceDesc = `${character.availableHitDice.length}/${character.hitDice.length}`
+  // Group hit dice by die type
+  const groupDice = (dice: number[]) => {
+    const counts: Record<number, number> = {}
+    for (const die of dice) {
+      counts[die] = (counts[die] || 0) + 1
+    }
+    return Object.entries(counts)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([die, count]) => `${count}d${die}`)
+      .join(", ")
+  }
+
+  // Calculate used hit dice by subtracting available from total
+  const availHitDice = character.availableHitDice
+  const usedHitDice = [...character.hitDice]
+  for (const die of character.availableHitDice) {
+    const index = usedHitDice.indexOf(die)
+    if (index !== -1) {
+      usedHitDice.splice(index, 1)
+    }
+  }
+
+  const availableHitDiceDesc = availHitDice.length > 0 ? groupDice(availHitDice) : "none"
+  const usedHitDiceDesc = usedHitDice.length > 0 ? groupDice(usedHitDice) : "none"
 
   return [
     `Coins: ${coinsDesc}`,
     `Available Spell Slots: ${slotsDesc}`,
-    `Hit Dice: ${hitDiceDesc}`,
+    `Available Hit Dice: ${availableHitDiceDesc}`,
+    `Unavailable Hit Dice: ${usedHitDiceDesc}`,
   ].join("\n")
 }
 

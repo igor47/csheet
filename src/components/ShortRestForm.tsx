@@ -43,9 +43,8 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
           {character.availableHitDice.length > 0 ? (
             <div class="mb-3">
               <div class="d-flex flex-wrap gap-2 mb-2">
-                {/* biome-ignore lint/suspicious/noArrayIndexKey: Hit dice can have duplicates, index is appropriate */}
                 {character.availableHitDice.map((die, index) => (
-                  <div class="form-check" key={`hitdie-${die}-${index}`}>
+                  <div class="form-check">
                     <input
                       class="form-check-input"
                       type="checkbox"

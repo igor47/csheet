@@ -2,6 +2,7 @@ import { create as createCoinsDb } from "@src/db/char_coins"
 import { applyDeltasWithChange, toCopper } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -51,9 +52,9 @@ Only include coin types that changed (don't need to specify coins that didn't ch
   inputSchema: UpdateCoinsApiSchema.omit({ make_change: true, is_check: true }),
 })
 
-export type UpdateCoinsResult =
-  | { complete: true; newCoins: { pp: number; gp: number; ep: number; sp: number; cp: number } }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type UpdateCoinsResult = ServiceResult<{
+  newCoins: { pp: number; gp: number; ep: number; sp: number; cp: number }
+}>
 
 /**
  * Update coin values using deltas (changes)
@@ -155,7 +156,7 @@ export async function updateCoins(
 
   return {
     complete: true,
-    newCoins,
+    result: { newCoins },
   }
 }
 
@@ -179,19 +180,7 @@ export async function executeUpdateCoins(
 
   const result = await updateCoins(db, char, data)
 
-  if (!result.complete) {
-    // Convert errors object to single error message
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to update coins",
-    }
-  }
-
-  return {
-    status: "success",
-    data: { newCoins: result.newCoins },
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

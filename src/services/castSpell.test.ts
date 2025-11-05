@@ -56,9 +56,9 @@ describe("castSpell", () => {
 
       expect(result.complete).toBe(true)
       if (result.complete) {
-        expect(result.note).toContain("Fire Bolt")
-        expect(result.note).toContain("No spell slot was used")
-        expect(result.spellId).toBe("srd_fire_bolt")
+        expect(result.result.note).toContain("Fire Bolt")
+        expect(result.result.note).toContain("No spell slot was used")
+        expect(result.result.spellId).toBe("srd_fire_bolt")
       }
     })
 
@@ -117,10 +117,10 @@ describe("castSpell", () => {
 
       expect(result.complete).toBe(true)
       if (result.complete) {
-        expect(result.note).toContain("Detect Magic")
-        expect(result.note).toContain("as a ritual")
-        expect(result.note).toContain("No spell slot was used")
-        expect(result.spellId).toBe("srd_detect_magic")
+        expect(result.result.note).toContain("Detect Magic")
+        expect(result.result.note).toContain("as a ritual")
+        expect(result.result.note).toContain("No spell slot was used")
+        expect(result.result.spellId).toBe("srd_detect_magic")
       }
     })
 
@@ -136,9 +136,9 @@ describe("castSpell", () => {
 
       expect(result.complete).toBe(true)
       if (result.complete) {
-        expect(result.note).toContain("Detect Magic")
-        expect(result.note).toContain("as a ritual")
-        expect(result.note).toContain("No spell slot was used")
+        expect(result.result.note).toContain("Detect Magic")
+        expect(result.result.note).toContain("as a ritual")
+        expect(result.result.note).toContain("No spell slot was used")
       }
     })
 
@@ -201,9 +201,9 @@ describe("castSpell", () => {
 
       expect(result.complete).toBe(true)
       if (result.complete) {
-        expect(result.note).toContain("Magic Missile")
-        expect(result.note).toContain("level 1 spell slot")
-        expect(result.spellId).toBe("srd_magic_missile")
+        expect(result.result.note).toContain("Magic Missile")
+        expect(result.result.note).toContain("level 1 spell slot")
+        expect(result.result.spellId).toBe("srd_magic_missile")
       }
 
       // Verify spell slot was consumed
@@ -224,8 +224,8 @@ describe("castSpell", () => {
 
       expect(result.complete).toBe(true)
       if (result.complete) {
-        expect(result.note).toContain("Magic Missile")
-        expect(result.note).toContain("level 2 spell slot")
+        expect(result.result.note).toContain("Magic Missile")
+        expect(result.result.note).toContain("level 2 spell slot")
       }
     })
 
@@ -308,8 +308,8 @@ describe("castSpell", () => {
 
       expect(result.complete).toBe(true)
       if (result.complete) {
-        expect(result.note).toContain("Detect Magic")
-        expect(result.note).toContain("as a ritual")
+        expect(result.result.note).toContain("Detect Magic")
+        expect(result.result.note).toContain("as a ritual")
       }
     })
 

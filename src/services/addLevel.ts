@@ -5,6 +5,7 @@ import type { Character } from "@src/db/characters"
 import { ClassNames, ClassNamesSchema, type ClassNameType, getTraits } from "@src/lib/dnd"
 import { getRuleset } from "@src/lib/dnd/rulesets"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -42,9 +43,7 @@ export const AddLevelApiSchema = z.object({
 
 export type AddLevelApi = z.infer<typeof AddLevelApiSchema>
 
-export type AddLevelResult =
-  | { complete: true }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type AddLevelResult = ServiceResult<undefined>
 
 /**
  * Add a level to a character
@@ -230,7 +229,7 @@ export async function addLevel(
     }
   })
 
-  return { complete: true }
+  return { complete: true, result: undefined }
 }
 
 // Vercel AI SDK tool definition
@@ -261,17 +260,7 @@ export async function executeAddLevel(
 
   const result = await addLevel(db, char, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to add level",
-    }
-  }
-
-  return {
-    status: "success",
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

@@ -148,33 +148,29 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
     return c.json({ error: "Tool call not found or already resolved" }, 404)
   }
 
-  try {
-    await executeTool(db, char, unresolvedTool)
+  // Execute the tool
+  const result = await executeTool(db, char, unresolvedTool)
 
-    // Get updated character and chat
-    const updatedChar = (await computeCharacter(db, characterId))!
-    const updatedChat = await computeChat(db, chatId)
+  // Get updated character and chat
+  const updatedChar = (await computeCharacter(db, characterId))!
+  const updatedChat = await computeChat(db, chatId)
 
-    // Return updated UI components with OOB swaps
-    return c.html(
-      <>
-        <CharacterInfo character={updatedChar} swapOob={true} />
-        <SpellsPanel character={updatedChar} swapOob={true} />
-        <AbilitiesPanel character={updatedChar} swapOob={true} />
-        <SkillsPanel character={updatedChar} swapOob={true} />
-        <InventoryPanel character={updatedChar} swapOob={true} />
-        <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />
-      </>
-    )
-  } catch (error) {
-    logger.error("Error executing tool", error as Error, {
-      toolName: unresolvedTool.toolName,
-      characterId,
-      userId: user.id,
-    })
-
-    return c.json({ error: "Failed to execute tool" }, 500)
+  // If tool execution failed, only return the chat box to show the error
+  if (result.status === "failed") {
+    return c.html(<ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />)
   }
+
+  // On success, return all updated UI components with OOB swaps
+  return c.html(
+    <>
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <InventoryPanel character={updatedChar} swapOob={true} />
+      <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />
+    </>
+  )
 })
 
 /**

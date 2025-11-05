@@ -1,5 +1,6 @@
 import { create as createTrait, TraitSourceSchema } from "@src/db/char_traits"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -37,9 +38,7 @@ export const AddTraitApiSchema = z.object({
 
 type AddTraitData = Partial<z.infer<typeof AddTraitApiSchema>>
 
-export type AddTraitResult =
-  | { complete: true }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type AddTraitResult = ServiceResult<undefined>
 
 /**
  * Add a trait to a character
@@ -92,7 +91,7 @@ export async function addTrait(db: SQL, data: Record<string, string>): Promise<A
   // Persist the trait
   await createTrait(db, result.data)
 
-  return { complete: true }
+  return { complete: true, result: undefined }
 }
 
 // Vercel AI SDK tool definition
@@ -126,17 +125,7 @@ export async function executeAddTrait(
 
   const result = await addTrait(db, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to add trait",
-    }
-  }
-
-  return {
-    status: "success",
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

@@ -71,22 +71,12 @@ async function autoExecuteReadOnlyTools(
     }
 
     // Execute the tool immediately
-    try {
-      await executeTool(db, character, {
-        messageId: assistantMsg.id,
-        toolCallId,
-        toolName: call.name,
-        parameters: call.parameters,
-      })
-    } catch (error) {
-      // Log errors but don't throw - tool execution is best-effort
-      logger.error("Auto-execution of read-only tool failed", error as Error, {
-        character_id: character.id,
-        message_id: assistantMsg.id,
-        tool_name: call.name,
-        tool_call_id: toolCallId,
-      })
-    }
+    await executeTool(db, character, {
+      messageId: assistantMsg.id,
+      toolCallId,
+      toolName: call.name,
+      parameters: call.parameters,
+    })
   }
 }
 
@@ -118,27 +108,17 @@ async function validateApprovalTools(
     }
 
     // Execute the tool in validation mode
-    try {
-      await executeTool(
-        db,
-        character,
-        {
-          messageId: assistantMsg.id,
-          toolCallId,
-          toolName: call.name,
-          parameters: call.parameters,
-        },
-        true // isCheck = true for validation mode
-      )
-    } catch (error) {
-      // Log errors but don't throw - validation is best-effort
-      logger.error("Validation of approval tool failed", error as Error, {
-        character_id: character.id,
-        message_id: assistantMsg.id,
-        tool_name: call.name,
-        tool_call_id: toolCallId,
-      })
-    }
+    await executeTool(
+      db,
+      character,
+      {
+        messageId: assistantMsg.id,
+        toolCallId,
+        toolName: call.name,
+        parameters: call.parameters,
+      },
+      true // isCheck = true for validation mode
+    )
   }
 }
 

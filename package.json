@@ -34,11 +34,13 @@
     "@ai-sdk/anthropic": "^2.0.39",
     "@aws-sdk/client-s3": "^3.913.0",
     "@aws-sdk/s3-request-presigner": "^3.913.0",
+    "@types/marked": "^6.0.0",
     "ai": "^5.0.82",
     "clsx": "^2.1.1",
     "hono": "^4.9.6",
     "htmx-ext-sse": "^2.2.4",
     "htmx.org": "^2.0.8",
+    "marked": "^16.4.1",
     "nodemailer": "^7.0.10",
     "ulid": "^3.0.1",
     "zod": "^4.1.11"

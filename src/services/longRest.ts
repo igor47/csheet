@@ -150,11 +150,12 @@ export async function executeLongRest(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   const data: Record<string, string> = {
     note: parameters.note?.toString() || "",
-    is_check: "false",
+    is_check: isCheck ? "true" : "false",
   }
 
   const result = await longRest(db, char, data)

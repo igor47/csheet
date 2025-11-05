@@ -206,13 +206,15 @@ export async function executeUseHitDie(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   const data: Record<string, string> = {
     action: "spend",
     die_value: parameters.die_value?.toString() || "",
     hp_rolled: parameters.hp_rolled?.toString() || "",
     note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
   }
 
   const result = await updateHitDice(db, char, data)
@@ -238,12 +240,14 @@ export async function executeRestoreHitDie(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   const data: Record<string, string> = {
     action: "restore",
     die_value: parameters.die_value?.toString() || "",
     note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
   }
 
   const result = await updateHitDice(db, char, data)

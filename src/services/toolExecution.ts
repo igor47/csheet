@@ -44,7 +44,8 @@ async function updateToolResult(
 export async function executeTool(
   db: SQL,
   char: ComputedCharacter,
-  unresolvedTool: UnresolvedToolCall
+  unresolvedTool: UnresolvedToolCall,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   const executor = TOOL_EXECUTORS[unresolvedTool.toolName]
 
@@ -52,8 +53,8 @@ export async function executeTool(
     throw new Error(`Unknown tool: ${unresolvedTool.toolName}`)
   }
 
-  // Execute the tool
-  const result = await executor(db, char, unresolvedTool.parameters)
+  // Execute the tool (with optional validation mode)
+  const result = await executor(db, char, unresolvedTool.parameters, isCheck)
 
   // Save the result to database (result already matches ToolResult format)
   await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)

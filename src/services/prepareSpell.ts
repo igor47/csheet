@@ -206,7 +206,8 @@ export async function executePrepareSpell(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
@@ -215,6 +216,7 @@ export async function executePrepareSpell(
     spell_id: parameters.spell_id?.toString() || "",
     current_spell_id: parameters.current_spell_id?.toString() || "",
     note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
   }
 
   const result = await prepareSpell(db, char, data)

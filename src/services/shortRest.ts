@@ -217,11 +217,12 @@ export async function executeShortRest(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   const data: Record<string, string> = {
     note: parameters.note?.toString() || "",
-    is_check: "false",
+    is_check: isCheck ? "true" : "false",
     arcane_recovery: parameters.arcane_recovery?.toString() || "false",
     arcane_slot_1: parameters.arcane_slot_1?.toString() || "false",
     arcane_slot_2: parameters.arcane_slot_2?.toString() || "false",

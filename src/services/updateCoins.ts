@@ -167,12 +167,14 @@ export async function executeUpdateCoins(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
     ...parameters,
     make_change: "true", // Always enable make_change for AI tool calls
+    is_check: isCheck ? "true" : "false",
   }
 
   const result = await updateCoins(db, char, data)

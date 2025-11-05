@@ -65,23 +65,48 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
 
           {character.availableHitDice.length > 0 ? (
             <div class="mb-3">
-              <div class="d-flex flex-wrap gap-2 mb-2">
-                {character.availableHitDice.map((die, index) => (
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      name={`spend_die_${index}`}
-                      value={die}
-                      id={`hitdie-${index}`}
-                      checked={values[`spend_die_${index}`] === String(die)}
-                    />
-                    <label class="form-check-label" for={`hitdie-${index}`}>
-                      d{die}
-                    </label>
+              {character.availableHitDice.map((die, index) => {
+                const isChecked = values[`spend_die_${index}`] === String(die)
+                const dieError = errors[`spend_die_${index}`]
+                const rollError = errors[`roll_die_${index}`]
+                return (
+                  <div class="mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="form-check" style="min-width: 60px">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name={`spend_die_${index}`}
+                          value={die}
+                          id={`hitdie-${index}`}
+                          checked={isChecked}
+                        />
+                        <label class="form-check-label" for={`hitdie-${index}`}>
+                          d{die}
+                        </label>
+                      </div>
+                      {isChecked && (
+                        <div class="input-group input-group-sm" style="max-width: 120px">
+                          <span class="input-group-text">Roll:</span>
+                          <input
+                            type="number"
+                            class="form-control"
+                            name={`roll_die_${index}`}
+                            id={`roll-${index}`}
+                            min="1"
+                            max={die}
+                            value={values[`roll_die_${index}`] || ""}
+                            placeholder="roll"
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {dieError && <div class="invalid-feedback d-block">{dieError}</div>}
+                    {rollError && <div class="invalid-feedback d-block">{rollError}</div>}
                   </div>
-                ))}
-              </div>
+                )
+              })}
               <small class="text-muted">
                 Available: {character.availableHitDice.length} / {character.hitDice.length} hit dice
               </small>

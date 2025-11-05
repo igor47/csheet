@@ -158,13 +158,17 @@ export async function updateHitDice(
       note: result.data.note || null,
     })
 
+    // Calculate HP gain: roll + constitution modifier (minimum 1)
+    const conMod = char.abilityScores.constitution.modifier
+    const hpGain = Math.max(1, result.data.hp_rolled + conMod)
+
     // Create HP restoration record (capped at max HP)
-    const hpToRestore = Math.min(result.data.hp_rolled, char.maxHitPoints - char.currentHP)
+    const hpToRestore = Math.min(hpGain, char.maxHitPoints - char.currentHP)
     if (hpToRestore > 0) {
       await createHPDb(db, {
         character_id: char.id,
         delta: hpToRestore,
-        note: `Spent a D${result.data.die_value} hit die`,
+        note: `Spent a D${result.data.die_value} hit die - Rolled ${result.data.hp_rolled} + ${conMod} CON`,
       })
       newHP = char.currentHP + hpToRestore
     }

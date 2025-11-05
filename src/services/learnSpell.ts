@@ -1,6 +1,7 @@
 import { create as createSpellLearned } from "@src/db/char_spells_learned"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -25,9 +26,7 @@ export const LearnSpellApiSchema = z.object({
 
 type LearnSpellData = Partial<z.infer<typeof LearnSpellApiSchema>>
 
-export type LearnSpellResult =
-  | { complete: true }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type LearnSpellResult = ServiceResult<undefined>
 
 /**
  * Add a spell to a wizard's spellbook
@@ -103,7 +102,7 @@ export async function learnSpell(
     note: result.data.note,
   })
 
-  return { complete: true }
+  return { complete: true, result: undefined }
 }
 
 // Vercel AI SDK tool definition
@@ -134,18 +133,7 @@ export async function executeLearnSpell(
 
   const result = await learnSpell(db, char, data)
 
-  if (!result.complete) {
-    // Convert errors object to single error message
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to learn spell",
-    }
-  }
-
-  return {
-    status: "success",
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

@@ -1,6 +1,7 @@
 import { create as createChargeDb, getCurrentCharges } from "@src/db/item_charges"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -21,9 +22,7 @@ export const ManageChargeApiSchema = z.object({
 
 export type ManageChargeData = z.infer<typeof ManageChargeApiSchema>
 
-export type ManageChargeResult =
-  | { complete: true; newCharges: number }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type ManageChargeResult = ServiceResult<{ newCharges: number }>
 
 /**
  * Manage item charges (use or add)
@@ -99,7 +98,7 @@ export async function manageCharge(
 
   return {
     complete: true,
-    newCharges,
+    result: { newCharges },
   }
 }
 
@@ -143,18 +142,7 @@ export async function executeManageCharge(
 
   const result = await manageCharge(db, char, item, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to manage charges",
-    }
-  }
-
-  return {
-    status: "success",
-    data: { newCharges: result.newCharges },
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

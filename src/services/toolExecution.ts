@@ -47,19 +47,44 @@ export async function executeTool(
   unresolvedTool: UnresolvedToolCall,
   isCheck?: boolean
 ): Promise<ToolExecutorResult> {
-  const executor = TOOL_EXECUTORS[unresolvedTool.toolName]
+  try {
+    const executor = TOOL_EXECUTORS[unresolvedTool.toolName]
 
-  if (!executor) {
-    throw new Error(`Unknown tool: ${unresolvedTool.toolName}`)
+    let result: ToolExecutorResult
+    if (executor) {
+      result = await executor(db, char, unresolvedTool.parameters, isCheck)
+    } else {
+      result = {
+        status: "failed",
+        error: `No executor defined for tool: ${unresolvedTool.toolName}`,
+      }
+    }
+
+    // Execute the tool (with optional validation mode)
+
+    // Save the result to database, but only when:
+    // 1. Not a validation check (isCheck=false), OR
+    // 2. Validation failed (status !== "success")
+    // This allows LLM to see validation errors and self-correct,
+    // while keeping successful validations unresolved for user approval
+    if (!isCheck || result.status !== "success") {
+      await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
+    }
+
+    return result
+  } catch (error) {
+    // If executor throws an exception, convert to failed result
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const result: ToolExecutorResult = {
+      status: "failed",
+      error: errorMessage,
+    }
+
+    // Store the error result
+    await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
+
+    return result
   }
-
-  // Execute the tool (with optional validation mode)
-  const result = await executor(db, char, unresolvedTool.parameters, isCheck)
-
-  // Save the result to database (result already matches ToolResult format)
-  await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
-
-  return result
 }
 
 /**

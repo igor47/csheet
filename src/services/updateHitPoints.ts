@@ -1,6 +1,7 @@
 import { create as createCharHPDb } from "@src/db/char_hp"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -39,9 +40,7 @@ The system will prevent healing above max HP or reducing below 0 HP.`,
   inputSchema: UpdateHitPointsApiSchema.omit({ is_check: true }),
 })
 
-export type UpdateHitPointsResult =
-  | { complete: true; newHP: number }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type UpdateHitPointsResult = ServiceResult<{ newHP: number }>
 
 /**
  * Update hit points by creating a new HP change record
@@ -108,7 +107,7 @@ export async function updateHitPoints(
 
   return {
     complete: true,
-    newHP: currentHP + delta,
+    result: { newHP: currentHP + delta },
   }
 }
 
@@ -133,19 +132,7 @@ export async function executeUpdateHitPoints(
 
   const result = await updateHitPoints(db, char, data)
 
-  if (!result.complete) {
-    // Convert errors object to single error message
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to update hit points",
-    }
-  }
-
-  return {
-    status: "success",
-    data: { newHP: result.newHP },
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

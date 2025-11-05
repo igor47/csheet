@@ -954,7 +954,7 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   return c.html(
     <>
-      <SpellCastResult message={result.note} spellId={result.spellId} />
+      <SpellCastResult message={result.result.note} spellId={result.result.spellId} />
       <SpellsPanel character={updatedChar} swapOob={true} />
     </>
   )
@@ -1005,15 +1005,18 @@ characterRoutes.post("/characters/:id/rest/short", async (c) => {
 
   // Build summary message
   const messageParts: string[] = []
-  if (result.summary.hitDiceSpent > 0) {
-    const diceDetails = result.summary.diceRolls
-      .map((roll) => `d${roll.die}: ${roll.roll}+${roll.modifier}`)
+  if (result.result.hitDiceSpent > 0) {
+    const diceDetails = result.result.diceRolls
+      .map(
+        (roll: { die: number; roll: number; modifier: number }) =>
+          `d${roll.die}: ${roll.roll}+${roll.modifier}`
+      )
       .join(", ")
-    messageParts.push(`Spent ${result.summary.hitDiceSpent} hit dice (${diceDetails})`)
-    messageParts.push(`Restored ${result.summary.hpRestored} HP`)
+    messageParts.push(`Spent ${result.result.hitDiceSpent} hit dice (${diceDetails})`)
+    messageParts.push(`Restored ${result.result.hpRestored} HP`)
   }
-  if (result.summary.arcaneRecoveryUsed) {
-    messageParts.push(`Arcane Recovery: ${result.summary.spellSlotsRestored} spell slots restored`)
+  if (result.result.arcaneRecoveryUsed) {
+    messageParts.push(`Arcane Recovery: ${result.result.spellSlotsRestored} spell slots restored`)
   }
 
   const message =
@@ -1053,11 +1056,11 @@ characterRoutes.post("/characters/:id/rest/long", async (c) => {
 
   // Build summary message
   const summaryParts: string[] = []
-  if (result.summary.hpRestored > 0) summaryParts.push(`${result.summary.hpRestored} HP`)
-  if (result.summary.hitDiceRestored > 0)
-    summaryParts.push(`${result.summary.hitDiceRestored} hit dice`)
-  if (result.summary.spellSlotsRestored > 0)
-    summaryParts.push(`${result.summary.spellSlotsRestored} spell slots`)
+  if (result.result.hpRestored > 0) summaryParts.push(`${result.result.hpRestored} HP`)
+  if (result.result.hitDiceRestored > 0)
+    summaryParts.push(`${result.result.hitDiceRestored} hit dice`)
+  if (result.result.spellSlotsRestored > 0)
+    summaryParts.push(`${result.result.spellSlotsRestored} spell slots`)
 
   const message =
     summaryParts.length > 0

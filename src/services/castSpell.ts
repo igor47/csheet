@@ -2,6 +2,7 @@ import type { SpellLevelType } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -30,9 +31,7 @@ export const CastSpellApiSchema = z.object({
   is_check: Checkbox().optional().default(false),
 })
 
-export type CastSpellResult =
-  | { complete: true; note: string; spellId: string }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type CastSpellResult = ServiceResult<{ note: string; spellId: string }>
 
 /**
  * Cast a spell, consuming a spell slot if not cast as a ritual
@@ -145,8 +144,10 @@ export async function castSpell(
   if (isCantrip || result.data.as_ritual) {
     return {
       complete: true,
-      note: `You cast ${spell.name}${asRitual ? " as a ritual" : ""}. No spell slot was used.`,
-      spellId: spell.id,
+      result: {
+        note: `You cast ${spell.name}${asRitual ? " as a ritual" : ""}. No spell slot was used.`,
+        spellId: spell.id,
+      },
     }
   } else if (!result.data.slot_level) {
     errors.slot_level = "Splot spell level is required"
@@ -177,8 +178,10 @@ export async function castSpell(
 
   return {
     complete: true,
-    note: `You cast ${spell.name} using a level ${result.data.slot_level} spell slot.`,
-    spellId: spell.id,
+    result: {
+      note: `You cast ${spell.name} using a level ${result.data.slot_level} spell slot.`,
+      spellId: spell.id,
+    },
   }
 }
 
@@ -214,19 +217,7 @@ export async function executeCastSpell(
 
   const result = await castSpell(db, char, data)
 
-  if (!result.complete) {
-    // Convert errors object to single error message
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to cast spell",
-    }
-  }
-
-  return {
-    status: "success",
-    data: { note: result.note, spellId: result.spellId },
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

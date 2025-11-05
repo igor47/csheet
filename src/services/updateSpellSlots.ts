@@ -1,6 +1,7 @@
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { SpellSlotsType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -22,9 +23,7 @@ export const UpdateSpellSlotsApiSchema = z.object({
 
 export type UpdateSpellSlotsApi = z.infer<typeof UpdateSpellSlotsApiSchema>
 
-export type UpdateSpellSlotsResult =
-  | { complete: true }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type UpdateSpellSlotsResult = ServiceResult<undefined>
 
 /**
  * Update spell slots by creating appropriate records
@@ -152,7 +151,7 @@ export async function updateSpellSlots(
     })
   }
 
-  return { complete: true }
+  return { complete: true, result: undefined }
 }
 
 // Vercel AI SDK tool definition
@@ -184,18 +183,7 @@ export async function executeUpdateSpellSlots(
 
   const result = await updateSpellSlots(db, char, data)
 
-  if (!result.complete) {
-    // Convert errors object to single error message
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to update spell slots",
-    }
-  }
-
-  return {
-    status: "success",
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

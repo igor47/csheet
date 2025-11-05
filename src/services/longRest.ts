@@ -3,6 +3,7 @@ import { create as createHPDb } from "@src/db/char_hp"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -24,9 +25,7 @@ export interface LongRestSummary {
   spellSlotsRestored: number
 }
 
-export type LongRestResult =
-  | { complete: true; summary: LongRestSummary }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type LongRestResult = ServiceResult<LongRestSummary>
 
 /**
  * Perform a long rest for a character
@@ -131,7 +130,7 @@ export async function longRest(
     }
   }
 
-  return { complete: true, summary }
+  return { complete: true, result: summary }
 }
 
 // Vercel AI SDK tool definition
@@ -160,15 +159,7 @@ export async function executeLongRest(
 
   const result = await longRest(db, char, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return { status: "failed", error: errorMessage }
-  }
-
-  return {
-    status: "success",
-    data: result.summary,
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

@@ -1,6 +1,7 @@
 import { create as createCharItemDb, getCurrentInventory } from "@src/db/char_items"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -15,9 +16,7 @@ export const EquipItemApiSchema = z.object({
   is_check: Checkbox().optional().default(false),
 })
 
-export type EquipItemResult =
-  | { complete: true }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type EquipItemResult = ServiceResult<undefined>
 
 /**
  * Change the worn/wielded state of an item
@@ -88,7 +87,7 @@ export async function equipItem(
     note: result.data.note || null,
   })
 
-  return { complete: true }
+  return { complete: true, result: undefined }
 }
 
 // Vercel AI SDK tool definition
@@ -119,17 +118,7 @@ export async function executeEquipItem(
 
   const result = await equipItem(db, char, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to equip item",
-    }
-  }
-
-  return {
-    status: "success",
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

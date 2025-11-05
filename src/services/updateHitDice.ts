@@ -3,6 +3,7 @@ import { create as createHPDb } from "@src/db/char_hp"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -38,9 +39,7 @@ export const UpdateHitDiceApiSchema = z.object({
   is_check: Checkbox().optional().default(false),
 })
 
-export type UpdateHitDiceResult =
-  | { complete: true; newHP?: number }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type UpdateHitDiceResult = ServiceResult<{ newHP?: number }>
 
 /**
  * Update hit dice by creating appropriate records
@@ -174,7 +173,7 @@ export async function updateHitDice(
     }
   }
 
-  return { complete: true, newHP }
+  return { complete: true, result: { newHP } }
 }
 
 // Vercel AI SDK tool definitions
@@ -219,18 +218,7 @@ export async function executeUseHitDie(
 
   const result = await updateHitDice(db, char, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to use hit die",
-    }
-  }
-
-  return {
-    status: "success",
-    data: { newHP: result.newHP },
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**
@@ -252,17 +240,7 @@ export async function executeRestoreHitDie(
 
   const result = await updateHitDice(db, char, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return {
-      status: "failed",
-      error: errorMessage || "Failed to restore hit die",
-    }
-  }
-
-  return {
-    status: "success",
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

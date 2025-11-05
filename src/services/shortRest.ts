@@ -2,6 +2,7 @@ import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumericEnumField, OptionalNumber, OptionalString } from "@src/lib/formSchemas"
+import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -57,9 +58,7 @@ export interface ShortRestSummary {
   arcaneRecoveryUsed: boolean
 }
 
-export type ShortRestResult =
-  | { complete: true; summary: ShortRestSummary }
-  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
+export type ShortRestResult = ServiceResult<ShortRestSummary>
 
 /**
  * Perform a short rest for a character
@@ -172,12 +171,12 @@ export async function shortRest(
     })
 
     if (hitDiceResult.complete) {
-      const hpGain = hitDiceResult.newHP! - char.currentHP
+      const hpGain = hitDiceResult.result.newHP! - char.currentHP
       summary.hitDiceSpent++
       summary.hpRestored += hpGain
       summary.diceRolls.push({ die: diceInfo.die, roll: diceInfo.roll!, modifier: conMod })
       // Update char's current HP for next iteration
-      char = { ...char, currentHP: hitDiceResult.newHP! }
+      char = { ...char, currentHP: hitDiceResult.result.newHP! }
     }
   }
 
@@ -198,7 +197,7 @@ export async function shortRest(
     }
   }
 
-  return { complete: true, summary }
+  return { complete: true, result: summary }
 }
 
 // Vercel AI SDK tool definition
@@ -236,15 +235,7 @@ export async function executeShortRest(
 
   const result = await shortRest(db, char, data)
 
-  if (!result.complete) {
-    const errorMessage = Object.values(result.errors).join(", ")
-    return { status: "failed", error: errorMessage }
-  }
-
-  return {
-    status: "success",
-    data: result.summary,
-  }
+  return serviceResultToToolResult(result)
 }
 
 /**

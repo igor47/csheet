@@ -56,6 +56,12 @@ import {
   restoreChargeToolName,
 } from "./services/restoreCharge"
 import {
+  executeShortRest,
+  formatShortRestApproval,
+  shortRestTool,
+  shortRestToolName,
+} from "./services/shortRest"
+import {
   executeUpdateCoins,
   formatUpdateCoinsApproval,
   updateCoinsTool,
@@ -169,6 +175,12 @@ export const TOOLS: ToolRegistration[] = [
     tool: longRestTool,
     executor: executeLongRest,
     formatApprovalMessage: formatLongRestApproval,
+  },
+  {
+    name: shortRestToolName,
+    tool: shortRestTool,
+    executor: executeShortRest,
+    formatApprovalMessage: formatShortRestApproval,
   },
 
   // Spellcasting

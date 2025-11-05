@@ -10,7 +10,9 @@ import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const LongRestApiSchema = z.object({
-  note: OptionalString(),
+  note: OptionalString().describe(
+    "Optional note about the circumstances of the long rest (e.g., where they rested, what happened)"
+  ),
   is_check: Checkbox().optional().default(false),
 })
 

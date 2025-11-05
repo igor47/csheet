@@ -15,6 +15,29 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
   // Calculate max spell slot level for Arcane Recovery (up to half wizard level, rounded up)
   const maxArcaneRecoveryLevel = wizardClass ? Math.min(5, Math.ceil(wizardClass.level / 2)) : 0
 
+  // Calculate available spell slot levels for recovery (levels with used slots)
+  const availableSlotLevelsForRecovery: number[] = []
+  if (character.spellSlots && character.availableSpellSlots) {
+    for (let level = 1; level <= maxArcaneRecoveryLevel; level++) {
+      const total = character.spellSlots.filter((s) => s === level).length
+      const available = character.availableSpellSlots.filter((s) => s === level).length
+      if (available < total) {
+        availableSlotLevelsForRecovery.push(level)
+      }
+    }
+  }
+
+  // Calculate currently selected slot levels total
+  let selectedSlotLevelsTotal = 0
+  for (let level = 1; level <= maxArcaneRecoveryLevel; level++) {
+    if (values[`arcane_slot_${level}`] === "true") {
+      selectedSlotLevelsTotal += level
+    }
+  }
+
+  // Calculate remaining capacity for Arcane Recovery
+  const maxArcaneRecoveryLevelRemaining = maxArcaneRecoveryLevel - selectedSlotLevelsTotal
+
   return (
     <ModalContent title="Take a Short Rest">
       <form
@@ -48,9 +71,10 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
                     <input
                       class="form-check-input"
                       type="checkbox"
-                      name="hitdice"
+                      name={`spend_die_${index}`}
                       value={die}
                       id={`hitdie-${index}`}
+                      checked={values[`spend_die_${index}`] === String(die)}
                     />
                     <label class="form-check-label" for={`hitdie-${index}`}>
                       d{die}
@@ -69,8 +93,8 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
             </div>
           )}
 
-          {/* Arcane Recovery Section (Wizards only) */}
-          {hasArcaneRecovery && (
+          {/* Arcane Recovery Section (Wizards only with used spell slots) */}
+          {hasArcaneRecovery && availableSlotLevelsForRecovery.length > 0 && (
             <>
               <hr class="my-3" />
               <h6 class="fw-bold mb-2">Arcane Recovery</h6>
@@ -97,24 +121,37 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
               {values.arcane_recovery === "true" && (
                 <div id="arcane-recovery-slots" class="mb-3">
                   <div class="form-label small">Select spell slot levels to recover:</div>
-                  {[1, 2, 3, 4, 5].map((level) => (
-                    <div class="form-check" key={level}>
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        name={`arcane_slot_${level}`}
-                        value="true"
-                        id={`arcane-slot-${level}`}
-                        disabled={level > maxArcaneRecoveryLevel}
-                        checked={values[`arcane_slot_${level}`] === "true"}
-                      />
-                      <label class="form-check-label" for={`arcane-slot-${level}`}>
-                        Level {level} slot
-                      </label>
-                    </div>
-                  ))}
+                  {Array.from({ length: maxArcaneRecoveryLevel }, (_, i) => i + 1).map((level) => {
+                    // Only render if this level has used slots
+                    if (!availableSlotLevelsForRecovery.includes(level)) {
+                      return null
+                    }
+
+                    const isChecked = values[`arcane_slot_${level}`] === "true"
+                    const isDisabled = !isChecked && level > maxArcaneRecoveryLevelRemaining
+
+                    return (
+                      <div class="form-check" key={level}>
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name={`arcane_slot_${level}`}
+                          value="true"
+                          id={`arcane-slot-${level}`}
+                          disabled={isDisabled}
+                          checked={isChecked}
+                        />
+                        <label
+                          class={`form-check-label ${isDisabled ? "text-muted" : ""}`}
+                          for={`arcane-slot-${level}`}
+                        >
+                          Level {level} slot
+                        </label>
+                      </div>
+                    )
+                  })}
                   <small class="text-muted d-block mt-2">
-                    Maximum total slot levels: {maxArcaneRecoveryLevel}
+                    Selected: {selectedSlotLevelsTotal} / {maxArcaneRecoveryLevel} slot levels
                   </small>
                   {errors.arcane_slots && (
                     <div class="invalid-feedback d-block">{errors.arcane_slots}</div>

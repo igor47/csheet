@@ -1,3 +1,4 @@
+import { beginOrSavepoint } from "@src/db"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
@@ -76,33 +77,52 @@ export async function shortRest(
     return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
   }
 
+  const values = checkD.data
+
   // Stage 2: Custom validation
   const errors: Record<string, string> = {}
 
   // Parse selected hit dice with their rolls
   const selectedDice: Array<{ index: number; die: HitDieType; roll?: number }> = []
-  for (let i = 0; i < Math.min(char.availableHitDice.length, 6); i++) {
-    const dieValue = data[`spend_die_${i}`]
-    if (dieValue === String(char.availableHitDice[i])) {
-      const rollStr = data[`roll_die_${i}`]
-      const roll = rollStr ? Number.parseInt(rollStr, 10) : undefined
+  const remainingHitDice = [...char.availableHitDice]
 
-      // Validate roll value if provided
-      if (roll !== undefined) {
-        if (roll < 1 || roll > char.availableHitDice[i]!) {
-          errors[`roll_die_${i}`] = `Roll must be between 1 and ${char.availableHitDice[i]}`
-        }
-      } else if (!checkD.data.is_check) {
-        // Require roll value for non-check submissions
-        errors[`roll_die_${i}`] = "Roll value is required"
-      }
+  // Iterate over all possible form field indices (0-5)
+  for (let i = 0; i < 6; i++) {
+    const dieValue = values[`spend_die_${i}` as keyof typeof values]
+    if (!dieValue) continue
 
-      selectedDice.push({ index: i, die: char.availableHitDice[i]!, roll })
+    const dieNum = dieValue as HitDieType
+
+    // Check if this die is available in remainingHitDice
+    const availableIndex = remainingHitDice.indexOf(dieNum)
+    if (availableIndex === -1) {
+      errors[`spend_die_${i}`] = `You don't have a d${dieNum} hit die available`
+      continue
     }
+
+    // Remove from remainingHitDice to prevent double-spending
+    remainingHitDice.splice(availableIndex, 1)
+
+    // Find the original index in char.availableHitDice for tracking
+    const originalIndex = char.availableHitDice.indexOf(dieNum)
+
+    const roll = values[`roll_die_${i}` as keyof typeof values] as number | undefined
+
+    // Validate roll value if provided
+    if (roll !== undefined) {
+      if (roll < 1 || roll > dieNum) {
+        errors[`roll_die_${i}`] = `Roll must be between 1 and ${dieNum}`
+      }
+    } else if (!values.is_check) {
+      // Require roll value for non-check submissions
+      errors[`roll_die_${i}`] = "Roll value is required"
+    }
+
+    selectedDice.push({ index: originalIndex, die: dieNum, roll })
   }
 
   // Validate Arcane Recovery
-  if (checkD.data.arcane_recovery) {
+  if (values.arcane_recovery) {
     const wizardClass = char.classes.find((c) => c.class === "wizard")
     if (!wizardClass) {
       errors.arcane_recovery = "Only Wizards can use Arcane Recovery"
@@ -111,7 +131,7 @@ export async function shortRest(
       const selectedSlots: number[] = []
 
       for (let level = 1; level <= 5; level++) {
-        if (checkD.data[`arcane_slot_${level}` as keyof typeof checkD.data]) {
+        if (values[`arcane_slot_${level}` as keyof typeof values]) {
           selectedSlots.push(level)
         }
       }
@@ -137,7 +157,7 @@ export async function shortRest(
   }
 
   // Stage 3: Early return for check mode
-  if (checkD.data.is_check || Object.keys(errors).length > 0) {
+  if (values.is_check || Object.keys(errors).length > 0) {
     return { complete: false, values: data, errors }
   }
 
@@ -147,54 +167,59 @@ export async function shortRest(
     return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
-  // Stage 5: Execute the short rest
-  const summary: ShortRestSummary = {
-    hpRestored: 0,
-    hitDiceSpent: 0,
-    diceRolls: [],
-    spellSlotsRestored: 0,
-    arcaneRecoveryUsed: false,
-  }
-
-  const note = result.data.note || "Took a short rest"
-  const conMod = char.abilityScores.constitution.modifier
-
-  // Spend hit dice and restore HP using updateHitDice service
-  for (const diceInfo of selectedDice) {
-    const hitDiceResult = await updateHitDice(db, char, {
-      action: "spend",
-      die_value: String(diceInfo.die),
-      hp_rolled: String(diceInfo.roll!),
-      note,
-      is_check: "false",
-    })
-
-    if (hitDiceResult.complete) {
-      const hpGain = hitDiceResult.result.newHP! - char.currentHP
-      summary.hitDiceSpent++
-      summary.hpRestored += hpGain
-      summary.diceRolls.push({ die: diceInfo.die, roll: diceInfo.roll!, modifier: conMod })
-      // Update char's current HP for next iteration
-      char = { ...char, currentHP: hitDiceResult.result.newHP! }
+  // Stage 5: Execute the short rest in a transaction
+  const summary = await beginOrSavepoint(db, async (tx) => {
+    const summary: ShortRestSummary = {
+      hpRestored: 0,
+      hitDiceSpent: 0,
+      diceRolls: [],
+      spellSlotsRestored: 0,
+      arcaneRecoveryUsed: false,
     }
-  }
 
-  // Arcane Recovery
-  if (result.data.arcane_recovery) {
-    summary.arcaneRecoveryUsed = true
+    const note = result.data.note || "Took a short rest"
+    const conMod = char.abilityScores.constitution.modifier
 
-    for (let level = 1; level <= 5; level++) {
-      if (result.data[`arcane_slot_${level}` as keyof typeof result.data]) {
-        await createSpellSlotDb(db, {
-          character_id: char.id,
-          slot_level: level,
-          action: "restore",
-          note: `${note} - Arcane Recovery`,
-        })
-        summary.spellSlotsRestored++
+    // Spend hit dice and restore HP using updateHitDice service
+    let currentChar = char
+    for (const diceInfo of selectedDice) {
+      const hitDiceResult = await updateHitDice(tx, currentChar, {
+        action: "spend",
+        die_value: String(diceInfo.die),
+        hp_rolled: String(diceInfo.roll!),
+        note,
+        is_check: "false",
+      })
+
+      if (hitDiceResult.complete) {
+        const hpGain = hitDiceResult.result.newHP! - currentChar.currentHP
+        summary.hitDiceSpent++
+        summary.hpRestored += hpGain
+        summary.diceRolls.push({ die: diceInfo.die, roll: diceInfo.roll!, modifier: conMod })
+        // Update char's current HP for next iteration
+        currentChar = { ...currentChar, currentHP: hitDiceResult.result.newHP! }
       }
     }
-  }
+
+    // Arcane Recovery
+    if (result.data.arcane_recovery) {
+      summary.arcaneRecoveryUsed = true
+
+      for (let level = 1; level <= 5; level++) {
+        if (result.data[`arcane_slot_${level}` as keyof typeof result.data]) {
+          await createSpellSlotDb(tx, {
+            character_id: currentChar.id,
+            slot_level: level,
+            action: "restore",
+            note: `${note} - Arcane Recovery`,
+          })
+          summary.spellSlotsRestored++
+        }
+      }
+    }
+
+    return summary
+  })
 
   return { complete: true, result: summary }
 }

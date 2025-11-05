@@ -192,7 +192,7 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
   // Convert markdown to HTML for rendering
   const htmlContent = markdownToHtml(
     content,
-    isAssistant ? `<i class="bi bi-book me-1"></i>` : undefined,
+    isAssistant ? `<i class="bi bi-book me-1"></i>` : undefined
   )
 
   const divClass = clsx("rounded px-3 py-2", {

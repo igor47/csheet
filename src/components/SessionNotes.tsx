@@ -14,7 +14,10 @@ export const SessionNotes = ({ characterId, currentNote }: SessionNotesProps) =>
   return (
     <div class="card shadow-sm flex-lg-fill d-lg-flex flex-lg-column" id="session-notes-card">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Session Notes</h5>
+        <h5 class="mb-0">
+          <i class="bi bi-journal-bookmark me-2"></i>
+          Session Notes
+        </h5>
         <div class="d-flex align-items-center gap-2">
           <NotesSaveIndicator lastSaved={currentNote?.updated_at} />
           <button

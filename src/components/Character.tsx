@@ -51,6 +51,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
                     aria-expanded="false"
                     aria-controls="col-abilities"
                   >
+                    <i class="bi bi-dpad me-2"></i>
                     Abilities & Saves
                   </button>
                 </h2>
@@ -70,6 +71,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
                     aria-expanded="false"
                     aria-controls="col-skills"
                   >
+                    <i class="bi bi-wrench me-2"></i>
                     Skills & Proficiencies
                   </button>
                 </h2>
@@ -89,6 +91,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
                     aria-expanded="false"
                     aria-controls="col-traits"
                   >
+                    <i class="bi bi-list-stars me-2"></i>
                     Traits & Features
                   </button>
                 </h2>
@@ -108,6 +111,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
                     aria-expanded="false"
                     aria-controls="col-spells"
                   >
+                    <i class="bi bi-magic me-2"></i>
                     Spells
                   </button>
                 </h2>
@@ -127,6 +131,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
                     aria-expanded="false"
                     aria-controls="col-inventory"
                   >
+                    <i class="bi bi-backpack me-2"></i>
                     Inventory
                   </button>
                 </h2>

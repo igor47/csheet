@@ -23,24 +23,26 @@ const TraitList = ({ traits, title }: TraitListProps) => {
   }
 
   return (
-    <div class="alert alert-light mx-1 mt-1">
-      <h6 class="mb-2">{title}</h6>
-      <ul class="list-group">
-        {traits.map((trait) => (
-          <li class="list-group-item">
-            <div class="d-flex justify-content-between align-items-start mb-1">
-              <h6 class="mb-0 text-capitalize">{trait.name}</h6>
-              {trait.level && <span class="badge bg-primary">Level {trait.level}</span>}
-            </div>
-            <p class="mb-0 text-muted">{trait.description}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul class="list-group mb-2 border border-info-subtle">
+      <li class="list-group-item fw-bold">
+        <i class="bi bi-list-stars me-2 text-info" />
+        {title}
+      </li>
+
+      {traits.map((trait) => (
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start mb-1">
+            <h6 class="mb-0 text-capitalize">{trait.name}</h6>
+            {trait.level && <span class="badge bg-primary">Level {trait.level}</span>}
+          </div>
+          <p class="mb-0 text-muted">{trait.description}</p>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
+export const CharacterNew = ({ values = {}, errors = {} }: CharacterNewProps) => {
   // Get ruleset based on selection, default to first ruleset
   const rulesetId = (values?.ruleset as RulesetId) || RULESETS[0]!.id
   const ruleset = getRuleset(rulesetId)
@@ -57,9 +59,15 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
   const classTraits: Trait[] = values?.class
     ? getTraits(ruleset, {
         className: values.class as ClassNameType,
-        subclass: values?.subclass,
+        subclass: values.subclass,
       })
     : []
+
+  // if we switched from class w/ subclasses to one w/o, clear subclass value
+  if (errors.subclass?.includes("not available")) {
+    delete errors.subclass
+    values.subclass = ""
+  }
 
   const fields = [
     <div class="mb-3">
@@ -105,9 +113,11 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         required
         error={errors?.species}
         value={values?.species}
+        class="mb-2"
       />
       {values?.species && (
-        <div class="alert alert-light mx-1 mt-1">
+        <div class="alert alert-info mb-2">
+          <i class="bi bi-info-circle me-2" />
           {ruleset.species.find((s) => s.name === values.species)?.description}
         </div>
       )}
@@ -141,9 +151,11 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         error={errors?.lineage}
         value={values?.lineage}
         disabled={lineages.length === 0}
+        class="mb-2"
       />
       {values?.species && values?.lineage && (
-        <div class="alert alert-light mx-1 mt-1">
+        <div class="alert alert-info mb-2">
+          <i class="bi bi-info-circle me-2" />
           {
             ruleset.species
               .find((s) => s.name === values.species)
@@ -151,7 +163,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
           }
         </div>
       )}
-      <TraitList traits={speciesTraits} title="Species Traits" />
+      <TraitList traits={speciesTraits} title="Species/Lineage Traits" />
     </div>
   )
 
@@ -168,9 +180,11 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         required
         error={errors?.background}
         value={values?.background}
+        class="mb-2"
       />
       {values?.background && (
-        <div class="alert alert-light mx-1 mt-1">
+        <div class="alert alert-info mb-2">
+          <i class="bi bi-info-circle me-2" />
           {ruleset.backgrounds[values.background]?.description}
         </div>
       )}
@@ -191,9 +205,11 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         required
         error={errors?.class}
         value={values?.class}
+        class="mb-2"
       />
       {values?.class && (
-        <div class="alert alert-light mx-1 mt-1">
+        <div class="alert alert-info mb-2">
+          <i class="bi bi-info-circle me-2" />
           {ruleset.classes[values.class as ClassNameType]?.description}
         </div>
       )}
@@ -224,9 +240,11 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
         error={errors?.subclass}
         value={values?.subclass}
         disabled={subclasses.length === 0}
+        class="mb-2"
       />
       {values?.class && values?.subclass && (
-        <div class="alert alert-light mx-1 mt-1">
+        <div class="alert alert-info mb-2">
+          <i class="bi bi-info-circle me-2" />
           {
             ruleset.classes[values.class as ClassNameType]?.subclasses.find(
               (sc) => sc.name === values.subclass
@@ -234,7 +252,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
           }
         </div>
       )}
-      <TraitList traits={classTraits} title="Class Traits" />
+      <TraitList traits={classTraits} title="Class/Subclass Traits" />
     </div>
   )
 
@@ -288,7 +306,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
   )
 
   return (
-    <div class="container mt-5" id="character-new">
+    <div class="container" id="character-new" style="overflow-anchor: none;">
       <div class="row justify-content-center">
         <div class="col-md-8">
           <div class="card shadow-sm">
@@ -299,7 +317,7 @@ export const CharacterNew = ({ values, errors }: CharacterNewProps) => {
                 hx-vals='{"is_check": "true"}'
                 hx-trigger="change"
                 hx-target="#character-new"
-                hx-swap="outerHTML"
+                hx-swap="outerHTML focus-scroll:false"
                 class="needs-validation"
                 novalidate
               >

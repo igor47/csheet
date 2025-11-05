@@ -31,6 +31,6 @@ export const Select = ({
         </option>
       ))}
     </select>
-    {error && !hideErrorMsg && <div class="invalid-feedback d-block">{error}</div>}
+    {error && !hideErrorMsg && <div class="invalid-feedback d-block my-1">{error}</div>}
   </>
 )

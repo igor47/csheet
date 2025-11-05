@@ -2,8 +2,7 @@ import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumericEnumField, OptionalNumber, OptionalString } from "@src/lib/formSchemas"
-import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
-import type { ToolExecutorResult } from "@src/tools"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -218,7 +217,7 @@ export async function executeShortRest(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-): Promise<ToolExecutorResult> {
+) {
   const data: Record<string, string> = {
     note: parameters.note?.toString() || "",
     is_check: isCheck ? "true" : "false",
@@ -233,9 +232,7 @@ export async function executeShortRest(
   // Add hit dice spending fields (AI can't specify these, so we won't spend any dice automatically)
   // This tool is mainly for recording the rest and using Arcane Recovery
 
-  const result = await shortRest(db, char, data)
-
-  return serviceResultToToolResult(result)
+  return shortRest(db, char, data)
 }
 
 /**

@@ -47,44 +47,77 @@ export async function executeTool(
   unresolvedTool: UnresolvedToolCall,
   isCheck?: boolean
 ): Promise<ToolExecutorResult> {
+  const executor = TOOL_EXECUTORS[unresolvedTool.toolName]
+
+  if (!executor) {
+    const toolResult: ToolExecutorResult = {
+      status: "failed",
+      error: `No executor defined for tool: ${unresolvedTool.toolName}`,
+    }
+
+    await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+    return toolResult
+  }
+
   try {
-    const executor = TOOL_EXECUTORS[unresolvedTool.toolName]
-
-    let result: ToolExecutorResult
-    if (executor) {
-      result = await executor(db, char, unresolvedTool.parameters, isCheck)
-    } else {
-      result = {
-        status: "failed",
-        error: `No executor defined for tool: ${unresolvedTool.toolName}`,
-      }
-    }
-
     // Execute the tool (with optional validation mode)
+    const result = await executor(db, char, unresolvedTool.parameters, isCheck)
 
-    // Save the result to database, but only when:
-    // 1. Not a validation check (isCheck=false), OR
-    // 2. Validation failed (status !== "success")
-    // This allows LLM to see validation errors and self-correct,
-    // while keeping successful validations unresolved for user approval
-    if (!isCheck || result.status !== "success") {
-      console.dir(result)
-      await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
+    const errorFields = result.complete
+      ? []
+      : Object.entries(result.errors).map(([k, v]) => `${k}: ${v}`)
+
+    // validation check should always return complete=false
+    if (isCheck) {
+      // this should never happen
+      if (result.complete === true) {
+        throw new Error("Tool executor returned complete=true during validation check")
+      }
+
+      // if we actually had validation errors, store them for the LLM to see
+      if (errorFields.length > 0) {
+        const toolResult: ToolExecutorResult = {
+          status: "failed",
+          error: `Tool validation failed with ${errorFields.length} errors: ${errorFields.join(", ")}`,
+        }
+        await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+        return toolResult
+
+        // Validation check passed, do not store result yet
+      } else {
+        return { status: "success" }
+      }
+
+      // we actually executed the tool, store the result
+    } else {
+      let toolResult: ToolExecutorResult
+      if (result.complete === true) {
+        toolResult = {
+          status: "success",
+          data: result.result,
+        }
+      } else {
+        toolResult = {
+          status: "failed",
+          error: `Tool execution failed with ${errorFields.length} errors: ${errorFields.join(", ")}`,
+        }
+      }
+
+      await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+      return toolResult
     }
 
-    return result
-  } catch (error) {
     // If executor throws an exception, convert to failed result
+  } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    const result: ToolExecutorResult = {
+    const toolResult: ToolExecutorResult = {
       status: "failed",
       error: errorMessage,
     }
 
     // Store the error result
-    await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
-
-    return result
+    await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+    return toolResult
   }
 }
 

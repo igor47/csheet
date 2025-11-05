@@ -18,13 +18,13 @@ describe("executeLookupSpell", () => {
       spell_name: "Fireball",
     })
 
-    expect(result.status).toBe("success")
-    if (result.status !== "success") return
-    expect(result.data?.spell).toBeTruthy()
-    expect(result.data?.spell.name).toBe("Fireball")
-    expect(result.data?.spell.level).toBe(3)
-    expect(result.data?.spell.school).toBe("evocation")
-    expect(result.data?.spell.description).toBeTruthy()
+    expect(result.complete).toBe(true)
+    if (result.complete !== true) return
+    expect(result.result).toBeTruthy()
+    expect(result.result.name).toBe("Fireball")
+    expect(result.result.level).toBe(3)
+    expect(result.result.school).toBe("evocation")
+    expect(result.result.description).toBeTruthy()
   })
 
   test("finds spell with case-insensitive match", async () => {
@@ -37,9 +37,9 @@ describe("executeLookupSpell", () => {
       spell_name: "fireball",
     })
 
-    expect(result.status).toBe("success")
-    if (result.status !== "success") return
-    expect(result.data?.spell.name).toBe("Fireball")
+    expect(result.complete).toBe(true)
+    if (result.complete !== true) return
+    expect(result.result.name).toBe("Fireball")
   })
 
   test("finds spell by partial name match", async () => {
@@ -52,9 +52,9 @@ describe("executeLookupSpell", () => {
       spell_name: "magic miss",
     })
 
-    expect(result.status).toBe("success")
-    if (result.status !== "success") return
-    expect(result.data?.spell.name).toBe("Magic Missile")
+    expect(result.complete).toBe(true)
+    if (result.complete !== true) return
+    expect(result.result.name).toBe("Magic Missile")
   })
 
   test("returns error when spell not found", async () => {
@@ -67,9 +67,9 @@ describe("executeLookupSpell", () => {
       spell_name: "NonexistentSpell",
     })
 
-    expect(result.status).toBe("failed")
-    if (result.status !== "failed") return
-    expect(result.error).toContain("No spell found matching")
+    expect(result.complete).toBe(false)
+    if (result.complete !== false) return
+    expect(result.errors.spell_name).toContain("No spell found matching")
   })
 
   test("returns error when multiple spells match", async () => {
@@ -83,10 +83,10 @@ describe("executeLookupSpell", () => {
       spell_name: "Acid",
     })
 
-    expect(result.status).toBe("failed")
-    if (result.status !== "failed") return
-    expect(result.error).toContain("Multiple spells match")
-    expect(result.error).toContain("Acid")
+    expect(result.complete).toBe(false)
+    if (result.complete !== false) return
+    expect(result.errors.spell_name).toContain("Multiple spells match")
+    expect(result.errors.spell_name).toContain("Acid")
   })
 
   test("includes all spell details in response", async () => {
@@ -99,10 +99,10 @@ describe("executeLookupSpell", () => {
       spell_name: "Shield",
     })
 
-    expect(result.status).toBe("success")
-    if (result.status !== "success") return
+    expect(result.complete).toBe(true)
+    if (result.complete !== true) return
 
-    const spell = result.data?.spell
+    const spell = result.result
     expect(spell).toBeTruthy()
     expect(spell?.id).toBeTruthy()
     expect(spell?.name).toBe("Shield")
@@ -127,9 +127,9 @@ describe("executeLookupSpell", () => {
       // Missing spell_name parameter
     })
 
-    expect(result.status).toBe("failed")
-    if (result.status !== "failed") return
-    expect(result.error).toContain("Invalid parameters")
+    expect(result.complete).toBe(false)
+    if (result.complete !== false) return
+    expect(result.errors.spell_name).toContain("Invalid input")
   })
 
   test("handles empty spell name", async () => {
@@ -142,10 +142,10 @@ describe("executeLookupSpell", () => {
       spell_name: "",
     })
 
-    expect(result.status).toBe("failed")
-    if (result.status !== "failed") return
+    expect(result.complete).toBe(false)
+    if (result.complete !== false) return
     // Empty string matches all spells, so we get "Multiple spells match"
-    expect(result.error).toContain("Multiple spells match")
+    expect(result.errors.spell_name).toContain("Multiple spells match")
   })
 
   test("handles spell name with extra whitespace", async () => {
@@ -158,8 +158,8 @@ describe("executeLookupSpell", () => {
       spell_name: "  Fireball  ",
     })
 
-    expect(result.status).toBe("success")
-    if (result.status !== "success") return
-    expect(result.data?.spell.name).toBe("Fireball")
+    expect(result.complete).toBe(true)
+    if (result.complete !== true) return
+    expect(result.result.name).toBe("Fireball")
   })
 })

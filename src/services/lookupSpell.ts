@@ -1,5 +1,6 @@
-import { spells } from "@src/lib/dnd/spells"
-import type { ToolExecutorResult } from "@src/tools"
+import { type Spell, spells } from "@src/lib/dnd/spells"
+import { zodToFormErrors } from "@src/lib/formErrors"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -36,13 +37,14 @@ export async function executeLookupSpell(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   _isCheck?: boolean
-): Promise<ToolExecutorResult> {
+): Promise<ServiceResult<Spell>> {
   const parsed = LookupSpellApiSchema.safeParse(parameters)
 
   if (!parsed.success) {
     return {
-      status: "failed",
-      error: `Invalid parameters: ${parsed.error.message}`,
+      complete: false,
+      values: parameters,
+      errors: zodToFormErrors(parsed.error),
     }
   }
 
@@ -58,8 +60,11 @@ export async function executeLookupSpell(
 
     if (matches.length === 0) {
       return {
-        status: "failed",
-        error: `No spell found matching "${spell_name}". Try a different name or partial name.`,
+        complete: false,
+        values: parameters,
+        errors: {
+          spell_name: `No spell found matching "${spell_name}". Try a different name or partial name.`,
+        },
       }
     }
 
@@ -69,8 +74,11 @@ export async function executeLookupSpell(
       // Multiple matches - return list of options
       const matchNames = matches.map((s) => s.name).join(", ")
       return {
-        status: "failed",
-        error: `Multiple spells match "${spell_name}": ${matchNames}. Please be more specific.`,
+        complete: false,
+        values: parameters,
+        errors: {
+          spell_name: `Multiple spells match "${spell_name}": ${matchNames}. Please be more specific.`,
+        },
       }
     }
   }
@@ -78,34 +86,16 @@ export async function executeLookupSpell(
   // This should never happen due to logic above, but TypeScript needs the check
   if (!spell) {
     return {
-      status: "failed",
-      error: `Spell not found: ${spell_name}`,
+      complete: false,
+      values: parameters,
+      errors: { spell_name: `Spell not found: ${spell_name}` },
     }
   }
 
   // Return full spell details
   return {
-    status: "success",
-    data: {
-      spell: {
-        id: spell.id,
-        name: spell.name,
-        level: spell.level,
-        school: spell.school,
-        description: spell.description,
-        briefDescription: spell.briefDescription,
-        atHigherLevelsText: spell.atHigherLevelsText,
-        castingTime: spell.castingTime,
-        range: spell.range,
-        components: spell.components,
-        duration: spell.duration,
-        target: spell.target,
-        resolution: spell.resolution,
-        damage: spell.damage,
-        classes: spell.classes,
-        ritual: spell.ritual,
-      },
-    },
+    complete: true,
+    result: spell,
   }
 }
 

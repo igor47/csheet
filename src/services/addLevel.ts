@@ -5,8 +5,7 @@ import type { Character } from "@src/db/characters"
 import { ClassNames, ClassNamesSchema, type ClassNameType, getTraits } from "@src/lib/dnd"
 import { getRuleset } from "@src/lib/dnd/rulesets"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
-import type { ToolExecutorResult } from "@src/tools"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -43,7 +42,7 @@ export const AddLevelApiSchema = z.object({
 
 export type AddLevelApi = z.infer<typeof AddLevelApiSchema>
 
-export type AddLevelResult = ServiceResult<undefined>
+export type AddLevelResult = ServiceResult<object>
 
 /**
  * Add a level to a character
@@ -229,7 +228,7 @@ export async function addLevel(
     }
   })
 
-  return { complete: true, result: undefined }
+  return { complete: true, result: {} }
 }
 
 // Vercel AI SDK tool definition
@@ -249,7 +248,7 @@ export async function executeAddLevel(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-): Promise<ToolExecutorResult> {
+) {
   const data: Record<string, string> = {
     class: parameters.class?.toString() || "",
     subclass: parameters.subclass?.toString() || "",
@@ -258,9 +257,7 @@ export async function executeAddLevel(
     is_check: isCheck ? "true" : "false",
   }
 
-  const result = await addLevel(db, char, data)
-
-  return serviceResultToToolResult(result)
+  return addLevel(db, char, data)
 }
 
 /**

@@ -2,8 +2,7 @@ import type { SpellLevelType } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
-import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
-import type { ToolExecutorResult } from "@src/tools"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -205,7 +204,7 @@ export async function executeCastSpell(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-): Promise<ToolExecutorResult> {
+) {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
     spell_id: parameters.spell_id?.toString() || "",
@@ -215,9 +214,7 @@ export async function executeCastSpell(
     is_check: isCheck ? "true" : "false",
   }
 
-  const result = await castSpell(db, char, data)
-
-  return serviceResultToToolResult(result)
+  return castSpell(db, char, data)
 }
 
 /**

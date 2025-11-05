@@ -2,8 +2,7 @@ import { create as createSpellPrepared } from "@src/db/char_spells_prepared"
 import { ClassNames, ClassNamesSchema } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
-import type { ToolExecutorResult } from "@src/tools"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -29,7 +28,7 @@ export const PrepareSpellApiSchema = z.object({
 
 type PrepareSpellData = Partial<z.infer<typeof PrepareSpellApiSchema>>
 
-export type PrepareSpellResult = ServiceResult<undefined>
+export type PrepareSpellResult = ServiceResult<object>
 
 /**
  * Prepare a spell in a slot (or replace an existing spell)
@@ -184,7 +183,7 @@ export async function prepareSpell(
     })
   })
 
-  return { complete: true, result: undefined }
+  return { complete: true, result: {} }
 }
 
 // Vercel AI SDK tool definition
@@ -207,7 +206,7 @@ export async function executePrepareSpell(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-): Promise<ToolExecutorResult> {
+) {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
     class: parameters.class?.toString() || "",
@@ -218,9 +217,7 @@ export async function executePrepareSpell(
     is_check: isCheck ? "true" : "false",
   }
 
-  const result = await prepareSpell(db, char, data)
-
-  return serviceResultToToolResult(result)
+  return prepareSpell(db, char, data)
 }
 
 /**

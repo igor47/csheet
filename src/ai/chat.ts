@@ -66,24 +66,78 @@ async function autoExecuteReadOnlyTools(
 
     // Check if this tool is read-only (doesn't require approval)
     const toolRegistration = TOOLS.find((t) => t.name === call.name)
+    if (toolRegistration && toolRegistration.requiresApproval !== false) {
+      continue
+    }
+
+    // Execute the tool immediately
+    try {
+      await executeTool(db, character, {
+        messageId: assistantMsg.id,
+        toolCallId,
+        toolName: call.name,
+        parameters: call.parameters,
+      })
+    } catch (error) {
+      // Log errors but don't throw - tool execution is best-effort
+      logger.error("Auto-execution of read-only tool failed", error as Error, {
+        character_id: character.id,
+        message_id: assistantMsg.id,
+        tool_name: call.name,
+        tool_call_id: toolCallId,
+      })
+    }
+  }
+}
+
+/**
+ * Auto-validate tool parameters for tools that require approval
+ * Runs validation checks before user sees approval UI, allowing LLM to self-correct
+ */
+async function validateApprovalTools(
+  db: SQL,
+  character: ComputedCharacter,
+  assistantMsg: ChatMessage
+): Promise<void> {
+  // Check if message has tool calls
+  if (!assistantMsg.tool_calls || !assistantMsg.tool_results) {
+    return
+  }
+
+  // Find tools that require approval and haven't been executed yet
+  for (const [toolCallId, call] of Object.entries(assistantMsg.tool_calls)) {
+    // Skip if already executed
+    if (assistantMsg.tool_results[toolCallId]) {
+      continue
+    }
+
+    // read-only tools will be executed automatically anyway
+    const toolRegistration = TOOLS.find((t) => t.name === call.name)
     if (toolRegistration && toolRegistration.requiresApproval === false) {
-      try {
-        // Execute the tool immediately
-        await executeTool(db, character, {
+      continue
+    }
+
+    // Execute the tool in validation mode
+    try {
+      await executeTool(
+        db,
+        character,
+        {
           messageId: assistantMsg.id,
           toolCallId,
           toolName: call.name,
           parameters: call.parameters,
-        })
-      } catch (error) {
-        // Log errors but don't throw - tool execution is best-effort
-        logger.error("Auto-execution of read-only tool failed", error as Error, {
-          character_id: character.id,
-          message_id: assistantMsg.id,
-          tool_name: call.name,
-          tool_call_id: toolCallId,
-        })
-      }
+        },
+        true // isCheck = true for validation mode
+      )
+    } catch (error) {
+      // Log errors but don't throw - validation is best-effort
+      logger.error("Validation of approval tool failed", error as Error, {
+        character_id: character.id,
+        message_id: assistantMsg.id,
+        tool_name: call.name,
+        tool_call_id: toolCallId,
+      })
     }
   }
 }
@@ -159,6 +213,9 @@ export async function executeChatRequest(
 
     // Auto-execute any read-only tools immediately
     await autoExecuteReadOnlyTools(db, character, assistantMsg)
+
+    // Validate parameters for tools that require approval
+    await validateApprovalTools(db, character, assistantMsg)
 
     return assistantMsg.id
   } catch (err) {

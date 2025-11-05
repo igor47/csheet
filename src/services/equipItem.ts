@@ -64,7 +64,8 @@ export async function executeEquipItem(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   try {
     await equipItem(

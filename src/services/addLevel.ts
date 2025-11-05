@@ -248,13 +248,15 @@ export async function executeAddLevel(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   const data: Record<string, string> = {
     class: parameters.class?.toString() || "",
     subclass: parameters.subclass?.toString() || "",
     hit_die_roll: parameters.hit_die_roll?.toString() || "",
     note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
   }
 
   const result = await addLevel(db, char, data)

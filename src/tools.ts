@@ -113,7 +113,8 @@ export type ToolExecutor = (
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ) => Promise<ToolExecutorResult>
 
 /**

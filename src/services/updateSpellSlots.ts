@@ -171,13 +171,15 @@ export async function executeUpdateSpellSlots(
   db: SQL,
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
     action: parameters.action?.toString() || "",
     slot_level: parameters.slot_level?.toString() || "",
     note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
   }
 
   const result = await updateSpellSlots(db, char, data)

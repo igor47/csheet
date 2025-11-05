@@ -49,7 +49,8 @@ export async function executeRestoreCharge(
   db: SQL,
   _char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _isCheck?: boolean
 ): Promise<ToolExecutorResult> {
   try {
     await restoreCharge(db, parameters.item_id, parameters.amount || 1, parameters.note)

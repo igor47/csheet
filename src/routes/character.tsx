@@ -64,7 +64,6 @@ import { countArchivedByUserId } from "@src/db/characters"
 import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
 import { findById as findItemById } from "@src/db/items"
-import { logger } from "@src/lib/logger"
 import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
 import { addTrait } from "@src/services/addTrait"
@@ -998,20 +997,14 @@ characterRoutes.post("/characters/:id/rest/short", async (c) => {
   }
 
   const body = (await c.req.parseBody()) as Record<string, string>
-  const result = await shortRest({
-    character_id: characterId,
-    note: body.note || null,
-  })
+  const result = await shortRest(getDb(c), char, body)
 
-  // Check if this is a validation request
-  const isCheck = body.is_check === "true"
-  if (isCheck) {
-    // Just return the form with any validation errors
-    return c.html(<ShortRestForm character={char} values={body} errors={{}} />)
+  if (!result.complete) {
+    return c.html(<ShortRestForm character={char} values={result.values} errors={result.errors} />)
   }
 
-  // Process the short rest
-  await setFlashMsg(c, result.message, "success")
+  // Display success message
+  await setFlashMsg(c, result.summary.message, "success")
 
   // Return updated components and close modal
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
@@ -1035,48 +1028,26 @@ characterRoutes.post("/characters/:id/rest/long", async (c) => {
   }
 
   const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await longRest(getDb(c), char, body)
 
-  // Check if this is a validation request
-  const isCheck = body.is_check === "true"
-  if (isCheck) {
-    // Just return the form with any validation errors
-    return c.html(<LongRestForm character={char} values={body} errors={{}} />)
+  if (!result.complete) {
+    return c.html(<LongRestForm character={char} values={result.values} errors={result.errors} />)
   }
 
-  // Process the long rest
-  try {
-    const summary = await longRest(
-      getDb(c),
-      {
-        character_id: characterId,
-        note: body.note || null,
-      },
-      char.currentHP,
-      char.maxHitPoints,
-      char.hitDice,
-      char.availableHitDice,
-      char.spellSlots,
-      char.availableSpellSlots
-    )
+  // Build summary message
+  const summaryParts: string[] = []
+  if (result.summary.hpRestored > 0) summaryParts.push(`${result.summary.hpRestored} HP`)
+  if (result.summary.hitDiceRestored > 0)
+    summaryParts.push(`${result.summary.hitDiceRestored} hit dice`)
+  if (result.summary.spellSlotsRestored > 0)
+    summaryParts.push(`${result.summary.spellSlotsRestored} spell slots`)
 
-    // Build summary message
-    const summaryParts: string[] = []
-    if (summary.hpRestored > 0) summaryParts.push(`${summary.hpRestored} HP`)
-    if (summary.hitDiceRestored > 0) summaryParts.push(`${summary.hitDiceRestored} hit dice`)
-    if (summary.spellSlotsRestored > 0)
-      summaryParts.push(`${summary.spellSlotsRestored} spell slots`)
+  const message =
+    summaryParts.length > 0
+      ? `Long rest complete! Restored: ${summaryParts.join(", ")}`
+      : "Long rest complete!"
 
-    const message =
-      summaryParts.length > 0
-        ? `Long rest complete! Restored: ${summaryParts.join(", ")}`
-        : "Long rest complete!"
-
-    await setFlashMsg(c, message, "success")
-  } catch (error) {
-    logger.error("taking long rest", error as Error, { characterId: char.id })
-    await setFlashMsg(c, "Failed to take long rest", "error")
-    return c.html(<LongRestForm character={char} values={body} errors={{}} />)
-  }
+  await setFlashMsg(c, message, "success")
 
   // Return updated components and close modal
   const updatedChar = (await computeCharacter(getDb(c), characterId))!

@@ -44,17 +44,17 @@ import {
   lookupSpellToolName,
 } from "./services/lookupSpell"
 import {
+  executeManageCharge,
+  formatManageChargeApproval,
+  manageChargeTool,
+  manageChargeToolName,
+} from "./services/manageCharge"
+import {
   executePrepareSpell,
   formatPrepareSpellApproval,
   prepareSpellTool,
   prepareSpellToolName,
 } from "./services/prepareSpell"
-import {
-  executeRestoreCharge,
-  formatRestoreChargeApproval,
-  restoreChargeTool,
-  restoreChargeToolName,
-} from "./services/restoreCharge"
 import {
   executeShortRest,
   formatShortRestApproval,
@@ -89,12 +89,6 @@ import {
   updateSpellSlotsTool,
   updateSpellSlotsToolName,
 } from "./services/updateSpellSlots"
-import {
-  executeUseCharge,
-  formatUseChargeApproval,
-  useChargeTool,
-  useChargeToolName,
-} from "./services/useCharge"
 
 /**
  * Result type for tool executors
@@ -225,16 +219,10 @@ export const TOOLS: ToolRegistration[] = [
     formatApprovalMessage: formatEquipItemApproval,
   },
   {
-    name: useChargeToolName,
-    tool: useChargeTool,
-    executor: executeUseCharge,
-    formatApprovalMessage: formatUseChargeApproval,
-  },
-  {
-    name: restoreChargeToolName,
-    tool: restoreChargeTool,
-    executor: executeRestoreCharge,
-    formatApprovalMessage: formatRestoreChargeApproval,
+    name: manageChargeToolName,
+    tool: manageChargeTool,
+    executor: executeManageCharge,
+    formatApprovalMessage: formatManageChargeApproval,
   },
 
   // Character Advancement

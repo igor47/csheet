@@ -39,6 +39,7 @@ export interface EquippedComputedItem {
   humanReadableDamage: string[]
 
   // Equipment state
+  character_id: string
   worn: boolean
   wielded: boolean
 
@@ -218,6 +219,7 @@ export async function computeCharacterItems(
       currentCharges: row.current_charges,
       chargeLabel,
       humanReadableDamage,
+      character_id: characterId,
       worn: row.worn,
       wielded: row.wielded,
       damage,

@@ -1,4 +1,5 @@
 import { create as createCharItemDb, getCurrentInventory } from "@src/db/char_items"
+import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ToolExecutorResult } from "@src/tools"
 import { tool } from "ai"
@@ -7,46 +8,87 @@ import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const EquipItemApiSchema = z.object({
-  character_id: z.string(),
   item_id: z.string().describe("The ID of the item to equip/unequip"),
   worn: Checkbox().describe("Whether the item is worn (armor, clothing, accessories)"),
   wielded: Checkbox().describe("Whether the item is wielded (weapons, shields held in hand)"),
   note: OptionalString().describe("Optional note about the equipment change"),
+  is_check: Checkbox().optional().default(false),
 })
+
+export type EquipItemResult =
+  | { complete: true }
+  | { complete: false; values: Record<string, string>; errors: Record<string, string> }
 
 /**
  * Change the worn/wielded state of an item
  */
 export async function equipItem(
   db: SQL,
-  characterId: string,
-  itemId: string,
-  worn: boolean,
-  wielded: boolean,
-  note?: string
-) {
+  char: ComputedCharacter,
+  data: Record<string, string>
+): Promise<EquipItemResult> {
+  const checkD = EquipItemApiSchema.partial().safeParse(data)
+  if (!checkD.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
+  }
+
+  const errors: Record<string, string> = {}
+  const isCheck = checkD.data.is_check === true || data.is_check === "true"
+
+  // Validate required fields
+  if (!checkD.data.item_id) {
+    if (!isCheck) {
+      errors.item_id = "Item ID is required"
+    }
+  }
+
+  const itemId = checkD.data.item_id || ""
+  const worn = checkD.data.worn === true || data.worn === "true"
+  const wielded = checkD.data.wielded === true || data.wielded === "true"
+
   // Verify the character currently has the item
-  const inventory = await getCurrentInventory(db, characterId)
-  const currentItem = inventory.find((ci) => ci.item_id === itemId)
+  if (itemId) {
+    try {
+      const inventory = await getCurrentInventory(db, char.id)
+      const currentItem = inventory.find((ci) => ci.item_id === itemId)
 
-  if (!currentItem) {
-    throw new Error("Character does not have this item")
+      if (!currentItem) {
+        errors.item_id = "Character does not have this item"
+      } else {
+        // Check if the state is actually changing
+        if (currentItem.worn === worn && currentItem.wielded === wielded) {
+          errors.general = "Item equipment state is already set to these values"
+        }
+      }
+    } catch (error) {
+      errors.general = error instanceof Error ? error.message : "Failed to check inventory"
+    }
   }
 
-  // Check if the state is actually changing
-  if (currentItem.worn === worn && currentItem.wielded === wielded) {
-    throw new Error("Item equipment state is already set to these values")
+  if (isCheck || Object.keys(errors).length > 0) {
+    return { complete: false, values: data, errors }
   }
+
+  // Parse and validate with Zod
+  const result = EquipItemApiSchema.safeParse(data)
+  if (!result.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
+  }
+
+  //////////////////////////
+  // actually equip the item
 
   // Create a new char_items entry with the new worn/wielded state
-  return await createCharItemDb(db, {
-    character_id: characterId,
-    item_id: itemId,
-    worn,
-    wielded,
+  await createCharItemDb(db, {
+    character_id: char.id,
+    item_id: result.data.item_id,
+    worn: result.data.worn,
+    wielded: result.data.wielded,
     dropped_at: null,
-    note: note || null,
+    note: result.data.note || null,
   })
+
+  return { complete: true }
 }
 
 // Vercel AI SDK tool definition
@@ -54,7 +96,7 @@ export const equipItemToolName = "equip_item" as const
 export const equipItemTool = tool({
   name: equipItemToolName,
   description: `Equip or unequip an item. Set worn=true for armor/clothing, wielded=true for weapons/shields. Both can be true (e.g., wearing magical armor).`,
-  inputSchema: EquipItemApiSchema.omit({ character_id: true }),
+  inputSchema: EquipItemApiSchema.omit({ is_check: true }),
 })
 
 /**
@@ -65,26 +107,28 @@ export async function executeEquipItem(
   char: ComputedCharacter,
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
-  _isCheck?: boolean
+  isCheck?: boolean
 ): Promise<ToolExecutorResult> {
-  try {
-    await equipItem(
-      db,
-      char.id,
-      parameters.item_id,
-      parameters.worn === true || parameters.worn === "true",
-      parameters.wielded === true || parameters.wielded === "true",
-      parameters.note
-    )
+  const data: Record<string, string> = {
+    item_id: parameters.item_id?.toString() || "",
+    worn: (parameters.worn === true || parameters.worn === "true").toString(),
+    wielded: (parameters.wielded === true || parameters.wielded === "true").toString(),
+    note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
+  }
 
-    return {
-      status: "success",
-    }
-  } catch (error) {
+  const result = await equipItem(db, char, data)
+
+  if (!result.complete) {
+    const errorMessage = Object.values(result.errors).join(", ")
     return {
       status: "failed",
-      error: error instanceof Error ? error.message : "Failed to equip item",
+      error: errorMessage || "Failed to equip item",
     }
+  }
+
+  return {
+    status: "success",
   }
 }
 

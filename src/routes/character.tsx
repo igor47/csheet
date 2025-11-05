@@ -891,7 +891,7 @@ characterRoutes.post("/characters/:id/items/:itemId/charges", async (c) => {
   const body = (await c.req.parseBody()) as Record<string, string>
   body.item_id = itemId
 
-  const result = await manageCharge(getDb(c), item, body)
+  const result = await manageCharge(getDb(c), char, item, body)
 
   if (!result.complete) {
     return c.html(

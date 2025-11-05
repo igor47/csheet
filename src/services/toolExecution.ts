@@ -68,6 +68,7 @@ export async function executeTool(
     // This allows LLM to see validation errors and self-correct,
     // while keeping successful validations unresolved for user approval
     if (!isCheck || result.status !== "success") {
+      console.dir(result)
       await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
     }
 

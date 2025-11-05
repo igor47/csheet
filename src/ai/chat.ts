@@ -30,6 +30,19 @@ export async function prepareChatRequest(
   // Generate new chat ID if not provided
   const finalChatId = chatId || ulid()
 
+  // save system message if this is a new chat
+  if (!chatId) {
+    const systemPrompt = buildSystemPrompt(character)
+    await saveChatMessage(db, {
+      character_id: character.id,
+      chat_id: finalChatId,
+      role: "system",
+      content: systemPrompt,
+      tool_calls: null,
+      tool_results: null,
+    })
+  }
+
   // Save user message
   await saveChatMessage(db, {
     character_id: character.id,
@@ -137,16 +150,12 @@ export async function executeChatRequest(
     throw new Error("Chat is not ready to stream - shouldStream flag is false")
   }
 
-  // Build system prompt with character context
-  const systemPrompt = buildSystemPrompt(character)
-
   const model = getChatModel()
 
   // Wrap streamText in a Promise that resolves when streaming completes
   const requestBody = {
     model,
     maxOutputTokens: 1024,
-    system: systemPrompt,
     messages: computedChat.llmMessages,
     tools: TOOL_DEFINITIONS,
     onError: ({ error }: { error: unknown }) => {

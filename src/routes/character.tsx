@@ -2,6 +2,7 @@ import { AbilitiesEditForm } from "@src/components/AbilitiesEditForm"
 import { AbilityHistory } from "@src/components/AbilityHistory"
 import { CastSpellForm } from "@src/components/CastSpellForm"
 import { Character } from "@src/components/Character"
+import { CharacterImport } from "@src/components/CharacterImport"
 import { CharacterInfo } from "@src/components/CharacterInfo"
 import { CharacterNew } from "@src/components/CharacterNew"
 import { Characters } from "@src/components/Characters"
@@ -74,6 +75,7 @@ import { createCharacter } from "@src/services/createCharacter"
 import { type CreateItemResult, createItem } from "@src/services/createItem"
 import { createItemEffect } from "@src/services/createItemEffect"
 import { deleteItemEffect } from "@src/services/deleteItemEffect"
+import { importCharacter } from "@src/services/importCharacter"
 import { changeItemState } from "@src/services/itemState"
 import { learnSpell } from "@src/services/learnSpell"
 import { listCharacters } from "@src/services/listCharacters"
@@ -136,6 +138,25 @@ characterRoutes.post("/characters/new", async (c) => {
   }
 
   await setFlashMsg(c, "Character created successfully!", "success")
+  c.header("HX-Redirect", `/characters/${result.character.id}`)
+  return c.body(null, 204)
+})
+
+characterRoutes.get("/characters/import", (c) => {
+  return c.render(<CharacterImport />, { title: "Import Character" })
+})
+
+characterRoutes.post("/characters/import", async (c) => {
+  const user = c.var.user!
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const result = await importCharacter(getDb(c), user, body)
+
+  if (!result.complete) {
+    return c.html(<CharacterImport values={result.values} errors={result.errors} />)
+  }
+
+  await setFlashMsg(c, "Character imported successfully!", "success")
   c.header("HX-Redirect", `/characters/${result.character.id}`)
   return c.body(null, 204)
 })

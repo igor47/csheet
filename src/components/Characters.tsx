@@ -126,9 +126,14 @@ export const Characters = ({ characters, showArchived, archivedCount }: Characte
     <div class="container-fluid container-md mt-3">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>My Characters</h1>
-        <a href="/characters/new" class="btn btn-primary">
-          <i class="bi bi-plus-circle"></i> Create New Character
-        </a>
+        <div class="d-flex gap-2">
+          <a href="/characters/new" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create New
+          </a>
+          <a href="/characters/import" class="btn btn-outline-primary">
+            <i class="bi bi-upload"></i> Import
+          </a>
+        </div>
       </div>
 
       {archivedCount > 0 && (

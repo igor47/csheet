@@ -1003,8 +1003,25 @@ characterRoutes.post("/characters/:id/rest/short", async (c) => {
     return c.html(<ShortRestForm character={char} values={result.values} errors={result.errors} />)
   }
 
-  // Display success message
-  await setFlashMsg(c, result.summary.message, "success")
+  // Build summary message
+  const messageParts: string[] = []
+  if (result.summary.hitDiceSpent > 0) {
+    const diceDetails = result.summary.diceRolls
+      .map((roll) => `d${roll.die}: ${roll.roll}+${roll.modifier}`)
+      .join(", ")
+    messageParts.push(`Spent ${result.summary.hitDiceSpent} hit dice (${diceDetails})`)
+    messageParts.push(`Restored ${result.summary.hpRestored} HP`)
+  }
+  if (result.summary.arcaneRecoveryUsed) {
+    messageParts.push(`Arcane Recovery: ${result.summary.spellSlotsRestored} spell slots restored`)
+  }
+
+  const message =
+    messageParts.length > 0
+      ? `Short rest complete! ${messageParts.join(". ")}`
+      : "Short rest complete!"
+
+  await setFlashMsg(c, message, "success")
 
   // Return updated components and close modal
   const updatedChar = (await computeCharacter(getDb(c), characterId))!

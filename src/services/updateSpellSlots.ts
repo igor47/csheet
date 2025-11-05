@@ -1,8 +1,7 @@
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { SpellSlotsType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
-import type { ToolExecutorResult } from "@src/tools"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -23,7 +22,7 @@ export const UpdateSpellSlotsApiSchema = z.object({
 
 export type UpdateSpellSlotsApi = z.infer<typeof UpdateSpellSlotsApiSchema>
 
-export type UpdateSpellSlotsResult = ServiceResult<undefined>
+export type UpdateSpellSlotsResult = ServiceResult<object>
 
 /**
  * Update spell slots by creating appropriate records
@@ -151,7 +150,7 @@ export async function updateSpellSlots(
     })
   }
 
-  return { complete: true, result: undefined }
+  return { complete: true, result: {} }
 }
 
 // Vercel AI SDK tool definition
@@ -172,7 +171,7 @@ export async function executeUpdateSpellSlots(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-): Promise<ToolExecutorResult> {
+) {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
     action: parameters.action?.toString() || "",
@@ -181,9 +180,7 @@ export async function executeUpdateSpellSlots(
     is_check: isCheck ? "true" : "false",
   }
 
-  const result = await updateSpellSlots(db, char, data)
-
-  return serviceResultToToolResult(result)
+  return updateSpellSlots(db, char, data)
 }
 
 /**

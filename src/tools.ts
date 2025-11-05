@@ -1,5 +1,6 @@
 import type { Tool } from "ai"
 import type { SQL } from "bun"
+import type { ServiceResult } from "./lib/serviceResult"
 import {
   addLevelTool,
   addLevelToolName,
@@ -109,7 +110,7 @@ export type ToolExecutor = (
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-) => Promise<ToolExecutorResult>
+) => Promise<ServiceResult>
 
 /**
  * Function signature for tool approval message formatters

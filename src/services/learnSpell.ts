@@ -1,8 +1,7 @@
 import { create as createSpellLearned } from "@src/db/char_spells_learned"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
-import type { ToolExecutorResult } from "@src/tools"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -26,7 +25,7 @@ export const LearnSpellApiSchema = z.object({
 
 type LearnSpellData = Partial<z.infer<typeof LearnSpellApiSchema>>
 
-export type LearnSpellResult = ServiceResult<undefined>
+export type LearnSpellResult = ServiceResult<object>
 
 /**
  * Add a spell to a wizard's spellbook
@@ -102,7 +101,7 @@ export async function learnSpell(
     note: result.data.note,
   })
 
-  return { complete: true, result: undefined }
+  return { complete: true, result: {} }
 }
 
 // Vercel AI SDK tool definition
@@ -123,7 +122,7 @@ export async function executeLearnSpell(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-): Promise<ToolExecutorResult> {
+) {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
     spell_id: parameters.spell_id?.toString() || "",
@@ -131,9 +130,7 @@ export async function executeLearnSpell(
     is_check: isCheck ? "true" : "false",
   }
 
-  const result = await learnSpell(db, char, data)
-
-  return serviceResultToToolResult(result)
+  return learnSpell(db, char, data)
 }
 
 /**

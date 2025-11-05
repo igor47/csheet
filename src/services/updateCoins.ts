@@ -2,8 +2,7 @@ import { create as createCoinsDb } from "@src/db/char_coins"
 import { applyDeltasWithChange, toCopper } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
-import { type ServiceResult, serviceResultToToolResult } from "@src/lib/serviceResult"
-import type { ToolExecutorResult } from "@src/tools"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -170,7 +169,7 @@ export async function executeUpdateCoins(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-): Promise<ToolExecutorResult> {
+) {
   // Convert parameters to string format for service
   const data: Record<string, string> = {
     ...parameters,
@@ -178,9 +177,7 @@ export async function executeUpdateCoins(
     is_check: isCheck ? "true" : "false",
   }
 
-  const result = await updateCoins(db, char, data)
-
-  return serviceResultToToolResult(result)
+  return updateCoins(db, char, data)
 }
 
 /**

@@ -129,8 +129,8 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
         role: "system",
         content: msg.content,
         providerOptions: {
-          anthropic: { cacheControl: { type: "ephemeral" } }
-        }
+          anthropic: { cacheControl: { type: "ephemeral" } },
+        },
       })
     } else {
       messages.push({

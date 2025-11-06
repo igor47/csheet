@@ -30,23 +30,40 @@ describe("GET /characters", () => {
     })
 
     describe("with no characters", () => {
-      test("redirects to /characters/new", async () => {
+      test("returns status 200 and shows empty state", async () => {
         const response = await makeRequest(testCtx.app, "/characters", {
           user,
         })
 
-        expect(response.status).toBe(302)
-        expect(response.headers.get("Location")).toBe("/characters/new")
+        expect(response.status).toBe(200)
+
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        // Check for empty state message
+        expect(body).toContain("You haven't created any characters yet")
       })
 
-      test("sets a flash message", async () => {
+      test("displays both Create and Import buttons in empty state", async () => {
         const response = await makeRequest(testCtx.app, "/characters", {
           user,
         })
 
-        // Check for flash cookie (flash messages are stored in cookies)
-        const setCookie = response.headers.get("Set-Cookie")
-        expect(setCookie).toContain("flash")
+        const document = await parseHtml(response)
+
+        // Check for the empty state actions container
+        const actionsContainer = expectElement(document, "#empty-state-actions")
+        expect(actionsContainer).toBeDefined()
+
+        // Check for Create button
+        const createBtn = expectElement(document, "#create-character-btn")
+        expect(createBtn.textContent).toContain("Create New Character")
+        expect(createBtn.getAttribute("href")).toBe("/characters/new")
+
+        // Check for Import button
+        const importBtn = expectElement(document, "#import-character-btn")
+        expect(importBtn.textContent).toContain("Import Existing Character")
+        expect(importBtn.getAttribute("href")).toBe("/characters/import")
       })
     })
 
@@ -295,11 +312,16 @@ describe("GET /characters?show_archived=true", () => {
     })
 
     describe("with no characters", () => {
-      test("redirects to /characters/new", async () => {
+      test("returns status 200 and shows empty state", async () => {
         const response = await makeRequest(testCtx.app, "/characters?show_archived=true", { user })
 
-        expect(response.status).toBe(302)
-        expect(response.headers.get("Location")).toBe("/characters/new")
+        expect(response.status).toBe(200)
+
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        // Check for empty state message for archived view
+        expect(body).toContain("No characters to display")
       })
     })
 

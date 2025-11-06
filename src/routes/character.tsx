@@ -104,13 +104,6 @@ characterRoutes.get("/characters", async (c) => {
   const characters = await listCharacters(getDb(c), user.id, showArchived)
   const archivedCount = await countArchivedByUserId(getDb(c), user.id)
 
-  // Redirect to /new if there are no characters at all
-  const activeCharacters = characters.filter((char) => char.archived_at === null)
-  if (activeCharacters.length === 0 && archivedCount === 0) {
-    await setFlashMsg(c, "Create a character to get started!", "info")
-    return c.redirect("/characters/new")
-  }
-
   return c.render(
     <Characters
       characters={characters}

@@ -23,7 +23,6 @@ import {
   characterStatusTool,
   characterStatusToolName,
   executeCharacterStatus,
-  formatCharacterStatusApproval,
 } from "./services/characterStatus"
 import type { ComputedCharacter } from "./services/computeCharacter"
 import {
@@ -44,12 +43,7 @@ import {
   longRestTool,
   longRestToolName,
 } from "./services/longRest"
-import {
-  executeLookupSpell,
-  formatLookupSpellApproval,
-  lookupSpellTool,
-  lookupSpellToolName,
-} from "./services/lookupSpell"
+import { executeLookupSpell, lookupSpellTool, lookupSpellToolName } from "./services/lookupSpell"
 import {
   executeManageCharge,
   formatManageChargeApproval,
@@ -136,10 +130,12 @@ export interface ToolRegistration {
   tool: Tool
   /** Executor function that performs the tool action */
   executor: ToolExecutor
-  /** Formatter function that generates user-friendly approval messages */
-  formatApprovalMessage: ToolFormatter
-  /** Whether this tool requires user approval (defaults to true) */
-  requiresApproval?: boolean
+  /**
+   * Optional formatter function that generates user-friendly approval messages.
+   * If provided, the tool requires user approval before execution.
+   * If omitted (undefined), the tool is read-only and executes immediately.
+   */
+  formatApprovalMessage?: ToolFormatter
 }
 
 /**
@@ -190,8 +186,6 @@ export const TOOLS: ToolRegistration[] = [
     name: characterStatusToolName,
     tool: characterStatusTool,
     executor: executeCharacterStatus,
-    formatApprovalMessage: formatCharacterStatusApproval,
-    requiresApproval: false,
   },
 
   // Spellcasting
@@ -199,8 +193,6 @@ export const TOOLS: ToolRegistration[] = [
     name: lookupSpellToolName,
     tool: lookupSpellTool,
     executor: executeLookupSpell,
-    formatApprovalMessage: formatLookupSpellApproval,
-    requiresApproval: false,
   },
   {
     name: prepareSpellToolName,
@@ -275,7 +267,8 @@ export const TOOL_EXECUTORS: Record<string, ToolExecutor> = Object.fromEntries(
 /**
  * Map of tool names to approval message formatters
  * Used to display user-friendly tool call approval messages
+ * Only includes tools that have formatters (require approval)
  */
 export const TOOL_FORMATTERS: Record<string, ToolFormatter> = Object.fromEntries(
-  TOOLS.map((t) => [t.name, t.formatApprovalMessage])
+  TOOLS.filter((t) => t.formatApprovalMessage).map((t) => [t.name, t.formatApprovalMessage!])
 )

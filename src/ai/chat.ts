@@ -79,7 +79,7 @@ async function autoExecuteReadOnlyTools(
 
     // Check if this tool is read-only (doesn't require approval)
     const toolRegistration = TOOLS.find((t) => t.name === call.name)
-    if (toolRegistration && toolRegistration.requiresApproval !== false) {
+    if (toolRegistration?.formatApprovalMessage) {
       continue
     }
 
@@ -116,7 +116,7 @@ async function validateApprovalTools(
 
     // read-only tools will be executed automatically anyway
     const toolRegistration = TOOLS.find((t) => t.name === call.name)
-    if (toolRegistration && toolRegistration.requiresApproval === false) {
+    if (!toolRegistration?.formatApprovalMessage) {
       continue
     }
 

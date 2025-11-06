@@ -217,9 +217,13 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
 export const ToolCallApproval = ({ characterId, chatId, toolCall }: ToolCallApprovalProps) => {
   // Get formatter for this tool and generate user-friendly message
   const formatter = TOOL_FORMATTERS[toolCall.toolName]
-  const approvalMessage = formatter
-    ? formatter(toolCall.parameters)
-    : `${toolCall.toolName}: ${JSON.stringify(toolCall.parameters)}`
+
+  // If no formatter exists, this tool doesn't require approval (shouldn't show UI)
+  if (!formatter) {
+    return null
+  }
+
+  const approvalMessage = formatter(toolCall.parameters)
 
   return (
     <div class="row g-0 mb-2 chat-message" id={`tool-${toolCall.messageId}-${toolCall.toolCallId}`}>

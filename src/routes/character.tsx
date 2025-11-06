@@ -1010,8 +1010,9 @@ characterRoutes.post("/characters/:id/rest/short", async (c) => {
     return c.body(null, 204)
   }
 
-  const body = (await c.req.parseBody()) as Record<string, string>
-  const result = await shortRest(getDb(c), char, body)
+  const body = await c.req.parseBody({ all: true, dot: true })
+  // biome-ignore lint/suspicious/noExplicitAny: input might be strings, arrays, or objects
+  const result = await shortRest(getDb(c), char, body as Record<string, any>)
 
   if (!result.complete) {
     return c.html(<ShortRestForm character={char} values={result.values} errors={result.errors} />)

@@ -289,3 +289,77 @@ export function RequiredString() {
 export function OptionalString() {
   return z.preprocess(coerceString, z.string().nullable())
 }
+
+// =============================================================================
+// Array field helpers (for parseBody({ all: true, dot: true }))
+// =============================================================================
+
+/**
+ * Wraps a Zod array schema with form data coercion.
+ *
+ * Use this for fields with [] suffix that may have multiple values.
+ * Handles both single values and arrays from parseBody({ all: true }).
+ *
+ * @example Array of numbers
+ * ```typescript
+ * ArrayField(z.array(z.coerce.number().int().min(1).max(5)))
+ * // Form with name="arcane_slots[]":
+ * // Single: "3" → [3]
+ * // Multiple: ["1", "2", "3"] → [1, 2, 3]
+ * // Empty: undefined → []
+ * ```
+ *
+ * @example Array of strings
+ * ```typescript
+ * ArrayField(z.array(z.string()))
+ * // Form with name="tags[]":
+ * // Multiple: ["combat", "magic"] → ["combat", "magic"]
+ * ```
+ */
+export function ArrayField<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess((val) => {
+    if (val === undefined || val === null || val === "") {
+      return []
+    }
+    return Array.isArray(val) ? val : [val]
+  }, schema)
+}
+
+/**
+ * Creates a schema for object arrays using dot notation.
+ *
+ * Use this for fields like "dice.0.die", "dice.0.roll", "dice.1.die", etc.
+ * Requires parseBody({ dot: true }) to convert dot notation to nested objects.
+ *
+ * The schema handles partial objects and filters out incomplete entries.
+ *
+ * @example Hit dice with die value and roll
+ * ```typescript
+ * ObjectArrayField(z.object({
+ *   die: z.coerce.number().refine(v => [6, 8, 10, 12].includes(v)),
+ *   roll: z.coerce.number().int().positive()
+ * }))
+ * // Form with names: "dice.0.die", "dice.0.roll", "dice.1.die", "dice.1.roll"
+ * // Input: { dice: [{ die: "8", roll: "5" }, { die: "10", roll: "7" }] }
+ * // Output: [{ die: 8, roll: 5 }, { die: 10, roll: 7 }]
+ * ```
+ */
+export function ObjectArrayField<T extends z.ZodObject<z.ZodRawShape>>(itemSchema: T) {
+  return z.preprocess((val) => {
+    let arr: unknown[] = []
+    if (Array.isArray(val)) {
+      arr = val
+    } else if (typeof val === "object" && val !== null) {
+      // Convert object with numeric keys to array
+      for (const key of Object.keys(val)) {
+        const index = Number(key)
+        if (!Number.isNaN(index)) {
+          arr[index] = (val as Record<string, unknown>)[key]
+        }
+      }
+    }
+
+    // Filter out null/undefined entries and validate each item
+    return arr.filter((item) => item !== null && item !== undefined)
+  }, z.array(itemSchema))
+}

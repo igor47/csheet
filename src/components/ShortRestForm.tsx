@@ -16,27 +16,47 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
   const maxArcaneRecoveryLevel = wizardClass ? Math.min(5, Math.ceil(wizardClass.level / 2)) : 0
 
   // Calculate available spell slot levels for recovery (levels with used slots)
-  const availableSlotLevelsForRecovery: number[] = []
-  if (character.spellSlots && character.availableSpellSlots) {
-    for (let level = 1; level <= maxArcaneRecoveryLevel; level++) {
-      const total = character.spellSlots.filter((s) => s === level).length
-      const available = character.availableSpellSlots.filter((s) => s === level).length
-      if (available < total) {
-        availableSlotLevelsForRecovery.push(level)
-      }
+  const availSpellSlots = character.availableSpellSlots
+  const usedSpellSlots = [...character.spellSlots]
+  for (const slot of availSpellSlots) {
+    const index = usedSpellSlots.indexOf(slot)
+    if (index !== -1) {
+      usedSpellSlots.splice(index, 1)
     }
+  }
+
+  // Parse selected arcane slots from values (array field)
+  const selectedArcaneSlots: number[] = []
+  const arcaneSlotsValue = values["arcane_slots[]"]
+  if (arcaneSlotsValue && Array.isArray(arcaneSlotsValue)) {
+    selectedArcaneSlots.push(...arcaneSlotsValue.map((v) => Number.parseInt(v, 10)))
   }
 
   // Calculate currently selected slot levels total
-  let selectedSlotLevelsTotal = 0
-  for (let level = 1; level <= maxArcaneRecoveryLevel; level++) {
-    if (values[`arcane_slot_${level}`] === "true") {
-      selectedSlotLevelsTotal += level
-    }
-  }
+  const selectedSlotLevelsTotal = selectedArcaneSlots.reduce((sum, level) => sum + level, 0)
 
   // Calculate remaining capacity for Arcane Recovery
   const maxArcaneRecoveryLevelRemaining = maxArcaneRecoveryLevel - selectedSlotLevelsTotal
+
+  // Parse selected dice from values (object array field parsed from dot notation)
+  const selectedDice: Array<{ die: number; roll: string; use: boolean }> = []
+  if (values.dice && typeof values.dice === "object") {
+    for (const d of Object.values(values.dice) as Record<string, string>[]) {
+      selectedDice.push({
+        die: Number.parseInt(d.die || "", 10),
+        roll: String(d.roll || ""),
+        use: d.use === "true",
+      })
+    }
+  } else {
+    for (const die of character.availableHitDice) {
+      selectedDice.push({
+        die: die,
+        roll: "",
+        use: false,
+      })
+    }
+  }
 
   return (
     <ModalContent title="Take a Short Rest">
@@ -65,48 +85,48 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
 
           {character.availableHitDice.length > 0 ? (
             <div class="mb-3">
-              {character.availableHitDice.map((die, index) => {
-                const isChecked = values[`spend_die_${index}`] === String(die)
-                const dieError = errors[`spend_die_${index}`]
-                const rollError = errors[`roll_die_${index}`]
+              {selectedDice.map((die, index) => {
+                const dieError = errors[`dice.${index}.die`]
+                const rollError = errors[`dice.${index}.roll`]
+
                 return (
                   <div class="mb-2">
                     <div class="d-flex align-items-center gap-2">
-                      <div class="form-check" style="min-width: 60px">
+                      <div class="form-check" style="min-width: 80px">
                         <input
                           class="form-check-input"
                           type="checkbox"
-                          name={`spend_die_${index}`}
-                          value={die}
-                          id={`hitdie-${index}`}
-                          checked={isChecked}
+                          name={`dice.${index}.use`}
+                          value="true"
+                          id={`dice-use-${index}`}
+                          checked={die.use}
                         />
-                        <label class="form-check-label" for={`hitdie-${index}`}>
-                          d{die}
+                        <label class="form-check-label" for={`dice-use-${index}`}>
+                          d{die.die}
                         </label>
+                        <input type="hidden" name={`dice.${index}.die`} value={die.die} />
                       </div>
-                      {isChecked && (
-                        <div class="input-group input-group-sm" style="max-width: 120px">
-                          <span class="input-group-text">Roll:</span>
-                          <input
-                            type="number"
-                            class="form-control"
-                            name={`roll_die_${index}`}
-                            id={`roll-${index}`}
-                            min="1"
-                            max={die}
-                            value={values[`roll_die_${index}`] || ""}
-                            placeholder="roll"
-                            required
-                          />
-                        </div>
-                      )}
+                      <div class="input-group input-group-sm" style="max-width: 140px">
+                        <span class="input-group-text">Roll:</span>
+                        <input
+                          type="number"
+                          class={`form-control ${rollError ? "is-invalid" : ""}`}
+                          name={`dice.${index}.roll`}
+                          id={`dice-roll-${index}`}
+                          min="1"
+                          max={die.die}
+                          value={die.roll}
+                          placeholder="roll"
+                          disabled={!die.use}
+                        />
+                      </div>
                     </div>
                     {dieError && <div class="invalid-feedback d-block">{dieError}</div>}
                     {rollError && <div class="invalid-feedback d-block">{rollError}</div>}
                   </div>
                 )
               })}
+
               <small class="text-muted">
                 Available: {character.availableHitDice.length} / {character.hitDice.length} hit dice
               </small>
@@ -119,7 +139,7 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
           )}
 
           {/* Arcane Recovery Section (Wizards only with used spell slots) */}
-          {hasArcaneRecovery && availableSlotLevelsForRecovery.length > 0 && (
+          {hasArcaneRecovery && usedSpellSlots.length > 0 && (
             <>
               <hr class="my-3" />
               <h6 class="fw-bold mb-2">Arcane Recovery</h6>
@@ -146,13 +166,11 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
               {values.arcane_recovery === "true" && (
                 <div id="arcane-recovery-slots" class="mb-3">
                   <div class="form-label small">Select spell slot levels to recover:</div>
-                  {Array.from({ length: maxArcaneRecoveryLevel }, (_, i) => i + 1).map((level) => {
-                    // Only render if this level has used slots
-                    if (!availableSlotLevelsForRecovery.includes(level)) {
-                      return null
+                  {usedSpellSlots.map((level) => {
+                    const isChecked = selectedArcaneSlots.includes(level)
+                    if (isChecked) {
+                      selectedArcaneSlots.splice(selectedArcaneSlots.indexOf(level), 1)
                     }
-
-                    const isChecked = values[`arcane_slot_${level}`] === "true"
                     const isDisabled = !isChecked && level > maxArcaneRecoveryLevelRemaining
 
                     return (
@@ -160,8 +178,8 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
                         <input
                           class="form-check-input"
                           type="checkbox"
-                          name={`arcane_slot_${level}`}
-                          value="true"
+                          name="arcane_slots[]"
+                          value={level}
                           id={`arcane-slot-${level}`}
                           disabled={isDisabled}
                           checked={isChecked}
@@ -170,7 +188,7 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
                           class={`form-check-label ${isDisabled ? "text-muted" : ""}`}
                           for={`arcane-slot-${level}`}
                         >
-                          Level {level} slots
+                          Level {level} slot
                         </label>
                       </div>
                     )
@@ -178,8 +196,8 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
                   <small class="text-muted d-block mt-2">
                     Selected: {selectedSlotLevelsTotal} / {maxArcaneRecoveryLevel} slot levels
                   </small>
-                  {errors.arcane_slots && (
-                    <div class="invalid-feedback d-block">{errors.arcane_slots}</div>
+                  {errors["arcane_slots[]"] && (
+                    <div class="invalid-feedback d-block">{errors["arcane_slots[]"]}</div>
                   )}
                 </div>
               )}

@@ -2,7 +2,13 @@ import { beginOrSavepoint } from "@src/db"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import { Checkbox, NumericEnumField, OptionalNumber, OptionalString } from "@src/lib/formSchemas"
+import {
+  ArrayField,
+  Checkbox,
+  NumberField,
+  ObjectArrayField,
+  OptionalString,
+} from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
 import type { SQL } from "bun"
@@ -10,29 +16,28 @@ import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 import { updateHitDice } from "./updateHitDice"
 
-// Schema building blocks
-const DieValueField = () =>
-  NumericEnumField(z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]).nullable())
-const RollValueField = () => OptionalNumber()
-const ArcaneSlotField = () => Checkbox().optional().default(false)
-
 export const ShortRestApiSchema = z.object({
   note: OptionalString().describe("Optional note about the circumstances of the short rest"),
   is_check: Checkbox().optional().default(false),
 
-  // Hit dice spending (support up to 6 dice per short rest)
-  spend_die_0: DieValueField().describe("Die value for first hit die to spend (6, 8, 10, or 12)"),
-  roll_die_0: RollValueField().describe("Rolled value for first hit die (1 to die value)"),
-  spend_die_1: DieValueField().describe("Die value for second hit die to spend (6, 8, 10, or 12)"),
-  roll_die_1: RollValueField().describe("Rolled value for second hit die"),
-  spend_die_2: DieValueField().describe("Die value for third hit die to spend (6, 8, 10, or 12)"),
-  roll_die_2: RollValueField().describe("Rolled value for third hit die"),
-  spend_die_3: DieValueField().describe("Die value for fourth hit die to spend (6, 8, 10, or 12)"),
-  roll_die_3: RollValueField().describe("Rolled value for fourth hit die"),
-  spend_die_4: DieValueField().describe("Die value for fifth hit die to spend (6, 8, 10, or 12)"),
-  roll_die_4: RollValueField().describe("Rolled value for fifth hit die"),
-  spend_die_5: DieValueField().describe("Die value for sixth hit die to spend (6, 8, 10, or 12)"),
-  roll_die_5: RollValueField().describe("Rolled value for sixth hit die"),
+  // Hit dice spending - array of {die, roll} objects
+  dice: ObjectArrayField(
+    z.object({
+      die: NumberField(
+        z.number().refine((v) => [6, 8, 10, 12].includes(v), {
+          message: "Die value must be 6, 8, 10, or 12",
+        })
+      ).describe("The type of hit die (6, 8, 10, or 12)"),
+      roll: NumberField(z.number().int().min(1).max(12).nullable()).describe(
+        "The HP rolled when spending this hit die"
+      ),
+    })
+  )
+    .optional()
+    .default([])
+    .describe(
+      "Array of hit dice to spend. Each die has a value (6/8/10/12) and roll (1 to die value)"
+    ),
 
   // Arcane Recovery (Wizards only)
   arcane_recovery: Checkbox()
@@ -41,11 +46,10 @@ export const ShortRestApiSchema = z.object({
     .describe(
       "Whether to use Arcane Recovery (Wizards only). Allows recovering spell slots with combined levels up to half wizard level (rounded up), maximum 5th level slots"
     ),
-  arcane_slot_1: ArcaneSlotField().describe("Restore a 1st level spell slot via Arcane Recovery"),
-  arcane_slot_2: ArcaneSlotField().describe("Restore a 2nd level spell slot via Arcane Recovery"),
-  arcane_slot_3: ArcaneSlotField().describe("Restore a 3rd level spell slot via Arcane Recovery"),
-  arcane_slot_4: ArcaneSlotField().describe("Restore a 4th level spell slot via Arcane Recovery"),
-  arcane_slot_5: ArcaneSlotField().describe("Restore a 5th level spell slot via Arcane Recovery"),
+  "arcane_slots[]": ArrayField(z.array(NumberField(z.number().int().min(1).max(5))))
+    .optional()
+    .default([])
+    .describe("Array of spell slot levels (1-5) to restore via Arcane Recovery"),
 })
 
 export type ShortRestApi = z.infer<typeof ShortRestApiSchema>
@@ -69,7 +73,8 @@ export type ShortRestResult = ServiceResult<ShortRestSummary>
 export async function shortRest(
   db: SQL,
   char: ComputedCharacter,
-  data: Record<string, string>
+  // biome-ignore lint/suspicious/noExplicitAny: Form data can include arrays and objects from parseBody
+  data: Record<string, any>
 ): Promise<ShortRestResult> {
   // Stage 1: Partial Zod validation
   const checkD = ShortRestApiSchema.partial().safeParse(data)
@@ -82,21 +87,26 @@ export async function shortRest(
   // Stage 2: Custom validation
   const errors: Record<string, string> = {}
 
-  // Parse selected hit dice with their rolls
+  // Parse and validate hit dice
   const selectedDice: Array<{ index: number; die: HitDieType; roll?: number }> = []
   const remainingHitDice = [...char.availableHitDice]
 
-  // Iterate over all possible form field indices (0-5)
-  for (let i = 0; i < 6; i++) {
-    const dieValue = values[`spend_die_${i}` as keyof typeof values]
-    if (!dieValue) continue
+  const dice = values.dice || []
+  for (let i = 0; i < dice.length; i++) {
+    const diceEntry = dice[i]
+    if (!diceEntry) continue
+    const dieNum = diceEntry.die as HitDieType
+    const roll = diceEntry.roll
 
-    const dieNum = dieValue as HitDieType
+    // Skip dice with no roll (empty/null) - these are UI-only, not being spent
+    if (roll === null || roll === undefined) {
+      continue
+    }
 
     // Check if this die is available in remainingHitDice
     const availableIndex = remainingHitDice.indexOf(dieNum)
     if (availableIndex === -1) {
-      errors[`spend_die_${i}`] = `You don't have a d${dieNum} hit die available`
+      errors[`dice.${i}.die`] = `You don't have a d${dieNum} hit die available`
       continue
     }
 
@@ -106,16 +116,9 @@ export async function shortRest(
     // Find the original index in char.availableHitDice for tracking
     const originalIndex = char.availableHitDice.indexOf(dieNum)
 
-    const roll = values[`roll_die_${i}` as keyof typeof values] as number | undefined
-
-    // Validate roll value if provided
-    if (roll !== undefined) {
-      if (roll < 1 || roll > dieNum) {
-        errors[`roll_die_${i}`] = `Roll must be between 1 and ${dieNum}`
-      }
-    } else if (!values.is_check) {
-      // Require roll value for non-check submissions
-      errors[`roll_die_${i}`] = "Roll value is required"
+    // Validate roll value (we know it's not null/undefined at this point)
+    if (roll < 1 || roll > dieNum) {
+      errors[`dice.${i}.roll`] = `Roll must be between 1 and ${dieNum}`
     }
 
     selectedDice.push({ index: originalIndex, die: dieNum, roll })
@@ -128,31 +131,34 @@ export async function shortRest(
       errors.arcane_recovery = "Only Wizards can use Arcane Recovery"
     } else {
       const maxArcaneRecoveryLevel = Math.min(5, Math.ceil(wizardClass.level / 2))
-      const selectedSlots: { level: number; count: number }[] = []
+      const selectedSlotLevels = values["arcane_slots[]"] || []
 
-      for (let level = 1; level <= 5; level++) {
-        if (values[`arcane_slot_${level}` as keyof typeof values]) {
-          // Calculate how many slots of this level to restore
-          // Maximum is based on remaining budget divided by slot level
-          const maxCount = Math.floor(maxArcaneRecoveryLevel / level)
-          selectedSlots.push({ level, count: maxCount })
-        }
-      }
-
-      // Calculate total slot levels (sum of level * count for each selected level)
-      const totalSlotLevels = selectedSlots.reduce((sum, slot) => sum + slot.level * slot.count, 0)
+      // Calculate total slot levels
+      const totalSlotLevels = selectedSlotLevels.reduce(
+        (sum: number, level: number) => sum + level,
+        0
+      )
       if (totalSlotLevels > maxArcaneRecoveryLevel) {
-        errors.arcane_slots = `Total slot levels (${totalSlotLevels}) exceeds maximum (${maxArcaneRecoveryLevel})`
+        errors["arcane_slots[]"] =
+          `Total slot levels (${totalSlotLevels}) exceeds maximum (${maxArcaneRecoveryLevel})`
       }
 
       // Validate character has enough used slots to restore
       if (char.spellSlots && char.availableSpellSlots) {
-        for (const slot of selectedSlots) {
-          const total = char.spellSlots.filter((s) => s === slot.level).length
-          const available = char.availableSpellSlots.filter((s) => s === slot.level).length
+        // Count how many of each level are being restored
+        const slotCounts = new Map<number, number>()
+        for (const level of selectedSlotLevels) {
+          slotCounts.set(level, (slotCounts.get(level) || 0) + 1)
+        }
+
+        // Check if we have enough used slots
+        for (const [level, count] of slotCounts) {
+          const total = char.spellSlots.filter((s) => s === level).length
+          const available = char.availableSpellSlots.filter((s) => s === level).length
           const used = total - available
-          if (used < slot.count) {
-            errors.arcane_slots = `You only have ${used} used level ${slot.level} spell slot(s), but trying to restore ${slot.count}`
+          if (used < count) {
+            errors["arcane_slots[]"] =
+              `You only have ${used} used level ${level} spell slot(s), but trying to restore ${count}`
             break
           }
         }
@@ -209,24 +215,14 @@ export async function shortRest(
     if (result.data.arcane_recovery) {
       summary.arcaneRecoveryUsed = true
 
-      const wizardClass = char.classes.find((c) => c.class === "wizard")!
-      const maxArcaneRecoveryLevel = Math.min(5, Math.ceil(wizardClass.level / 2))
-
-      for (let level = 1; level <= 5; level++) {
-        if (result.data[`arcane_slot_${level}` as keyof typeof result.data]) {
-          // Restore multiple slots of this level based on budget
-          const maxCount = Math.floor(maxArcaneRecoveryLevel / level)
-
-          for (let i = 0; i < maxCount; i++) {
-            await createSpellSlotDb(tx, {
-              character_id: currentChar.id,
-              slot_level: level,
-              action: "restore",
-              note: `${note} - Arcane Recovery`,
-            })
-            summary.spellSlotsRestored++
-          }
-        }
+      for (const level of result.data["arcane_slots[]"]) {
+        await createSpellSlotDb(tx, {
+          character_id: currentChar.id,
+          slot_level: level,
+          action: "restore",
+          note: `${note} - Arcane Recovery`,
+        })
+        summary.spellSlotsRestored++
       }
     }
 
@@ -241,7 +237,9 @@ export const shortRestToolName = "short_rest" as const
 export const shortRestTool = tool({
   name: shortRestToolName,
   description: `Take a short rest (1 hour of downtime). You can spend hit dice to recover HP. Each die recovers HP equal to the roll + Constitution modifier. Wizards can use Arcane Recovery to restore spell slots.`,
-  inputSchema: ShortRestApiSchema.omit({ is_check: true }),
+  inputSchema: ShortRestApiSchema.omit({ is_check: true, "arcane_slots[]": true }).extend({
+    arcane_slots: ShortRestApiSchema.shape["arcane_slots[]"],
+  })
 })
 
 /**
@@ -255,29 +253,20 @@ export async function executeShortRest(
   parameters: Record<string, any>,
   isCheck?: boolean
 ) {
-  const data: Record<string, string> = {
+  const data: Parameters<typeof shortRest>[2] = {
     note: parameters.note?.toString() || "",
     is_check: isCheck ? "true" : "false",
-    // Hit dice spending (AI can specify these for automated rests)
-    spend_die_0: parameters.spend_die_0?.toString() || "",
-    roll_die_0: parameters.roll_die_0?.toString() || "",
-    spend_die_1: parameters.spend_die_1?.toString() || "",
-    roll_die_1: parameters.roll_die_1?.toString() || "",
-    spend_die_2: parameters.spend_die_2?.toString() || "",
-    roll_die_2: parameters.roll_die_2?.toString() || "",
-    spend_die_3: parameters.spend_die_3?.toString() || "",
-    roll_die_3: parameters.roll_die_3?.toString() || "",
-    spend_die_4: parameters.spend_die_4?.toString() || "",
-    roll_die_4: parameters.roll_die_4?.toString() || "",
-    spend_die_5: parameters.spend_die_5?.toString() || "",
-    roll_die_5: parameters.roll_die_5?.toString() || "",
-    // Arcane Recovery
     arcane_recovery: parameters.arcane_recovery?.toString() || "false",
-    arcane_slot_1: parameters.arcane_slot_1?.toString() || "false",
-    arcane_slot_2: parameters.arcane_slot_2?.toString() || "false",
-    arcane_slot_3: parameters.arcane_slot_3?.toString() || "false",
-    arcane_slot_4: parameters.arcane_slot_4?.toString() || "false",
-    arcane_slot_5: parameters.arcane_slot_5?.toString() || "false",
+  }
+
+  // Convert dice array if provided
+  if (parameters.dice && Array.isArray(parameters.dice)) {
+    data.dice = parameters.dice
+  }
+
+  // Convert arcane_slots array if provided
+  if (parameters.arcane_slots && Array.isArray(parameters.arcane_slots)) {
+    data["arcane_slots[]"] = parameters.arcane_slots
   }
 
   return shortRest(db, char, data)

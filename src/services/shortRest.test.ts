@@ -33,14 +33,13 @@ describe("shortRest", () => {
 
         // Character has d10 hit dice, try to spend a d8
         const result = await shortRest(testCtx.db, char, {
-          spend_die_0: "8",
-          roll_die_0: "5",
+          dice: [{ die: "8", roll: "5" }],
           is_check: "false",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.spend_die_0).toBe("You don't have a d8 hit die available")
+          expect(result.errors["dice.0.die"]).toBe("You don't have a d8 hit die available")
         }
       })
     })
@@ -51,17 +50,16 @@ describe("shortRest", () => {
         if (!char) throw new Error("Character not found")
 
         // Character has 3 d10 hit dice
-        // Form field index doesn't matter - only die availability matters
+        // Array index doesn't matter - only die availability matters
         const result = await shortRest(testCtx.db, char, {
-          spend_die_5: "10",
-          roll_die_5: "7",
+          dice: [{ die: "10", roll: "7" }],
           is_check: "true", // Use check mode to avoid HP updates
         })
 
         // Should succeed because character has d10s available
         expect(result.complete).toBe(false) // Check mode always returns incomplete
         if (!result.complete) {
-          expect(result.errors.spend_die_5).toBeUndefined()
+          expect(result.errors["dice.0.die"]).toBeUndefined()
         }
       })
     })
@@ -71,22 +69,20 @@ describe("shortRest", () => {
         const char = await computeCharacter(testCtx.db, character.id)
         if (!char) throw new Error("Character not found")
 
-        // Try to spend two d10s when we have at least one
+        // Try to spend 4 d10s when we only have 3 available
         const result = await shortRest(testCtx.db, char, {
-          spend_die_0: "10",
-          roll_die_0: "7",
-          spend_die_1: "10",
-          roll_die_1: "8",
-          spend_die_2: "10",
-          roll_die_2: "6",
-          spend_die_3: "10", // This should fail - only 3 dice available
-          roll_die_3: "5",
+          dice: [
+            { die: "10", roll: "7" },
+            { die: "10", roll: "8" },
+            { die: "10", roll: "6" },
+            { die: "10", roll: "5" }, // This should fail - only 3 dice available
+          ],
           is_check: "false",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.spend_die_3).toBe("You don't have a d10 hit die available")
+          expect(result.errors["dice.3.die"]).toBe("You don't have a d10 hit die available")
         }
       })
     })
@@ -115,18 +111,17 @@ describe("shortRest", () => {
 
         // Try to spend 3 dice
         const result = await shortRest(testCtx.db, char, {
-          spend_die_0: "10",
-          roll_die_0: "7",
-          spend_die_1: "10",
-          roll_die_1: "8",
-          spend_die_2: "10", // This should fail
-          roll_die_2: "6",
+          dice: [
+            { die: "10", roll: "7" },
+            { die: "10", roll: "8" },
+            { die: "10", roll: "6" }, // This should fail
+          ],
           is_check: "false",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.spend_die_2).toBe("You don't have a d10 hit die available")
+          expect(result.errors["dice.2.die"]).toBe("You don't have a d10 hit die available")
         }
       })
     })
@@ -148,10 +143,10 @@ describe("shortRest", () => {
         if (!charWithLowHP) throw new Error("Character not found")
 
         const result = await shortRest(testCtx.db, charWithLowHP, {
-          spend_die_0: "10",
-          roll_die_0: "8",
-          spend_die_1: "10",
-          roll_die_1: "7",
+          dice: [
+            { die: "10", roll: "8" },
+            { die: "10", roll: "7" },
+          ],
           is_check: "false",
         })
 
@@ -180,14 +175,14 @@ describe("shortRest", () => {
         if (!char) throw new Error("Character not found")
 
         const result = await shortRest(testCtx.db, char, {
-          spend_die_0: "10",
-          roll_die_0: "0",
+          dice: [{ die: "10", roll: "0" }],
           is_check: "false",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.roll_die_0).toBe("Roll must be between 1 and 10")
+          // Zod validation catches this before manual validation
+          expect(result.errors["dice.0.roll"]).toBe("Too small: expected number to be >=1")
         }
       })
 
@@ -196,44 +191,50 @@ describe("shortRest", () => {
         if (!char) throw new Error("Character not found")
 
         const result = await shortRest(testCtx.db, char, {
-          spend_die_0: "10",
-          roll_die_0: "11",
+          dice: [{ die: "10", roll: "11" }],
           is_check: "false",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.roll_die_0).toBe("Roll must be between 1 and 10")
+          expect(result.errors["dice.0.roll"]).toBe("Roll must be between 1 and 10")
         }
       })
 
-      test("requires roll value for non-check submissions", async () => {
+      test("ignores dice with empty roll value", async () => {
         const char = await computeCharacter(testCtx.db, character.id)
         if (!char) throw new Error("Character not found")
 
-        const result = await shortRest(testCtx.db, char, {
-          spend_die_0: "10",
+        // Damage the character to reduce HP
+        await updateHitPoints(testCtx.db, char, {
+          action: "lose",
+          amount: "10",
+          note: "Test damage",
           is_check: "false",
         })
 
-        expect(result.complete).toBe(false)
-        if (!result.complete) {
-          expect(result.errors.roll_die_0).toBe("Roll value is required")
-        }
-      })
+        const charWithLowHP = await computeCharacter(testCtx.db, character.id)
+        if (!charWithLowHP) throw new Error("Character not found")
 
-      test("allows missing roll value for check submissions", async () => {
-        const char = await computeCharacter(testCtx.db, character.id)
-        if (!char) throw new Error("Character not found")
-
-        const result = await shortRest(testCtx.db, char, {
-          spend_die_0: "10",
-          is_check: "true",
+        // Submit with one die with roll and one without
+        const result = await shortRest(testCtx.db, charWithLowHP, {
+          dice: [
+            { die: "10", roll: "8" }, // This one should be spent
+            { die: "10", roll: "" }, // This one should be ignored
+          ],
+          is_check: "false",
         })
 
-        expect(result.complete).toBe(false)
-        if (!result.complete) {
-          expect(result.errors.roll_die_0).toBeUndefined()
+        // Should succeed, only spending the first die
+        expect(result.complete).toBe(true)
+        if (result.complete) {
+          expect(result.result.hitDiceSpent).toBe(1)
+          expect(result.result.diceRolls).toHaveLength(1)
+          expect(result.result.diceRolls[0]).toEqual({
+            die: 10,
+            roll: 8,
+            modifier: charWithLowHP.abilityScores.constitution.modifier,
+          })
         }
       })
     })
@@ -263,7 +264,7 @@ describe("shortRest", () => {
 
         const result = await shortRest(testCtx.db, char, {
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1"],
           is_check: "false",
         })
 
@@ -277,7 +278,7 @@ describe("shortRest", () => {
         const char = await computeCharacter(testCtx.db, wizardCharacter.id)
         if (!char) throw new Error("Character not found")
 
-        // Use 2 spell slots to have enough to restore (level 4 wizard will restore 2 slots)
+        // Use 2 spell slots to have enough to restore
         for (let i = 0; i < 2; i++) {
           await createSpellSlot(testCtx.db, {
             character_id: char.id,
@@ -292,14 +293,14 @@ describe("shortRest", () => {
 
         const result = await shortRest(testCtx.db, charWithUsedSlots, {
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1", "1"],
           is_check: "true",
         })
 
         // Check mode should pass validation
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.arcane_slots).toBeUndefined()
+          expect(result.errors["arcane_slots[]"]).toBeUndefined()
         }
       })
 
@@ -310,13 +311,13 @@ describe("shortRest", () => {
         // Try to restore slots without using any
         const result = await shortRest(testCtx.db, char, {
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1"],
           is_check: "false",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.arcane_slots).toContain("only have 0 used")
+          expect(result.errors["arcane_slots[]"]).toContain("only have 0 used")
         }
       })
 
@@ -338,17 +339,17 @@ describe("shortRest", () => {
         if (!charWithUsedSlots) throw new Error("Character not found")
 
         // Level 4 wizard budget = 2
-        // Restoring level-1 slots will restore 2 slots (2 * 1 = 2 budget)
+        // Restoring 2 level-1 slots (2 * 1 = 2 budget)
         // This should pass validation
         const result = await shortRest(testCtx.db, charWithUsedSlots, {
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1", "1"],
           is_check: "true",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.arcane_slots).toBeUndefined()
+          expect(result.errors["arcane_slots[]"]).toBeUndefined()
         }
       })
 
@@ -367,16 +368,16 @@ describe("shortRest", () => {
         const charWithUsedSlot = await computeCharacter(testCtx.db, wizardCharacter.id)
         if (!charWithUsedSlot) throw new Error("Character not found")
 
-        // Try to restore level-1 slots (which would restore 2 slots, but only 1 is used)
+        // Try to restore 2 level-1 slots (but only 1 is used)
         const result = await shortRest(testCtx.db, charWithUsedSlot, {
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1", "1"],
           is_check: "false",
         })
 
         expect(result.complete).toBe(false)
         if (!result.complete) {
-          expect(result.errors.arcane_slots).toContain("only have 1 used level 1 spell slot")
+          expect(result.errors["arcane_slots[]"]).toContain("only have 1 used level 1 spell slot")
         }
       })
     })
@@ -403,7 +404,7 @@ describe("shortRest", () => {
 
         const result = await shortRest(testCtx.db, charWithUsedSlots, {
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1", "1"],
           is_check: "false",
         })
 
@@ -440,7 +441,7 @@ describe("shortRest", () => {
 
         const result = await shortRest(testCtx.db, charWithUsedSlot, {
           arcane_recovery: "true",
-          arcane_slot_2: "true",
+          "arcane_slots[]": ["2"],
           is_check: "false",
         })
 
@@ -484,7 +485,7 @@ describe("shortRest", () => {
 
         const result = await shortRest(testCtx.db, charWithUsedSlots, {
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1", "1", "1"],
           is_check: "false",
         })
 
@@ -529,10 +530,9 @@ describe("shortRest", () => {
         if (!charDamagedAndUsedSlots) throw new Error("Character not found")
 
         const result = await shortRest(testCtx.db, charDamagedAndUsedSlots, {
-          spend_die_0: "6",
-          roll_die_0: "4",
+          dice: [{ die: "6", roll: "4" }],
           arcane_recovery: "true",
-          arcane_slot_1: "true",
+          "arcane_slots[]": ["1", "1"],
           is_check: "false",
         })
 

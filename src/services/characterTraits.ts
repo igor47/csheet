@@ -28,10 +28,10 @@ export async function executeCharacterTraits(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   _parameters: Record<string, any>,
   _isCheck?: boolean
-): Promise<ServiceResult<{traits: CharTrait[]}>> {
+): Promise<ServiceResult<{ traits: CharTrait[] }>> {
   const traits = char.traits
   return {
     complete: true,
-    result: {traits}
+    result: { traits },
   }
 }

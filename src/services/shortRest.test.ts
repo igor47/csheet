@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import { create as createSpellSlot } from "@src/db/char_spell_slots"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import { useTestApp } from "@src/test/app"
@@ -233,6 +234,314 @@ describe("shortRest", () => {
         expect(result.complete).toBe(false)
         if (!result.complete) {
           expect(result.errors.roll_die_0).toBeUndefined()
+        }
+      })
+    })
+  })
+
+  describe("arcane recovery", () => {
+    let user: User
+    let wizardCharacter: Character
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      // Create a level 4 wizard (budget = ceil(4/2) = 2)
+      wizardCharacter = await characterFactory.create(
+        { user_id: user.id, class: "wizard", level: 4 },
+        testCtx.db
+      )
+    })
+
+    describe("validation", () => {
+      test("non-wizard cannot use Arcane Recovery", async () => {
+        const fighter = await characterFactory.create(
+          { user_id: user.id, class: "fighter", level: 4 },
+          testCtx.db
+        )
+        const char = await computeCharacter(testCtx.db, fighter.id)
+        if (!char) throw new Error("Character not found")
+
+        const result = await shortRest(testCtx.db, char, {
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "false",
+        })
+
+        expect(result.complete).toBe(false)
+        if (!result.complete) {
+          expect(result.errors.arcane_recovery).toBe("Only Wizards can use Arcane Recovery")
+        }
+      })
+
+      test("level 4 wizard can restore level-1 slots", async () => {
+        const char = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!char) throw new Error("Character not found")
+
+        // Use 2 spell slots to have enough to restore (level 4 wizard will restore 2 slots)
+        for (let i = 0; i < 2; i++) {
+          await createSpellSlot(testCtx.db, {
+            character_id: char.id,
+            slot_level: 1,
+            action: "use",
+            note: "Cast spell",
+          })
+        }
+
+        const charWithUsedSlots = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charWithUsedSlots) throw new Error("Character not found")
+
+        const result = await shortRest(testCtx.db, charWithUsedSlots, {
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "true",
+        })
+
+        // Check mode should pass validation
+        expect(result.complete).toBe(false)
+        if (!result.complete) {
+          expect(result.errors.arcane_slots).toBeUndefined()
+        }
+      })
+
+      test("cannot restore slots that aren't used", async () => {
+        const char = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!char) throw new Error("Character not found")
+
+        // Try to restore slots without using any
+        const result = await shortRest(testCtx.db, char, {
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "false",
+        })
+
+        expect(result.complete).toBe(false)
+        if (!result.complete) {
+          expect(result.errors.arcane_slots).toContain("only have 0 used")
+        }
+      })
+
+      test("level 4 wizard cannot restore more slots than budget allows", async () => {
+        const char = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!char) throw new Error("Character not found")
+
+        // Use multiple spell slots
+        for (let i = 0; i < 4; i++) {
+          await createSpellSlot(testCtx.db, {
+            character_id: char.id,
+            slot_level: 1,
+            action: "use",
+            note: "Cast spell",
+          })
+        }
+
+        const charWithUsedSlots = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charWithUsedSlots) throw new Error("Character not found")
+
+        // Level 4 wizard budget = 2
+        // Restoring level-1 slots will restore 2 slots (2 * 1 = 2 budget)
+        // This should pass validation
+        const result = await shortRest(testCtx.db, charWithUsedSlots, {
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "true",
+        })
+
+        expect(result.complete).toBe(false)
+        if (!result.complete) {
+          expect(result.errors.arcane_slots).toBeUndefined()
+        }
+      })
+
+      test("cannot restore more slots than actually used", async () => {
+        const char = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!char) throw new Error("Character not found")
+
+        // Use only 1 level-1 slot
+        await createSpellSlot(testCtx.db, {
+          character_id: char.id,
+          slot_level: 1,
+          action: "use",
+          note: "Cast spell",
+        })
+
+        const charWithUsedSlot = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charWithUsedSlot) throw new Error("Character not found")
+
+        // Try to restore level-1 slots (which would restore 2 slots, but only 1 is used)
+        const result = await shortRest(testCtx.db, charWithUsedSlot, {
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "false",
+        })
+
+        expect(result.complete).toBe(false)
+        if (!result.complete) {
+          expect(result.errors.arcane_slots).toContain("only have 1 used level 1 spell slot")
+        }
+      })
+    })
+
+    describe("execution", () => {
+      test("level 4 wizard restores 2 level-1 slots", async () => {
+        const char = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!char) throw new Error("Character not found")
+
+        // Use 2 level-1 slots
+        for (let i = 0; i < 2; i++) {
+          await createSpellSlot(testCtx.db, {
+            character_id: char.id,
+            slot_level: 1,
+            action: "use",
+            note: "Cast spell",
+          })
+        }
+
+        const charWithUsedSlots = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charWithUsedSlots) throw new Error("Character not found")
+
+        const beforeAvailable = charWithUsedSlots.availableSpellSlots.filter((s) => s === 1).length
+
+        const result = await shortRest(testCtx.db, charWithUsedSlots, {
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "false",
+        })
+
+        expect(result.complete).toBe(true)
+        if (result.complete) {
+          expect(result.result.arcaneRecoveryUsed).toBe(true)
+          expect(result.result.spellSlotsRestored).toBe(2) // Should restore 2 slots
+        }
+
+        // Verify slots were actually restored
+        const charAfter = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charAfter) throw new Error("Character not found")
+
+        const afterAvailable = charAfter.availableSpellSlots.filter((s) => s === 1).length
+        expect(afterAvailable).toBe(beforeAvailable + 2)
+      })
+
+      test("level 4 wizard restores 1 level-2 slot", async () => {
+        const char = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!char) throw new Error("Character not found")
+
+        // Use a level-2 slot
+        await createSpellSlot(testCtx.db, {
+          character_id: char.id,
+          slot_level: 2,
+          action: "use",
+          note: "Cast spell",
+        })
+
+        const charWithUsedSlot = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charWithUsedSlot) throw new Error("Character not found")
+
+        const beforeAvailable = charWithUsedSlot.availableSpellSlots.filter((s) => s === 2).length
+
+        const result = await shortRest(testCtx.db, charWithUsedSlot, {
+          arcane_recovery: "true",
+          arcane_slot_2: "true",
+          is_check: "false",
+        })
+
+        expect(result.complete).toBe(true)
+        if (result.complete) {
+          expect(result.result.arcaneRecoveryUsed).toBe(true)
+          expect(result.result.spellSlotsRestored).toBe(1) // Should restore 1 slot
+        }
+
+        // Verify slot was actually restored
+        const charAfter = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charAfter) throw new Error("Character not found")
+
+        const afterAvailable = charAfter.availableSpellSlots.filter((s) => s === 2).length
+        expect(afterAvailable).toBe(beforeAvailable + 1)
+      })
+
+      test("level 6 wizard restores 3 level-1 slots", async () => {
+        // Create a level 6 wizard (budget = ceil(6/2) = 3)
+        const level6Wizard = await characterFactory.create(
+          { user_id: user.id, class: "wizard", level: 6 },
+          testCtx.db
+        )
+        const char = await computeCharacter(testCtx.db, level6Wizard.id)
+        if (!char) throw new Error("Character not found")
+
+        // Use 3 level-1 slots
+        for (let i = 0; i < 3; i++) {
+          await createSpellSlot(testCtx.db, {
+            character_id: char.id,
+            slot_level: 1,
+            action: "use",
+            note: "Cast spell",
+          })
+        }
+
+        const charWithUsedSlots = await computeCharacter(testCtx.db, level6Wizard.id)
+        if (!charWithUsedSlots) throw new Error("Character not found")
+
+        const beforeAvailable = charWithUsedSlots.availableSpellSlots.filter((s) => s === 1).length
+
+        const result = await shortRest(testCtx.db, charWithUsedSlots, {
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "false",
+        })
+
+        expect(result.complete).toBe(true)
+        if (result.complete) {
+          expect(result.result.spellSlotsRestored).toBe(3) // Should restore 3 slots
+        }
+
+        // Verify slots were actually restored
+        const charAfter = await computeCharacter(testCtx.db, level6Wizard.id)
+        if (!charAfter) throw new Error("Character not found")
+
+        const afterAvailable = charAfter.availableSpellSlots.filter((s) => s === 1).length
+        expect(afterAvailable).toBe(beforeAvailable + 3)
+      })
+
+      test("combines with hit dice spending", async () => {
+        const char = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!char) throw new Error("Character not found")
+
+        // Damage character and use a spell slot
+        await updateHitPoints(testCtx.db, char, {
+          action: "lose",
+          amount: "10",
+          note: "Test damage",
+          is_check: "false",
+        })
+        await createSpellSlot(testCtx.db, {
+          character_id: char.id,
+          slot_level: 1,
+          action: "use",
+          note: "Cast spell",
+        })
+        await createSpellSlot(testCtx.db, {
+          character_id: char.id,
+          slot_level: 1,
+          action: "use",
+          note: "Cast spell",
+        })
+
+        const charDamagedAndUsedSlots = await computeCharacter(testCtx.db, wizardCharacter.id)
+        if (!charDamagedAndUsedSlots) throw new Error("Character not found")
+
+        const result = await shortRest(testCtx.db, charDamagedAndUsedSlots, {
+          spend_die_0: "6",
+          roll_die_0: "4",
+          arcane_recovery: "true",
+          arcane_slot_1: "true",
+          is_check: "false",
+        })
+
+        expect(result.complete).toBe(true)
+        if (result.complete) {
+          expect(result.result.hitDiceSpent).toBe(1)
+          expect(result.result.hpRestored).toBeGreaterThan(0)
+          expect(result.result.arcaneRecoveryUsed).toBe(true)
+          expect(result.result.spellSlotsRestored).toBe(2)
         }
       })
     })

@@ -19,6 +19,12 @@ import {
   executeCastSpell,
   formatCastSpellApproval,
 } from "./services/castSpell"
+import {
+  characterStatusTool,
+  characterStatusToolName,
+  executeCharacterStatus,
+  formatCharacterStatusApproval,
+} from "./services/characterStatus"
 import type { ComputedCharacter } from "./services/computeCharacter"
 import {
   equipItemTool,
@@ -177,6 +183,15 @@ export const TOOLS: ToolRegistration[] = [
     tool: shortRestTool,
     executor: executeShortRest,
     formatApprovalMessage: formatShortRestApproval,
+  },
+
+  // Character Info (Read-only)
+  {
+    name: characterStatusToolName,
+    tool: characterStatusTool,
+    executor: executeCharacterStatus,
+    formatApprovalMessage: formatCharacterStatusApproval,
+    requiresApproval: false,
   },
 
   // Spellcasting

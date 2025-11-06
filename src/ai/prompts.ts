@@ -1,252 +1,35 @@
-import type { SpellSlotLevelType } from "@src/db/char_spell_slots"
-import { ItemCategories } from "@src/lib/dnd"
-import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 
 /**
  * Build the system prompt for the AI assistant based on the character's current state
+ * This version only includes static character identity information.
+ * Dynamic stats (abilities, skills, resources, etc.) are available via the character_status tool.
  */
 
-const PREAMBLE =
-  `Reed here. *doesn't look up from ledger* I've got a dozen other adventurers' sheets to update today, so let's keep this brief.
-
-I know the D&D 5e rules inside and out - Player's Handbook, the whole deal. I'll update your sheet, track your resources, manage your spells. Just tell me what happened and I'll handle it. Quick questions are fine too.
-
-Let's get to it.
-` as const
-
-function formatClasses(character: ComputedCharacter): string {
-  return character.classes
-    .map((c) => `level ${c.level} ${c.class} ${c.subclass ? ` (${c.subclass})` : ""}`)
-    .join(", ")
-}
-
-function formatAbilities(character: ComputedCharacter): string {
-  const abilityLines: string[] = []
-  // Ability scores with modifiers and saves
-  for (const [ability, score] of Object.entries(character.abilityScores)) {
-    const modStr = score.modifier >= 0 ? `+${score.modifier}` : `${score.modifier}`
-    const saveStr = score.savingThrow >= 0 ? `+${score.savingThrow}` : `${score.savingThrow}`
-    const profMark = score.proficient ? "*" : ""
-    abilityLines.push(
-      `${ability.toUpperCase()}: ${score.score} (${modStr}, save ${saveStr}${profMark})`
-    )
-  }
-
-  return abilityLines.join(",")
-}
-
-function formatSkills(character: ComputedCharacter): string {
-  // Skills - only show proficient/expert
-  const proficientSkills: string[] = []
-  for (const [skill, skillScore] of Object.entries(character.skills)) {
-    if (skillScore.proficiency !== "none") {
-      const modStr = skillScore.modifier >= 0 ? `+${skillScore.modifier}` : `${skillScore.modifier}`
-      const profLevel =
-        skillScore.proficiency === "expert"
-          ? "**"
-          : skillScore.proficiency === "proficient"
-            ? "*"
-            : ""
-      proficientSkills.push(`${skill} ${modStr}${profLevel}`)
-    }
-  }
-  const skillsDesc =
-    proficientSkills.length > 0 ? proficientSkills.join(", ") : "no proficient skills"
-
-  return skillsDesc
-}
-
-function formatCombat(character: ComputedCharacter): string {
-  const hpDesc = `${character.currentHP}/${character.maxHitPoints}`
-  const initStr = character.initiative >= 0 ? `+${character.initiative}` : `${character.initiative}`
-
-  return `HP: ${hpDesc} • AC: ${character.armorClass} • Initiative: ${initStr} • Passive Perception: ${character.passivePerception}`
-}
-
-function formatResources(character: ComputedCharacter): string {
-  const coinsDesc = character.coins
-    ? `${character.coins.pp}pp ${character.coins.gp}gp ${character.coins.ep}ep ${character.coins.sp}sp ${character.coins.cp}cp`
-    : "no coins"
-
-  const slotCounts: Record<SpellSlotLevelType, { total: number; available: number }> = {}
-  for (let level = 1; level <= 9; level++) {
-    const total = character.spellSlots.filter((slot) => slot === level).length
-    const available = character.availableSpellSlots.filter((slot) => slot === level).length
-    if (total > 0) {
-      slotCounts[level as SpellSlotLevelType] = { total, available }
-    }
-  }
-
-  const slotsDesc = Object.entries(slotCounts)
-    .map(([level, counts]) => {
-      return `${counts.available}/${counts.total} L${level}`
-    })
-    .join(", ")
-
-  // Group hit dice by die type
-  const groupDice = (dice: number[]) => {
-    const counts: Record<number, number> = {}
-    for (const die of dice) {
-      counts[die] = (counts[die] || 0) + 1
-    }
-    return Object.entries(counts)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([die, count]) => `${count}d${die}`)
-      .join(", ")
-  }
-
-  // Calculate used hit dice by subtracting available from total
-  const availHitDice = character.availableHitDice
-  const usedHitDice = [...character.hitDice]
-  for (const die of character.availableHitDice) {
-    const index = usedHitDice.indexOf(die)
-    if (index !== -1) {
-      usedHitDice.splice(index, 1)
-    }
-  }
-
-  const availableHitDiceDesc = availHitDice.length > 0 ? groupDice(availHitDice) : "none"
-  const usedHitDiceDesc = usedHitDice.length > 0 ? groupDice(usedHitDice) : "none"
-
-  return [
-    `Coins: ${coinsDesc}`,
-    `Available Spell Slots: ${slotsDesc}`,
-    `Available Hit Dice: ${availableHitDiceDesc}`,
-    `Unavailable Hit Dice: ${usedHitDiceDesc}`,
-  ].join("\n")
-}
-
-function formatEquipment(character: ComputedCharacter): string {
-  const itemLines: string[] = []
-
-  for (const cat of ItemCategories) {
-    const itemsInCat = character.equippedItems.filter((item) => item.category === cat)
-    if (itemsInCat.length === 0) {
-      continue
-    }
-
-    itemLines.push(`## ${cat} items`)
-
-    for (const item of itemsInCat) {
-      const itemParts: string[] = [
-        `Item ID: ${item.id} -- ${item.name}`,
-        item.wearable ? (item.worn ? " (worn)" : " (not worn)") : "",
-        item.wieldable ? (item.wielded ? " (wielded)" : " (not wielded)") : "",
-        ":",
-        item.humanReadableDamage.length > 0
-          ? ` Damage: ${item.humanReadableDamage.join(", ")}.`
-          : "",
-        item.chargeLabel && item.currentCharges > 0
-          ? ` ${item.currentCharges} ${item.chargeLabel} remaining.`
-          : "",
-      ]
-
-      itemLines.push(itemParts.join(" "))
-    }
-  }
-
-  // Active item effects
-  const itemEffects: string[] = []
-  for (const [attr, effectInfo] of Object.entries(character.affectedAttributes)) {
-    for (const effect of effectInfo) {
-      itemEffects.push(`${effect.itemName} affects ${attr}: ${effect.effectDescription}`)
-    }
-  }
-
-  if (itemEffects.length > 0) {
-    itemLines.push("## Active Item Effects")
-    for (const effectLine of itemEffects) {
-      itemLines.push(`- ${effectLine}`)
-    }
-  }
-
-  return itemLines.join("\n")
-}
-
-function formatSpellcasting(character: ComputedCharacter): string {
-  if (character.spells.length === 0) {
-    return "No spellcasting abilities"
-  }
-
-  let spellcastingSection = ""
-
-  for (const spellInfo of character.spells) {
-    const atkStr =
-      spellInfo.spellAttackBonus >= 0
-        ? `+${spellInfo.spellAttackBonus}`
-        : `${spellInfo.spellAttackBonus}`
-    spellcastingSection += `\n**${spellInfo.class}** (${spellInfo.ability.toUpperCase()}): Spell Attack ${atkStr}, Save DC ${spellInfo.spellSaveDC}`
-
-    // Prepared cantrips
-    const preparedCantrips = spellInfo.cantripSlots
-      .filter((slot) => slot.spell_id)
-      .map((slot) => spells.find((s) => s.id === slot.spell_id)?.name || slot.spell_id)
-    if (preparedCantrips.length > 0) {
-      spellcastingSection += `\nCantrips: ${preparedCantrips.join(", ")}`
-    }
-
-    // Prepared leveled spells
-    const preparedSpells = spellInfo.preparedSpells
-      .filter((slot) => slot.spell_id)
-      .map((slot) => {
-        const spell = spells.find((s) => s.id === slot.spell_id)
-        const lockMark = slot.alwaysPrepared ? "🔒" : ""
-        return spell ? `${spell.name} (L${spell.level})${lockMark}` : slot.spell_id
-      })
-    if (preparedSpells.length > 0) {
-      spellcastingSection += `\nPrepared: ${preparedSpells.join(", ")}`
-    }
-
-    // Wizard spellbook
-    if (spellInfo.knownSpells && spellInfo.knownSpells.length > 0) {
-      const spellbookSpells = spellInfo.knownSpells
-        .map((spellId) => spells.find((s) => s.id === spellId))
-        .filter((s) => s && s.level > 0) // Don't list cantrips in spellbook
-        .map((s) => `${s?.name} (L${s?.level})`)
-      if (spellbookSpells.length > 0) {
-        spellcastingSection += `\nSpellbook: ${spellbookSpells.join(", ")}`
-      }
-    }
-  }
-
-  return spellcastingSection
-}
-
-const FOOTER = `
-# How I Work
-
-I'll just do it. Tell me what happened and I'll update your sheet. My tools have validation built in - if something's wrong, they'll catch it and I'll adjust.
-
-**Spells**: When you mention a spell by name, I'll use lookup_spell to find its ID first, then handle learning/preparing/casting. Every time.
-
-**Missing info**: I'll make reasonable assumptions based on D&D rules. If I genuinely can't proceed, I'll ask. Otherwise, I'm trying it.
-
-The tools need your confirmation before changes take effect, so there's a safety net. I'm here to move fast and keep your sheet current.` as const
-
 export function buildSystemPrompt(character: ComputedCharacter): string {
-  const prompt = [
-    PREAMBLE,
-    "Your character sheet is as follows:",
-    "\n# Character Overview",
-    `Name: ${character.name}`,
-    `Species: ${character.species} ${character.lineage || ""}`,
-    `Background: ${character.background || "none"}`,
-    `Classes: total level ${character.totalLevel}, as a ${formatClasses(character)}`,
-    "\n# Ability Scores",
-    formatAbilities(character),
-    "\n# Skills",
-    formatSkills(character),
-    "\n# Combat Stats",
-    formatCombat(character),
-    "\n# Resources",
-    formatResources(character),
-    "\n# Equipment",
-    formatEquipment(character),
-    "\n# Spellcasting",
-    formatSpellcasting(character),
-    FOOTER,
-  ].join("\n")
+  return `
+You are Reed, an AI assistant specialized in managing Dungeons & Dragons 5th Edition character sheets. Your role is to help players update and maintain their character sheets based on in-game events and actions.
 
-  return prompt
+You are a crotchety, no-nonsense old scribe. You've been keeping adventurers' records for decades, and you've seen it all. You're efficient, direct, and a bit gruff, but you care deeply about accuracy and the well-being of the characters whose sheets you manage.
+
+Today, you're helping this adventurer:
+
+Character name: ${character.name}
+Species: ${character.species} ${character.lineage || ""}
+Background: ${character.background || "none"}
+
+# Your approach:
+
+You can answer questions, provide advice, and help with rules clarifications, but your main job is to update the character sheet based on what the player tells you. You let the players focus on the game while you handle the bookkeeping. If they ask for advice, you give it, but always steer them back to the task of keeping their sheet accurate.
+
+If players ask you questions unrelated to DnD or character sheets, curtly redirect them back to your purpose. You don't want them wasting your time -- you still have a lot of character sheets to manage today!
+
+You have access to a set of tools. Reach for them often! The system you're working in has built-in validation and error-checking, so trust the tools to handle the details. Your main job is to interpret the player's input and decide which tools to use.
+
+Use your best judgement for tool parameters. You can ask the players for clarification or more information if you're genuinely unsure, but try to avoid it. You want to keep things moving quickly.
+
+A few special tools to specifically note:
+* character_status : Use this to get the current state of the character sheet whenever you need it.
+* lookup_spell : Use this to find spell IDs by name. You usually need spell IDs for learning, preparing, or casting spells.
+  `
 }

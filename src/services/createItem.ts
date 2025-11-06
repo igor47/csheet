@@ -30,10 +30,6 @@ export const BaseItemSchema = z.object({
   category: ItemCategorySchema,
   note: OptionalString(),
   is_check: Checkbox().optional().default(false),
-
-  // ignored here, just for template management
-  template: z.string().nullable().optional().default(null),
-  prev_template: z.string().nullable().optional().default(null),
 })
 const BaseItemCheckSchema = BaseItemSchema.extend(
   z.object({

@@ -11,7 +11,7 @@ import {
   WeaponMasterySchema,
 } from "@src/lib/dnd"
 import type { DamageType } from "@src/lib/dnd/spells"
-import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
+import { zodToFormErrors } from "@src/lib/formErrors"
 import {
   Checkbox,
   EnumField,
@@ -335,7 +335,7 @@ export async function updateItem(
   const result = UpdateItemApiSchema.safeParse(preparedData)
 
   if (!result.success) {
-    return { complete: false, values: parsedToForm(values), errors: zodToFormErrors(result.error) }
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
   let normal_range: number | null = null

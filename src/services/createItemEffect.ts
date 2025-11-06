@@ -1,6 +1,6 @@
 import { create as createItemEffectDb } from "@src/db/item_effects"
 import { ItemEffectAppliesSchema, ItemEffectOpSchema, ItemEffectTargetSchema } from "@src/lib/dnd"
-import { parsedToForm, zodToFormErrors } from "@src/lib/formErrors"
+import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, EnumField, NumberField } from "@src/lib/formSchemas"
 import { logger } from "@src/lib/logger"
 import type { SQL } from "bun"
@@ -82,14 +82,14 @@ export async function createItemEffect(
 
   // Early return if validation errors or check mode
   if (isCheck || Object.keys(errors).length > 0) {
-    return { complete: false, values: parsedToForm(values), errors }
+    return { complete: false, values: data, errors }
   }
 
   // Full Zod validation
   const result = CreateItemEffectApiSchema.safeParse(data)
 
   if (!result.success) {
-    return { complete: false, values: parsedToForm(values), errors: zodToFormErrors(result.error) }
+    return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
   // Create the item effect

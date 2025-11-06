@@ -170,7 +170,7 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
                           class={`form-check-label ${isDisabled ? "text-muted" : ""}`}
                           for={`arcane-slot-${level}`}
                         >
-                          Level {level} slot
+                          Level {level} slots
                         </label>
                       </div>
                     )

@@ -16,8 +16,6 @@ export interface EditItemFormProps {
 
 const DIE_VALUES = [4, 6, 8, 10, 12, 20, 100] as const
 
-const MAX_DAMAGE_ROWS = 10
-
 function buildFormValues(item: Item, damages: ItemDamage[]): Record<string, string> {
   const values: Record<string, string> = {
     name: item.name,
@@ -52,18 +50,27 @@ function buildFormValues(item: Item, damages: ItemDamage[]): Record<string, stri
       values.long_range = String(item.long_range)
     }
 
-    // Populate damage rows
+    // Populate damage rows - structure as nested object for parseBody({ dot: true })
     values.damage_row_count = String(damages.length || 1)
-    for (let i = 0; i < damages.length; i++) {
-      const damage = damages[i]
-      if (!damage) continue
+    if (damages.length > 0) {
+      const damageObj: Record<string, Record<string, string>> = {}
+      for (let i = 0; i < damages.length; i++) {
+        const damage = damages[i]
+        if (!damage) continue
 
-      // damage.dice is an array like [6, 6] meaning 2d6
-      const numDice = damage.dice.length
-      const dieValue = damage.dice[0] // All dice in the array should be the same value
-      values[`damage_num_dice_${i}`] = String(numDice)
-      values[`damage_die_value_${i}`] = String(dieValue)
-      values[`damage_type_${i}`] = damage.type
+        // damage.dice is an array like [6, 6] meaning 2d6
+        const numDice = damage.dice.length
+        const dieValue = damage.dice[0] // All dice in the array should be the same value
+        damageObj[String(i)] = {
+          num_dice: String(numDice),
+          die_value: String(dieValue),
+          type: damage.type,
+          versatile: damage.versatile ? "true" : "false",
+        }
+      }
+      // Store as a nested object (will be read by our parsing logic)
+      // biome-ignore lint/suspicious/noExplicitAny: values is Record<string, string> but damage needs nested structure
+      ;(values as any).damage = damageObj
     }
   }
 
@@ -83,10 +90,41 @@ export const EditItemForm = ({
 
   const selectedCategory = values.category || ""
   const selectedWeaponType = values.weapon_type || "melee"
-  const damageRowCount = Math.min(
-    Number.parseInt(values.damage_row_count || "1", 10),
-    MAX_DAMAGE_ROWS
-  )
+  const damageRowCount = Number.parseInt(values.damage_row_count || "1", 10)
+
+  // Parse damage entries from values (object array field parsed from dot notation)
+  const damageEntries: Array<{
+    num_dice: string
+    die_value: string
+    type: string
+    versatile: boolean
+  }> = []
+  if (values.damage && typeof values.damage === "object") {
+    for (const d of Object.values(values.damage) as Record<string, string>[]) {
+      damageEntries.push({
+        num_dice: String(d.num_dice || "1"),
+        die_value: String(d.die_value || ""),
+        type: String(d.type || ""),
+        versatile: d.versatile === "true",
+      })
+    }
+  }
+
+  // Adjust array size to match damageRowCount
+  if (damageEntries.length > damageRowCount) {
+    // Trim excess entries
+    damageEntries.length = damageRowCount
+  } else {
+    // Add empty rows until we have damageRowCount entries
+    while (damageEntries.length < damageRowCount) {
+      damageEntries.push({
+        num_dice: "1",
+        die_value: "",
+        type: "",
+        versatile: false,
+      })
+    }
+  }
 
   // Pre-compute option arrays for selects
   const armorTypeOptions = ArmorTypes.map((type) => ({
@@ -149,13 +187,14 @@ export const EditItemForm = ({
           </label>
           <input
             type="text"
-            class="form-control"
+            class={clsx("form-control", { "is-invalid": errors?.category })}
             id="item-category"
             value={selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}
             disabled
           />
           <input type="hidden" name="category" value={selectedCategory} />
           <div class="form-text">Category cannot be changed</div>
+          {errors?.category && <div class="invalid-feedback d-block">{errors.category}</div>}
         </div>
 
         {/* Description */}
@@ -369,50 +408,65 @@ export const EditItemForm = ({
               value={damageRowCount}
             />
 
-            {Array.from({ length: damageRowCount }, (_, i) => {
-              const numDiceError = errors?.[`damage_num_dice_${i}`]
-              const dieValueError = errors?.[`damage_die_value_${i}`]
-              const damageTypeError = errors?.[`damage_type_${i}`]
+            {damageEntries.map((entry, i) => {
+              const numDiceError = errors?.[`damage.${i}.num_dice`]
+              const dieValueError = errors?.[`damage.${i}.die_value`]
+              const damageTypeError = errors?.[`damage.${i}.type`]
 
               return (
-                <div class="row mb-2">
-                  <div class="col-3">
+                <div class="mb-3">
+                  <div class="row mb-1">
+                    <div class="col-3">
+                      <input
+                        type="number"
+                        class={clsx("form-control form-control-sm", { "is-invalid": numDiceError })}
+                        name={`damage.${i}.num_dice`}
+                        placeholder="# dice"
+                        min="1"
+                        value={entry.num_dice}
+                      />
+                      {numDiceError && (
+                        <div class="invalid-feedback d-block small">{numDiceError}</div>
+                      )}
+                    </div>
+                    <div class="col-1 d-flex align-items-top justify-content-center">
+                      <span class="text-muted">d</span>
+                    </div>
+                    <div class="col-3">
+                      <Select
+                        class="form-select-sm"
+                        name={`damage.${i}.die_value`}
+                        placeholder="Die"
+                        options={dieValueOptions}
+                        value={entry.die_value}
+                        error={dieValueError}
+                        hideErrorMsg={true}
+                      />
+                    </div>
+                    <div class="col-5">
+                      <Select
+                        class="form-select-sm"
+                        name={`damage.${i}.type`}
+                        placeholder="Type"
+                        options={damageTypeOptions}
+                        value={entry.type}
+                        error={damageTypeError}
+                        hideErrorMsg={true}
+                      />
+                    </div>
+                  </div>
+                  <div class="form-check ms-1">
                     <input
-                      type="number"
-                      class={clsx("form-control form-control-sm", { "is-invalid": numDiceError })}
-                      name={`damage_num_dice_${i}`}
-                      placeholder="# dice"
-                      min="1"
-                      value={values[`damage_num_dice_${i}`] || "1"}
+                      class="form-check-input form-check-input-sm"
+                      type="checkbox"
+                      id={`damage-versatile-${i}`}
+                      name={`damage.${i}.versatile`}
+                      value="true"
+                      checked={entry.versatile}
                     />
-                    {numDiceError && (
-                      <div class="invalid-feedback d-block small">{numDiceError}</div>
-                    )}
-                  </div>
-                  <div class="col-1 d-flex align-items-top justify-content-center">
-                    <span class="text-muted">d</span>
-                  </div>
-                  <div class="col-3">
-                    <Select
-                      class="form-select-sm"
-                      name={`damage_die_value_${i}`}
-                      placeholder="Die"
-                      options={dieValueOptions}
-                      value={values[`damage_die_value_${i}`]}
-                      error={dieValueError}
-                      hideErrorMsg={true}
-                    />
-                  </div>
-                  <div class="col-5">
-                    <Select
-                      class="form-select-sm"
-                      name={`damage_type_${i}`}
-                      placeholder="Type"
-                      options={damageTypeOptions}
-                      value={values[`damage_type_${i}`]}
-                      error={damageTypeError}
-                      hideErrorMsg={true}
-                    />
+                    <label class="form-check-label small" for={`damage-versatile-${i}`}>
+                      Versatile
+                    </label>
                   </div>
                 </div>
               )
@@ -424,7 +478,6 @@ export const EditItemForm = ({
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
                 onclick={`document.getElementById('damage_row_count').value = ${damageRowCount + 1}; document.getElementById('edit-item-form').dispatchEvent(new Event('change'));`}
-                disabled={damageRowCount >= MAX_DAMAGE_ROWS}
               >
                 <i class="bi bi-plus"></i> Add Damage
               </button>

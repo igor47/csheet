@@ -239,7 +239,7 @@ export const shortRestTool = tool({
   description: `Take a short rest (1 hour of downtime). You can spend hit dice to recover HP. Each die recovers HP equal to the roll + Constitution modifier. Wizards can use Arcane Recovery to restore spell slots.`,
   inputSchema: ShortRestApiSchema.omit({ is_check: true, "arcane_slots[]": true }).extend({
     arcane_slots: ShortRestApiSchema.shape["arcane_slots[]"],
-  })
+  }),
 })
 
 /**

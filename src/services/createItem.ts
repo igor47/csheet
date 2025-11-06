@@ -16,6 +16,7 @@ import {
   EnumField,
   NumberField,
   NumericEnumField,
+  ObjectArrayField,
   OptionalString,
 } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
@@ -64,18 +65,20 @@ const ArmorItemSchema = z.object({
   stealth_disadvantage: Checkbox().optional().default(false),
 })
 
+// Damage entry schema for ObjectArrayField
 const DamageDice = [4, 6, 8, 10, 12, 20, 100] as const
-const NumDiceField = NumberField(
-  z.number().int({ message: "Must be a whole number" }).min(1, { message: "Must be at least 1" })
-)
-const DieValueField = NumericEnumField(
-  z.union(DamageDice.map((n) => z.literal(n)) as [z.ZodLiteral<number>, ...z.ZodLiteral<number>[]])
-)
-const OptionalDieValueField = NumericEnumField(
-  z
-    .union(DamageDice.map((n) => z.literal(n)) as [z.ZodLiteral<number>, ...z.ZodLiteral<number>[]])
-    .nullable()
-)
+const DamageEntrySchema = z.object({
+  num_dice: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(1, { message: "Must be at least 1" })
+  ),
+  die_value: NumericEnumField(
+    z.union(
+      DamageDice.map((n) => z.literal(n)) as [z.ZodLiteral<number>, ...z.ZodLiteral<number>[]]
+    )
+  ),
+  type: DamageTypeSchema,
+  versatile: Checkbox().optional().default(false),
+})
 
 // Weapon-specific fields
 const WeaponItemBaseSchema = z.object({
@@ -90,84 +93,8 @@ const WeaponItemBaseSchema = z.object({
   reach: Checkbox().optional().default(false),
   loading: Checkbox().optional().default(false),
 
-  damage_row_count: NumberField(
-    z
-      .number()
-      .int({ message: "Must be a whole number" })
-      .min(1, { message: "Must be at least 1" })
-      .max(10, { message: "Cannot exceed 10" })
-      .optional()
-      .default(1)
-  ),
-
-  // Row 0 (required)
-  damage_num_dice_0: NumDiceField,
-  damage_die_value_0: DieValueField,
-  damage_type_0: DamageTypeSchema,
-  damage_versatile_0: Checkbox().optional().default(false),
-  // Row 1 (optional)
-  damage_num_dice_1: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_1: OptionalDieValueField.optional(),
-  damage_type_1: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_1: Checkbox().optional().default(false),
-  // Row 2 (optional)
-  damage_num_dice_2: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_2: OptionalDieValueField.optional(),
-  damage_type_2: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_2: Checkbox().optional().default(false),
-  // Row 3 (optional)
-  damage_num_dice_3: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_3: OptionalDieValueField.optional(),
-  damage_type_3: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_3: Checkbox().optional().default(false),
-  // Row 4 (optional)
-  damage_num_dice_4: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_4: OptionalDieValueField.optional(),
-  damage_type_4: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_4: Checkbox().optional().default(false),
-  // Row 5 (optional)
-  damage_num_dice_5: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_5: OptionalDieValueField.optional(),
-  damage_type_5: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_5: Checkbox().optional().default(false),
-  // Row 6 (optional)
-  damage_num_dice_6: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_6: OptionalDieValueField.optional(),
-  damage_type_6: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_6: Checkbox().optional().default(false),
-  // Row 7 (optional)
-  damage_num_dice_7: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_7: OptionalDieValueField.optional(),
-  damage_type_7: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_7: Checkbox().optional().default(false),
-  // Row 8 (optional)
-  damage_num_dice_8: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_8: OptionalDieValueField.optional(),
-  damage_type_8: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_8: Checkbox().optional().default(false),
-  // Row 9 (optional)
-  damage_num_dice_9: NumberField(
-    z.number().int({ message: "Must be a whole number" }).min(1).nullable()
-  ).optional(),
-  damage_die_value_9: OptionalDieValueField.optional(),
-  damage_type_9: EnumField(DamageTypeSchema.nullable()),
-  damage_versatile_9: Checkbox().optional().default(false),
+  // Damage entries using ObjectArrayField (at least one required for weapons)
+  damage: ObjectArrayField(DamageEntrySchema),
 })
 
 const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
@@ -241,8 +168,6 @@ export type CreateItemResult = ServiceResult<{
   category: string
 }>
 
-const MAX_DAMAGE_ROWS = 10 as const
-
 /**
  * Creates a new item and adds it to the character's inventory
  */
@@ -314,45 +239,20 @@ export async function createItem(
       }
     }
 
-    // Validate damage
-    for (let i = 0; i < MAX_DAMAGE_ROWS; i++) {
-      const numDiceField = `damage_num_dice_${i}` as keyof typeof values
-      const numDice = values[numDiceField] as number | undefined
-
-      const dieValueField = `damage_die_value_${i}` as keyof typeof values
-      const dieValue = values[dieValueField] as number | undefined
-
-      const damageTypeField = `damage_type_${i}` as keyof typeof values
-      const damageType = values[damageTypeField] as DamageType | undefined
-
-      const versatileField = `damage_versatile_${i}` as keyof typeof values
-      const versatile = (values[versatileField] as boolean | undefined) || false
-
-      const damageVals = [numDice, dieValue, damageType]
-
-      // All damage fields provided
-      if (damageVals.every((v) => v !== undefined)) {
+    // Validate damage entries
+    const damageEntries = values.damage || []
+    if (damageEntries.length === 0 && !isCheck) {
+      errors.damage = "At least one damage entry is required for weapons"
+    } else {
+      // Convert damage entries to internal format
+      for (let i = 0; i < damageEntries.length; i++) {
+        const entry = damageEntries[i]
+        if (!entry) continue
         damages.push({
-          dice: Array(numDice!).fill(dieValue!),
-          type: damageType!,
-          versatile,
+          dice: Array(entry.num_dice).fill(entry.die_value),
+          type: entry.type,
+          versatile: entry.versatile,
         })
-
-        // Some but not all damage fields provided
-      } else if (damageVals.some((v) => v !== undefined)) {
-        if (numDice === undefined) {
-          errors[numDiceField] = `Number of dice is required`
-        }
-        if (dieValue === undefined) {
-          errors[dieValueField] = `Die value is required`
-        }
-        if (damageType === undefined) {
-          errors[damageTypeField] = `Damage type is required`
-        }
-
-        // No damage fields provided on row 0
-      } else if (i === 0 && !isCheck) {
-        errors[numDiceField] = `At least one damage entry is required for weapons`
       }
     }
   }

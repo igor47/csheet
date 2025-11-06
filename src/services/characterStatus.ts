@@ -19,7 +19,7 @@ export const characterStatusTool = tool({
 
 /**
  * Execute character status lookup
- * Returns the full computed character state as structured data
+ * Returns the computed character state without traits (use character_traits tool for traits)
  */
 export async function executeCharacterStatus(
   _db: SQL,
@@ -27,10 +27,11 @@ export async function executeCharacterStatus(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   _parameters: Record<string, any>,
   _isCheck?: boolean
-): Promise<ServiceResult<ComputedCharacter>> {
-  // Return the full computed character as structured data
+): Promise<ServiceResult<Omit<ComputedCharacter, "traits">>> {
+  // Return the full computed character as structured data, excluding traits
+  const { traits: _traits, ...charWithoutTraits } = char
   return {
     complete: true,
-    result: char,
+    result: charWithoutTraits,
   }
 }

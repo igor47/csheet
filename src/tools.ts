@@ -24,6 +24,11 @@ import {
   characterStatusToolName,
   executeCharacterStatus,
 } from "./services/characterStatus"
+import {
+  characterTraitsTool,
+  characterTraitsToolName,
+  executeCharacterTraits,
+} from "./services/characterTraits"
 import type { ComputedCharacter } from "./services/computeCharacter"
 import {
   equipItemTool,
@@ -186,6 +191,11 @@ export const TOOLS: ToolRegistration[] = [
     name: characterStatusToolName,
     tool: characterStatusTool,
     executor: executeCharacterStatus,
+  },
+  {
+    name: characterTraitsToolName,
+    tool: characterTraitsTool,
+    executor: executeCharacterTraits,
   },
 
   // Spellcasting

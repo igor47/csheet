@@ -73,3 +73,13 @@
 #avatar-upload-button:hover #avatar-upload-icon {
   opacity: 1;
 }
+
+/* Flash message auto-close progress bar animation */
+@keyframes flash-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}

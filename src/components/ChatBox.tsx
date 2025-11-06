@@ -14,8 +14,8 @@ function markdownToHtml(markdown: string, icon?: string): string {
   const renderer = new marked.Renderer()
 
   if (icon) {
-    renderer.paragraph = (tokens: Tokens.Paragraph) => {
-      const text = tokens.text
+    renderer.paragraph = function(tokens: Tokens.Paragraph) {
+      const text = this.parser.parseInline(tokens.tokens)
 
       if (isFirstParagraph) {
         isFirstParagraph = false

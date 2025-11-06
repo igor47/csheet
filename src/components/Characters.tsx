@@ -93,9 +93,14 @@ const EmptyState = ({ showArchived }: { showArchived: boolean }) => (
       {showArchived ? "No characters to display." : "You haven't created any characters yet."}
     </p>
     {!showArchived && (
-      <a href="/characters/new" class="btn btn-primary mt-3">
-        Create Your First Character
-      </a>
+      <div class="d-flex gap-2 justify-content-center mt-3" id="empty-state-actions">
+        <a href="/characters/new" class="btn btn-primary" id="create-character-btn">
+          <i class="bi bi-plus-circle"></i> Create New Character
+        </a>
+        <a href="/characters/import" class="btn btn-outline-primary" id="import-character-btn">
+          <i class="bi bi-upload"></i> Import Existing Character
+        </a>
+      </div>
     )}
   </div>
 )

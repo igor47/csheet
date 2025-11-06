@@ -88,7 +88,11 @@ export const Layout = ({
           <div class="container-fluid mt-3" id="messages">
             <div class="row">
               <div class="col-md-8 offset-md-4 col-lg-6 offset-lg-6 col-xl-4 offset-xl-8">
-                <div class={flashClass} role="alert">
+                <div
+                  class={flashClass}
+                  role="alert"
+                  data-auto-close={flash.level !== "error" ? "true" : undefined}
+                >
                   {flash.msg}
                   <button
                     type="button"
@@ -96,6 +100,18 @@ export const Layout = ({
                     data-bs-dismiss="alert"
                     aria-label="Close"
                   ></button>
+                  {flash.level !== "error" && (
+                    <div class="progress mt-2" style="height: 3px;">
+                      <div
+                        class={`progress-bar bg-${flash.level}`}
+                        role="progressbar"
+                        style="width: 100%; animation: flash-progress 5s linear forwards;"
+                        aria-valuenow="100"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -109,6 +125,7 @@ export const Layout = ({
           integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
           crossorigin="anonymous"
         />
+        <script src="/static/flash.js"></script>
       </body>
     </html>
   )

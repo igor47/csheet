@@ -13,8 +13,6 @@ export interface CreateItemFormProps {
 
 const DIE_VALUES = [4, 6, 8, 10, 12, 20, 100] as const
 
-const MAX_DAMAGE_ROWS = 10
-
 export const CreateItemForm = ({ character, values, errors }: CreateItemFormProps) => {
   // Load templates for the character's ruleset
   const rulesetId = character.ruleset as RulesetId
@@ -94,10 +92,10 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
       for (let i = 0; i < template.damage.length; i++) {
         const dmg = template.damage[i]
         if (dmg) {
-          values[`damage_num_dice_${i}`] = String(dmg.num_dice)
-          values[`damage_die_value_${i}`] = String(dmg.die_value)
-          values[`damage_type_${i}`] = dmg.type
-          if (dmg.versatile) values[`damage_versatile_${i}`] = "true"
+          values[`damage.${i}.num_dice`] = String(dmg.num_dice)
+          values[`damage.${i}.die_value`] = String(dmg.die_value)
+          values[`damage.${i}.type`] = dmg.type
+          if (dmg.versatile) values[`damage.${i}.versatile`] = "true"
         }
       }
     }
@@ -120,10 +118,41 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
   if (values.category === "weapon" && !values.weapon_type) {
     values.weapon_type = "melee"
   }
-  const damageRowCount = Math.min(
-    Number.parseInt(values.damage_row_count || "1", 10),
-    MAX_DAMAGE_ROWS
-  )
+  const damageRowCount = Number.parseInt(values.damage_row_count || "1", 10)
+
+  // Parse damage entries from values (object array field parsed from dot notation)
+  const damageEntries: Array<{
+    num_dice: string
+    die_value: string
+    type: string
+    versatile: boolean
+  }> = []
+  if (values.damage && typeof values.damage === "object") {
+    for (const d of Object.values(values.damage) as Record<string, string>[]) {
+      damageEntries.push({
+        num_dice: String(d.num_dice || "1"),
+        die_value: String(d.die_value || ""),
+        type: String(d.type || ""),
+        versatile: d.versatile === "true",
+      })
+    }
+  }
+
+  // Adjust array size to match damageRowCount
+  if (damageEntries.length > damageRowCount) {
+    // Trim excess entries
+    damageEntries.length = damageRowCount
+  } else {
+    // Add empty rows until we have damageRowCount entries
+    while (damageEntries.length < damageRowCount) {
+      damageEntries.push({
+        num_dice: "1",
+        die_value: "",
+        type: "",
+        versatile: false,
+      })
+    }
+  }
 
   return (
     <ModalContent title="Add Item to Inventory">
@@ -458,10 +487,10 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
               value={damageRowCount}
             />
 
-            {Array.from({ length: damageRowCount }, (_, i) => {
-              const numDiceError = errors?.[`damage_num_dice_${i}`]
-              const dieValueError = errors?.[`damage_die_value_${i}`]
-              const damageTypeError = errors?.[`damage_type_${i}`]
+            {damageEntries.map((entry, i) => {
+              const numDiceError = errors?.[`damage.${i}.num_dice`]
+              const dieValueError = errors?.[`damage.${i}.die_value`]
+              const damageTypeError = errors?.[`damage.${i}.type`]
 
               return (
                 <div class="mb-3">
@@ -470,10 +499,10 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                       <input
                         type="number"
                         class={clsx("form-control form-control-sm", { "is-invalid": numDiceError })}
-                        name={`damage_num_dice_${i}`}
+                        name={`damage.${i}.num_dice`}
                         placeholder="# dice"
                         min="1"
-                        value={values[`damage_num_dice_${i}`] || "1"}
+                        value={entry.num_dice}
                       />
                       {numDiceError && (
                         <div class="invalid-feedback d-block small">{numDiceError}</div>
@@ -485,10 +514,10 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                     <div class="col-3">
                       <Select
                         class="form-select-sm"
-                        name={`damage_die_value_${i}`}
+                        name={`damage.${i}.die_value`}
                         placeholder="Die"
                         options={dieValueOptions}
-                        value={values[`damage_die_value_${i}`]}
+                        value={entry.die_value}
                         error={dieValueError}
                         hideErrorMsg={true}
                       />
@@ -496,10 +525,10 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                     <div class="col-5">
                       <Select
                         class="form-select-sm"
-                        name={`damage_type_${i}`}
+                        name={`damage.${i}.type`}
                         placeholder="Type"
                         options={damageTypeOptions}
-                        value={values[`damage_type_${i}`]}
+                        value={entry.type}
                         error={damageTypeError}
                         hideErrorMsg={true}
                       />
@@ -510,9 +539,9 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                       class="form-check-input form-check-input-sm"
                       type="checkbox"
                       id={`damage-versatile-${i}`}
-                      name={`damage_versatile_${i}`}
+                      name={`damage.${i}.versatile`}
                       value="true"
-                      checked={values[`damage_versatile_${i}`] === "true"}
+                      checked={entry.versatile}
                     />
                     <label class="form-check-label small" for={`damage-versatile-${i}`}>
                       Versatile
@@ -528,7 +557,6 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
                 onclick={`document.getElementById('damage_row_count').value = ${damageRowCount + 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
-                disabled={damageRowCount >= MAX_DAMAGE_ROWS}
               >
                 <i class="bi bi-plus"></i> Add Damage
               </button>

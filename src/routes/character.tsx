@@ -439,7 +439,7 @@ characterRoutes.post("/characters/:id/edit/trait", async (c) => {
 
 characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   const characterId = c.req.param("id") as string
-  const body = (await c.req.parseBody()) as Record<string, string>
+  const body = (await c.req.parseBody({ all: true, dot: true })) as Record<string, string>
 
   const char = await computeCharacter(getDb(c), characterId)
   if (!char) {
@@ -530,7 +530,7 @@ characterRoutes.get("/characters/:id/items/:itemId/edit", async (c) => {
 characterRoutes.post("/characters/:id/items/:itemId/edit", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
-  const body = (await c.req.parseBody()) as Record<string, string>
+  const body = (await c.req.parseBody({ all: true, dot: true })) as Record<string, string>
 
   const char = await computeCharacter(getDb(c), characterId)
   if (!char) {

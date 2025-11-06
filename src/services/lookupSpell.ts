@@ -98,15 +98,3 @@ export async function executeLookupSpell(
     result: spell,
   }
 }
-
-/**
- * Format approval message for spell lookup
- * Since this is a read-only tool, we return an empty string (no approval needed)
- */
-export function formatLookupSpellApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  _parameters: Record<string, any>
-): string {
-  // Read-only tool doesn't need approval message
-  return ""
-}

@@ -34,15 +34,3 @@ export async function executeCharacterStatus(
     result: char,
   }
 }
-
-/**
- * Format approval message for character status lookup
- * Since this is a read-only tool, we return an empty string (no approval needed)
- */
-export function formatCharacterStatusApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  _parameters: Record<string, any>
-): string {
-  // Read-only tool doesn't need approval message
-  return ""
-}

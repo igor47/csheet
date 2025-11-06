@@ -193,9 +193,9 @@ function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCal
       // Find IDs where tool_results is null
       for (const [id, call] of Object.entries(msg.tool_calls)) {
         if (!msg.tool_results[id]) {
-          // Check if this tool requires approval
+          // Check if this tool requires approval (has a formatter)
           const toolRegistration = TOOLS.find((t) => t.name === call.name)
-          const requiresApproval = toolRegistration?.requiresApproval !== false
+          const requiresApproval = !!toolRegistration?.formatApprovalMessage
 
           // Only include tools that require approval
           if (requiresApproval) {

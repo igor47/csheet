@@ -341,6 +341,12 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
             <div class="card-body">
               <h1 class="card-title mb-4">Import Existing Character</h1>
 
+              <p class="text-muted mb-3">
+                Use this form to quickly add an existing character to CSheet. If you want to create
+                a brand new level 1 character, you're encouraged to use the{" "}
+                <a href="/characters/new">character creation wizard</a> instead.
+              </p>
+
               <div class="alert alert-warning mb-4">
                 <i class="bi bi-exclamation-triangle me-2" />
                 <strong>Note:</strong> You can configure spells and inventory after importing your

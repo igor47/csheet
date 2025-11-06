@@ -18,12 +18,12 @@ import {
   NumericEnumField,
   OptionalString,
 } from "@src/lib/formSchemas"
-import { logger } from "@src/lib/logger"
+import type { ServiceResult } from "@src/lib/serviceResult"
 import type { SQL } from "bun"
 import { z } from "zod"
 
 // Base schema for all items
-const BaseItemSchema = z.object({
+export const BaseItemSchema = z.object({
   character_id: z.string(),
   name: z.string().min(1, "Item name is required"),
   description: OptionalString(),
@@ -228,7 +228,7 @@ const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
   }),
 ])
 
-const ItemTypeSchemas = z.discriminatedUnion("category", [
+export const ItemTypeSchemas = z.discriminatedUnion("category", [
   BasicItemSchema,
   ShieldItemSchema,
   ArmorItemSchema,
@@ -239,9 +239,11 @@ export const CreateItemApiSchema = ItemTypeSchemas.and(BaseItemSchema)
 
 export type CreateItemData = z.infer<typeof CreateItemApiSchema>
 
-export type CreateItemResult =
-  | { complete: true }
-  | { complete: false; values: Record<string, string>; errors?: Record<string, string> }
+export type CreateItemResult = ServiceResult<{
+  id: string
+  name: string
+  category: string
+}>
 
 const MAX_DAMAGE_ROWS = 10 as const
 
@@ -384,85 +386,81 @@ export async function createItem(
     long_range = result.data.long_range
   }
 
-  // Create the item and related records in a transaction
-  try {
-    // Create the base item
-    const newItem = await createItemDb(db, {
-      name: result.data.name,
-      description: result.data.description,
-      category: result.data.category,
-      armor_type: result.data.category === "armor" ? result.data.armor_type : null,
-      armor_class: result.data.category === "armor" ? result.data.armor_class : null,
-      armor_class_dex: result.data.category === "armor" ? result.data.armor_class_dex : null,
-      armor_class_dex_max:
-        result.data.category === "armor" ? result.data.armor_class_dex_max : null,
-      min_strength: result.data.category === "armor" ? result.data.min_strength : null,
+  // Create the base item
+  const newItem = await createItemDb(db, {
+    name: result.data.name,
+    description: result.data.description,
+    category: result.data.category,
+    armor_type: result.data.category === "armor" ? result.data.armor_type : null,
+    armor_class: result.data.category === "armor" ? result.data.armor_class : null,
+    armor_class_dex: result.data.category === "armor" ? result.data.armor_class_dex : null,
+    armor_class_dex_max: result.data.category === "armor" ? result.data.armor_class_dex_max : null,
+    min_strength: result.data.category === "armor" ? result.data.min_strength : null,
 
-      armor_modifier: result.data.category === "shield" ? result.data.armor_modifier : null,
+    armor_modifier: result.data.category === "shield" ? result.data.armor_modifier : null,
 
-      thrown: result.data.category === "weapon" ? result.data.weapon_type === "thrown" : false,
-      finesse: result.data.category === "weapon" ? result.data.finesse : false,
-      mastery: result.data.category === "weapon" ? result.data.mastery : null,
-      martial: result.data.category === "weapon" ? result.data.martial : false,
-      light: result.data.category === "weapon" ? result.data.light : false,
-      heavy: result.data.category === "weapon" ? result.data.heavy : false,
-      two_handed: result.data.category === "weapon" ? result.data.two_handed : false,
-      reach: result.data.category === "weapon" ? result.data.reach : false,
-      loading: result.data.category === "weapon" ? result.data.loading : false,
+    thrown: result.data.category === "weapon" ? result.data.weapon_type === "thrown" : false,
+    finesse: result.data.category === "weapon" ? result.data.finesse : false,
+    mastery: result.data.category === "weapon" ? result.data.mastery : null,
+    martial: result.data.category === "weapon" ? result.data.martial : false,
+    light: result.data.category === "weapon" ? result.data.light : false,
+    heavy: result.data.category === "weapon" ? result.data.heavy : false,
+    two_handed: result.data.category === "weapon" ? result.data.two_handed : false,
+    reach: result.data.category === "weapon" ? result.data.reach : false,
+    loading: result.data.category === "weapon" ? result.data.loading : false,
 
-      normal_range,
-      long_range,
+    normal_range,
+    long_range,
 
-      created_by: userId,
-    })
+    created_by: userId,
+  })
 
-    // Create damage records for weapons
-    for (const dmg of damages) {
-      await createItemDamageDb(db, {
-        item_id: newItem.id,
-        dice: dmg.dice,
-        type: dmg.type,
-        versatile: dmg.versatile,
-      })
-    }
-
-    // Create starting ammo charges if applicable
-    if (result.data.category === "weapon" && result.data.weapon_type === "ranged") {
-      await createItemChargeDb(db, {
-        item_id: newItem.id,
-        delta: result.data.starting_ammo,
-        note: "Starting ammunition",
-      })
-    }
-
-    // Create stealth disadvantage effect if applicable
-    if (result.data.category === "armor" && result.data.stealth_disadvantage) {
-      await createItemEffectDb(db, {
-        item_id: newItem.id,
-        target: "stealth",
-        op: "disadvantage",
-        value: null,
-        applies: "worn",
-      })
-    }
-
-    // Add item to character's inventory
-    await createCharItemDb(db, {
-      character_id: result.data.character_id,
+  // Create damage records for weapons
+  for (const dmg of damages) {
+    await createItemDamageDb(db, {
       item_id: newItem.id,
-      worn: false,
-      wielded: false,
-      dropped_at: null,
-      note: result.data.note,
+      dice: dmg.dice,
+      type: dmg.type,
+      versatile: dmg.versatile,
     })
+  }
 
-    return { complete: true }
-  } catch (error) {
-    logger.error("Error creating item:", error as Error)
-    return {
-      complete: false,
-      values: data,
-      errors: { general: "Failed to create item. Please try again." },
-    }
+  // Create starting ammo charges if applicable
+  if (result.data.category === "weapon" && result.data.weapon_type === "ranged") {
+    await createItemChargeDb(db, {
+      item_id: newItem.id,
+      delta: result.data.starting_ammo,
+      note: "Starting ammunition",
+    })
+  }
+
+  // Create stealth disadvantage effect if applicable
+  if (result.data.category === "armor" && result.data.stealth_disadvantage) {
+    await createItemEffectDb(db, {
+      item_id: newItem.id,
+      target: "stealth",
+      op: "disadvantage",
+      value: null,
+      applies: "worn",
+    })
+  }
+
+  // Add item to character's inventory
+  await createCharItemDb(db, {
+    character_id: result.data.character_id,
+    item_id: newItem.id,
+    worn: false,
+    wielded: false,
+    dropped_at: null,
+    note: result.data.note,
+  })
+
+  return {
+    complete: true,
+    result: {
+      id: newItem.id,
+      name: newItem.name,
+      category: newItem.category,
+    },
   }
 }

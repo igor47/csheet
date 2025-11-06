@@ -31,6 +31,12 @@ import {
 } from "./services/characterTraits"
 import type { ComputedCharacter } from "./services/computeCharacter"
 import {
+  createItemTool,
+  createItemToolName,
+  executeCreateItem,
+  formatCreateItemApproval,
+} from "./services/createItemTool"
+import {
   equipItemTool,
   equipItemToolName,
   executeEquipItem,
@@ -48,6 +54,11 @@ import {
   longRestTool,
   longRestToolName,
 } from "./services/longRest"
+import {
+  executeLookupItemTemplate,
+  lookupItemTemplateTool,
+  lookupItemTemplateToolName,
+} from "./services/lookupItemTemplate"
 import { executeLookupSpell, lookupSpellTool, lookupSpellToolName } from "./services/lookupSpell"
 import {
   executeManageCharge,
@@ -115,7 +126,8 @@ export type ToolExecutor = (
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
   isCheck?: boolean
-) => Promise<ServiceResult>
+  // biome-ignore lint/suspicious/noExplicitAny: Service results can be any valid JSON
+) => Promise<ServiceResult<Record<string, any>>>
 
 /**
  * Function signature for tool approval message formatters
@@ -230,6 +242,17 @@ export const TOOLS: ToolRegistration[] = [
   },
 
   // Items
+  {
+    name: lookupItemTemplateToolName,
+    tool: lookupItemTemplateTool,
+    executor: executeLookupItemTemplate,
+  },
+  {
+    name: createItemToolName,
+    tool: createItemTool,
+    executor: executeCreateItem,
+    formatApprovalMessage: formatCreateItemApproval,
+  },
   {
     name: equipItemToolName,
     tool: equipItemTool,

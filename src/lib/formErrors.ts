@@ -2,12 +2,12 @@ import type { ZodError } from "zod"
 
 type FormErrors = Record<string, string>
 
-function humanizeEnumError(error: string): string {
+export function humanizeEnumError(error: string): string {
   // Transform enum errors from: expected one of "option1"|"option2"|"option3"
   // to: expected one of option1, option2, option3
 
   // First pass: replace first "option"| with option|
-  let result = error.replace(/"([^"]+)"\|/g, "$1|")
+  let result = error.replace(/"([^"]+)"\|/, "$1|")
 
   // Second pass: replace any remaining |"option" with , option
   result = result.replace(/\|"([^"]+)"/g, ", $1")

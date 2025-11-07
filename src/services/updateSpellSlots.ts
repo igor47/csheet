@@ -8,7 +8,6 @@ import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const UpdateSpellSlotsApiSchema = z.object({
-  character_id: z.string(),
   action: z
     .enum(["use", "restore"])
     .describe("Whether to use (consume) a spell slot or restore (regain) a spell slot"),
@@ -124,7 +123,6 @@ export async function updateSpellSlots(
 
   // If we got here, let's actually validate and persist the data
   const result = UpdateSpellSlotsApiSchema.safeParse({
-    character_id: char.id,
     action: data.action,
     slot_level: parseInt(data.slot_level!, 10),
     note: data.note ? data.note : null,
@@ -136,14 +134,14 @@ export async function updateSpellSlots(
 
   if (result.data.action === "use") {
     await createSpellSlotDb(db, {
-      character_id: result.data.character_id,
+      character_id: char.id,
       slot_level: result.data.slot_level,
       action: "use",
       note: result.data.note || null,
     })
   } else if (result.data.action === "restore") {
     await createSpellSlotDb(db, {
-      character_id: result.data.character_id,
+      character_id: char.id,
       slot_level: result.data.slot_level,
       action: "restore",
       note: result.data.note || null,
@@ -158,7 +156,7 @@ export const updateSpellSlotsToolName = "update_spell_slots" as const
 export const updateSpellSlotsTool = tool({
   name: updateSpellSlotsToolName,
   description: `Manually use or restore a spell slot. This is useful for features that restore spell slots (like Arcane Recovery) or consume them for non-spell purposes. For casting spells, use the cast_spell tool instead.`,
-  inputSchema: UpdateSpellSlotsApiSchema.omit({ character_id: true }),
+  inputSchema: UpdateSpellSlotsApiSchema,
 })
 
 /**

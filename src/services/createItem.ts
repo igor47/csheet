@@ -27,7 +27,6 @@ import type { ComputedCharacter } from "./computeCharacter"
 
 // Base schema for all items
 export const BaseItemSchema = z.object({
-  character_id: z.string(),
   name: z.string().min(1, "Item name is required"),
   description: OptionalString(),
   category: ItemCategorySchema,
@@ -175,7 +174,7 @@ export type CreateItemResult = ServiceResult<{
  */
 export async function createItem(
   db: SQL,
-  userId: string,
+  char: ComputedCharacter,
   data: Record<string, string>
 ): Promise<CreateItemResult> {
   const errors: Record<string, string> = {}
@@ -310,7 +309,7 @@ export async function createItem(
     normal_range,
     long_range,
 
-    created_by: userId,
+    created_by: char.user_id,
   })
 
   // Create damage records for weapons
@@ -345,7 +344,7 @@ export async function createItem(
 
   // Add item to character's inventory
   await createCharItemDb(db, {
-    character_id: result.data.character_id,
+    character_id: char.id,
     item_id: newItem.id,
     worn: false,
     wielded: false,
@@ -372,8 +371,7 @@ export const createItemToolName = "create_item" as const
 // Flat schema with all fields optional (service validates category-specific requirements)
 // Reuses schemas from above to avoid duplication
 const CreateItemToolSchema = z.object({
-  // Base fields from BaseItemSchema (excluding internal fields)
-  character_id: BaseItemSchema.shape.character_id,
+  // Base fields from BaseItemSchema
   name: BaseItemSchema.shape.name,
   description: BaseItemSchema.shape.description,
   category: BaseItemSchema.shape.category,
@@ -440,13 +438,20 @@ export async function executeCreateItem(
   parameters: Record<string, any>,
   isCheck?: boolean
 ) {
-  // Convert all parameters to string format for the service
-  const data: Record<string, string> = {}
+  // Convert parameters to the format expected by createItem service
+  // biome-ignore lint/suspicious/noExplicitAny: Mixing strings with objects/arrays for form data
+  const data: Record<string, any> = {}
 
-  // Convert each parameter to string, handling all the possible fields
+  // Convert each parameter, preserving arrays and objects
   for (const [key, value] of Object.entries(parameters)) {
     if (value !== null && value !== undefined) {
-      data[key] = value.toString()
+      // Keep arrays and objects as-is for ObjectArrayField to process
+      if (Array.isArray(value) || typeof value === "object") {
+        data[key] = value
+      } else {
+        // Convert primitives to strings
+        data[key] = value.toString()
+      }
     }
   }
 
@@ -454,7 +459,7 @@ export async function executeCreateItem(
   data.is_check = isCheck ? "true" : "false"
 
   // Call the existing createItem service and return its result directly
-  return createItem(db, char.user_id, data)
+  return createItem(db, char, data)
 }
 
 /**

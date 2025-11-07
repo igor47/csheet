@@ -35,7 +35,7 @@ import {
   createItemToolName,
   executeCreateItem,
   formatCreateItemApproval,
-} from "./services/createItemTool"
+} from "./services/createItem"
 import {
   equipItemTool,
   equipItemToolName,

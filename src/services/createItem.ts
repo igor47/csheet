@@ -20,8 +20,10 @@ import {
   OptionalString,
 } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
+import type { ComputedCharacter } from "./computeCharacter"
 
 // Base schema for all items
 export const BaseItemSchema = z.object({
@@ -359,4 +361,165 @@ export async function createItem(
       category: newItem.category,
     },
   }
+}
+
+// ============================================================================
+// Tool Definition
+// ============================================================================
+
+export const createItemToolName = "create_item" as const
+
+// Flat schema with all fields optional (service validates category-specific requirements)
+// Reuses schemas from above to avoid duplication
+const CreateItemToolSchema = z.object({
+  // Base fields from BaseItemSchema (excluding internal fields)
+  character_id: BaseItemSchema.shape.character_id,
+  name: BaseItemSchema.shape.name,
+  description: BaseItemSchema.shape.description,
+  category: BaseItemSchema.shape.category,
+  note: BaseItemSchema.shape.note,
+
+  // Weapon-specific fields from WeaponItemBaseSchema
+  weapon_type: z.enum(["melee", "ranged", "thrown"]).optional(),
+  damage: WeaponItemBaseSchema.shape.damage.optional(),
+  finesse: WeaponItemBaseSchema.shape.finesse.optional(),
+  mastery: WeaponItemBaseSchema.shape.mastery.optional(),
+  martial: WeaponItemBaseSchema.shape.martial.optional(),
+  light: WeaponItemBaseSchema.shape.light.optional(),
+  heavy: WeaponItemBaseSchema.shape.heavy.optional(),
+  two_handed: WeaponItemBaseSchema.shape.two_handed.optional(),
+  reach: WeaponItemBaseSchema.shape.reach.optional(),
+  loading: WeaponItemBaseSchema.shape.loading.optional(),
+  // Range fields from the discriminated union variants (made optional)
+  normal_range: NumberField(
+    z.number().int({ message: "Must be a whole number" }).positive().optional()
+  ),
+  long_range: NumberField(
+    z.number().int({ message: "Must be a whole number" }).positive().optional()
+  ),
+  starting_ammo: NumberField(
+    z.number().int({ message: "Must be a whole number" }).min(0).optional()
+  ),
+
+  // Armor-specific fields from ArmorItemSchema
+  armor_type: ArmorItemSchema.shape.armor_type.optional(),
+  armor_class: ArmorItemSchema.shape.armor_class.optional(),
+  armor_class_dex: ArmorItemSchema.shape.armor_class_dex.optional(),
+  armor_class_dex_max: ArmorItemSchema.shape.armor_class_dex_max.optional(),
+  min_strength: ArmorItemSchema.shape.min_strength.optional(),
+  stealth_disadvantage: ArmorItemSchema.shape.stealth_disadvantage.optional(),
+
+  // Shield-specific fields from ShieldItemSchema
+  armor_modifier: ShieldItemSchema.shape.armor_modifier.optional(),
+})
+
+/**
+ * Vercel AI SDK tool definition for item creation
+ * This tool requires approval before execution
+ */
+export const createItemTool = tool({
+  name: createItemToolName,
+  description: [
+    "Create a new item and add it to the character's inventory.",
+    "The item will be added to inventory but not equipped.",
+    "You can create weapons, armor, shields, or misc items. For weapons, you must specify damage dice.",
+    "For armor, you must specify armor_class and armor_type. For shields, you must specify armor_modifier.",
+    "For common items, you can use lookup_item_template tool first to get item details from the SRD, then pass those details here.",
+  ].join(" "),
+  inputSchema: CreateItemToolSchema,
+})
+
+/**
+ * Execute the create_item tool from AI assistant
+ * Converts AI parameters to service format and calls createItem
+ */
+export async function executeCreateItem(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>,
+  isCheck?: boolean
+) {
+  // Convert all parameters to string format for the service
+  const data: Record<string, string> = {}
+
+  // Convert each parameter to string, handling all the possible fields
+  for (const [key, value] of Object.entries(parameters)) {
+    if (value !== null && value !== undefined) {
+      data[key] = value.toString()
+    }
+  }
+
+  // Add is_check flag
+  data.is_check = isCheck ? "true" : "false"
+
+  // Call the existing createItem service and return its result directly
+  return createItem(db, char.user_id, data)
+}
+
+/**
+ * Format approval message for create_item tool calls
+ */
+export function formatCreateItemApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { name, category, description } = parameters
+  let message = `Create ${category}: ${name}`
+
+  // Add category-specific details
+  if (category === "weapon") {
+    const weaponDetails = []
+    if (parameters.weapon_type) {
+      weaponDetails.push(parameters.weapon_type)
+    }
+    if (parameters.martial) {
+      weaponDetails.push("martial")
+    }
+    if (parameters.finesse) {
+      weaponDetails.push("finesse")
+    }
+    if (parameters.two_handed) {
+      weaponDetails.push("two-handed")
+    }
+
+    // Add damage info from damage array
+    if (parameters.damage && Array.isArray(parameters.damage) && parameters.damage.length > 0) {
+      const damageStrings = parameters.damage.map((dmg) => {
+        const dice = `${dmg.num_dice}d${dmg.die_value}`
+        const type = dmg.type || ""
+        const versatile = dmg.versatile ? " (versatile)" : ""
+        return `${dice} ${type}${versatile}`
+      })
+      weaponDetails.push(...damageStrings)
+    }
+
+    if (weaponDetails.length > 0) {
+      message += ` (${weaponDetails.join(", ")})`
+    }
+  } else if (category === "armor") {
+    const armorDetails = []
+    if (parameters.armor_type) {
+      armorDetails.push(parameters.armor_type)
+    }
+    if (parameters.armor_class) {
+      armorDetails.push(`AC ${parameters.armor_class}`)
+    }
+    if (parameters.stealth_disadvantage) {
+      armorDetails.push("stealth disadvantage")
+    }
+    if (armorDetails.length > 0) {
+      message += ` (${armorDetails.join(", ")})`
+    }
+  } else if (category === "shield") {
+    if (parameters.armor_modifier) {
+      message += ` (+${parameters.armor_modifier} AC)`
+    }
+  }
+
+  if (description) {
+    message += `\n${description}`
+  }
+
+  return message
 }

@@ -424,9 +424,8 @@ characterRoutes.post("/characters/:id/edit/trait", async (c) => {
 
   // Set source to "custom" for user-added traits
   body.source = "custom"
-  body.character_id = characterId
 
-  const result = await addTrait(getDb(c), body)
+  const result = await addTrait(getDb(c), char, body)
 
   if (!result.complete) {
     return c.html(<TraitEditForm character={char} values={result.values} errors={result.errors} />)
@@ -448,13 +447,10 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
     return c.body(null, 204)
   }
 
-  // Set character_id for the item
-  body.character_id = characterId
-
   // if we have a template change, skip the validation
   let result: CreateItemResult
   if (body.template === body.prev_template) {
-    result = await createItem(getDb(c), c.var.user!.id, body)
+    result = await createItem(getDb(c), char, body)
   } else {
     result = { complete: false, values: body, errors: {} }
   }

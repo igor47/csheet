@@ -7,7 +7,6 @@ import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const AddTraitApiSchema = z.object({
-  character_id: z.string(),
   name: z
     .string()
     .min(1, "Trait name is required")
@@ -43,15 +42,14 @@ export type AddTraitResult = ServiceResult<object>
  * Add a trait to a character
  * Can be called with isCheck for validation or without for persistence
  */
-export async function addTrait(db: SQL, data: Record<string, string>): Promise<AddTraitResult> {
+export async function addTrait(
+  db: SQL,
+  char: ComputedCharacter,
+  data: Record<string, string>
+): Promise<AddTraitResult> {
   const errors: Record<string, string> = {}
   const values = data as AddTraitData
   const isCheck = data.is_check === "true"
-
-  // Soft validation for is_check
-  if (!values.character_id && !isCheck) {
-    errors.character_id = "Character ID is required"
-  }
 
   if (!values.name) {
     if (!isCheck) {
@@ -88,7 +86,10 @@ export async function addTrait(db: SQL, data: Record<string, string>): Promise<A
   }
 
   // Persist the trait
-  await createTrait(db, result.data)
+  await createTrait(db, {
+    character_id: char.id,
+    ...result.data,
+  })
 
   return { complete: true, result: {} }
 }
@@ -98,7 +99,7 @@ export const addTraitToolName = "add_trait" as const
 export const addTraitTool = tool({
   name: addTraitToolName,
   description: `Add a trait, feature, or feat to the character. This can be used for custom traits, feats gained, or features from magic items.`,
-  inputSchema: AddTraitApiSchema.omit({ character_id: true }),
+  inputSchema: AddTraitApiSchema,
 })
 
 /**
@@ -112,7 +113,6 @@ export async function executeAddTrait(
   isCheck?: boolean
 ) {
   const data: Record<string, string> = {
-    character_id: char.id,
     name: parameters.name?.toString() || "",
     description: parameters.description?.toString() || "",
     source: parameters.source?.toString() || "",
@@ -122,7 +122,7 @@ export async function executeAddTrait(
     is_check: isCheck ? "true" : "false",
   }
 
-  return addTrait(db, data)
+  return addTrait(db, char, data)
 }
 
 /**

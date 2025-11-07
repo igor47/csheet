@@ -12,7 +12,6 @@ import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export const AddLevelApiSchema = z.object({
-  character_id: z.string(),
   class: ClassNamesSchema.describe("The class to add a level in (e.g., 'fighter', 'wizard')"),
   level: z
     .number()
@@ -236,7 +235,7 @@ export const addLevelToolName = "add_level" as const
 export const addLevelTool = tool({
   name: addLevelToolName,
   description: `Add a level to the character (level up). Automatically adds class traits/features for the new level. Ask the user to roll their hit die for HP.`,
-  inputSchema: AddLevelApiSchema.omit({ character_id: true, level: true }),
+  inputSchema: AddLevelApiSchema.omit({ level: true }),
 })
 
 /**

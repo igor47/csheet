@@ -19,8 +19,6 @@ export const TraitEditForm = ({ character, values, errors }: TraitEditFormProps)
         hx-swap="innerHTML"
         class="modal-body needs-validation"
       >
-        <input type="hidden" name="character_id" value={character.id} />
-
         <div class="mb-3">
           <label for="name" class="form-label">
             Trait Name

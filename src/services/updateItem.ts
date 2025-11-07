@@ -25,8 +25,6 @@ import { z } from "zod"
 
 // Base schema for item updates (category is NOT editable)
 const BaseItemUpdateSchema = z.object({
-  item_id: z.string(),
-  character_id: z.string(),
   name: z.string().min(1, "Item name is required"),
   description: OptionalString(),
   category: ItemCategorySchema, // For identification only, not editable
@@ -166,12 +164,8 @@ export async function updateItem(
     }
   }
 
-  // Add item_id, character_id, and category to data
-  data.item_id = itemId
-  data.character_id = characterId
+  // cannot change item category
   data.category = existingItem.category
-
-  const isCheck = data.is_check === "true"
 
   // Partial validation for check mode
   const partial = ItemTypeUpdateSchemas.and(BaseItemUpdateSchema.partial()).safeParse(data)
@@ -184,6 +178,7 @@ export async function updateItem(
   }
 
   const values = partial.data
+  const isCheck = values.is_check
 
   // Soft validation for check mode
   if (!values.name) {

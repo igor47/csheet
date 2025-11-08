@@ -79,6 +79,33 @@ description = "Remove the Cloud Run service and migration job"
 run = "gcloud beta run services logs tail prod-app --project=csheet-475917 --region=us-central1"
 description = "Tail production Cloud Run logs"
 
+[tasks."db:prod:psql"]
+run = "gcloud sql connect app-db-7205418 --project=csheet-475917 --database=csheet --user=app"
+description = "Connect to production database (interactive psql)"
+
+[tasks."db:prod:proxy"]
+run = """
+  echo "Starting Cloud SQL Proxy for production database..."
+  echo "Connection will be available at: localhost:5433"
+  echo "Database: csheet"
+  echo "User: app"
+  echo ""
+  echo "Connect with DBeaver using:"
+  echo "  Host: localhost"
+  echo "  Port: 5433"
+  echo "  Database: csheet"
+  echo "  Username: app"
+  echo "  Password: (retrieve from Secret Manager)"
+  echo ""
+  echo "To get the password, run:"
+  echo "  gcloud secrets versions access latest --secret=prod-postgres-password --project=csheet-475917"
+  echo ""
+  echo "Press Ctrl+C to stop the proxy"
+  echo ""
+  gcloud sql instances describe app-db-7205418 --project=csheet-475917 --format="value(connectionName)" | xargs -I {} cloud-sql-proxy {} --port 5433
+"""
+description = "Start Cloud SQL Proxy tunnel to production database (localhost:5433)"
+
 [tasks.install]
 run = "bun install"
 description = "Install dependencies"

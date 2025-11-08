@@ -230,13 +230,15 @@ const sqlInstance = new gcp.sql.DatabaseInstance(
     databaseVersion: "POSTGRES_16",
     project,
     region,
+    deletionProtection: stack === "prod" ? true : undefined,
     settings: {
       tier: dbTier,
       availabilityType: stack === "prod" ? "REGIONAL" : undefined,
       edition: stack === "prod" ? "ENTERPRISE" : undefined,
       ipConfiguration: {
         privateNetwork: network.id,
-        ipv4Enabled: false,
+        ipv4Enabled: stack === "prod",
+        authorizedNetworks: stack === "prod" ? [] : undefined,
       },
       backupConfiguration: {
         enabled: true,
@@ -245,7 +247,8 @@ const sqlInstance = new gcp.sql.DatabaseInstance(
         location: "us",
         transactionLogRetentionDays: 7,
         backupRetentionSettings: {
-          retainedBackups: stack === "prod" ? 90 : 7,
+          retainedBackups: stack === "prod" ? 30 : 7,
+          retentionUnit: stack === "prod" ? "COUNT" : undefined,
         },
       },
       diskAutoresize: true,

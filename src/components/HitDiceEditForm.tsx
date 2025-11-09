@@ -1,5 +1,6 @@
 import { HitDiceDisplay } from "@src/components/ui/HitDiceDisplay"
 import type { HitDieType } from "@src/lib/dnd"
+import { ignoreCheckEmptyErrors } from "@src/lib/formErrors"
 import clsx from "clsx"
 
 export interface HitDiceEditFormProps {
@@ -14,8 +15,8 @@ export const HitDiceEditForm = ({
   characterId,
   allHitDice,
   availableHitDice,
-  values,
-  errors,
+  values = {},
+  errors = {},
 }: HitDiceEditFormProps) => {
   const action =
     values?.action || (availableHitDice.length < allHitDice.length ? "restore" : "spend")
@@ -51,6 +52,8 @@ export const HitDiceEditForm = ({
   }
   const uniqueUsedDice = Array.from(new Set(usedDice)).sort((a, b) => a - b)
 
+  errors = ignoreCheckEmptyErrors(values, errors)
+
   return (
     <>
       <div class="modal-header">
@@ -60,8 +63,9 @@ export const HitDiceEditForm = ({
       <div class="modal-body">
         <form
           id="hitdice-edit-form"
-          hx-post={`/characters/${characterId}/edit/hitdice/check`}
-          hx-trigger="change delay:300ms"
+          hx-post={`/characters/${characterId}/edit/hitdice`}
+          hx-vals='{"is_check": "true"}'
+          hx-trigger="change delay:100ms"
           hx-target="#editModalContent"
           hx-swap="innerHTML"
           class="needs-validation"
@@ -208,8 +212,9 @@ export const HitDiceEditForm = ({
               name="note"
               rows={2}
               placeholder="Add a note about this hit dice change..."
-              value={values?.note || ""}
-            />
+            >
+              {values?.note || ""}
+            </textarea>
           </div>
 
           <div class="modal-footer">
@@ -219,9 +224,11 @@ export const HitDiceEditForm = ({
             <button
               type="submit"
               class="btn btn-primary"
+              hx-vals='{"is_check": "false"}'
               hx-post={`/characters/${characterId}/edit/hitdice`}
               hx-target="#editModalContent"
               hx-swap="innerHTML"
+              hx-sync="closest form:replace"
             >
               Update Hit Dice
             </button>

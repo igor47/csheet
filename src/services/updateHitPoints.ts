@@ -12,7 +12,7 @@ export const UpdateHitPointsApiSchema = z.object({
   amount: NumberField(
     z
       .number({
-        error: (iss) => (iss === undefined ? "Amount is required" : "Must be a valid number"),
+        error: (iss) => (iss.value === null ? "Amount is required" : "Must be a valid number"),
       })
       .int({ message: "Must be a whole number" })
       .min(1, { message: "Must be at least 1" })
@@ -54,30 +54,26 @@ export async function updateHitPoints(
     return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
   }
 
+  const values = checkD.data
   const errors: Record<string, string> = {}
   const currentHP = char.currentHP
   const maxHitPoints = char.maxHitPoints
 
   // Validate amount
-  if (data.amount) {
-    const amount = parseInt(data.amount, 10)
-    if (Number.isNaN(amount) || amount < 1) {
-      errors.amount = "Amount must be a positive number"
+  if (values.amount) {
+    // Check bounds
+    if (checkD.data.action === "restore") {
+      const newHP = currentHP + values.amount
+      if (newHP > maxHitPoints) {
+        errors.amount = `Cannot restore more than ${maxHitPoints - currentHP} HP (would exceed max)`
+      }
     } else {
-      // Check bounds
-      if (checkD.data.action === "restore") {
-        const newHP = currentHP + amount
-        if (newHP > maxHitPoints) {
-          errors.amount = `Cannot restore more than ${maxHitPoints - currentHP} HP (would exceed max)`
-        }
-      } else {
-        const newHP = currentHP - amount
-        if (newHP < 0) {
-          errors.amount = `Cannot lose more than ${currentHP} HP (would go below 0)`
-        }
+      const newHP = currentHP - values.amount
+      if (newHP < 0) {
+        errors.amount = `Cannot lose more than ${currentHP} HP (would go below 0)`
       }
     }
-  } else if (!checkD.data.is_check) {
+  } else if (!values.is_check) {
     errors.amount = "Amount is required"
   }
 

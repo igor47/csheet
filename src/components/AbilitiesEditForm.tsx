@@ -133,7 +133,7 @@ export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesE
         id="abilities-edit-form"
         hx-post={`/characters/${character.id}/edit/abilities`}
         hx-vals='{"is_check": "true"}'
-        hx-trigger="change delay:300ms"
+        hx-trigger="change"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
         class="needs-validation"

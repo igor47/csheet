@@ -15,25 +15,23 @@ export const UpdateHitDiceApiSchema = z.object({
     .describe("Whether to spend a hit die (during short rest) or restore a hit die"),
   die_value: NumberField(
     z
-      .number()
+      .number({
+        error: (iss) => (iss.input === null ? "Die value is required" : `Must be a valid number `),
+      })
       .int({ message: "Must be a whole number" })
       .refine((val): val is HitDieType => [6, 8, 10, 12].includes(val), {
         message: "Hit die must be 6, 8, 10, or 12",
       })
-      .nullable()
-  )
-    .optional()
-    .describe("The type of hit die (6, 8, 10, or 12)"),
+  ).describe("The type of hit die (6, 8, 10, or 12)"),
   hp_rolled: NumberField(
     z
-      .number()
+      .number({
+        error: (iss) => (iss.input === null ? "HP roll is required" : "Must be a valid number"),
+      })
       .int({ message: "Must be a whole number" })
       .min(1, { message: "Must be at least 1" })
       .max(12, { message: "Cannot exceed 12" })
-      .nullable()
-  )
-    .optional()
-    .describe("The HP rolled when spending a hit die (required for spend action)"),
+  ).describe("The HP rolled when spending a hit die (required for spend action)"),
   note: OptionalString().describe("Optional note about the hit die use or restoration"),
   is_check: Checkbox().optional().default(false),
 })

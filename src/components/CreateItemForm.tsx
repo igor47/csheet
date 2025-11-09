@@ -211,6 +211,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           </label>
           <Select
             id="item-category"
+            hx-preserve
             name="category"
             placeholder="Select category..."
             options={ItemCategories.map((cat) => ({
@@ -724,6 +725,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
             hx-swap="innerHTML"
+            hx-sync="closest form:abort"
           >
             Add Item
           </button>

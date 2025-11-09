@@ -39,7 +39,7 @@ export const LongRestForm = ({ character, values, errors }: LongRestFormProps) =
         id="long-rest-form"
         hx-post={`/characters/${character.id}/rest/long`}
         hx-vals='{"is_check": "true"}'
-        hx-trigger="change delay:300ms"
+        hx-trigger="change"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
         class="needs-validation"

@@ -37,7 +37,7 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
         id="learn-spell-form"
         hx-post={`/characters/${character.id}/edit/spellbook`}
         hx-vals='{"is_check": "true"}'
-        hx-trigger="change delay:300ms"
+        hx-trigger="change"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
         class="needs-validation"

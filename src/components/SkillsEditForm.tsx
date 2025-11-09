@@ -151,7 +151,7 @@ export const SkillsEditForm = ({ character, values = {}, errors = {} }: SkillsEd
         id="skills-edit-form"
         hx-post={`/characters/${character.id}/edit/skills`}
         hx-vals='{"is_check": "true"}'
-        hx-trigger="change delay:300ms"
+        hx-trigger="change"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
         class="needs-validation"

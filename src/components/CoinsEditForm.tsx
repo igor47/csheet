@@ -121,7 +121,7 @@ export const CoinsEditForm = ({ character, values = {}, errors = {} }: CoinsEdit
         id="coins-edit-form"
         hx-post={`/characters/${character.id}/edit/coins`}
         hx-vals='{"is_check": "true"}'
-        hx-trigger="change delay:300ms"
+        hx-trigger="change"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
         class="needs-validation"

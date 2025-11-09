@@ -63,3 +63,23 @@ export function zodToFormErrors(zodError: ZodError): FormErrors {
 
   return errors
 }
+
+// biome-ignore lint/suspicious/noExplicitAny: values can be complicated (e.g. arrays, nested objects)
+export function ignoreCheckEmptyErrors(
+  values: Record<string, any>,
+  errors: FormErrors
+): FormErrors {
+  if (values.is_check !== "true") {
+    return errors
+  }
+
+  const filteredErrors: FormErrors = {}
+  for (const [field, message] of Object.entries(errors)) {
+    // If field is missing or empty in values, skip the error
+    if (values[field] === undefined || values[field] === "") {
+      continue
+    }
+    filteredErrors[field] = message
+  }
+  return filteredErrors
+}

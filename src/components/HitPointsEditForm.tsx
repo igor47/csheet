@@ -1,4 +1,5 @@
 import { HitPointsBar } from "@src/components/ui/HitPointsBar"
+import { ignoreCheckEmptyErrors } from "@src/lib/formErrors"
 import clsx from "clsx"
 
 export interface HitPointsEditFormProps {
@@ -13,8 +14,8 @@ export const HitPointsEditForm = ({
   characterId,
   currentHP,
   maxHitPoints,
-  values,
-  errors,
+  values = {},
+  errors = {},
 }: HitPointsEditFormProps) => {
   const action = values?.action || (currentHP >= maxHitPoints ? "lose" : "restore")
   const amount = values?.amount ? parseInt(values.amount, 10) : 0
@@ -30,6 +31,7 @@ export const HitPointsEditForm = ({
   }
 
   const showPreview = amount > 0 && !errors?.amount
+  errors = ignoreCheckEmptyErrors(values, errors)
 
   return (
     <>
@@ -40,8 +42,9 @@ export const HitPointsEditForm = ({
       <div class="modal-body">
         <form
           id="hp-edit-form"
-          hx-post={`/characters/${characterId}/edit/hitpoints/check`}
-          hx-trigger="change delay:300ms"
+          hx-post={`/characters/${characterId}/edit/hitpoints`}
+          hx-vals='{"is_check": "true"}'
+          hx-trigger="change"
           hx-target="#editModalContent"
           hx-swap="innerHTML"
           class="needs-validation"
@@ -130,8 +133,9 @@ export const HitPointsEditForm = ({
               name="note"
               rows={2}
               placeholder="Add a note about this HP change..."
-              value={values?.note || ""}
-            />
+            >
+              {values?.note || ""}
+            </textarea>
           </div>
 
           <div class="modal-footer">
@@ -141,6 +145,7 @@ export const HitPointsEditForm = ({
             <button
               type="submit"
               class="btn btn-primary"
+              hx-vals='{"is_check": "false"}'
               hx-post={`/characters/${characterId}/edit/hitpoints`}
               hx-target="#editModalContent"
               hx-swap="innerHTML"

@@ -208,7 +208,7 @@ export function formatUpdateCoinsApproval(
 
   let message = `${action} ${changes.join(", ")}`
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

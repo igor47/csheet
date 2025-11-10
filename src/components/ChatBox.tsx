@@ -151,15 +151,23 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
               name="message"
               id="chat-input"
               class="form-control"
-              placeholder="e.g., I spent 50 gold on a sword"
+              placeholder={
+                computedChat.unresolvedToolCalls.length > 0
+                  ? "Accept or decline Reed's edit"
+                  : "e.g., I spent 50 gold on a sword"
+              }
               required
               autocomplete="off"
-              {...(computedChat.shouldStream ? { disabled: true } : {})}
+              {...(computedChat.shouldStream || computedChat.unresolvedToolCalls.length > 0
+                ? { disabled: true }
+                : {})}
             />
             <button
               type="submit"
               class="btn btn-primary"
-              {...(computedChat.shouldStream ? { disabled: true } : {})}
+              {...(computedChat.shouldStream || computedChat.unresolvedToolCalls.length > 0
+                ? { disabled: true }
+                : {})}
             >
               {computedChat.shouldStream ? (
                 <output class="spinner-border spinner-border-sm" aria-hidden="true" />
@@ -229,33 +237,34 @@ export const ToolCallApproval = ({ characterId, chatId, toolCall }: ToolCallAppr
     <div class="row g-0 mb-2 chat-message" id={`tool-${toolCall.messageId}-${toolCall.toolCallId}`}>
       <div class="col-10">
         <div class="card border-warning">
-          <div class="card-body p-2">
-            <div class="d-flex align-items-start">
-              <i class="bi bi-exclamation-triangle text-warning me-2 mt-1"></i>
-              <div class="flex-grow-1" style="white-space: pre-line;">
-                {approvalMessage}
-              </div>
-              <div class="btn-group btn-group-sm ms-2">
-                <button
-                  type="button"
-                  class="btn btn-success"
-                  hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/approve`}
-                  hx-target="#chat-box-card"
-                  hx-swap="outerHTML"
-                >
-                  <i class="bi bi-check-lg"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-danger"
-                  hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/reject`}
-                  hx-target="#chat-box-card"
-                  hx-swap="outerHTML"
-                >
-                  <i class="bi bi-x-lg"></i>
-                </button>
-              </div>
-            </div>
+          <div class="card-header bg-warning text-dark py-2">
+            <h6 class="mb-0">
+              <i class="bi bi-question-circle me-2"></i>
+              Accept Reed's Action
+            </h6>
+          </div>
+          <div class="card-body p-3">{approvalMessage}</div>
+          <div class="card-footer d-flex justify-content-end gap-2 p-2">
+            <button
+              type="button"
+              class="btn btn-success btn-sm"
+              hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/approve`}
+              hx-target="#chat-box-card"
+              hx-swap="outerHTML"
+            >
+              <i class="bi bi-check-lg me-1"></i>
+              Confirm
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger btn-sm"
+              hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/reject`}
+              hx-target="#chat-box-card"
+              hx-swap="outerHTML"
+            >
+              <i class="bi bi-x-lg me-1"></i>
+              Decline
+            </button>
           </div>
         </div>
       </div>

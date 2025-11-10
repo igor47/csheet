@@ -137,7 +137,7 @@ export function formatEquipItemApproval(
   let message = action
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

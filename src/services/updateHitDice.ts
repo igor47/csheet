@@ -248,7 +248,7 @@ export function formatUseHitDieApproval(
   let message = `Spend D${die_value} hit die (rolled ${hp_rolled} HP)`
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message
@@ -266,7 +266,7 @@ export function formatRestoreHitDieApproval(
   let message = `Restore D${die_value} hit die`
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

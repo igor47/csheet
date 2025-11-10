@@ -142,7 +142,7 @@ export function formatUpdateHitPointsApproval(
 
   let message = `${verb} ${amount} ${suffix}`
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

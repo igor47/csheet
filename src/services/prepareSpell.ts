@@ -238,7 +238,7 @@ export function formatPrepareSpellApproval(
     : `Prepare ${spellName} as ${className} ${spell_type}`
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

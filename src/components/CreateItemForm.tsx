@@ -7,7 +7,8 @@ import { clsx } from "clsx"
 
 export interface CreateItemFormProps {
   character: ComputedCharacter
-  values: Record<string, string>
+  // biome-ignore lint/suspicious/noExplicitAny: form values can be strings, objects, or arrays depending on the field
+  values: Record<string, any>
   errors?: Record<string, string>
 }
 

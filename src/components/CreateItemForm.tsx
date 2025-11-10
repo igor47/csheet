@@ -89,15 +89,13 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
     // Damage arrays
     if (template.damage) {
       values.damage_row_count = String(template.damage.length)
-      for (let i = 0; i < template.damage.length; i++) {
-        const dmg = template.damage[i]
-        if (dmg) {
-          values[`damage.${i}.num_dice`] = String(dmg.num_dice)
-          values[`damage.${i}.die_value`] = String(dmg.die_value)
-          values[`damage.${i}.type`] = dmg.type
-          if (dmg.versatile) values[`damage.${i}.versatile`] = "true"
-        }
-      }
+      // Create nested object structure instead of dot notation
+      values.damage = template.damage.map((dmg) => ({
+        num_dice: String(dmg.num_dice),
+        die_value: String(dmg.die_value),
+        type: dmg.type,
+        ...(dmg.versatile && { versatile: "true" }),
+      }))
     }
 
     // Armor-specific fields

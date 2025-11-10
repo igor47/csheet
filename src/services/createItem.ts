@@ -523,7 +523,7 @@ export function formatCreateItemApproval(
   }
 
   if (description) {
-    message += `\n${description}`
+    message += ` with description '${description}'`
   }
 
   return message

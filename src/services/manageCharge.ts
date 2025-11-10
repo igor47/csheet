@@ -156,7 +156,7 @@ export function formatManageChargeApproval(
   let message = `${verb} ${amount} charge${amount > 1 ? "s" : ""} ${action === "use" ? "from" : "to"} ${item_id}`
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

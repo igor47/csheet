@@ -275,7 +275,7 @@ export function formatAddLevelApproval(
   message += `, rolled ${hit_die_roll} HP`
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

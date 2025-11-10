@@ -148,7 +148,7 @@ export function formatLearnSpellApproval(
   let message = `Add ${spellName} to spellbook`
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

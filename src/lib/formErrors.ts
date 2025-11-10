@@ -64,8 +64,8 @@ export function zodToFormErrors(zodError: ZodError): FormErrors {
   return errors
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: values can be complicated (e.g. arrays, nested objects)
 export function ignoreCheckEmptyErrors(
+  // biome-ignore lint/suspicious/noExplicitAny: values can be complicated (e.g. arrays, nested objects)
   values: Record<string, any>,
   errors: FormErrors
 ): FormErrors {

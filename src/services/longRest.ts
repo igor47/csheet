@@ -171,7 +171,7 @@ export function formatLongRestApproval(
   let message = "Take a long rest"
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

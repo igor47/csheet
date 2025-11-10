@@ -194,7 +194,7 @@ export function formatUpdateSpellSlotsApproval(
   let message = `${verb} level ${slot_level} spell slot`
 
   if (note) {
-    message += `\n${note}`
+    message += ` with note '${note}'`
   }
 
   return message

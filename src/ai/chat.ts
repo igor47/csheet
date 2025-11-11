@@ -1,11 +1,11 @@
-import { type ChatMessage, create as saveChatMessage } from "@src/db/chat_messages"
+import { type ChatMessage, create as saveChatMessage, type Usage } from "@src/db/chat_messages"
 import { getChatModel } from "@src/lib/ai"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat } from "@src/services/computeChat"
 import { executeTool } from "@src/services/toolExecution"
 import { TOOL_DEFINITIONS, TOOLS } from "@src/tools"
-import { streamText } from "ai"
+import { type LanguageModel, streamText } from "ai"
 import type { SQL } from "bun"
 import { ulid } from "ulid"
 import { buildSystemPrompt } from "./prompts"
@@ -41,6 +41,7 @@ export async function prepareChatRequest(
       tool_calls: null,
       tool_results: null,
       error: null,
+      usage: null,
     })
   }
 
@@ -53,6 +54,7 @@ export async function prepareChatRequest(
     tool_calls: null,
     tool_results: null,
     error: null,
+    usage: null,
   })
 
   return { chatId: finalChatId }
@@ -154,8 +156,9 @@ export async function executeChatRequest(
 
   // First try-catch: Prep phase (building request)
   let requestBody: Parameters<typeof streamText>[0]
+  let model: LanguageModel
   try {
-    const model = getChatModel()
+    model = getChatModel()
     requestBody = {
       model,
       maxOutputTokens: 1024,
@@ -185,6 +188,7 @@ export async function executeChatRequest(
         type: "prep",
         message: err instanceof Error ? err.message : "Unknown prep error",
       },
+      usage: null,
     })
 
     return assistantMsg.id
@@ -214,6 +218,19 @@ export async function executeChatRequest(
       toolResults[id] = null
     }
 
+    // Capture usage data from AI SDK
+    const usageData = await result.usage
+    const usage: Usage | null = usageData
+      ? {
+          provider: model.provider,
+          modelId: model.modelId,
+          inputTokens: usageData.inputTokens || 0,
+          outputTokens: usageData.outputTokens || 0,
+          cachedInputTokens: usageData.cachedInputTokens,
+          totalTokens: usageData.totalTokens || 0,
+        }
+      : null
+
     // Create assistant message with final content after streaming completes
     const assistantMsg = await saveChatMessage(db, {
       character_id: character.id,
@@ -223,6 +240,7 @@ export async function executeChatRequest(
       tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
       tool_results: Object.keys(toolResults).length > 0 ? toolResults : null,
       error: null,
+      usage,
     })
 
     // Auto-execute any read-only tools immediately
@@ -246,6 +264,7 @@ export async function executeChatRequest(
       content: "",
       tool_calls: null,
       tool_results: null,
+      usage: null,
       error: {
         type: "stream",
         message: err instanceof Error ? err.message : "Unknown stream error",

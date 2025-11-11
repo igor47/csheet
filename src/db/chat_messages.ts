@@ -22,6 +22,15 @@ export const MessageErrorSchema = z.object({
     .optional(),
 })
 
+export const UsageSchema = z.object({
+  provider: z.string(),
+  modelId: z.string(),
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  cachedInputTokens: z.number().optional(),
+  totalTokens: z.number(),
+})
+
 export const ChatMessageSchema = z.object({
   id: z.string(),
   character_id: z.string(),
@@ -31,6 +40,7 @@ export const ChatMessageSchema = z.object({
   tool_calls: z.record(z.string(), ToolCallSchema).nullable().default(null),
   tool_results: z.record(z.string(), ToolResultSchema.nullable()).nullable().default(null),
   error: MessageErrorSchema.nullable().default(null),
+  usage: UsageSchema.nullable().default(null),
   created_at: z.date(),
 })
 
@@ -42,6 +52,7 @@ export const CreateChatMessageSchema = ChatMessageSchema.omit({
 export type ToolCall = z.infer<typeof ToolCallSchema>
 export type ToolResult = z.infer<typeof ToolResultSchema>
 export type MessageError = z.infer<typeof MessageErrorSchema>
+export type Usage = z.infer<typeof UsageSchema>
 export type ChatMessage = z.infer<typeof ChatMessageSchema>
 export type CreateChatMessage = z.infer<typeof CreateChatMessageSchema>
 
@@ -56,6 +67,7 @@ function parseMessageRow(row: any): ChatMessage {
     tool_calls: row.tool_calls ?? null,
     tool_results: row.tool_results ?? null,
     error: row.error ?? null,
+    usage: row.usage ?? null,
     created_at: new Date(row.created_at),
   })
 }
@@ -64,7 +76,7 @@ export async function create(db: SQL, message: CreateChatMessage): Promise<ChatM
   const id = ulid()
 
   const result = await db`
-    INSERT INTO chat_messages (id, character_id, chat_id, role, content, tool_calls, tool_results, error, created_at)
+    INSERT INTO chat_messages (id, character_id, chat_id, role, content, tool_calls, tool_results, error, usage, created_at)
     VALUES (
       ${id},
       ${message.character_id},
@@ -74,6 +86,7 @@ export async function create(db: SQL, message: CreateChatMessage): Promise<ChatM
       ${message.tool_calls},
       ${message.tool_results},
       ${message.error},
+      ${message.usage},
       CURRENT_TIMESTAMP
     )
     RETURNING *
@@ -105,6 +118,7 @@ export interface ChatPreview {
   message_count: number
   last_message: string
   last_message_at: Date
+  total_tokens: number | null
 }
 
 export async function getChatsByCharacterId(db: SQL, characterId: string): Promise<ChatPreview[]> {
@@ -120,7 +134,15 @@ export async function getChatsByCharacterId(db: SQL, characterId: string): Promi
         ORDER BY created_at DESC
         LIMIT 1
       ) as last_message,
-      MAX(created_at) as last_message_at
+      MAX(created_at) as last_message_at,
+      (
+        SELECT usage->'totalTokens'
+        FROM chat_messages cm2
+        WHERE cm2.chat_id = cm.chat_id
+          AND usage IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) as total_tokens
     FROM chat_messages cm
     WHERE character_id = ${characterId}
     GROUP BY chat_id, character_id
@@ -134,6 +156,7 @@ export async function getChatsByCharacterId(db: SQL, characterId: string): Promi
     message_count: Number(row.message_count),
     last_message: row.last_message,
     last_message_at: new Date(row.last_message_at),
+    total_tokens: row.total_tokens ? Number(row.total_tokens) : null,
   }))
 }
 

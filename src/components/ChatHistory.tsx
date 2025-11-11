@@ -30,6 +30,16 @@ export const ChatHistory = ({ character, chats }: ChatHistoryProps) => {
     return `${message.substring(0, maxLength)}...`
   }
 
+  const formatTokens = (tokens: number | null) => {
+    if (tokens === null) {
+      return null
+    }
+    return tokens.toLocaleString()
+  }
+
+  // Calculate total tokens across all chats
+  const totalTokens = chats.reduce((sum, chat) => sum + (chat.total_tokens || 0), 0)
+
   return (
     <>
       <div class="modal-header">
@@ -40,6 +50,11 @@ export const ChatHistory = ({ character, chats }: ChatHistoryProps) => {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        {totalTokens > 0 && (
+          <div class="alert alert-info mb-3">
+            <strong>Total tokens used:</strong> {formatTokens(totalTokens)}
+          </div>
+        )}
         {chats.length === 0 ? (
           <div class="text-center py-4">
             <p class="text-muted">No previous conversations found.</p>
@@ -63,6 +78,7 @@ export const ChatHistory = ({ character, chats }: ChatHistoryProps) => {
                   <small class="text-muted">
                     {formatDate(chat.last_message_at)} • {chat.message_count}{" "}
                     {chat.message_count === 1 ? "message" : "messages"}
+                    {chat.total_tokens !== null && ` • ${formatTokens(chat.total_tokens)} tokens`}
                   </small>
                 </div>
                 <button

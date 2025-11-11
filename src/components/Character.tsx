@@ -21,6 +21,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
     llmMessages: [],
     shouldStream: false,
     unresolvedToolCalls: [],
+    consecutiveErrorCount: 0,
   }
 
   return (

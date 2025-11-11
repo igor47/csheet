@@ -1,7 +1,7 @@
-\restrict pvjOXl9YLIvZIpwIY4SpsjlLg6SdnGsubpkeBvXexBkbo3eJ75tXDZIElIyU7Rk
+\restrict dHjV1HblrFJx4fO7pHqv5n4S8XTimapDTTVbRC9wurJFqB3ZtlnByHRDIhsNzgZ
 
 -- Dumped from database version 16.10
--- Dumped by pg_dump version 17.6
+-- Dumped by pg_dump version 18.0
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -296,6 +296,7 @@ CREATE TABLE public.chat_messages (
     tool_results jsonb,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     chat_id character varying(26) NOT NULL,
+    error jsonb,
     CONSTRAINT chat_messages_role_check CHECK ((role = ANY (ARRAY['user'::text, 'assistant'::text, 'system'::text])))
 );
 
@@ -1102,7 +1103,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict pvjOXl9YLIvZIpwIY4SpsjlLg6SdnGsubpkeBvXexBkbo3eJ75tXDZIElIyU7Rk
+\unrestrict dHjV1HblrFJx4fO7pHqv5n4S8XTimapDTTVbRC9wurJFqB3ZtlnByHRDIhsNzgZ
 
 
 --
@@ -1139,4 +1140,6 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251027195737'),
     ('20251028010531'),
     ('20251029183629'),
-    ('20251030232843');
+    ('20251030232843'),
+    ('20251111071524'),
+    ('20251111085621');

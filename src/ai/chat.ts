@@ -40,6 +40,7 @@ export async function prepareChatRequest(
       content: systemPrompt,
       tool_calls: null,
       tool_results: null,
+      error: null,
     })
   }
 
@@ -51,6 +52,7 @@ export async function prepareChatRequest(
     content: userMessage,
     tool_calls: null,
     tool_results: null,
+    error: null,
   })
 
   return { chatId: finalChatId }
@@ -136,8 +138,8 @@ async function validateApprovalTools(
 }
 
 /**
- * Execute a chat request by streaming AI response and creating assistant message after completion
- * Returns the ID of the newly created assistant message
+ * Execute a chat request by streaming AI response and creating assistant message
+ * Always returns the ID of the newly created assistant message (with content or error)
  */
 export async function executeChatRequest(
   db: SQL,
@@ -150,23 +152,45 @@ export async function executeChatRequest(
     throw new Error("Chat is not ready to stream - shouldStream flag is false")
   }
 
-  const model = getChatModel()
+  // First try-catch: Prep phase (building request)
+  let requestBody: Parameters<typeof streamText>[0]
+  try {
+    const model = getChatModel()
+    requestBody = {
+      model,
+      maxOutputTokens: 1024,
+      messages: computedChat.llmMessages,
+      tools: TOOL_DEFINITIONS,
+      onError: ({ error }: { error: unknown }) => {
+        logger.error("AI streaming error", error as Error, {
+          character_id: character.id,
+        })
+      },
+    }
+  } catch (err) {
+    logger.error("AI prep error", err as Error, {
+      chatId: computedChat.chatId,
+      character_id: character.id,
+    })
 
-  // Wrap streamText in a Promise that resolves when streaming completes
-  const requestBody = {
-    model,
-    maxOutputTokens: 1024,
-    messages: computedChat.llmMessages,
-    tools: TOOL_DEFINITIONS,
-    onError: ({ error }: { error: unknown }) => {
-      // Handle errors that occur during streaming (before onFinish)
-      logger.error("AI streaming error", error as Error, {
-        character_id: character.id,
-      })
-    },
+    // Create assistant message with prep error
+    const assistantMsg = await saveChatMessage(db, {
+      character_id: character.id,
+      chat_id: computedChat.chatId,
+      role: "assistant",
+      content: "",
+      tool_calls: null,
+      tool_results: null,
+      error: {
+        type: "prep",
+        message: err instanceof Error ? err.message : "Unknown prep error",
+      },
+    })
+
+    return assistantMsg.id
   }
 
-  // Start streaming - result is returned synchronously, streaming happens via callbacks
+  // Second try-catch: Streaming phase
   const messageAggregator: string[] = []
   try {
     const result = streamText(requestBody)
@@ -198,6 +222,7 @@ export async function executeChatRequest(
       content: messageAggregator.join(""),
       tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
       tool_results: Object.keys(toolResults).length > 0 ? toolResults : null,
+      error: null,
     })
 
     // Auto-execute any read-only tools immediately
@@ -212,6 +237,21 @@ export async function executeChatRequest(
       chatId: computedChat.chatId,
       character_id: character.id,
     })
-    throw err
+
+    // Create assistant message with stream error
+    const assistantMsg = await saveChatMessage(db, {
+      character_id: character.id,
+      chat_id: computedChat.chatId,
+      role: "assistant",
+      content: "",
+      tool_calls: null,
+      tool_results: null,
+      error: {
+        type: "stream",
+        message: err instanceof Error ? err.message : "Unknown stream error",
+      },
+    })
+
+    return assistantMsg.id
   }
 }

@@ -13,6 +13,15 @@ export const ToolResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success"), data: z.record(z.string(), z.any()).optional() }),
 ])
 
+export const MessageErrorSchema = z.object({
+  type: z.enum(["prep", "stream"]),
+  message: z.string(),
+  retryAt: z
+    .union([z.date(), z.string()])
+    .transform((val) => (typeof val === "string" ? new Date(val) : val))
+    .optional(),
+})
+
 export const ChatMessageSchema = z.object({
   id: z.string(),
   character_id: z.string(),
@@ -21,6 +30,7 @@ export const ChatMessageSchema = z.object({
   content: z.string(),
   tool_calls: z.record(z.string(), ToolCallSchema).nullable().default(null),
   tool_results: z.record(z.string(), ToolResultSchema.nullable()).nullable().default(null),
+  error: MessageErrorSchema.nullable().default(null),
   created_at: z.date(),
 })
 
@@ -31,34 +41,45 @@ export const CreateChatMessageSchema = ChatMessageSchema.omit({
 
 export type ToolCall = z.infer<typeof ToolCallSchema>
 export type ToolResult = z.infer<typeof ToolResultSchema>
+export type MessageError = z.infer<typeof MessageErrorSchema>
 export type ChatMessage = z.infer<typeof ChatMessageSchema>
 export type CreateChatMessage = z.infer<typeof CreateChatMessageSchema>
+
+/**
+ * Parse a database row into a ChatMessage
+ * Centralizes the JSON parsing and date conversion logic
+ */
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
+function parseMessageRow(row: any): ChatMessage {
+  return ChatMessageSchema.parse({
+    ...row,
+    tool_calls: row.tool_calls ?? null,
+    tool_results: row.tool_results ?? null,
+    error: row.error ?? null,
+    created_at: new Date(row.created_at),
+  })
+}
 
 export async function create(db: SQL, message: CreateChatMessage): Promise<ChatMessage> {
   const id = ulid()
 
   const result = await db`
-    INSERT INTO chat_messages (id, character_id, chat_id, role, content, tool_calls, tool_results, created_at)
+    INSERT INTO chat_messages (id, character_id, chat_id, role, content, tool_calls, tool_results, error, created_at)
     VALUES (
       ${id},
       ${message.character_id},
       ${message.chat_id},
       ${message.role},
       ${message.content},
-      ${message.tool_calls ? JSON.stringify(message.tool_calls) : null},
-      ${message.tool_results ? JSON.stringify(message.tool_results) : null},
+      ${message.tool_calls},
+      ${message.tool_results},
+      ${message.error},
       CURRENT_TIMESTAMP
     )
     RETURNING *
   `
 
-  const row = result[0]
-  return ChatMessageSchema.parse({
-    ...row,
-    tool_calls: row.tool_calls ? JSON.parse(row.tool_calls) : null,
-    tool_results: row.tool_results ? JSON.parse(row.tool_results) : null,
-    created_at: new Date(row.created_at),
-  })
+  return parseMessageRow(result[0])
 }
 
 // Chat-specific functions
@@ -73,14 +94,7 @@ export async function findByChatId(db: SQL, chatId: string, limit = 50): Promise
   return (
     result
       // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
-      .map((row: any) =>
-        ChatMessageSchema.parse({
-          ...row,
-          tool_calls: row.tool_calls ? JSON.parse(row.tool_calls) : null,
-          tool_results: row.tool_results ? JSON.parse(row.tool_results) : null,
-          created_at: new Date(row.created_at),
-        })
-      )
+      .map((row: any) => parseMessageRow(row))
       .reverse()
   ) // Return in chronological order (oldest first)
 }
@@ -128,4 +142,19 @@ export async function clearChat(db: SQL, chatId: string): Promise<void> {
     DELETE FROM chat_messages
     WHERE chat_id = ${chatId}
   `
+}
+
+export async function setMessageRetry(db: SQL, messageId: string): Promise<ChatMessage> {
+  const result = await db`
+    UPDATE chat_messages
+    SET error = jsonb_set(error, '{retryAt}', to_jsonb(CURRENT_TIMESTAMP))
+    WHERE id = ${messageId} AND error IS NOT NULL
+    RETURNING *
+  `
+
+  if (result.length === 0) {
+    throw new Error(`Message ${messageId} not found or has no error`)
+  }
+
+  return parseMessageRow(result[0])
 }

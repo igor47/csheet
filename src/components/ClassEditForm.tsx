@@ -78,7 +78,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
           hx-vals='{"is_check": "true"}'
           hx-trigger="change"
           hx-target="#editModalContent"
-          hx-swap="innerHTML"
+          hx-swap="morph:innerHTML"
           class="needs-validation"
           novalidate
         >
@@ -146,7 +146,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
                 "bg-secondary-subtle text-muted": hitDieReadonly,
                 "is-invalid": errors?.hit_die_roll,
               })}
-              id="hit_die_roll"
+              id="classedit-hit-die-roll"
               name="hit_die_roll"
               value={hitDieValue}
               min="1"
@@ -180,11 +180,12 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
             </button>
             <button
               type="submit"
+              id="classedit-submit"
               class="btn btn-primary"
               hx-post={`/characters/${character.id}/edit/class`}
               hx-vals='{"is_check": "false"}'
               hx-target="#editModalContent"
-              hx-swap="innerHTML"
+              hx-swap="morph:innerHTML"
             >
               Add Level
             </button>

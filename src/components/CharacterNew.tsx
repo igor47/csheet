@@ -317,7 +317,7 @@ export const CharacterNew = ({ values = {}, errors = {} }: CharacterNewProps) =>
                 hx-vals='{"is_check": "true"}'
                 hx-trigger="change"
                 hx-target="#character-new"
-                hx-swap="outerHTML focus-scroll:false"
+                hx-swap="morph:outerHTML focus-scroll:false"
                 class="needs-validation"
                 novalidate
               >
@@ -326,6 +326,7 @@ export const CharacterNew = ({ values = {}, errors = {} }: CharacterNewProps) =>
                 <div class="d-flex gap-2">
                   <button
                     type="submit"
+                    id="character-new-submit"
                     hx-post="/characters/new"
                     hx-vals='{"is_check": "false"}'
                     class="btn btn-primary"

@@ -83,7 +83,7 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
           hx-vals='{"is_check": "true"}'
           hx-trigger="change"
           hx-target="#editModalContent"
-          hx-swap="innerHTML"
+          hx-swap="morph:innerHTML"
           class="needs-validation"
           novalidate
         >
@@ -217,7 +217,7 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
               hx-post={`/characters/${character.id}/edit/spellslots`}
               hx-vals='{"is_check": "false"}'
               hx-target="#editModalContent"
-              hx-swap="innerHTML"
+              hx-swap="morph:innerHTML"
             >
               Update Spell Slots
             </button>

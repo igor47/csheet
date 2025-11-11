@@ -32,7 +32,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Then overlay the generated htmx files from deps stage (after postinstall)
-COPY --from=deps /app/static/htmx.min.js /app/static/htmx-ext-sse.js ./static/
+COPY --from=deps /app/static/htmx.min.js /app/static/htmx-ext-sse.js /app/static/idiomorph-ext.min.js ./static/
 
 ENV NODE_ENV=production \
     PORT=3000

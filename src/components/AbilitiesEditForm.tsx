@@ -135,7 +135,7 @@ export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesE
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="needs-validation"
         novalidate
       >
@@ -183,7 +183,7 @@ export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesE
             hx-post={`/characters/${character.id}/edit/abilities`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
           >
             Update Abilities
           </button>

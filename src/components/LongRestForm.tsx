@@ -41,7 +41,7 @@ export const LongRestForm = ({ character, values, errors }: LongRestFormProps) =
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="needs-validation"
         novalidate
       >
@@ -129,7 +129,7 @@ export const LongRestForm = ({ character, values, errors }: LongRestFormProps) =
             hx-post={`/characters/${character.id}/rest/long`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
           >
             <i class="bi bi-moon-stars me-2"></i>
             Complete Long Rest

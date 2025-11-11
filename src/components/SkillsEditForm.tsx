@@ -153,7 +153,7 @@ export const SkillsEditForm = ({ character, values = {}, errors = {} }: SkillsEd
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="needs-validation"
         novalidate
       >
@@ -205,7 +205,7 @@ export const SkillsEditForm = ({ character, values = {}, errors = {} }: SkillsEd
             hx-post={`/characters/${character.id}/edit/skills`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
           >
             Update Skills
           </button>

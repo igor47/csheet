@@ -16,7 +16,7 @@ export const TraitEditForm = ({ character, values, errors }: TraitEditFormProps)
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="modal-body needs-validation"
       >
         <div class="mb-3">
@@ -78,6 +78,7 @@ export const TraitEditForm = ({ character, values, errors }: TraitEditFormProps)
             hx-post={`/characters/${character.id}/edit/trait`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
+            hx-swap="morph:innerHTML"
           >
             Add Trait
           </button>

@@ -25,9 +25,11 @@ export const Layout = ({
   currentPage,
   flash,
 }: LayoutProps) => {
+  // Map flash level to Bootstrap alert classes (Bootstrap uses "danger" not "error")
+  const flashBootstrapClass = flash?.level === "error" ? "danger" : flash?.level
   const flashClass = clsx(
     "alert alert-dismissible fade show",
-    flash ? `alert-${flash.level}` : null
+    flash ? `alert-${flashBootstrapClass}` : null
   )
 
   // Default metadata values

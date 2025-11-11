@@ -490,7 +490,8 @@ describe("POST /characters/:id/archive", () => {
           method: "POST",
         })
 
-        expect(response.status).toBe(403)
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe("/characters")
       })
     })
   })
@@ -590,7 +591,112 @@ describe("POST /characters/:id/unarchive", () => {
           method: "POST",
         })
 
-        expect(response.status).toBe(403)
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe("/characters")
+      })
+    })
+  })
+})
+
+describe("GET /characters/:id", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is not authenticated", () => {
+    test("redirects to login", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      const character = await characterFactory.create({ user_id: user.id }, testCtx.db)
+
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}`)
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toContain("/login")
+    })
+  })
+
+  describe("when user is authenticated", () => {
+    let user: User
+    let character: Character
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      character = await characterFactory.create({ user_id: user.id }, testCtx.db)
+    })
+
+    describe("when character belongs to another user", () => {
+      test("redirects to /characters", async () => {
+        const otherUser = await userFactory.create({}, testCtx.db)
+
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}`, {
+          user: otherUser,
+        })
+
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe("/characters")
+      })
+    })
+
+    describe("when character belongs to the user", () => {
+      test("renders the character sheet", async () => {
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}`, { user })
+
+        expect(response.status).toBe(200)
+        const body = await response.text()
+        expect(body).toContain(character.name)
+      })
+    })
+  })
+})
+
+describe("GET /characters/:id/history/:field", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is not authenticated", () => {
+    test("redirects to login", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      const character = await characterFactory.create({ user_id: user.id }, testCtx.db)
+
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}/history/class`)
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toContain("/login")
+    })
+  })
+
+  describe("when user is authenticated", () => {
+    let user: User
+    let character: Character
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      character = await characterFactory.create({ user_id: user.id }, testCtx.db)
+    })
+
+    describe("when character belongs to another user", () => {
+      test("redirects to /characters", async () => {
+        const otherUser = await userFactory.create({}, testCtx.db)
+
+        const response = await makeRequest(
+          testCtx.app,
+          `/characters/${character.id}/history/hitpoints`,
+          { user: otherUser }
+        )
+
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe("/characters")
+      })
+    })
+
+    describe("when character belongs to the user", () => {
+      test("renders the history", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/characters/${character.id}/history/class`,
+          {
+            user,
+          }
+        )
+
+        expect(response.status).toBe(200)
       })
     })
   })

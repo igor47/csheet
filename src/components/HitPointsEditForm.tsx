@@ -46,7 +46,7 @@ export const HitPointsEditForm = ({
           hx-vals='{"is_check": "true"}'
           hx-trigger="change"
           hx-target="#editModalContent"
-          hx-swap="innerHTML"
+          hx-swap="morph:innerHTML"
           class="needs-validation"
           novalidate
         >
@@ -148,7 +148,7 @@ export const HitPointsEditForm = ({
               hx-vals='{"is_check": "false"}'
               hx-post={`/characters/${characterId}/edit/hitpoints`}
               hx-target="#editModalContent"
-              hx-swap="innerHTML"
+              hx-swap="morph:innerHTML"
             >
               Update Hit Points
             </button>

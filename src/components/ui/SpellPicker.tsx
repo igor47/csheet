@@ -46,6 +46,7 @@ export const SpellPicker = ({
 
       {/* Search input */}
       <input
+        id="spellpicker-spell-search"
         type="text"
         class="form-control mb-2"
         name="spell_search"

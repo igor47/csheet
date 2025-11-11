@@ -129,7 +129,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
         hx-vals='{"is_check": "true"}'
         hx-trigger="input from:[name='spell_search'] changed delay:300ms, change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="needs-validation"
         novalidate
       >
@@ -252,7 +252,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
             hx-post={`/characters/${character.id}/edit/prepspell`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
             disabled={!selectedSpell}
           >
             {actionText} {toTitleCase(slotTypeLabel)}

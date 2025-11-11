@@ -4,6 +4,7 @@ node_modules/
 # statically served FE dependencies
 static/htmx.min.js
 static/htmx-ext-sse.js
+static/idiomorph-ext.min.js
 
 # output
 out

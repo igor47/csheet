@@ -74,7 +74,7 @@ const MultiClassSelector = ({ values = {}, errors = {} }: MultiClassSelectorProp
                   <input
                     type="checkbox"
                     class="form-check-input"
-                    id={`classes_${cls}`}
+                    id={`charimport-classes-${cls}`}
                     name={`classes_${cls}`}
                     checked={isSelected}
                   />
@@ -85,7 +85,7 @@ const MultiClassSelector = ({ values = {}, errors = {} }: MultiClassSelectorProp
                 {isSelected && (
                   <Select
                     name={`levels_${cls}`}
-                    id={`levels_${cls}`}
+                    id={`charimport-levels-${cls}`}
                     style="max-width: 10em;"
                     options={levelOptions}
                     value={level.toString()}
@@ -98,7 +98,7 @@ const MultiClassSelector = ({ values = {}, errors = {} }: MultiClassSelectorProp
                 <div class="ms-4">
                   <Select
                     name={`subclass_${cls}`}
-                    id={`subclass_${cls}`}
+                    id={`charimport-subclass-${cls}`}
                     options={subclassOptions}
                     placeholder={`Select ${toTitleCase(cls)} subclass`}
                     value={values[`subclass_${cls}`] as string}
@@ -150,7 +150,7 @@ const AbilityScoreInputs = ({ values = {}, errors = {} }: AbilityScoreInputsProp
                 <input
                   type="number"
                   class={clsx("form-control", { "is-invalid": hasError })}
-                  id={`ability_${ability}`}
+                  id={`charimport-ability-${ability}`}
                   name={`ability_${ability}`}
                   value={score}
                   min="3"
@@ -163,7 +163,7 @@ const AbilityScoreInputs = ({ values = {}, errors = {} }: AbilityScoreInputsProp
                 <input
                   type="checkbox"
                   class="form-check-input"
-                  id={`save_${ability}`}
+                  id={`charimport-save-${ability}`}
                   name={`save_${ability}`}
                   checked={isProficient}
                 />
@@ -197,7 +197,7 @@ const MaxHPInput = ({ values = {}, errors = {} }: MaxHPInputProps) => {
       <input
         type="number"
         class={clsx("form-control", { "is-invalid": errors?.max_hp })}
-        id="max_hp"
+        id="charimport-max-hp"
         name="max_hp"
         value={maxHp || ""}
         min="1"
@@ -278,7 +278,7 @@ const SkillProficiencySelector = ({ values = {}, errors = {} }: SkillProficiency
                       type="radio"
                       class="btn-check"
                       name={proficiencyFieldName}
-                      id={`${proficiencyFieldName}_${level}`}
+                      id={`charimport-${proficiencyFieldName}-${level}`}
                       value={level}
                       checked={currentProficiency === level}
                       autocomplete="off"
@@ -358,7 +358,7 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
                 hx-vals='{"is_check": "true"}'
                 hx-trigger="change"
                 hx-target="#character-import"
-                hx-swap="outerHTML focus-scroll:false"
+                hx-swap="morph:outerHTML focus-scroll:false"
                 class="needs-validation"
                 novalidate
               >
@@ -514,6 +514,7 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
                 <div class="d-flex gap-2">
                   <button
                     type="submit"
+                    id="character-import-submit"
                     hx-post="/characters/import"
                     hx-vals='{"is_check": "false"}'
                     class="btn btn-primary"

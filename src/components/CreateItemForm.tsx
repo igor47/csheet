@@ -161,7 +161,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="modal-body needs-validation"
       >
         {/* General error message */}
@@ -209,8 +209,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             Category <span class="text-danger">*</span>
           </label>
           <Select
-            id="item-category"
-            hx-preserve
+            id="createitem-category"
             name="category"
             placeholder="Select category..."
             options={ItemCategories.map((cat) => ({
@@ -219,6 +218,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             }))}
             value={values.category}
             error={errors?.category}
+            hx-preserve
           />
         </div>
 
@@ -248,7 +248,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
               Armor Type
             </label>
             <Select
-              id="armor-type"
+              id="createitem-armor-type"
               name="armor_type"
               placeholder="Select type..."
               options={armorTypeOptions}
@@ -699,9 +699,10 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
             id="item-note"
             name="note"
             rows={2}
-            value={values.note || ""}
             placeholder="Where or how you acquired this item"
-          />
+          >
+            {values.note || ""}
+          </textarea>
           {errors?.note && <div class="invalid-feedback d-block">{errors.note}</div>}
         </div>
 
@@ -719,11 +720,12 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           </button>
           <button
             type="submit"
+            id="createitem-submit"
             class="btn btn-primary"
             hx-post={`/characters/${character.id}/edit/newitem`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
             hx-sync="closest form:abort"
           >
             Add Item

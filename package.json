@@ -12,7 +12,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "postinstall": "mkdir -p static && cp node_modules/htmx.org/dist/htmx.min.js static/ && cp node_modules/htmx-ext-sse/sse.js static/htmx-ext-sse.js"
+    "postinstall": "mkdir -p static && cp node_modules/htmx.org/dist/htmx.min.js static/ && cp node_modules/htmx-ext-sse/sse.js static/htmx-ext-sse.js && cp node_modules/idiomorph/dist/idiomorph-ext.min.js static/idiomorph-ext.min.js"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",
@@ -40,6 +40,7 @@
     "hono": "^4.9.6",
     "htmx-ext-sse": "^2.2.4",
     "htmx.org": "^2.0.8",
+    "idiomorph": "^0.7.4",
     "marked": "^16.4.1",
     "nodemailer": "^7.0.10",
     "ulid": "^3.0.1",

@@ -39,7 +39,7 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
         hx-vals='{"is_check": "true"}'
         hx-trigger="input from:[name='spell_search'] changed delay:300ms, change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="needs-validation"
         novalidate
       >
@@ -83,7 +83,7 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
           </label>
           <textarea
             class="form-control"
-            id="note"
+            id="learnspell-note"
             name="note"
             rows={2}
             placeholder="Add a note about adding this spell to your spellbook..."
@@ -97,11 +97,12 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
           </button>
           <button
             type="submit"
+            id="learnspell-submit"
             class="btn btn-primary"
             hx-post={`/characters/${character.id}/edit/spellbook`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
             disabled={!selectedSpell}
           >
             Add to Spellbook

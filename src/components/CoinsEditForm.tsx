@@ -123,7 +123,7 @@ export const CoinsEditForm = ({ character, values = {}, errors = {} }: CoinsEdit
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="needs-validation"
         novalidate
       >
@@ -142,7 +142,7 @@ export const CoinsEditForm = ({ character, values = {}, errors = {} }: CoinsEdit
               <input
                 class="form-check-input"
                 type="checkbox"
-                id="make_change"
+                id="coinsedit-make-change"
                 name="make_change"
                 value="true"
                 checked={makeChange}
@@ -229,11 +229,12 @@ export const CoinsEditForm = ({ character, values = {}, errors = {} }: CoinsEdit
           </button>
           <button
             type="submit"
+            id="coinsedit-submit"
             class="btn btn-primary"
             hx-post={`/characters/${character.id}/edit/coins`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
           >
             Update Coins
           </button>

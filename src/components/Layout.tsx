@@ -83,6 +83,7 @@ export const Layout = ({
         <link href="/static/styles.css" rel="stylesheet" />
         <script src="/static/htmx.min.js"></script>
         <script src="/static/htmx-ext-sse.js"></script>
+        <script src="/static/idiomorph-ext.min.js"></script>
       </head>
       <body data-bs-theme="dark">
         <Navbar user={user} currentPage={currentPage} />

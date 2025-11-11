@@ -66,7 +66,7 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="needs-validation"
         novalidate
       >
@@ -234,7 +234,7 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
             hx-post={`/characters/${character.id}/rest/short`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
           >
             <i class="bi bi-cup-hot me-2"></i>
             Complete Short Rest

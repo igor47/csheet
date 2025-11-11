@@ -49,7 +49,7 @@ export const ChargeManagementForm = ({
           hx-vals='{"is_check": "true"}'
           hx-trigger="change"
           hx-target="#editModalContent"
-          hx-swap="innerHTML"
+          hx-swap="morph:innerHTML"
           class="needs-validation"
           novalidate
         >
@@ -177,7 +177,7 @@ export const ChargeManagementForm = ({
               hx-post={`/characters/${characterId}/items/${item.id}/charges`}
               hx-vals='{"is_check": "false"}'
               hx-target="#editModalContent"
-              hx-swap="innerHTML"
+              hx-swap="morph:innerHTML"
             >
               Update {chargeLabel}
             </button>

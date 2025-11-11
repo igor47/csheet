@@ -150,12 +150,12 @@ export const EditItemForm = ({
   return (
     <ModalContent title="Edit Item">
       <form
-        id="edit-item-form"
+        id="edititem-form"
         hx-post={`/characters/${character.id}/items/${item.id}/edit`}
         hx-vals='{"is_check": "true"}'
         hx-trigger="change"
         hx-target="#editModalContent"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         class="modal-body needs-validation"
       >
         {/* General error message */}
@@ -404,7 +404,7 @@ export const EditItemForm = ({
             <input
               type="hidden"
               name="damage_row_count"
-              id="damage_row_count"
+              id="edititem-damage-row-count"
               value={damageRowCount}
             />
 
@@ -419,6 +419,7 @@ export const EditItemForm = ({
                     <div class="col-3">
                       <input
                         type="number"
+                        id={`edititem-damage-num-dice-${i}`}
                         class={clsx("form-control form-control-sm", { "is-invalid": numDiceError })}
                         name={`damage.${i}.num_dice`}
                         placeholder="# dice"
@@ -436,6 +437,7 @@ export const EditItemForm = ({
                       <Select
                         class="form-select-sm"
                         name={`damage.${i}.die_value`}
+                        id={`edititem-damage-die-${i}`}
                         placeholder="Die"
                         options={dieValueOptions}
                         value={entry.die_value}
@@ -447,6 +449,7 @@ export const EditItemForm = ({
                       <Select
                         class="form-select-sm"
                         name={`damage.${i}.type`}
+                        id={`edititem-damage-type-${i}`}
                         placeholder="Type"
                         options={damageTypeOptions}
                         value={entry.type}
@@ -459,7 +462,7 @@ export const EditItemForm = ({
                     <input
                       class="form-check-input form-check-input-sm"
                       type="checkbox"
-                      id={`damage-versatile-${i}`}
+                      id={`edititem-damage-versatile-${i}`}
                       name={`damage.${i}.versatile`}
                       value="true"
                       checked={entry.versatile}
@@ -558,11 +561,12 @@ export const EditItemForm = ({
           </button>
           <button
             type="submit"
+            id="edititem-submit"
             class="btn btn-primary"
             hx-post={`/characters/${character.id}/items/${item.id}/edit`}
             hx-vals='{"is_check": "false"}'
             hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
           >
             Update Item
           </button>

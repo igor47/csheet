@@ -43,7 +43,7 @@ export const SessionNotes = ({ characterId, currentNote }: SessionNotesProps) =>
           hx-post={`/characters/${characterId}/notes`}
           hx-trigger={`input changed delay:${autoSaveDelaySeconds}s`}
           hx-target="#notes-save-status"
-          hx-swap="outerHTML"
+          hx-swap="morph:outerHTML"
           // biome-ignore lint/suspicious/noTsIgnore: this is SSR HTML, not real TS event code
           // @ts-ignore
           onInput="document.getElementById('notes-saved').classList.add('d-none'); document.getElementById('notes-unsaved').classList.remove('d-none');"

@@ -65,9 +65,9 @@ export const HitDiceEditForm = ({
           id="hitdice-edit-form"
           hx-post={`/characters/${characterId}/edit/hitdice`}
           hx-vals='{"is_check": "true"}'
-          hx-trigger="change delay:100ms"
+          hx-trigger="change"
           hx-target="#editModalContent"
-          hx-swap="innerHTML"
+          hx-swap="morph:innerHTML"
           class="needs-validation"
           novalidate
         >
@@ -121,7 +121,7 @@ export const HitDiceEditForm = ({
               </label>
               <select
                 class={clsx("form-select", { "is-invalid": errors?.die_value })}
-                id="die_value"
+                id="hitdice-die-value"
                 name="die_value"
                 required
               >
@@ -145,7 +145,7 @@ export const HitDiceEditForm = ({
                 </label>
                 <select
                   class={clsx("form-select", { "is-invalid": errors?.die_value })}
-                  id="die_value"
+                  id="hitdice-die-value"
                   name="die_value"
                   required
                 >
@@ -169,7 +169,7 @@ export const HitDiceEditForm = ({
                   <input
                     type="number"
                     class={clsx("form-control", { "is-invalid": errors?.hp_rolled })}
-                    id="hp_rolled"
+                    id="hitdice-hp-rolled"
                     name="hp_rolled"
                     value={values?.hp_rolled || ""}
                     min="1"
@@ -223,11 +223,12 @@ export const HitDiceEditForm = ({
             </button>
             <button
               type="submit"
+              id="hitdice-edit-submit"
               class="btn btn-primary"
               hx-vals='{"is_check": "false"}'
               hx-post={`/characters/${characterId}/edit/hitdice`}
               hx-target="#editModalContent"
-              hx-swap="innerHTML"
+              hx-swap="morph:innerHTML"
               hx-sync="closest form:replace"
             >
               Update Hit Dice

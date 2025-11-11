@@ -69,8 +69,10 @@ import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
 import { addTrait } from "@src/services/addTrait"
 import { archiveCharacter } from "@src/services/archiveCharacter"
+import { authorizeCharacter, handleUnallowed } from "@src/services/authorize"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
+import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 import { createCharacter } from "@src/services/createCharacter"
 import { type CreateItemResult, createItem } from "@src/services/createItem"
 import { createItemEffect } from "@src/services/createItemEffect"
@@ -156,11 +158,10 @@ characterRoutes.post("/characters/import", async (c) => {
 
 characterRoutes.get("/characters/:id", async (c) => {
   const id = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), id)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    return c.redirect("/characters")
-  }
+
+  const authResult = await authorizeCharacter(c, id)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const currentNote = await getCurrentNote(getDb(c), id)
 
@@ -173,21 +174,10 @@ characterRoutes.get("/characters/:id", async (c) => {
 
 characterRoutes.post("/characters/:id/archive", async (c) => {
   const characterId = c.req.param("id") as string
-  const user = c.var.user!
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 404)
-  }
-
-  // Verify ownership
-  if (char.user_id !== user.id) {
-    await setFlashMsg(c, "Unauthorized", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await archiveCharacter(getDb(c), char)
 
@@ -204,21 +194,10 @@ characterRoutes.post("/characters/:id/archive", async (c) => {
 
 characterRoutes.post("/characters/:id/unarchive", async (c) => {
   const characterId = c.req.param("id") as string
-  const user = c.var.user!
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters?show_archived=true")
-    return c.body(null, 404)
-  }
-
-  // Verify ownership
-  if (char.user_id !== user.id) {
-    await setFlashMsg(c, "Unauthorized", "error")
-    c.header("HX-Redirect", "/characters?show_archived=true")
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await unarchiveCharacter(getDb(c), char)
 
@@ -237,12 +216,9 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await addLevel(getDb(c), char, body)
 
@@ -267,12 +243,9 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await updateHitPoints(getDb(c), char, body)
 
@@ -296,12 +269,10 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
 
 characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const result = await updateHitDice(getDb(c), char, body)
@@ -327,12 +298,9 @@ characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await updateSpellSlots(getDb(c), char, body)
 
@@ -351,12 +319,9 @@ characterRoutes.post("/characters/:id/edit/prepspell", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await prepareSpell(getDb(c), char, body)
 
@@ -375,12 +340,9 @@ characterRoutes.post("/characters/:id/edit/spellbook", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await learnSpell(getDb(c), char, body)
 
@@ -395,18 +357,10 @@ characterRoutes.post("/characters/:id/edit/spellbook", async (c) => {
 
 characterRoutes.get("/characters/:id/edit/trait", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
 
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   return c.html(<TraitEditForm character={char} />)
 })
@@ -415,12 +369,9 @@ characterRoutes.post("/characters/:id/edit/trait", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   // Set source to "custom" for user-added traits
   body.source = "custom"
@@ -440,12 +391,9 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   const characterId = c.req.param("id") as string
   const body = (await c.req.parseBody({ all: true, dot: true })) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   // if we have a template change, skip the validation
   let result: CreateItemResult
@@ -468,21 +416,12 @@ characterRoutes.get("/characters/:id/items/:itemId", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
-
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to view this character")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   // Find the item in the computed character's items
-  const item = char.equippedItems.find((i) => i.id === itemId)
+  const item = char.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)
   if (!item) {
     await setFlashMsg(c, "Item not found", "error")
     c.header("HX-Redirect", `/characters/${characterId}`)
@@ -496,18 +435,9 @@ characterRoutes.get("/characters/:id/items/:itemId/edit", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
-
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   // Load the item
   const item = await findItemById(getDb(c), itemId)
@@ -528,18 +458,9 @@ characterRoutes.post("/characters/:id/items/:itemId/edit", async (c) => {
   const itemId = c.req.param("itemId") as string
   const body = (await c.req.parseBody({ all: true, dot: true })) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
-
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await updateItem(getDb(c), itemId, characterId, body)
 
@@ -574,20 +495,11 @@ characterRoutes.get("/characters/:id/items/:itemId/effects", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 403)
-  }
-
-  const item = char.equippedItems.find((i) => i.id === itemId)
+  const item = char.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)
   if (!item) {
     return c.html(
       <ModalContent title="Error">
@@ -606,20 +518,11 @@ characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 403)
-  }
-
-  let item = char.equippedItems.find((i) => i.id === itemId)
+  let item = char.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)
   if (!item) {
     return c.html(
       <ModalContent title="Error">
@@ -648,7 +551,7 @@ characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
 
   // Effect created successfully - reload the effects editor and all affected panels
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  item = updatedChar.equippedItems.find((i) => i.id === itemId)!
+  item = updatedChar.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)!
   return c.html(
     <>
       <ItemEffectsEditor
@@ -671,20 +574,11 @@ characterRoutes.delete("/characters/:id/items/:itemId/effects/:effectId", async 
   const itemId = c.req.param("itemId") as string
   const effectId = c.req.param("effectId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 403)
-  }
-
-  let item = char.equippedItems.find((i) => i.id === itemId)
+  let item = char.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)
   if (!item) {
     return c.html(
       <ModalContent title="Error">
@@ -710,7 +604,7 @@ characterRoutes.delete("/characters/:id/items/:itemId/effects/:effectId", async 
 
   // Effect deleted successfully - reload the effects editor and all affected panels
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  item = updatedChar.equippedItems.find((i) => i.id === itemId)!
+  item = updatedChar.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)!
   return c.html(
     <>
       <ItemEffectsEditor character={updatedChar} item={item} effects={item.effects} />
@@ -727,10 +621,8 @@ characterRoutes.post("/characters/:id/items/:itemId/wear", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char || char.user_id !== c.var.user?.id) {
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return c.body(null, 403)
 
   await changeItemState(getDb(c), characterId, itemId, { worn: true })
 
@@ -750,10 +642,8 @@ characterRoutes.post("/characters/:id/items/:itemId/remove", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char || char.user_id !== c.var.user?.id) {
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return c.body(null, 403)
 
   await changeItemState(getDb(c), characterId, itemId, { worn: false })
 
@@ -773,10 +663,8 @@ characterRoutes.post("/characters/:id/items/:itemId/wield", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char || char.user_id !== c.var.user?.id) {
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return c.body(null, 403)
 
   await changeItemState(getDb(c), characterId, itemId, { wielded: true })
 
@@ -796,10 +684,8 @@ characterRoutes.post("/characters/:id/items/:itemId/sheathe", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char || char.user_id !== c.var.user?.id) {
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return c.body(null, 403)
 
   await changeItemState(getDb(c), characterId, itemId, { wielded: false })
 
@@ -819,10 +705,8 @@ characterRoutes.post("/characters/:id/items/:itemId/drop", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char || char.user_id !== c.var.user?.id) {
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return c.body(null, 403)
 
   await changeItemState(getDb(c), characterId, itemId, { dropped: true })
 
@@ -842,20 +726,11 @@ characterRoutes.get("/characters/:id/items/:itemId/charges", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 403)
-  }
-
-  const item = char.equippedItems.find((i) => i.id === itemId)
+  const item = char.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)
   if (!item) {
     return c.html(
       <ModalContent title="Error">
@@ -874,20 +749,11 @@ characterRoutes.post("/characters/:id/items/:itemId/charges", async (c) => {
   const characterId = c.req.param("id") as string
   const itemId = c.req.param("itemId") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 403)
-  }
-
-  const item = char.equippedItems.find((i) => i.id === itemId)
+  const item = char.equippedItems.find((i: EquippedComputedItem) => i.id === itemId)
   if (!item) {
     return c.html(
       <ModalContent title="Error">
@@ -921,18 +787,10 @@ characterRoutes.post("/characters/:id/items/:itemId/charges", async (c) => {
 
 characterRoutes.get("/characters/:id/castspell", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
 
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const values: Record<string, string> = {}
   for (const qField of ["spell_id", "as_ritual"]) {
@@ -947,12 +805,10 @@ characterRoutes.get("/characters/:id/castspell", async (c) => {
 
 characterRoutes.post("/characters/:id/castspell", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const result = await castSpell(getDb(c), char, body)
@@ -973,12 +829,10 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
 // GET /characters/:id/rest/short - Show short rest modal
 characterRoutes.get("/characters/:id/rest/short", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   return c.html(<ShortRestForm character={char} values={{}} errors={{}} />)
 })
@@ -986,12 +840,10 @@ characterRoutes.get("/characters/:id/rest/short", async (c) => {
 // GET /characters/:id/rest/long - Show long rest modal
 characterRoutes.get("/characters/:id/rest/long", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   return c.html(<LongRestForm character={char} values={{}} errors={{}} />)
 })
@@ -999,12 +851,10 @@ characterRoutes.get("/characters/:id/rest/long", async (c) => {
 // POST /characters/:id/rest/short - Process short rest
 characterRoutes.post("/characters/:id/rest/short", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const body = await c.req.parseBody({ all: true, dot: true })
   // biome-ignore lint/suspicious/noExplicitAny: input might be strings, arrays, or objects
@@ -1051,12 +901,10 @@ characterRoutes.post("/characters/:id/rest/short", async (c) => {
 // POST /characters/:id/rest/long - Process long rest
 characterRoutes.post("/characters/:id/rest/long", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const result = await longRest(getDb(c), char, body)
@@ -1095,18 +943,9 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   const characterId = c.req.param("id") as string
   const field = c.req.param("field") as string
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
-
-  if (char.user_id !== c.var.user?.id) {
-    await setFlashMsg(c, "You do not have permission to edit this character")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   if (field === "class") {
     return c.html(<ClassEditForm character={char} values={{}} />)
@@ -1189,12 +1028,10 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
 // POST /characters/:id/edit/abilities - Update all abilities
 characterRoutes.post("/characters/:id/edit/abilities", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const result = await updateAbilities(getDb(c), char, body)
@@ -1220,12 +1057,10 @@ characterRoutes.post("/characters/:id/edit/abilities", async (c) => {
 // POST /characters/:id/edit/skills - Update all skills
 characterRoutes.post("/characters/:id/edit/skills", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const result = await updateSkills(getDb(c), char, body)
@@ -1247,12 +1082,10 @@ characterRoutes.post("/characters/:id/edit/skills", async (c) => {
 // POST /characters/:id/edit/coins - Update coins
 characterRoutes.post("/characters/:id/edit/coins", async (c) => {
   const characterId = c.req.param("id") as string
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const result = await updateCoins(getDb(c), char, body)
@@ -1268,21 +1101,12 @@ characterRoutes.post("/characters/:id/edit/coins", async (c) => {
 
 // POST /characters/:id/avatar - Set character avatar
 characterRoutes.post("/characters/:id/avatar", async (c) => {
-  const user = c.get("user")
-  if (!user) {
-    c.header("HX-Redirect", "/login")
-    return c.body(null, 302)
-  }
-
   const characterId = c.req.param("id")
   const body = (await c.req.parseBody()) as Record<string, string>
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", `/characters`)
-    return c.body(null, 204)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
 
   const result = await updateAvatar(getDb(c), char, body)
 
@@ -1298,6 +1122,9 @@ characterRoutes.post("/characters/:id/avatar", async (c) => {
 characterRoutes.get("/characters/:id/history/:field", async (c) => {
   const characterId = c.req.param("id") as string
   const field = c.req.param("field") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
 
   if (field === "class") {
     const levels = await findByCharacterId(getDb(c), characterId)
@@ -1420,16 +1247,9 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
 // POST /characters/:id/notes - Auto-save notes
 characterRoutes.post("/characters/:id/notes", async (c) => {
   const characterId = c.req.param("id") as string
-  const user = c.var.user!
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    return c.html(<NotesSaveIndicator error={true} />)
-  }
-
-  if (char.user_id !== user.id) {
-    return c.html(<NotesSaveIndicator error={true} />)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return c.html(<NotesSaveIndicator error={true} />)
 
   const body = (await c.req.parseBody()) as Record<string, string>
   const content = body.content || ""
@@ -1447,20 +1267,9 @@ characterRoutes.post("/characters/:id/notes", async (c) => {
 characterRoutes.post("/characters/:id/notes/restore/:noteId", async (c) => {
   const characterId = c.req.param("id") as string
   const noteId = c.req.param("noteId") as string
-  const user = c.var.user!
 
-  const char = await computeCharacter(getDb(c), characterId)
-  if (!char) {
-    await setFlashMsg(c, "Character not found", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 204)
-  }
-
-  if (char.user_id !== user.id) {
-    await setFlashMsg(c, "Unauthorized", "error")
-    c.header("HX-Redirect", "/characters")
-    return c.body(null, 403)
-  }
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
 
   // Find the note to restore
   const noteToRestore = await findNoteById(getDb(c), noteId)

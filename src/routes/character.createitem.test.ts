@@ -424,7 +424,7 @@ describe("POST /characters/:id/edit/newitem", () => {
       expect(response.headers.get("Location")).toContain("/login")
     })
 
-    test.skip("prevents creating items for another user's character", async () => {
+    test("prevents creating items for another user's character", async () => {
       const otherUser = await userFactory.create({}, testCtx.db)
       const otherCharacter = await characterFactory.create({ user_id: otherUser.id }, testCtx.db)
 
@@ -437,7 +437,7 @@ describe("POST /characters/:id/edit/newitem", () => {
       formData.append("damage.0.die_value", "4")
       formData.append("damage.0.type", "bludgeoning")
 
-      const _response = await makeRequest(
+      const response = await makeRequest(
         testCtx.app,
         `/characters/${otherCharacter.id}/edit/newitem`,
         {
@@ -447,7 +447,10 @@ describe("POST /characters/:id/edit/newitem", () => {
         }
       )
 
-      // The endpoint should handle this gracefully
+      // Should get redirected with 302 (non-HTMX request)
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/characters")
+
       // Verify the item does NOT appear in the other character's inventory
       const otherCharItems = await computeCharacterItems(testCtx.db, otherCharacter.id)
       const stolenItem = otherCharItems.find((i) => i.name === "Stolen Item")

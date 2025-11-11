@@ -134,12 +134,13 @@ describe("GET /characters/:id/edit/skills", () => {
         otherUser = await userFactory.create({}, testCtx.db)
       })
 
-      test("returns 403", async () => {
+      test("redirects to /characters", async () => {
         const response = await makeRequest(testCtx.app, `/characters/${character.id}/edit/skills`, {
           user: otherUser,
         })
 
-        expect(response.status).toBe(403)
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe("/characters")
       })
     })
   })

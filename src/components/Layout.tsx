@@ -126,6 +126,7 @@ export const Layout = ({
           crossorigin="anonymous"
         />
         <script src="/static/flash.js"></script>
+        <script src="/static/htmx-auth.js"></script>
       </body>
     </html>
   )

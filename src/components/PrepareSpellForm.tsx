@@ -127,7 +127,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
         id="prepare-spell-form"
         hx-post={`/characters/${character.id}/edit/prepspell`}
         hx-vals='{"is_check": "true"}'
-        hx-trigger="change"
+        hx-trigger="input from:[name='spell_search'] changed delay:300ms, change"
         hx-target="#editModalContent"
         hx-swap="innerHTML"
         class="needs-validation"
@@ -221,6 +221,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
           label={`Select ${toTitleCase(slotTypeLabel)} to Prepare`}
           error={errors?.spell_id}
           emptyMessage={`No ${slotTypeLabel}s available${selectedSI.knownSpells !== null && !isCantrip ? " in your spellbook" : ""}.`}
+          searchQuery={values.spell_search}
         />
 
         {/* Spell Detail */}

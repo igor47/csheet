@@ -24,15 +24,15 @@ async function updateToolResult(
   }
 
   const message = messages[0]
-  const toolResults = message.tool_results ? JSON.parse(message.tool_results) : {}
+  const toolResults = message.tool_results ?? {}
 
   // Update tool_results mapping
   toolResults[toolCallId] = result
 
-  // Save updated tool_results
+  // Save updated tool_results (bun:sql handles JSONB encoding)
   await db`
     UPDATE chat_messages
-    SET tool_results = ${JSON.stringify(toolResults)}
+    SET tool_results = ${toolResults}
     WHERE id = ${messageId}
   `
 }

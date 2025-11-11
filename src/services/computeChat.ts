@@ -33,6 +33,8 @@ export interface ComputedChat {
   llmMessages: ModelMessage[]
   shouldStream: boolean
   unresolvedToolCalls: UnresolvedToolCall[]
+  erroredMessage?: DbChatMessage
+  consecutiveErrorCount: number
 }
 
 /**
@@ -51,11 +53,16 @@ function toUiMessages(dbMessages: DbChatMessage[]): UiChatMessage[] {
 /**
  * Convert database messages to LLM-compatible message format
  * Includes tool messages for resolved tool calls
+ * Excludes messages with errors (failed streaming/prep attempts)
  */
 function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
   const messages: ModelMessage[] = []
 
   for (const msg of dbMessages) {
+    // Skip messages that have errors
+    if (msg.error !== null) {
+      continue
+    }
     if (msg.role === "assistant") {
       const content: (TextPart | ToolCallPart)[] = []
       if (msg.content) {
@@ -88,7 +95,7 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
           if (result.status === "rejected") {
             output = {
               type: "error-text",
-              value: "User declined this action",
+              value: "This tool call was rejected (not approved) by the user.",
             }
           } else if (result.status === "failed") {
             output = {
@@ -164,13 +171,26 @@ function hasAllToolResults(msg: DbChatMessage) {
  * Requirements:
  * 1. Last message is from user
  * 2. No unresolved tool calls in any message
+ * 3. If last message is assistant with error and no retryAt, don't stream
+ * 4. If last message is assistant with error.retryAt set, stream (retry initiated)
  */
 function shouldInitiateStream(dbMessages: DbChatMessage[]): boolean {
   if (dbMessages.length === 0) return false
 
-  // last message is from the user, so we can ask LLM to respond
   const lastMessage = dbMessages[dbMessages.length - 1]
+
+  // If last message is assistant with unretried error, don't stream
+  if (lastMessage?.role === "assistant" && lastMessage.error && !lastMessage.error.retryAt) {
+    return false
+  }
+
+  // last message is from the user, so we can ask LLM to respond
   if (lastMessage?.role === "user") return true
+
+  // If assistant message has error.retryAt set, stream (retry initiated)
+  if (lastMessage?.role === "assistant" && lastMessage.error?.retryAt) {
+    return true
+  }
 
   // Check if there are any unresolved tool calls
   if (lastMessage?.role === "assistant" && hasAllToolResults(lastMessage)) return true
@@ -215,6 +235,47 @@ function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCal
 }
 
 /**
+ * Find the errored message if last message has unretried error
+ */
+function findErroredMessage(dbMessages: DbChatMessage[]): DbChatMessage | undefined {
+  if (dbMessages.length === 0) return undefined
+
+  const lastMessage = dbMessages[dbMessages.length - 1]
+
+  // Check if last message is assistant with unretried error
+  if (lastMessage?.role === "assistant" && lastMessage.error && !lastMessage.error.retryAt) {
+    return lastMessage
+  }
+
+  return undefined
+}
+
+/**
+ * Count consecutive errored assistant messages from the end of the chat
+ */
+function countConsecutiveErrors(dbMessages: DbChatMessage[]): number {
+  let count = 0
+
+  // Count backwards from the end
+  for (let i = dbMessages.length - 1; i >= 0; i--) {
+    const msg = dbMessages[i]!
+
+    // Stop if we hit a non-assistant message
+    if (msg.role !== "assistant") break
+
+    // Count if this assistant message has an error
+    if (msg.error) {
+      count++
+    } else {
+      // Stop if we hit a successful assistant message
+      break
+    }
+  }
+
+  return count
+}
+
+/**
  * Compute chat data structure from database messages
  * Transforms raw database messages into a format suitable for UI and LLM consumption
  */
@@ -228,5 +289,7 @@ export async function computeChat(db: SQL, chatId: string): Promise<ComputedChat
     llmMessages: toLlmMessages(dbMessages),
     shouldStream: shouldInitiateStream(dbMessages),
     unresolvedToolCalls: findUnresolvedToolCalls(dbMessages),
+    erroredMessage: findErroredMessage(dbMessages),
+    consecutiveErrorCount: countConsecutiveErrors(dbMessages),
   }
 }

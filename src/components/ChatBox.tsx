@@ -51,6 +51,18 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
     return null
   }
 
+  let inputPlaceholder = "e.g. I spent 50 gold on a sword"
+  if (computedChat.unresolvedToolCalls.length > 0) {
+    inputPlaceholder = "Accept or decline Reed's edit"
+  } else if (computedChat.erroredMessage || computedChat.shouldStream) {
+    inputPlaceholder = "Hold on a second..."
+  }
+
+  const inputDisabled =
+    computedChat.shouldStream ||
+    computedChat.unresolvedToolCalls.length > 0 ||
+    !!computedChat.erroredMessage
+
   return (
     <div
       class="card shadow-sm mb-3"
@@ -88,7 +100,7 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
         {/* Chat messages container */}
         <div
           id="chat-messages"
-          class="container-fluid mb-3"
+          class="container-fluid mb-3 px-0"
           style="max-height: 300px; overflow-y: auto; min-height: 100px;"
           data-scroll-bottom="true"
         >
@@ -115,6 +127,16 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
             ))
           )}
 
+          {/* Show error retry UI if last message has unretried error */}
+          {computedChat.erroredMessage?.error && (
+            <StreamErrorRetry
+              characterId={character.id}
+              chatId={computedChat.chatId}
+              error={computedChat.erroredMessage.error}
+              consecutiveErrorCount={computedChat.consecutiveErrorCount}
+            />
+          )}
+
           {/* Response box - shown when waiting for AI response */}
           {computedChat.shouldStream && (
             <div class="row g-0 mb-2 chat-message">
@@ -126,6 +148,7 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
                     hx-ext="sse"
                     sse-connect={`/characters/${character.id}/chat/${computedChat.chatId}/stream`}
                     sse-swap="message"
+                    sse-close="close"
                   >
                     Thinking...
                   </span>
@@ -151,21 +174,17 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
               name="message"
               id="chat-input"
               class="form-control"
-              placeholder={
-                computedChat.unresolvedToolCalls.length > 0
-                  ? "Accept or decline Reed's edit"
-                  : "e.g., I spent 50 gold on a sword"
-              }
+              placeholder={inputPlaceholder}
               required
               autocomplete="off"
-              {...(computedChat.shouldStream || computedChat.unresolvedToolCalls.length > 0
-                ? { disabled: true }
-                : {})}
+              disabled={inputDisabled}
             />
             <button
               type="submit"
               class="btn btn-primary"
-              {...(computedChat.shouldStream || computedChat.unresolvedToolCalls.length > 0
+              {...(computedChat.shouldStream ||
+              computedChat.unresolvedToolCalls.length > 0 ||
+              computedChat.erroredMessage
                 ? { disabled: true }
                 : {})}
             >
@@ -213,6 +232,72 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
       <div class={isAssistant ? "col-10" : "col-10 offset-2"}>
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: this HTML is sanitized */}
         <div dangerouslySetInnerHTML={{ __html: htmlContent }} class={divClass} />
+      </div>
+    </div>
+  )
+}
+
+export interface StreamErrorRetryProps {
+  characterId: string
+  chatId: string
+  error: { type: "prep" | "stream"; message: string }
+  consecutiveErrorCount: number
+}
+
+/**
+ * Stream error retry component
+ * Shows an error message with a retry button (for stream errors)
+ * or a message to start a new chat (for prep errors or too many retries)
+ */
+export const StreamErrorRetry = ({
+  characterId,
+  chatId,
+  error,
+  consecutiveErrorCount,
+}: StreamErrorRetryProps) => {
+  const isPrep = error.type === "prep"
+  const tooManyRetries = consecutiveErrorCount > 3
+
+  // Show "having problems" message for prep errors or too many retries
+  const showProblemsMessage = isPrep || tooManyRetries
+
+  return (
+    <div class="row g-0 mb-2 chat-message">
+      <div class="col-10">
+        <div class={`card ${showProblemsMessage ? "border-danger" : "border-warning"}`}>
+          <div class="card-body p-3">
+            <p class="mb-0">
+              <i class="bi bi-exclamation-circle me-2"></i>
+              {showProblemsMessage
+                ? "Reed is having some problems right now. Ask him again later, or start a new chat."
+                : "Reed couldn't hear you. Mind repeating that?"}
+            </p>
+          </div>
+          <div class="card-footer d-flex justify-content-end gap-2 p-2">
+            {!showProblemsMessage && (
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                hx-post={`/characters/${characterId}/chat/${chatId}/retry`}
+                hx-target="#chat-box-card"
+                hx-swap="outerHTML"
+              >
+                <i class="bi bi-volume-up me-1"></i>
+                Repeat Louder
+              </button>
+            )}
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              hx-get={`/characters/${characterId}/chat/new`}
+              hx-target="#chat-box-card"
+              hx-swap="outerHTML"
+            >
+              <i class="bi bi-plus-lg me-1"></i>
+              New Chat
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

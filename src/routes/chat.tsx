@@ -7,7 +7,7 @@ import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { isAiEnabled } from "@src/config"
 import { getDb } from "@src/db"
-import { clearChat, getChatsByCharacterId } from "@src/db/chat_messages"
+import { clearChat, getChatsByCharacterId, setMessageRetry } from "@src/db/chat_messages"
 import { logger } from "@src/lib/logger"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { computeChat } from "@src/services/computeChat"
@@ -85,30 +85,17 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
   }
 
   return streamSSE(c, async (stream) => {
-    try {
-      // Execute chat request and stream updates
-      await executeChatRequest(db, char, computedChat, async (chunk) => {
-        if (chunk.type === "text") {
-          // Stream text updates as "message" events
-          await stream.writeSSE({
-            event: "message",
-            data: chunk.text,
-          })
-        }
-      })
-    } catch (error) {
-      logger.error("Error processing chat message", error as Error, {
-        characterId,
-        userId: user.id,
-        chatId,
-      })
-
-      // Send error message as response event
-      await stream.writeSSE({
-        event: "message",
-        data: "Sorry, I encountered an error processing your message. Please try again.",
-      })
-    }
+    // Execute chat request and stream updates
+    // executeChatRequest always returns message ID (with content or error)
+    await executeChatRequest(db, char, computedChat, async (chunk) => {
+      if (chunk.type === "text") {
+        // Stream text updates as "message" events
+        await stream.writeSSE({
+          event: "message",
+          data: chunk.text,
+        })
+      }
+    })
 
     // After streaming completes, reload chat and return complete ChatBox
     const updatedChat = await computeChat(db, chatId)
@@ -213,6 +200,49 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/reject", async (c
 })
 
 /**
+ * POST /characters/:id/chat/:chatId/retry
+ * Retry a failed streaming attempt by marking error.retryAt
+ */
+chatRoutes.post("/characters/:id/chat/:chatId/retry", async (c) => {
+  if (!isAiEnabled()) {
+    return c.json({ error: "AI features are not enabled" }, 503)
+  }
+
+  const user = c.var.user!
+  const characterId = c.req.param("id")
+  const chatId = c.req.param("chatId")
+  const db = getDb(c)
+
+  // Verify character belongs to user
+  const char = await computeCharacter(db, characterId)
+  if (!char || char.user_id !== user.id) {
+    return c.json({ error: "Character not found" }, 404)
+  }
+
+  // Get computed chat to find the errored message
+  const computedChat = await computeChat(db, chatId)
+
+  if (!computedChat.erroredMessage) {
+    return c.json({ error: "No errored message to retry" }, 404)
+  }
+
+  logger.info("Retrying message", {
+    messageId: computedChat.erroredMessage.id,
+    error: computedChat.erroredMessage.error,
+    chatId,
+  })
+
+  // Mark the message for retry by setting error.retryAt
+  await setMessageRetry(db, computedChat.erroredMessage.id)
+
+  // Get updated chat with shouldStream=true
+  const updatedChat = await computeChat(db, chatId)
+
+  // Return updated ChatBox which will trigger streaming
+  return c.html(<ChatBox character={char} computedChat={updatedChat} />)
+})
+
+/**
  * GET /characters/:id/chat/new
  * Create a new empty chat (return ChatBox with no messages and null chatId)
  */
@@ -238,6 +268,7 @@ chatRoutes.get("/characters/:id/chat/new", async (c) => {
     llmMessages: [],
     shouldStream: false,
     unresolvedToolCalls: [],
+    consecutiveErrorCount: 0,
   }
 
   // Return empty ChatBox

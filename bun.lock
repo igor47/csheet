@@ -10,6 +10,7 @@
         "@types/marked": "^6.0.0",
         "ai": "^5.0.82",
         "clsx": "^2.1.1",
+        "cropperjs": "^2.1.0",
         "hono": "^4.9.6",
         "htmx-ext-sse": "^2.2.4",
         "htmx.org": "^2.0.8",
@@ -147,6 +148,28 @@
     "@biomejs/cli-win32-arm64": ["@biomejs/cli-win32-arm64@2.2.6", "", { "os": "win32", "cpu": "arm64" }, "sha512-h3A88G8PGM1ryTeZyLlSdfC/gz3e95EJw9BZmA6Po412DRqwqPBa2Y9U+4ZSGUAXCsnSQE00jLV8Pyrh0d+jQw=="],
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.2.6", "", { "os": "win32", "cpu": "x64" }, "sha512-yx0CqeOhPjYQ5ZXgPfu8QYkgBhVJyvWe36as7jRuPrKPO5ylVDfwVtPQ+K/mooNTADW0IhxOZm3aPu16dP8yNQ=="],
+
+    "@cropper/element": ["@cropper/element@2.1.0", "", { "dependencies": { "@cropper/utils": "^2.1.0" } }, "sha512-2zELddqHQNmlvkPoiYzE5nxEjPE+C8nXoTPuvV3FvLp3YjBinc7qb73Icg9UXP0o9qC4+h9q96JgGo0AyMO/Ng=="],
+
+    "@cropper/element-canvas": ["@cropper/element-canvas@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-el+rfJpZxsD2q5XxDBA4fRczcrOqB65Lb7roqXOq8LKufwf4bPWA9C6DjNJJahh/TP94dsLIEy3tSkgRMDv3Aw=="],
+
+    "@cropper/element-crosshair": ["@cropper/element-crosshair@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-0V589dAx8uZAfvJwdINLn76gfPQEafPH94ukjJ76uX0FCUovLaAVX+VRD/MDSYn0Mza/xejzmL9Dhd1DfemvmA=="],
+
+    "@cropper/element-grid": ["@cropper/element-grid@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-dEnk0rO+vp553LMvsPYgfrqVFcYXeVFrgFeavBYYEhAXtO40p7kN4rmLYLMMjaN+T/Mx2BATv6kUQpALKy2HLw=="],
+
+    "@cropper/element-handle": ["@cropper/element-handle@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-8BklWA4C/2GGAULupIWleSnGutECvYt3vx9flodqDfZpDEozws4LgLqmmzVuQmVkRVUdLnXdtx28kjgWLtzkHg=="],
+
+    "@cropper/element-image": ["@cropper/element-image@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/element-canvas": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-mXOV8ixJvG0XtTxLebYAKDjEkFbFOQnsF02hXPZk1yQSV0J+LLhN7a2NePrtKnoTsEV19fhhX3UorMoyGGxvzg=="],
+
+    "@cropper/element-selection": ["@cropper/element-selection@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/element-canvas": "^2.1.0", "@cropper/element-image": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-mtFtBl6HIa/s9TWohXw+Z5eJoeYTqylrIcHvS7oVv0uM7IyeRwBW65Q7z+KtLfq/LW+2Sw/XDyvR+VN/DawBPw=="],
+
+    "@cropper/element-shade": ["@cropper/element-shade@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/element-canvas": "^2.1.0", "@cropper/element-selection": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-zMdyqbb0lc0Vd1oj2Z1miIZvhyZG41OXMHvrNt0hNwblh0dVdrvtw48lnFDgRv+672vt2CNx7Q04GuvCQfPlgg=="],
+
+    "@cropper/element-viewer": ["@cropper/element-viewer@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/element-canvas": "^2.1.0", "@cropper/element-image": "^2.1.0", "@cropper/element-selection": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-XnxlQuqHitd1FOFZ6E0yXAF5NYd/LyIvONLLHI9p1rJw747WYKUPxQaSYtFKF7IOizJu/8mMj++Zc1dZ5ZP3YQ=="],
+
+    "@cropper/elements": ["@cropper/elements@2.1.0", "", { "dependencies": { "@cropper/element": "^2.1.0", "@cropper/element-canvas": "^2.1.0", "@cropper/element-crosshair": "^2.1.0", "@cropper/element-grid": "^2.1.0", "@cropper/element-handle": "^2.1.0", "@cropper/element-image": "^2.1.0", "@cropper/element-selection": "^2.1.0", "@cropper/element-shade": "^2.1.0", "@cropper/element-viewer": "^2.1.0" } }, "sha512-qvzlYDn3VQgPPpsCu6Gi1XUO0v3vpXQFSjjxcVijbXeNsl/eiKrN7H9/CEiRgi5vr8kXfd7ZvgYxBjUBbH+y+w=="],
+
+    "@cropper/utils": ["@cropper/utils@2.1.0", "", {}, "sha512-wLtpZ4/UWgo+fGmG8NBWge8x5ehjfDe9ovleDfLy8kpwFaw43XXOEXQtRL1UNr0u4JZxaeO8FcXcolRWUUrlRQ=="],
 
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
@@ -495,6 +518,8 @@
     "common-ancestor-path": ["common-ancestor-path@1.0.1", "", {}, "sha512-L3sHRo1pXXEqX8VU28kfgUY+YGsk09hPqZiZmLacNib6XNTCM8ubYeT7ryXQw8asB1sKgcU5lkB7ONug08aB8w=="],
 
     "create-require": ["create-require@1.1.1", "", {}, "sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ=="],
+
+    "cropperjs": ["cropperjs@2.1.0", "", { "dependencies": { "@cropper/elements": "^2.1.0", "@cropper/utils": "^2.1.0" } }, "sha512-SsSDqdVRl+mjbIBkGWlk1gCGcc+HzBqCbH5EQ+1tkAFUdxq2KUGukXF1RqhmvXrrdrX7PDwSUkWgXS7E36KvGQ=="],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 

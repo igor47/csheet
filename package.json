@@ -12,7 +12,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "postinstall": "mkdir -p static && cp node_modules/htmx.org/dist/htmx.min.js static/ && cp node_modules/htmx-ext-sse/sse.js static/htmx-ext-sse.js && cp node_modules/idiomorph/dist/idiomorph-ext.min.js static/idiomorph-ext.min.js"
+    "postinstall": "mkdir -p static && cp node_modules/htmx.org/dist/htmx.min.js static/ && cp node_modules/htmx-ext-sse/sse.js static/htmx-ext-sse.js && cp node_modules/idiomorph/dist/idiomorph-ext.min.js static/idiomorph-ext.min.js && cp node_modules/cropperjs/dist/cropper.min.js static/"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",
@@ -37,6 +37,7 @@
     "@types/marked": "^6.0.0",
     "ai": "^5.0.82",
     "clsx": "^2.1.1",
+    "cropperjs": "^2.1.0",
     "hono": "^4.9.6",
     "htmx-ext-sse": "^2.2.4",
     "htmx.org": "^2.0.8",

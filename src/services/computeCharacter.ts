@@ -6,6 +6,8 @@ import { findByCharacterId as getAllLevels, getCurrentLevels } from "@src/db/cha
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { type CharTrait, findByCharacterId as findTraits } from "@src/db/char_traits"
+import type { CropPercents } from "@src/db/character_avatars"
+import { findPrimaryByCharacterId as getPrimaryAvatar } from "@src/db/character_avatars"
 import { type Character, findById } from "@src/db/characters"
 import {
   Abilities,
@@ -77,6 +79,8 @@ export interface ComputedCharacter extends Character {
   coins: CurrentCoins | null
   equippedItems: EquippedComputedItem[]
   affectedAttributes: Record<string, ItemEffectInfo[]>
+  avatar_id: string | null
+  avatar_crop: CropPercents | null
 }
 // Calculate modifier and saving throw for each ability
 const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
@@ -437,6 +441,9 @@ export async function computeCharacter(
     }
   }
 
+  // Get primary avatar
+  const primaryAvatar = await getPrimaryAvatar(db, characterId)
+
   const char = {
     ...character,
     classes,
@@ -461,6 +468,20 @@ export async function computeCharacter(
     coins: currentCoins,
     equippedItems,
     affectedAttributes,
+    avatar_id: primaryAvatar?.upload_id ?? null,
+    avatar_crop:
+      primaryAvatar &&
+      primaryAvatar.crop_x_percent !== null &&
+      primaryAvatar.crop_y_percent !== null &&
+      primaryAvatar.crop_width_percent !== null &&
+      primaryAvatar.crop_height_percent !== null
+        ? {
+            crop_x_percent: primaryAvatar.crop_x_percent,
+            crop_y_percent: primaryAvatar.crop_y_percent,
+            crop_width_percent: primaryAvatar.crop_width_percent,
+            crop_height_percent: primaryAvatar.crop_height_percent,
+          }
+        : null,
   }
 
   return char

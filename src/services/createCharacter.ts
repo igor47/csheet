@@ -471,7 +471,6 @@ export async function createCharacter(
       background: validated.background,
       ruleset: validated.ruleset,
       alignment: validated.alignment,
-      avatar_id: null,
     })
 
     // Get class definition for initial setup

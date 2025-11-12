@@ -1,4 +1,4 @@
-\restrict Ah1gzcmwaXniQw2dzIyVlrPF4EVIv28DgaOjh5TDOwpcDPd3dZKeX8QreYsxoVW
+\restrict Dg0ksc8IIsh0chvkrHOQy7LtnwsmjF3WyModqIXmKLfbi99THWiNyWMb9U47Fk5
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.0
@@ -257,6 +257,28 @@ CREATE TABLE public.char_traits (
 
 
 --
+-- Name: character_avatars; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.character_avatars (
+    id text NOT NULL,
+    character_id text NOT NULL,
+    upload_id text NOT NULL,
+    is_primary boolean DEFAULT false NOT NULL,
+    crop_x_percent real,
+    crop_y_percent real,
+    crop_width_percent real,
+    crop_height_percent real,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT character_avatars_crop_height_percent_check CHECK (((crop_height_percent IS NULL) OR ((crop_height_percent >= (0)::double precision) AND (crop_height_percent <= (1)::double precision)))),
+    CONSTRAINT character_avatars_crop_width_percent_check CHECK (((crop_width_percent IS NULL) OR ((crop_width_percent >= (0)::double precision) AND (crop_width_percent <= (1)::double precision)))),
+    CONSTRAINT character_avatars_crop_x_percent_check CHECK (((crop_x_percent IS NULL) OR ((crop_x_percent >= (0)::double precision) AND (crop_x_percent <= (1)::double precision)))),
+    CONSTRAINT character_avatars_crop_y_percent_check CHECK (((crop_y_percent IS NULL) OR ((crop_y_percent >= (0)::double precision) AND (crop_y_percent <= (1)::double precision))))
+);
+
+
+--
 -- Name: characters; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -271,7 +293,6 @@ CREATE TABLE public.characters (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     ruleset text DEFAULT 'srd51'::text NOT NULL,
-    avatar_id text,
     archived_at timestamp with time zone
 );
 
@@ -531,6 +552,22 @@ ALTER TABLE ONLY public.char_traits
 
 
 --
+-- Name: character_avatars character_avatars_character_id_upload_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.character_avatars
+    ADD CONSTRAINT character_avatars_character_id_upload_id_key UNIQUE (character_id, upload_id);
+
+
+--
+-- Name: character_avatars character_avatars_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.character_avatars
+    ADD CONSTRAINT character_avatars_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: characters characters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -726,6 +763,20 @@ CREATE INDEX idx_char_spells_prepared_spell_id ON public.char_spells_prepared US
 --
 
 CREATE INDEX idx_char_traits_char_id ON public.char_traits USING btree (character_id, created_at);
+
+
+--
+-- Name: idx_character_avatars_character_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_character_avatars_character_id ON public.character_avatars USING btree (character_id);
+
+
+--
+-- Name: idx_character_avatars_is_primary; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_character_avatars_is_primary ON public.character_avatars USING btree (character_id, is_primary) WHERE (is_primary = true);
 
 
 --
@@ -1037,11 +1088,19 @@ ALTER TABLE ONLY public.char_traits
 
 
 --
--- Name: characters characters_avatar_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: character_avatars character_avatars_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.characters
-    ADD CONSTRAINT characters_avatar_id_fkey FOREIGN KEY (avatar_id) REFERENCES public.uploads(id);
+ALTER TABLE ONLY public.character_avatars
+    ADD CONSTRAINT character_avatars_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: character_avatars character_avatars_upload_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.character_avatars
+    ADD CONSTRAINT character_avatars_upload_id_fkey FOREIGN KEY (upload_id) REFERENCES public.uploads(id) ON DELETE CASCADE;
 
 
 --
@@ -1104,7 +1163,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Ah1gzcmwaXniQw2dzIyVlrPF4EVIv28DgaOjh5TDOwpcDPd3dZKeX8QreYsxoVW
+\unrestrict Dg0ksc8IIsh0chvkrHOQy7LtnwsmjF3WyModqIXmKLfbi99THWiNyWMb9U47Fk5
 
 
 --
@@ -1144,4 +1203,7 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251030232843'),
     ('20251111071524'),
     ('20251111085621'),
-    ('20251111221748');
+    ('20251111221748'),
+    ('20251112060352'),
+    ('20251112060400'),
+    ('20251112060500');

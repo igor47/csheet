@@ -350,7 +350,6 @@ export async function importCharacter(
       background: finalBackground,
       ruleset: validated.ruleset,
       alignment: validated.alignment,
-      avatar_id: null,
     })
 
     // Parse final ability scores (these are already modified)

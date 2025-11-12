@@ -61,16 +61,16 @@
 }
 
 /* character avatar */
-#avatar-upload-icon {
+.avatar-icon {
   opacity: 0;
   transition: opacity 0.1s ease;
 }
 
-#avatar-upload-button:hover #avatar-image {
+.avatar-button:hover .avatar-image {
   opacity: 0.6;
 }
 
-#avatar-upload-button:hover #avatar-upload-icon {
+.avatar-button:hover .avatar-icon {
   opacity: 1;
 }
 

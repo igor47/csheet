@@ -13,7 +13,6 @@ export const CharacterSchema = z.object({
   background: z.string(),
   alignment: z.nullish(z.string()),
   ruleset: RulesetIdSchema.default(SRD51_ID),
-  avatar_id: z.string().nullable().default(null),
   archived_at: z.date().nullable().default(null),
   created_at: z.date(),
   updated_at: z.date(),

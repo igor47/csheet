@@ -1,6 +1,7 @@
 import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
+import { AvatarDisplay } from "./AvatarDisplay"
 import { HitDiceDisplay } from "./ui/HitDiceDisplay"
 import { HitPointsBar } from "./ui/HitPointsBar"
 import { LabeledValue } from "./ui/LabeledValue"
@@ -89,34 +90,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
       <div class="card-body">
         <div class="row g-2 d-flex align-items-center">
           <div class="col-3 col-lg-2">
-            <button
-              id="avatar-upload-button"
-              type="button"
-              class="position-relative ratio ratio-1x1 rounded overflow-hidden border-0 p-0"
-              tabindex={0}
-              hx-get={`/characters/${character.id}/edit/avatar`}
-              hx-target="#editModalContent"
-              hx-swap="innerHTML"
-              data-bs-toggle="modal"
-              data-bs-target="#editModal"
-            >
-              <img
-                id="avatar-image"
-                src={
-                  character.avatar_id
-                    ? `/uploads/${character.avatar_id}`
-                    : "/static/placeholder.png"
-                }
-                class="w-100 h-100"
-                alt={`${character.name}'s avatar`}
-                style="object-fit: cover;"
-              />
-              <i
-                id="avatar-upload-icon"
-                class="bi bi-camera-fill text-white fs-1"
-                style="position: absolute; top: 100%; left: 50%; transform: translate(-50%, -35%); pointer-events: none;"
-              />
-            </button>
+            <AvatarDisplay character={character} />
           </div>
           <div class="col-9 col-lg-10">
             <h2>{character.name}</h2>

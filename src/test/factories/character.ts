@@ -97,7 +97,6 @@ export const characterFactory = {
       background: built.background,
       alignment: built.alignment,
       ruleset: built.ruleset,
-      avatar_id: null,
     }
 
     const character = await createCharacter(db, characterData)

@@ -1,5 +1,7 @@
 import { AbilitiesEditForm } from "@src/components/AbilitiesEditForm"
 import { AbilityHistory } from "@src/components/AbilityHistory"
+import { AvatarCropper } from "@src/components/AvatarCropper"
+import { AvatarGallery } from "@src/components/AvatarGallery"
 import { CastSpellForm } from "@src/components/CastSpellForm"
 import { Character } from "@src/components/Character"
 import { CharacterImport } from "@src/components/CharacterImport"
@@ -61,6 +63,7 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
+import * as CharacterAvatars from "@src/db/character_avatars"
 import { countArchivedByUserId } from "@src/db/characters"
 import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
@@ -1121,6 +1124,205 @@ characterRoutes.post("/characters/:id/avatar", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeEditModal")
   return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
+})
+
+// GET /characters/:id/avatars - Show avatar gallery
+characterRoutes.get("/characters/:id/avatars", async (c) => {
+  const characterId = c.req.param("id")
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+
+  const avatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
+  const avatarsWithUrls = avatars.map((avatar) => ({
+    ...avatar,
+    uploadUrl: `/uploads/${avatar.upload_id}`,
+  }))
+
+  return c.html(<AvatarGallery characterId={characterId} avatars={avatarsWithUrls} />)
+})
+
+// POST /characters/:id/avatars - Create new avatar with optional crop
+characterRoutes.post("/characters/:id/avatars", async (c) => {
+  const characterId = c.req.param("id")
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+
+  // Validate upload_id
+  const uploadId = body.upload_id
+  if (!uploadId) {
+    return c.json({ error: "upload_id is required" }, 400)
+  }
+
+  // Parse crop coordinates if provided
+  const cropData: Partial<CharacterAvatars.CreateCharacterAvatar> = {
+    character_id: characterId,
+    upload_id: uploadId,
+  }
+
+  if (body.crop_x_percent) {
+    cropData.crop_x_percent = Number.parseFloat(body.crop_x_percent)
+    cropData.crop_y_percent = Number.parseFloat(body.crop_y_percent!)
+    cropData.crop_width_percent = Number.parseFloat(body.crop_width_percent!)
+    cropData.crop_height_percent = Number.parseFloat(body.crop_height_percent!)
+  }
+
+  // If this is the first avatar, make it primary
+  const existingAvatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
+  cropData.is_primary = existingAvatars.length === 0
+
+  // Create the avatar
+  const avatar = await CharacterAvatars.create(
+    getDb(c),
+    cropData as CharacterAvatars.CreateCharacterAvatar
+  )
+
+  // If set as primary, update it atomically
+  if (cropData.is_primary) {
+    await CharacterAvatars.setPrimary(getDb(c), characterId, avatar.id)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
+})
+
+// GET /characters/:id/avatars/:avatarId/crop-editor - Show cropper for existing avatar
+characterRoutes.get("/characters/:id/avatars/:avatarId/crop-editor", async (c) => {
+  const characterId = c.req.param("id")
+  const avatarId = c.req.param("avatarId")
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+
+  const avatar = await CharacterAvatars.findById(getDb(c), avatarId)
+  if (!avatar || avatar.character_id !== characterId) {
+    return c.json({ error: "Avatar not found" }, 404)
+  }
+
+  const uploadUrl = `/uploads/${avatar.upload_id}`
+
+  // Convert percentages back to pixel coordinates for Cropper.js
+  // This will be done client-side once we know the image dimensions
+  const existingCrop =
+    avatar.crop_x_percent !== null
+      ? {
+          x: avatar.crop_x_percent,
+          y: avatar.crop_y_percent!,
+          width: avatar.crop_width_percent!,
+          height: avatar.crop_height_percent!,
+        }
+      : null
+
+  return c.html(
+    <AvatarCropper
+      characterId={characterId}
+      avatarId={avatarId}
+      uploadUrl={uploadUrl}
+      existingCrop={existingCrop}
+    />
+  )
+})
+
+// POST /characters/:id/avatars/:avatarId/crop - Update crop coordinates
+characterRoutes.post("/characters/:id/avatars/:avatarId/crop", async (c) => {
+  const characterId = c.req.param("id")
+  const avatarId = c.req.param("avatarId")
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+
+  const avatar = await CharacterAvatars.findById(getDb(c), avatarId)
+  if (!avatar || avatar.character_id !== characterId) {
+    return c.json({ error: "Avatar not found" }, 404)
+  }
+
+  const cropData: CharacterAvatars.UpdateCrop = {
+    crop_x_percent: Number.parseFloat(body.crop_x_percent!),
+    crop_y_percent: Number.parseFloat(body.crop_y_percent!),
+    crop_width_percent: Number.parseFloat(body.crop_width_percent!),
+    crop_height_percent: Number.parseFloat(body.crop_height_percent!),
+  }
+
+  await CharacterAvatars.updateCrop(getDb(c), avatarId, cropData)
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeEditModal")
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
+})
+
+// POST /characters/:id/avatars/:avatarId/set-primary - Set avatar as primary
+characterRoutes.post("/characters/:id/avatars/:avatarId/set-primary", async (c) => {
+  const characterId = c.req.param("id")
+  const avatarId = c.req.param("avatarId")
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+
+  const avatar = await CharacterAvatars.findById(getDb(c), avatarId)
+  if (!avatar || avatar.character_id !== characterId) {
+    return c.json({ error: "Avatar not found" }, 404)
+  }
+
+  await CharacterAvatars.setPrimary(getDb(c), characterId, avatarId)
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+
+  // Get updated avatars for the gallery
+  const avatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
+  const avatarsWithUrls = avatars.map((a) => ({
+    ...a,
+    uploadUrl: `/uploads/${a.upload_id}`,
+  }))
+
+  return c.html(
+    <>
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <AvatarGallery characterId={characterId} avatars={avatarsWithUrls} />
+    </>
+  )
+})
+
+// DELETE /characters/:id/avatars/:avatarId - Delete avatar
+characterRoutes.delete("/characters/:id/avatars/:avatarId", async (c) => {
+  const characterId = c.req.param("id")
+  const avatarId = c.req.param("avatarId")
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+
+  const avatar = await CharacterAvatars.findById(getDb(c), avatarId)
+  if (!avatar || avatar.character_id !== characterId) {
+    return c.json({ error: "Avatar not found" }, 404)
+  }
+
+  // Check if this is the only/primary avatar
+  const count = await CharacterAvatars.countByCharacterId(getDb(c), characterId)
+  if (count === 1) {
+    return c.json({ error: "Cannot delete the only avatar" }, 400)
+  }
+
+  await CharacterAvatars.deleteAvatar(getDb(c), avatarId)
+
+  // If we deleted the primary avatar, set another as primary
+  if (avatar.is_primary) {
+    const remainingAvatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
+    if (remainingAvatars.length > 0) {
+      await CharacterAvatars.setPrimary(getDb(c), characterId, remainingAvatars[0]!.id)
+    }
+  }
+
+  // Return updated gallery
+  const avatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
+  const avatarsWithUrls = avatars.map((a) => ({
+    ...a,
+    uploadUrl: `/uploads/${a.upload_id}`,
+  }))
+
+  return c.html(<AvatarGallery characterId={characterId} avatars={avatarsWithUrls!} />)
 })
 
 characterRoutes.get("/characters/:id/history/:field", async (c) => {

@@ -6,23 +6,9 @@ export interface UpdateAvatarFormProps {
   errors?: Record<string, string>
 }
 
-export const UpdateAvatarForm = ({ character, errors }: UpdateAvatarFormProps) => (
-  <ModalContent title={character.avatar_id ? "Replace Avatar" : "Upload Avatar"}>
+export const UpdateAvatarForm = ({ errors }: UpdateAvatarFormProps) => (
+  <ModalContent title="Upload Avatar">
     <div class="modal-body" id="avatarUploadModalBody">
-      {/* Current Avatar Preview */}
-      <div class="mb-3 text-center">
-        <div class="d-inline-block position-relative" style="max-width: 300px;">
-          <img
-            src={
-              character.avatar_id ? `/uploads/${character.avatar_id}` : "/static/placeholder.png"
-            }
-            alt={`${character.name}'s avatar`}
-            class="img-fluid rounded"
-            style="max-height: 300px; object-fit: contain;"
-          />
-        </div>
-      </div>
-
       <div class="mb-3">
         <label for="avatarFileInput" class="form-label">
           Choose an image (max 5MB)

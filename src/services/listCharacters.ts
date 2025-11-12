@@ -97,7 +97,6 @@ export async function listCharacters(
       background: row.background,
       alignment: row.alignment,
       ruleset: row.ruleset,
-      avatar_id: row.avatar_id,
       archived_at: row.archived_at ? new Date(row.archived_at) : null,
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),

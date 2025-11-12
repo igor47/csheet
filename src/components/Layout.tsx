@@ -84,6 +84,7 @@ export const Layout = ({
         <script src="/static/htmx.min.js"></script>
         <script src="/static/htmx-ext-sse.js"></script>
         <script src="/static/idiomorph-ext.min.js"></script>
+        <script src="/static/cropper.min.js"></script>
       </head>
       <body data-bs-theme="dark">
         <Navbar user={user} currentPage={currentPage} />
@@ -130,6 +131,7 @@ export const Layout = ({
         />
         <script src="/static/flash.js"></script>
         <script src="/static/htmx-auth.js"></script>
+        <script src="/static/avatar-cropper.js"></script>
       </body>
     </html>
   )

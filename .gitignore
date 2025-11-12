@@ -5,6 +5,7 @@ node_modules/
 static/htmx.min.js
 static/htmx-ext-sse.js
 static/idiomorph-ext.min.js
+static/cropper.min.js
 
 # output
 out

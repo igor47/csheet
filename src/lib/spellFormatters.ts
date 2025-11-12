@@ -129,3 +129,17 @@ export function formatAreaOfEffect(area: AreaOfEffect): string {
       return `${area.length}-foot-long, ${area.width}-foot-wide line${origin}`
   }
 }
+
+export function formatDamageFormula(dice?: Dice, flatBonus?: number): string {
+  const parts: string[] = []
+
+  if (dice && dice.length > 0) {
+    parts.push(formatDice(dice))
+  }
+
+  if (flatBonus) {
+    parts.push(flatBonus > 0 ? `+${flatBonus}` : `${flatBonus}`)
+  }
+
+  return parts.join(" ")
+}

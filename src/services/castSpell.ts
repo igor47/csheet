@@ -1,8 +1,10 @@
-import type { SpellLevelType } from "@src/lib/dnd"
+import type { AbilityType, SpellLevelType } from "@src/lib/dnd"
+import type { DamageType, Spell } from "@src/lib/dnd/spells"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { formatDamageFormula } from "@src/lib/spellFormatters"
 import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -30,7 +32,123 @@ export const CastSpellApiSchema = z.object({
   is_check: Checkbox().optional().default(false),
 })
 
-export type CastSpellResult = ServiceResult<{ note: string; spellId: string }>
+export type DamageInfo = {
+  type: DamageType
+  formula: string
+  notes?: string
+}
+
+export type AttackInfo = {
+  attackBonus?: number
+  saveDC?: number
+  saveAbility?: AbilityType
+  onSaveSuccess?: string
+  damage?: DamageInfo[]
+  healing?: string
+  scalingExplanation?: string
+}
+
+export type CastSpellResult = ServiceResult<{
+  note: string
+  spellId: string
+  attackInfo?: AttackInfo
+}>
+
+/**
+ * Compute attack/damage information for a spell based on character stats
+ */
+function computeAttackInfo(
+  char: ComputedCharacter,
+  spell: Spell,
+  slotLevel: number | null
+): AttackInfo | undefined {
+  // Only compute attack info if the spell has combat mechanics
+  if (spell.resolution.kind === "none" && !spell.damage && !spell.healingDice) {
+    return undefined
+  }
+
+  const attackInfo: AttackInfo = {}
+
+  // Get the appropriate spell info for this character
+  const spellInfo = char.spells.find(
+    (s) =>
+      s.preparedSpells.some((ps) => ps.spell_id === spell.id) ||
+      s.cantripSlots.some((cs) => cs.spell_id === spell.id)
+  )
+
+  // Attack spell - show attack bonus
+  if (spell.resolution.kind === "attack") {
+    attackInfo.attackBonus = spellInfo?.spellAttackBonus ?? 0
+  }
+
+  // Save spell - show DC and save ability
+  if (spell.resolution.kind === "save") {
+    attackInfo.saveDC = spellInfo?.spellSaveDC ?? 0
+    attackInfo.saveAbility = spell.resolution.ability
+    attackInfo.onSaveSuccess = spell.resolution.onSuccess || "none"
+  }
+
+  // Calculate damage (with scaling if applicable)
+  if (spell.damage && spell.damage.length > 0) {
+    const effectiveLevel = slotLevel || spell.level
+    const damageInfo: DamageInfo[] = []
+    let scalingExplanation: string | undefined
+
+    // Check if spell scales with slot level
+    if (spell.damageScaling?.mode === "perSlotLevel" && effectiveLevel > spell.level) {
+      const scaledDice = spell.damageScaling.progression[effectiveLevel]
+      if (scaledDice) {
+        // Use scaled damage
+        for (const damageEntry of spell.damage) {
+          const formula = formatDamageFormula(scaledDice, damageEntry.flatBonus)
+          damageInfo.push({
+            type: damageEntry.type,
+            formula,
+            notes: damageEntry.notes,
+          })
+        }
+
+        // Build scaling explanation
+        const baseDice = spell.damage[0]?.dice
+        if (baseDice) {
+          const baseFormula = formatDamageFormula(baseDice)
+          const scaledFormula = formatDamageFormula(scaledDice)
+          const dicePerLevel = scaledDice.length - baseDice.length
+          scalingExplanation = `Base: ${baseFormula}, +${dicePerLevel}d${scaledDice[0]} per level above ${spell.level} = ${scaledFormula}`
+        }
+      }
+    } else {
+      // Use base damage (no scaling or cast at base level)
+      for (const damageEntry of spell.damage) {
+        const formula = formatDamageFormula(damageEntry.dice, damageEntry.flatBonus)
+        damageInfo.push({
+          type: damageEntry.type,
+          formula,
+          notes: damageEntry.notes,
+        })
+      }
+    }
+
+    if (damageInfo.length > 0) {
+      attackInfo.damage = damageInfo
+    }
+    if (scalingExplanation) {
+      attackInfo.scalingExplanation = scalingExplanation
+    }
+  }
+
+  // Calculate healing
+  if (spell.healingDice) {
+    attackInfo.healing = formatDamageFormula(spell.healingDice)
+  }
+
+  // Only return attackInfo if it has meaningful data
+  if (Object.keys(attackInfo).length === 0) {
+    return undefined
+  }
+
+  return attackInfo
+}
 
 /**
  * Cast a spell, consuming a spell slot if not cast as a ritual
@@ -141,11 +259,13 @@ export async function castSpell(
 
   // No spell slot used
   if (isCantrip || result.data.as_ritual) {
+    const attackInfo = computeAttackInfo(char, spell, null)
     return {
       complete: true,
       result: {
         note: `You cast ${spell.name}${asRitual ? " as a ritual" : ""}. No spell slot was used.`,
         spellId: spell.id,
+        attackInfo,
       },
     }
   } else if (!result.data.slot_level) {
@@ -175,11 +295,13 @@ export async function castSpell(
     throw new Error("Failed to use spell slot")
   }
 
+  const attackInfo = computeAttackInfo(char, spell, result.data.slot_level)
   return {
     complete: true,
     result: {
       note: `You cast ${spell.name} using a level ${result.data.slot_level} spell slot.`,
       spellId: spell.id,
+      attackInfo,
     },
   }
 }
@@ -188,7 +310,15 @@ export async function castSpell(
 export const castSpellToolName = "cast_spell" as const
 export const castSpellTool = tool({
   name: castSpellToolName,
-  description: `Cast a spell. Requires a spell id, which you must *always* get beforehand using lookup_spell tool. If casting a cantrip or casting as a ritual, this requires using a spell slot. Feel free to assume a spell slot level when appropriate.`,
+  description: `Cast a spell. Requires a spell id, which you must *always* get beforehand using lookup_spell tool. If casting a cantrip or casting as a ritual, this *does not* require using a spell slot. Feel free to assume a spell slot level if the spell has a minimum or if the character only has certain slots available.
+
+IMPORTANT: After casting an attack or damage spell, always inform the user of the combat results. Include:
+- For attack spells: The attack bonus (e.g., "+7 to hit with a ranged spell attack")
+- For save spells: The save DC and ability (e.g., "DC 15 Dexterity saving throw, half damage on success")
+- For damage spells: The damage dice formula (e.g., "8d6 fire damage" or "3d8+5 lightning damage")
+- For scaled spells: Mention the scaling (e.g., "Fireball cast at 5th level deals 10d6 fire damage")
+
+Format example: "You cast Fireball at 3rd level. Targets must make a DC 15 Dexterity saving throw, taking 8d6 fire damage on a failed save or half on a success."`,
   inputSchema: CastSpellApiSchema.omit({ note: true, is_check: true }).extend({
     note: z.string().optional().describe("Optional additional notes about the casting"),
   }),

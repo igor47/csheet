@@ -820,7 +820,11 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   return c.html(
     <>
-      <SpellCastResult message={result.result.note} spellId={result.result.spellId} />
+      <SpellCastResult
+        message={result.result.note}
+        spellId={result.result.spellId}
+        attackInfo={result.result.attackInfo}
+      />
       <SpellsPanel character={updatedChar} swapOob={true} />
     </>
   )

@@ -159,6 +159,14 @@ if (stack === "prod") {
     member: pulumi.interpolate`serviceAccount:${deploySA.email}`,
   })
 
+  // Grant deploy SA access to decrypt Pulumi state secrets
+  // The KMS key was created manually: csheet-pulumi/infra in us-central1
+  new gcp.kms.CryptoKeyIAMMember("deploy-kms-decrypt", {
+    cryptoKeyId: "projects/csheet-475917/locations/us-central1/keyRings/csheet-pulumi/cryptoKeys/infra",
+    role: "roles/cloudkms.cryptoKeyDecrypter",
+    member: pulumi.interpolate`serviceAccount:${deploySA.email}`,
+  })
+
   // Allow admin user to impersonate the deploy service account (for local testing)
   new gcp.serviceaccount.IAMMember("admin-impersonates-deploy", {
     serviceAccountId: deploySA.name,

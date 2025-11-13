@@ -90,7 +90,7 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
       <div class="card-body">
         <div class="row g-2 d-flex align-items-center">
           <div class="col-3 col-lg-2">
-            <AvatarDisplay character={character} />
+            <AvatarDisplay character={character} mode="clickable-gallery" />
           </div>
           <div class="col-9 col-lg-10">
             <h2>{character.name}</h2>

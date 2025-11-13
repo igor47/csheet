@@ -1,14 +1,13 @@
-import type { CharacterAvatar } from "@src/db/character_avatars"
+import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { ModalContent } from "./ui/ModalContent"
 
 export interface AvatarGalleryProps {
-  characterId: string
-  avatars: Array<CharacterAvatar & { uploadUrl: string }>
+  character: ComputedCharacter
 }
 
-export const AvatarGallery = ({ characterId, avatars }: AvatarGalleryProps) => {
-  const hasAvatars = avatars.length > 0
+export const AvatarGallery = ({ character }: AvatarGalleryProps) => {
+  const hasAvatars = character.avatars.length > 0
 
   return (
     <ModalContent title="Avatar Gallery">
@@ -21,28 +20,21 @@ export const AvatarGallery = ({ characterId, avatars }: AvatarGalleryProps) => {
 
         {hasAvatars && (
           <div class="row g-3">
-            {avatars.map((avatar) => (
+            {character.avatars.map((avatar, index) => (
               <div class="col-6 col-md-4" key={avatar.id}>
                 <div class="card">
                   <div class="card-body p-2">
-                    {/* Avatar preview (show with crop) */}
-                    <button
-                      type="button"
-                      class="btn p-0 border-0 w-100 mb-2"
-                      hx-get={`/characters/${characterId}/avatars/${avatar.id}/crop-editor`}
-                      hx-target="#editModalContent"
-                      hx-swap="innerHTML"
-                    >
-                      <AvatarDisplay
-                        uploadUrl={avatar.uploadUrl}
-                        cropPercents={avatar}
-                        alt="Avatar"
-                        className="rounded"
-                      />
-                    </button>
+                    {/* Avatar preview - click to open lightbox */}
+                    <AvatarDisplay
+                      character={character}
+                      avatarIndex={index}
+                      mode="clickable-lightbox"
+                      className="rounded"
+                    />
 
-                    {/* Primary badge/button */}
-                    <div class="d-flex gap-1 flex-column">
+                    {/* Action buttons */}
+                    <div class="d-flex gap-1 flex-column mt-2">
+                      {/* Primary button/badge */}
                       {avatar.is_primary ? (
                         <div class="btn btn-sm btn-primary disabled">
                           <i class="bi bi-star-fill"></i> Primary
@@ -51,17 +43,30 @@ export const AvatarGallery = ({ characterId, avatars }: AvatarGalleryProps) => {
                         <button
                           type="button"
                           class="btn btn-sm btn-outline-primary"
-                          hx-post={`/characters/${characterId}/avatars/${avatar.id}/set-primary`}
+                          hx-post={`/characters/${character.id}/avatars/${avatar.id}/set-primary`}
                           hx-target="#editModalContent"
                           hx-swap="innerHTML"
                         >
                           <i class="bi bi-star"></i> Primary
                         </button>
                       )}
+
+                      {/* Crop button */}
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        hx-get={`/characters/${character.id}/avatars/${avatar.id}/crop-editor`}
+                        hx-target="#editModalContent"
+                        hx-swap="innerHTML"
+                      >
+                        <i class="bi bi-crop"></i> Crop
+                      </button>
+
+                      {/* Delete button */}
                       <button
                         type="button"
                         class="btn btn-sm btn-outline-danger"
-                        hx-delete={`/characters/${characterId}/avatars/${avatar.id}`}
+                        hx-delete={`/characters/${character.id}/avatars/${avatar.id}`}
                         hx-target="closest .modal-body"
                         hx-swap="outerHTML"
                         hx-confirm="Are you sure you want to delete this avatar?"
@@ -81,7 +86,7 @@ export const AvatarGallery = ({ characterId, avatars }: AvatarGalleryProps) => {
         <button
           type="button"
           class="btn btn-primary"
-          hx-get={`/characters/${characterId}/edit/avatar`}
+          hx-get={`/characters/${character.id}/edit/avatar`}
           hx-target="#editModalContent"
           hx-swap="innerHTML"
         >

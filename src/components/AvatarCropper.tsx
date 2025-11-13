@@ -33,7 +33,7 @@ export const AvatarCropper = ({
             id="cropperImage"
             src={uploadUrl}
             alt="Avatar to crop"
-            style="max-width: 100%; display: block;"
+            style="max-height: 500px; display: block;"
             data-existing-crop={existingCrop ? JSON.stringify(existingCrop) : ""}
           />
         </div>

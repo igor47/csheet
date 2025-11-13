@@ -2,6 +2,7 @@ import { AbilitiesEditForm } from "@src/components/AbilitiesEditForm"
 import { AbilityHistory } from "@src/components/AbilityHistory"
 import { AvatarCropper } from "@src/components/AvatarCropper"
 import { AvatarGallery } from "@src/components/AvatarGallery"
+import { AvatarLightbox } from "@src/components/AvatarLightbox"
 import { CastSpellForm } from "@src/components/CastSpellForm"
 import { Character } from "@src/components/Character"
 import { CharacterImport } from "@src/components/CharacterImport"
@@ -1133,13 +1134,25 @@ characterRoutes.get("/characters/:id/avatars", async (c) => {
   const authResult = await authorizeCharacter(c, characterId)
   if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
 
-  const avatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
-  const avatarsWithUrls = avatars.map((avatar) => ({
-    ...avatar,
-    uploadUrl: `/uploads/${avatar.upload_id}`,
-  }))
+  const char = (await computeCharacter(getDb(c), characterId))!
+  return c.html(<AvatarGallery character={char} />)
+})
 
-  return c.html(<AvatarGallery characterId={characterId} avatars={avatarsWithUrls} />)
+// GET /characters/:id/avatars/lightbox - Show avatar lightbox at specific index
+characterRoutes.get("/characters/:id/avatars/lightbox", async (c) => {
+  const characterId = c.req.param("id")
+  const indexParam = c.req.query("index")
+  const currentIndex = indexParam ? Number.parseInt(indexParam, 10) : 0
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+
+  const char = (await computeCharacter(getDb(c), characterId))!
+
+  // Validate index is in bounds
+  const validIndex = currentIndex >= 0 && currentIndex < char.avatars.length ? currentIndex : 0
+
+  return c.html(<AvatarLightbox character={char} currentIndex={validIndex} />)
 })
 
 // POST /characters/:id/avatars - Create new avatar with optional crop
@@ -1271,17 +1284,10 @@ characterRoutes.post("/characters/:id/avatars/:avatarId/set-primary", async (c) 
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
 
-  // Get updated avatars for the gallery
-  const avatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
-  const avatarsWithUrls = avatars.map((a) => ({
-    ...a,
-    uploadUrl: `/uploads/${a.upload_id}`,
-  }))
-
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
-      <AvatarGallery characterId={characterId} avatars={avatarsWithUrls} />
+      <AvatarGallery character={updatedChar} />
     </>
   )
 })
@@ -1316,13 +1322,8 @@ characterRoutes.delete("/characters/:id/avatars/:avatarId", async (c) => {
   }
 
   // Return updated gallery
-  const avatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
-  const avatarsWithUrls = avatars.map((a) => ({
-    ...a,
-    uploadUrl: `/uploads/${a.upload_id}`,
-  }))
-
-  return c.html(<AvatarGallery characterId={characterId} avatars={avatarsWithUrls!} />)
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(<AvatarGallery character={updatedChar} />)
 })
 
 characterRoutes.get("/characters/:id/history/:field", async (c) => {

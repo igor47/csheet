@@ -1198,8 +1198,12 @@ characterRoutes.post("/characters/:id/avatars", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
-  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
+  return c.html(
+    <>
+      <AvatarGallery character={updatedChar} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+    </>
+  )
 })
 
 // GET /characters/:id/avatars/:avatarId/crop-editor - Show cropper for existing avatar
@@ -1263,8 +1267,12 @@ characterRoutes.post("/characters/:id/avatars/:avatarId/crop", async (c) => {
   await CharacterAvatars.updateCrop(getDb(c), avatarId, cropData)
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
-  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
+  return c.html(
+    <>
+      <AvatarGallery character={updatedChar} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+    </>
+  )
 })
 
 // POST /characters/:id/avatars/:avatarId/set-primary - Set avatar as primary

@@ -211,11 +211,14 @@ describe("POST /characters/:id/avatar", () => {
         expect(html).toContain("hx-swap-oob")
         expect(html).toContain("character-info")
 
-        // Verify database was updated
+        // Verify avatar was created in character_avatars table
         const result = await testCtx.db`
-          SELECT avatar_id FROM characters WHERE id = ${character.id}
+          SELECT upload_id, is_primary FROM character_avatars
+          WHERE character_id = ${character.id}
         `
-        expect(result[0].avatar_id).toBe(upload.id)
+        expect(result.length).toBe(1)
+        expect(result[0].upload_id).toBe(upload.id)
+        expect(result[0].is_primary).toBe(true)
       })
     })
 

@@ -9,25 +9,45 @@ export interface AvatarDisplayProps {
 }
 
 /**
- * Calculate CSS object-position from crop percentages
- * The object-position centers the crop area within the visible container
+ * Generate CSS custom properties for crop transform
+ * Uses translate + scale to display only the cropped region
  */
 function getCropStyle(cropPercents?: CropPercents | null) {
   if (!cropPercents) {
+    // No crop - just center the image
     return {
-      objectFit: "cover" as const,
-      objectPosition: "50% 50%",
+      containerStyle: "",
+      imageStyle: "width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%;",
     }
   }
 
-  // Calculate the center point of the crop area
-  const centerX = (cropPercents.crop_x_percent + cropPercents.crop_width_percent / 2) * 100
-  const centerY = (cropPercents.crop_y_percent + cropPercents.crop_height_percent / 2) * 100
+  // CSS custom properties for the transform
+  const containerStyle = `
+    --crop-x: ${cropPercents.crop_x_percent};
+    --crop-y: ${cropPercents.crop_y_percent};
+    --crop-w: ${cropPercents.crop_width_percent};
+    --crop-h: ${cropPercents.crop_height_percent};
+  `.trim()
 
-  return {
-    objectFit: "cover" as const,
-    objectPosition: `${centerX}% ${centerY}%`,
-  }
+  // Transform to show only the cropped region
+  // Scale up the image so crop region fills container, then translate to position it
+  // translate percentages are relative to the image's own dimensions
+  const imageStyle = `
+    width: 100%;
+    height: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    transform:
+      translate(
+        calc(-1 * var(--crop-x) / var(--crop-w) * 100%),
+        calc(-1 * var(--crop-y) / var(--crop-w) * 100%)
+      )
+      scale(calc(1 / var(--crop-w)));
+  `.trim()
+
+  return { containerStyle, imageStyle }
 }
 
 /**
@@ -82,16 +102,17 @@ export const AvatarDisplay = ({
         hx-swap="innerHTML"
         data-bs-toggle="modal"
         data-bs-target="#editModal"
+        style={cropStyle.containerStyle}
       >
         <img
           src={imgUrl}
           alt={imgAlt}
-          class={`avatar-image w-100 h-100 ${className}`}
-          style={`object-fit: ${cropStyle.objectFit}; object-position: ${cropStyle.objectPosition};`}
+          class={`avatar-image ${className}`}
+          style={cropStyle.imageStyle}
         />
         <i
           class="avatar-icon bi bi-images text-white fs-1"
-          style="position: absolute; top: 100%; left: 50%; transform: translate(-50%, -35%); pointer-events: none;"
+          style="position: absolute; top: 100%; left: 50%; transform: translate(-50%, -35%); pointer-events: none; z-index: 1;"
         />
       </button>
     )
@@ -107,13 +128,11 @@ export const AvatarDisplay = ({
         hx-target="#editModalContent"
         hx-swap="innerHTML"
       >
-        <div class="ratio ratio-1x1">
-          <img
-            src={imgUrl}
-            alt={imgAlt}
-            class={`w-100 h-100 ${className}`}
-            style={`object-fit: ${cropStyle.objectFit}; object-position: ${cropStyle.objectPosition};`}
-          />
+        <div
+          class="ratio ratio-1x1 position-relative overflow-hidden"
+          style={cropStyle.containerStyle}
+        >
+          <img src={imgUrl} alt={imgAlt} class={className} style={cropStyle.imageStyle} />
         </div>
       </button>
     )
@@ -121,13 +140,8 @@ export const AvatarDisplay = ({
 
   // Display-only mode: Just render the image
   return (
-    <div class="ratio ratio-1x1">
-      <img
-        src={imgUrl}
-        alt={imgAlt}
-        class={`w-100 h-100 ${className}`}
-        style={`object-fit: ${cropStyle.objectFit}; object-position: ${cropStyle.objectPosition};`}
-      />
+    <div class="ratio ratio-1x1 position-relative overflow-hidden" style={cropStyle.containerStyle}>
+      <img src={imgUrl} alt={imgAlt} class={className} style={cropStyle.imageStyle} />
     </div>
   )
 }

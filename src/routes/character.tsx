@@ -44,7 +44,7 @@ import { SpellSlotsEditForm } from "@src/components/SpellSlotsEditForm"
 import { SpellSlotsHistory } from "@src/components/SpellSlotsHistory"
 import { TraitEditForm } from "@src/components/TraitEditForm"
 import { TraitHistory } from "@src/components/TraitHistory"
-import { UpdateAvatarForm } from "@src/components/UpdateAvatarForm"
+import { UploadAvatarForm } from "@src/components/UploadAvatarForm"
 import { ModalContent } from "@src/components/ui/ModalContent"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
@@ -92,13 +92,13 @@ import { saveNotes } from "@src/services/saveNotes"
 import { shortRest } from "@src/services/shortRest"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
 import { updateAbilities } from "@src/services/updateAbilities"
-import { updateAvatar } from "@src/services/updateAvatar"
 import { updateCoins } from "@src/services/updateCoins"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateItem } from "@src/services/updateItem"
 import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
+import { validateUploadForUse } from "@src/services/uploads"
 import { Hono } from "hono"
 
 export const characterRoutes = new Hono()
@@ -1011,7 +1011,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "avatar") {
-    return c.html(<UpdateAvatarForm character={char} />)
+    return c.html(<UploadAvatarForm character={char} />)
   }
 
   if (field === "abilities") {
@@ -1107,26 +1107,6 @@ characterRoutes.post("/characters/:id/edit/coins", async (c) => {
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
-// POST /characters/:id/avatar - Set character avatar
-characterRoutes.post("/characters/:id/avatar", async (c) => {
-  const characterId = c.req.param("id")
-  const body = (await c.req.parseBody()) as Record<string, string>
-
-  const authResult = await authorizeCharacter(c, characterId)
-  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
-  const char = authResult.character
-
-  const result = await updateAvatar(getDb(c), char, body)
-
-  if (!result.complete) {
-    return c.html(<UpdateAvatarForm character={char} errors={result.errors} />)
-  }
-
-  const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
-  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
-})
-
 // GET /characters/:id/avatars - Show avatar gallery
 characterRoutes.get("/characters/:id/avatars", async (c) => {
   const characterId = c.req.param("id")
@@ -1166,44 +1146,60 @@ characterRoutes.post("/characters/:id/avatars", async (c) => {
   // Validate upload_id
   const uploadId = body.upload_id
   if (!uploadId) {
-    return c.json({ error: "upload_id is required" }, 400)
+    return c.html(
+      <UploadAvatarForm
+        character={authResult.character}
+        errors={{ upload_id: "Upload ID is required" }}
+      />
+    )
   }
 
-  // Parse crop coordinates if provided
-  const cropData: Partial<CharacterAvatars.CreateCharacterAvatar> = {
-    character_id: characterId,
-    upload_id: uploadId,
+  try {
+    // Validate upload exists, is owned by user, and is complete
+    await validateUploadForUse(getDb(c), uploadId, authResult.character.user_id)
+
+    // Parse crop coordinates if provided
+    const cropData: Partial<CharacterAvatars.CreateCharacterAvatar> = {
+      character_id: characterId,
+      upload_id: uploadId,
+    }
+
+    if (body.crop_x_percent) {
+      cropData.crop_x_percent = Number.parseFloat(body.crop_x_percent)
+      cropData.crop_y_percent = Number.parseFloat(body.crop_y_percent!)
+      cropData.crop_width_percent = Number.parseFloat(body.crop_width_percent!)
+      cropData.crop_height_percent = Number.parseFloat(body.crop_height_percent!)
+    }
+
+    // If this is the first avatar, make it primary
+    const existingAvatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
+    cropData.is_primary = existingAvatars.length === 0
+
+    // Create the avatar
+    const avatar = await CharacterAvatars.create(
+      getDb(c),
+      cropData as CharacterAvatars.CreateCharacterAvatar
+    )
+
+    // If set as primary, update it atomically
+    if (cropData.is_primary) {
+      await CharacterAvatars.setPrimary(getDb(c), characterId, avatar.id)
+    }
+
+    const updatedChar = (await computeCharacter(getDb(c), characterId))!
+    return c.html(
+      <>
+        <AvatarGallery character={updatedChar} />
+        <CharacterInfo character={updatedChar} swapOob={true} />
+      </>
+    )
+  } catch (error) {
+    // Return error in UpdateAvatarForm
+    const errorMessage = error instanceof Error ? error.message : "Failed to create avatar"
+    return c.html(
+      <UploadAvatarForm character={authResult.character} errors={{ upload_id: errorMessage }} />
+    )
   }
-
-  if (body.crop_x_percent) {
-    cropData.crop_x_percent = Number.parseFloat(body.crop_x_percent)
-    cropData.crop_y_percent = Number.parseFloat(body.crop_y_percent!)
-    cropData.crop_width_percent = Number.parseFloat(body.crop_width_percent!)
-    cropData.crop_height_percent = Number.parseFloat(body.crop_height_percent!)
-  }
-
-  // If this is the first avatar, make it primary
-  const existingAvatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
-  cropData.is_primary = existingAvatars.length === 0
-
-  // Create the avatar
-  const avatar = await CharacterAvatars.create(
-    getDb(c),
-    cropData as CharacterAvatars.CreateCharacterAvatar
-  )
-
-  // If set as primary, update it atomically
-  if (cropData.is_primary) {
-    await CharacterAvatars.setPrimary(getDb(c), characterId, avatar.id)
-  }
-
-  const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  return c.html(
-    <>
-      <AvatarGallery character={updatedChar} />
-      <CharacterInfo character={updatedChar} swapOob={true} />
-    </>
-  )
 })
 
 // GET /characters/:id/avatars/:avatarId/crop-editor - Show cropper for existing avatar

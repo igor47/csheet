@@ -1,12 +1,12 @@
 import type { Character } from "@src/db/characters"
 import { ModalContent } from "./ui/ModalContent"
 
-export interface UpdateAvatarFormProps {
+export interface UploadAvatarFormProps {
   character: Character
   errors?: Record<string, string>
 }
 
-export const UpdateAvatarForm = ({ errors }: UpdateAvatarFormProps) => (
+export const UploadAvatarForm = ({ character, errors }: UploadAvatarFormProps) => (
   <ModalContent title="Upload Avatar">
     <div class="modal-body" id="avatarUploadModalBody">
       <div class="mb-3">
@@ -55,7 +55,7 @@ export const UpdateAvatarForm = ({ errors }: UpdateAvatarFormProps) => (
         type="button"
         class="btn btn-primary"
         id="uploadAvatarBtn"
-        onclick="handleAvatarUpload()"
+        onclick={`handleAvatarUpload('${character.id}')`}
       >
         Upload
       </button>

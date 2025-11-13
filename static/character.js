@@ -47,7 +47,7 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
 });
 
 // Avatar Upload Flow
-async function handleAvatarUpload() {
+async function handleAvatarUpload(characterId) {
   const uploadBtn = document.getElementById('uploadAvatarBtn');
   const fileInput = document.getElementById('avatarFileInput');
   const progressDiv = document.getElementById('uploadProgress');
@@ -125,17 +125,12 @@ async function handleAvatarUpload() {
     }
 
     // Step 4: Assign avatar to character using htmx
-    const characterId = document.querySelector('[data-character-id]')?.dataset.characterId;
-    if (!characterId) {
-      throw new Error('Character ID not found');
-    }
-
     // Hide progress, show success temporarily
     progressDiv.classList.add('d-none');
     successDiv.classList.remove('d-none');
 
-    // Use htmx to assign avatar and update UI
-    htmx.ajax('POST', `/characters/${characterId}/avatar`, {
+    // Use htmx to assign avatar and update UI (shows gallery)
+    htmx.ajax('POST', `/characters/${characterId}/avatars`, {
       target: '#editModalContent',
       swap: 'innerHTML',
       values: { upload_id }

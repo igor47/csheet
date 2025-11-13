@@ -92,13 +92,13 @@ import { saveNotes } from "@src/services/saveNotes"
 import { shortRest } from "@src/services/shortRest"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
 import { updateAbilities } from "@src/services/updateAbilities"
+import { updateAvatar } from "@src/services/updateAvatar"
 import { updateCoins } from "@src/services/updateCoins"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateItem } from "@src/services/updateItem"
 import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
-import { validateUploadForUse } from "@src/services/uploads"
 import { Hono } from "hono"
 
 export const characterRoutes = new Hono()
@@ -1143,100 +1143,38 @@ characterRoutes.post("/characters/:id/avatars", async (c) => {
   const authResult = await authorizeCharacter(c, characterId)
   if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
 
-  // Validate upload_id
-  const uploadId = body.upload_id
-  if (!uploadId) {
-    return c.html(
-      <UploadAvatarForm
-        character={authResult.character}
-        errors={{ upload_id: "Upload ID is required" }}
-      />
-    )
+  // Use the updateAvatar service to handle avatar creation
+  const result = await updateAvatar(getDb(c), authResult.character, body)
+
+  if (!result.complete) {
+    return c.html(<UploadAvatarForm character={authResult.character} errors={result.errors} />)
   }
 
-  try {
-    // Validate upload exists, is owned by user, and is complete
-    await validateUploadForUse(getDb(c), uploadId, authResult.character.user_id)
-
-    // Parse crop coordinates if provided
-    const cropData: Partial<CharacterAvatars.CreateCharacterAvatar> = {
-      character_id: characterId,
-      upload_id: uploadId,
-    }
-
-    if (body.crop_x_percent) {
-      cropData.crop_x_percent = Number.parseFloat(body.crop_x_percent)
-      cropData.crop_y_percent = Number.parseFloat(body.crop_y_percent!)
-      cropData.crop_width_percent = Number.parseFloat(body.crop_width_percent!)
-      cropData.crop_height_percent = Number.parseFloat(body.crop_height_percent!)
-    }
-
-    // If this is the first avatar, make it primary
-    const existingAvatars = await CharacterAvatars.findByCharacterId(getDb(c), characterId)
-    cropData.is_primary = existingAvatars.length === 0
-
-    // Create the avatar
-    const avatar = await CharacterAvatars.create(
-      getDb(c),
-      cropData as CharacterAvatars.CreateCharacterAvatar
-    )
-
-    // If set as primary, update it atomically
-    if (cropData.is_primary) {
-      await CharacterAvatars.setPrimary(getDb(c), characterId, avatar.id)
-    }
-
-    const updatedChar = (await computeCharacter(getDb(c), characterId))!
-    return c.html(
-      <>
-        <AvatarGallery character={updatedChar} />
-        <CharacterInfo character={updatedChar} swapOob={true} />
-      </>
-    )
-  } catch (error) {
-    // Return error in UpdateAvatarForm
-    const errorMessage = error instanceof Error ? error.message : "Failed to create avatar"
-    return c.html(
-      <UploadAvatarForm character={authResult.character} errors={{ upload_id: errorMessage }} />
-    )
-  }
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(
+    <>
+      <AvatarGallery character={updatedChar} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+    </>
+  )
 })
 
-// GET /characters/:id/avatars/:avatarId/crop-editor - Show cropper for existing avatar
-characterRoutes.get("/characters/:id/avatars/:avatarId/crop-editor", async (c) => {
+// GET /characters/:id/avatars/:index/crop-editor - Show cropper for avatar at index
+characterRoutes.get("/characters/:id/avatars/:index/crop-editor", async (c) => {
   const characterId = c.req.param("id")
-  const avatarId = c.req.param("avatarId")
+  const avatarIndex = Number.parseInt(c.req.param("index"), 10)
 
   const authResult = await authorizeCharacter(c, characterId)
   if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
 
-  const avatar = await CharacterAvatars.findById(getDb(c), avatarId)
-  if (!avatar || avatar.character_id !== characterId) {
+  const char = (await computeCharacter(getDb(c), characterId))!
+
+  // Validate index is in bounds
+  if (avatarIndex < 0 || avatarIndex >= char.avatars.length) {
     return c.json({ error: "Avatar not found" }, 404)
   }
 
-  const uploadUrl = `/uploads/${avatar.upload_id}`
-
-  // Convert percentages back to pixel coordinates for Cropper.js
-  // This will be done client-side once we know the image dimensions
-  const existingCrop =
-    avatar.crop_x_percent !== null
-      ? {
-          x: avatar.crop_x_percent,
-          y: avatar.crop_y_percent!,
-          width: avatar.crop_width_percent!,
-          height: avatar.crop_height_percent!,
-        }
-      : null
-
-  return c.html(
-    <AvatarCropper
-      characterId={characterId}
-      avatarId={avatarId}
-      uploadUrl={uploadUrl}
-      existingCrop={existingCrop}
-    />
-  )
+  return c.html(<AvatarCropper character={char} avatarIndex={avatarIndex} />)
 })
 
 // POST /characters/:id/avatars/:avatarId/crop - Update crop coordinates

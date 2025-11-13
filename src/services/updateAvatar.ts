@@ -20,7 +20,7 @@ export type UpdateAvatarResult =
 /**
  * Update a character's avatar
  * Validates upload exists, belongs to user, and is complete
- * Creates a new character_avatar record and sets it as primary if it's the first
+ * Creates a new character_avatar record (automatically set as primary if it's the first)
  */
 export async function updateAvatar(
   db: SQL,
@@ -39,21 +39,11 @@ export async function updateAvatar(
     // Validate upload exists, is owned by user, and is complete
     await validateUploadForUse(db, upload_id, character.user_id)
 
-    // Check if this is the first avatar
-    const existingAvatars = await CharacterAvatars.findByCharacterId(db, character.id)
-    const isPrimary = existingAvatars.length === 0
-
-    // Create the avatar
-    const avatar = await CharacterAvatars.create(db, {
+    // Create the avatar (database handles primary logic atomically)
+    await CharacterAvatars.create(db, {
       character_id: character.id,
       upload_id: upload_id,
-      is_primary: isPrimary,
     })
-
-    // If set as primary, update it atomically
-    if (isPrimary) {
-      await CharacterAvatars.setPrimary(db, character.id, avatar.id)
-    }
 
     return { complete: true }
   } catch (error) {

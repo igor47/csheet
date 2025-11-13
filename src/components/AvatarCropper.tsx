@@ -1,31 +1,30 @@
+import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalContent } from "./ui/ModalContent"
 
 export interface AvatarCropperProps {
-  characterId: string
-  avatarId?: string
-  uploadUrl: string
-  existingCrop?: {
-    x: number
-    y: number
-    width: number
-    height: number
-  } | null
-  isNewUpload?: boolean
+  character: ComputedCharacter
+  avatarIndex: number
 }
 
-export const AvatarCropper = ({
-  characterId,
-  avatarId,
-  uploadUrl,
-  existingCrop,
-  isNewUpload = false,
-}: AvatarCropperProps) => {
-  const action = avatarId
-    ? `/characters/${characterId}/avatars/${avatarId}/crop`
-    : `/characters/${characterId}/avatars`
+export const AvatarCropper = ({ character, avatarIndex }: AvatarCropperProps) => {
+  const avatar = character.avatars[avatarIndex]
+  if (!avatar) {
+    throw new Error(`Avatar at index ${avatarIndex} not found`)
+  }
+
+  const uploadUrl = avatar.uploadUrl
+
+  const existingCrop = {
+    x: avatar.crop_x_percent,
+    y: avatar.crop_y_percent!,
+    width: avatar.crop_width_percent!,
+    height: avatar.crop_height_percent!,
+  }
+
+  const action = `/characters/${character.id}/avatars/${avatar.id}/crop`
 
   return (
-    <ModalContent title={avatarId ? "Adjust Crop" : "Crop Avatar"}>
+    <ModalContent title="Adjust Crop">
       <div class="modal-body">
         {/* Cropper.js v2 web components */}
         <div class="mb-3" style="max-width: 100%;">
@@ -39,10 +38,10 @@ export const AvatarCropper = ({
               movable
               resizable
               zoomable
-              data-existingx={existingCrop ? existingCrop.x : undefined}
-              data-existingy={existingCrop ? existingCrop.y : undefined}
-              data-existingw={existingCrop ? existingCrop.width : undefined}
-              data-existingh={existingCrop ? existingCrop.height : undefined}
+              data-existingx={existingCrop.x || undefined}
+              data-existingy={existingCrop.y || undefined}
+              data-existingw={existingCrop.width || undefined}
+              data-existingh={existingCrop.height || undefined}
             >
               <cropper-grid role="grid" covered></cropper-grid>
               <cropper-crosshair centered></cropper-crosshair>
@@ -70,11 +69,6 @@ export const AvatarCropper = ({
           <input type="hidden" id="crop_width_percent" name="crop_width_percent" />
           <input type="hidden" id="crop_height_percent" name="crop_height_percent" />
 
-          {/* For new uploads, include the upload_id */}
-          {isNewUpload && (
-            <input type="hidden" name="upload_id" value={uploadUrl.split("/").pop()} />
-          )}
-
           <div id="cropError" class="alert alert-danger d-none" role="alert"></div>
         </form>
       </div>
@@ -83,7 +77,7 @@ export const AvatarCropper = ({
         <button
           type="button"
           class="btn btn-secondary"
-          hx-get={`/characters/${characterId}/avatars`}
+          hx-get={`/characters/${character.id}/avatars`}
           hx-target="#editModalContent"
           hx-swap="innerHTML"
         >

@@ -131,7 +131,6 @@ export const Layout = ({
         />
         <script src="/static/flash.js"></script>
         <script src="/static/htmx-auth.js"></script>
-        <script src="/static/avatar-cropper.js"></script>
       </body>
     </html>
   )

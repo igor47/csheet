@@ -27,15 +27,34 @@ export const AvatarCropper = ({
   return (
     <ModalContent title={avatarId ? "Adjust Crop" : "Crop Avatar"}>
       <div class="modal-body">
-        {/* Image container for Cropper.js */}
-        <div class="mb-3" style="max-height: 500px;">
-          <img
-            id="cropperImage"
-            src={uploadUrl}
-            alt="Avatar to crop"
-            style="max-height: 500px; display: block;"
-            data-existing-crop={existingCrop ? JSON.stringify(existingCrop) : ""}
-          />
+        {/* Cropper.js v2 web components */}
+        <div class="mb-3" style="max-width: 100%;">
+          <cropper-canvas style="height: 500px; width: 100%;">
+            <cropper-image src={uploadUrl} alt="Avatar to crop" scalable translatable />
+
+            <cropper-shade hidden></cropper-shade>
+            <cropper-handle action="move" plain></cropper-handle>
+            <cropper-selection
+              aspectRatio="1"
+              movable resizable zoomable
+              data-existingx={existingCrop ? existingCrop.x : undefined}
+              data-existingy={existingCrop ? existingCrop.y : undefined}
+              data-existingw={existingCrop ? existingCrop.width : undefined}
+              data-existingh={existingCrop ? existingCrop.height : undefined}
+             >
+              <cropper-grid role="grid" covered></cropper-grid>
+              <cropper-crosshair centered></cropper-crosshair>
+              <cropper-handle action="move" theme-color="rgba(255, 255, 255, 0.35)"></cropper-handle>
+              <cropper-handle action="n-resize"></cropper-handle>
+              <cropper-handle action="e-resize"></cropper-handle>
+              <cropper-handle action="s-resize"></cropper-handle>
+              <cropper-handle action="w-resize"></cropper-handle>
+              <cropper-handle action="ne-resize"></cropper-handle>
+              <cropper-handle action="nw-resize"></cropper-handle>
+              <cropper-handle action="se-resize"></cropper-handle>
+              <cropper-handle action="sw-resize"></cropper-handle>
+            </cropper-selection>
+          </cropper-canvas>
         </div>
 
         {/* Form for submitting crop data */}
@@ -56,13 +75,28 @@ export const AvatarCropper = ({
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          Cancel
+        <button
+          type="button"
+          class="btn btn-secondary"
+          hx-get={`/characters/${characterId}/avatars`}
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+        >
+          <i class="bi bi-grid-3x3"></i> Back to Gallery
         </button>
-        <button type="button" class="btn btn-primary" id="saveCropBtn">
+        <button
+          type="button"
+          class="btn btn-primary"
+          hx-post={action}
+          hx-include="#cropForm"
+          hx-target="#editModalContent"
+          hx-swap="innerHTML"
+        >
           Save Crop
         </button>
       </div>
+
+      <script src="/static/avatar-cropper.js"></script>
     </ModalContent>
   )
 }

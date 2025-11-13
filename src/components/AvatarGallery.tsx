@@ -55,7 +55,7 @@ export const AvatarGallery = ({ character }: AvatarGalleryProps) => {
                       <button
                         type="button"
                         class="btn btn-sm btn-outline-secondary"
-                        hx-get={`/characters/${character.id}/avatars/${avatar.id}/crop-editor`}
+                        hx-get={`/characters/${character.id}/avatars/${index}/crop-editor`}
                         hx-target="#editModalContent"
                         hx-swap="innerHTML"
                       >

@@ -48,6 +48,8 @@ export type CropPercents = z.infer<typeof CropPercentsSchema>
 
 /**
  * Create a new character avatar
+ * Automatically sets is_primary to TRUE if it's the first avatar for the character
+ * This check is done atomically in the database to avoid race conditions
  */
 export async function create(db: SQL, avatar: CreateCharacterAvatar): Promise<CharacterAvatar> {
   const id = ulid()
@@ -67,7 +69,12 @@ export async function create(db: SQL, avatar: CreateCharacterAvatar): Promise<Ch
       ${id},
       ${avatar.character_id},
       ${avatar.upload_id},
-      ${avatar.is_primary ?? false},
+      COALESCE(
+        ${avatar.is_primary ?? null}::boolean,
+        NOT EXISTS(
+          SELECT 1 FROM character_avatars WHERE character_id = ${avatar.character_id}
+        )
+      ),
       ${avatar.crop_x_percent ?? null},
       ${avatar.crop_y_percent ?? null},
       ${avatar.crop_width_percent ?? null},

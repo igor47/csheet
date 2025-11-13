@@ -36,15 +36,20 @@ export const AvatarCropper = ({
             <cropper-handle action="move" plain></cropper-handle>
             <cropper-selection
               aspectRatio="1"
-              movable resizable zoomable
+              movable
+              resizable
+              zoomable
               data-existingx={existingCrop ? existingCrop.x : undefined}
               data-existingy={existingCrop ? existingCrop.y : undefined}
               data-existingw={existingCrop ? existingCrop.width : undefined}
               data-existingh={existingCrop ? existingCrop.height : undefined}
-             >
+            >
               <cropper-grid role="grid" covered></cropper-grid>
               <cropper-crosshair centered></cropper-crosshair>
-              <cropper-handle action="move" theme-color="rgba(255, 255, 255, 0.35)"></cropper-handle>
+              <cropper-handle
+                action="move"
+                theme-color="rgba(255, 255, 255, 0.35)"
+              ></cropper-handle>
               <cropper-handle action="n-resize"></cropper-handle>
               <cropper-handle action="e-resize"></cropper-handle>
               <cropper-handle action="s-resize"></cropper-handle>

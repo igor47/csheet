@@ -1,7 +1,7 @@
 function prepareCropperImage() {
   const cropperImage = document.querySelector('cropper-image');
   if (!cropperImage) {
-    console.warn(`No ${selector} element found`);
+    console.warn(`No cropper-image element found`);
     return;
   }
 
@@ -48,8 +48,8 @@ function prepareCropperImage() {
       const hPercent = height / renderedH;
       cropH.value = hPercent;
 
-      const canvasExtraV = (canvasW - renderedW) / 2;
-      const xPercent = (x - canvasExtraV) / renderedW;
+      const canvasExtraW = (canvasW - renderedW) / 2;
+      const xPercent = (x - canvasExtraW) / renderedW;
       cropX.value = xPercent;
 
       const wPercent = width / renderedW;
@@ -100,8 +100,12 @@ function prepareCropperImage() {
 
       // if existing crop data is present, set initial selection
       if (existingx && existingy && existingw && existingh) {
-        // set initial selection based on existing data
-        const x = parseFloat(existingx) * renderedW;
+        // Calculate canvas padding for narrow images
+        const canvasW = cropperCanvas.getBoundingClientRect().width;
+        const canvasExtraW = (canvasW - renderedW) / 2;
+
+        // Convert percentages to canvas pixels (add padding to x)
+        const x = parseFloat(existingx) * renderedW + canvasExtraW;
         const y = parseFloat(existingy) * renderedH;
         const width = parseFloat(existingw) * renderedW;
         const height = parseFloat(existingh) * renderedH;

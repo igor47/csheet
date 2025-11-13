@@ -147,12 +147,12 @@ describe("GET /characters", () => {
   })
 })
 
-describe("POST /characters/:id/avatar", () => {
+describe("POST /characters/:id/avatars", () => {
   const testCtx = useTestApp()
 
   describe("when user is not authenticated", () => {
     test("returns 401", async () => {
-      const response = await makeRequest(testCtx.app, "/characters/test-id/avatar", {
+      const response = await makeRequest(testCtx.app, "/characters/test-id/avatars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ upload_id: "test-upload" }),
@@ -194,11 +194,11 @@ describe("POST /characters/:id/avatar", () => {
         `
       })
 
-      test("sets the character avatar", async () => {
+      test("creates avatar and returns gallery", async () => {
         const formData = new FormData()
         formData.append("upload_id", upload.id)
 
-        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatar`, {
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatars`, {
           user,
           method: "POST",
           body: formData,
@@ -206,10 +206,11 @@ describe("POST /characters/:id/avatar", () => {
 
         expect(response.status).toBe(200)
 
-        // Should return HTML with OOB swap
+        // Should return gallery view and character info OOB swap
         const html = await response.text()
         expect(html).toContain("hx-swap-oob")
         expect(html).toContain("character-info")
+        expect(html).toContain("Avatar Gallery") // Gallery title
 
         // Verify avatar was created in character_avatars table
         const result = await testCtx.db`
@@ -237,7 +238,7 @@ describe("POST /characters/:id/avatar", () => {
         const formData = new FormData()
         formData.append("upload_id", upload.id)
 
-        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatar`, {
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatars`, {
           user,
           method: "POST",
           body: formData,
@@ -274,7 +275,7 @@ describe("POST /characters/:id/avatar", () => {
         const formData = new FormData()
         formData.append("upload_id", upload.id)
 
-        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatar`, {
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatars`, {
           user,
           method: "POST",
           body: formData,
@@ -290,7 +291,7 @@ describe("POST /characters/:id/avatar", () => {
       test("returns error in modal", async () => {
         const formData = new FormData()
 
-        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatar`, {
+        const response = await makeRequest(testCtx.app, `/characters/${character.id}/avatars`, {
           user,
           method: "POST",
           body: formData,

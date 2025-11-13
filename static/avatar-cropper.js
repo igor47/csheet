@@ -98,12 +98,12 @@ function prepareCropperImage() {
 
       const { existingx, existingy, existingw, existingh } = cropperSelection.dataset;
 
+      // Calculate canvas padding for narrow images
+      const canvasW = cropperCanvas.getBoundingClientRect().width;
+      const canvasExtraW = (canvasW - renderedW) / 2;
+
       // if existing crop data is present, set initial selection
       if (existingx && existingy && existingw && existingh) {
-        // Calculate canvas padding for narrow images
-        const canvasW = cropperCanvas.getBoundingClientRect().width;
-        const canvasExtraW = (canvasW - renderedW) / 2;
-
         // Convert percentages to canvas pixels (add padding to x)
         const x = parseFloat(existingx) * renderedW + canvasExtraW;
         const y = parseFloat(existingy) * renderedH;
@@ -115,7 +115,7 @@ function prepareCropperImage() {
       // otherwise, center a square selection
       } else {
         const sideLength = Math.min(renderedW, renderedH) * 0.8;
-        const x = (renderedW - sideLength) / 2;
+        const x = (renderedW - sideLength) / 2 + canvasExtraW;
         const y = (renderedH - sideLength) / 2;
         cropperSelection.$change(x, y, sideLength, sideLength);
         setCropFormFields({ x, y, width: sideLength, height: sideLength });

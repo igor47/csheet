@@ -539,7 +539,7 @@ characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
 
   const body = (await c.req.parseBody()) as Record<string, string>
   body.item_id = itemId
-  const result = await createItemEffect(getDb(c), body)
+  const result = await createItemEffect(getDb(c), char, body)
 
   if (!result.complete) {
     return c.html(
@@ -593,15 +593,18 @@ characterRoutes.delete("/characters/:id/items/:itemId/effects/:effectId", async 
     )
   }
 
-  const deleteResult = await deleteItemEffect(getDb(c), itemId, effectId)
+  const deleteResult = await deleteItemEffect(getDb(c), char, {
+    item_id: itemId,
+    effect_id: effectId,
+  })
 
-  if (!deleteResult.success) {
+  if (!deleteResult.complete) {
     return c.html(
       <ItemEffectsEditor
         character={char}
         item={item}
         effects={item.effects}
-        errors={{ general: deleteResult.error || "Failed to delete effect" }}
+        errors={deleteResult.errors}
       />
     )
   }

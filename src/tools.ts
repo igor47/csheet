@@ -37,6 +37,18 @@ import {
   formatCreateItemApproval,
 } from "./services/createItem"
 import {
+  createItemEffectTool,
+  createItemEffectToolName,
+  executeCreateItemEffect,
+  formatCreateItemEffectApproval,
+} from "./services/createItemEffect"
+import {
+  deleteItemEffectTool,
+  deleteItemEffectToolName,
+  executeDeleteItemEffect,
+  formatDeleteItemEffectApproval,
+} from "./services/deleteItemEffect"
+import {
   equipItemTool,
   equipItemToolName,
   executeEquipItem,
@@ -264,6 +276,18 @@ export const TOOLS: ToolRegistration[] = [
     tool: manageChargeTool,
     executor: executeManageCharge,
     formatApprovalMessage: formatManageChargeApproval,
+  },
+  {
+    name: createItemEffectToolName,
+    tool: createItemEffectTool,
+    executor: executeCreateItemEffect,
+    formatApprovalMessage: formatCreateItemEffectApproval,
+  },
+  {
+    name: deleteItemEffectToolName,
+    tool: deleteItemEffectTool,
+    executor: executeDeleteItemEffect,
+    formatApprovalMessage: formatDeleteItemEffectApproval,
   },
 
   // Character Advancement

@@ -1,5 +1,4 @@
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { AvatarDisplay } from "./AvatarDisplay"
 import { ModalContent } from "./ui/ModalContent"
 
 export interface AvatarLightboxProps {
@@ -12,15 +11,29 @@ export const AvatarLightbox = ({ character, currentIndex }: AvatarLightboxProps)
   const prevIndex = currentIndex > 0 ? currentIndex - 1 : totalAvatars - 1
   const nextIndex = currentIndex < totalAvatars - 1 ? currentIndex + 1 : 0
   const showNavigation = totalAvatars > 1
+  const currentAvatar = character.avatars[currentIndex]
+
+  if (!currentAvatar) {
+    return (
+      <ModalContent title="Avatar Not Found">
+        <div class="modal-body">
+          <p>Avatar not found.</p>
+        </div>
+      </ModalContent>
+    )
+  }
 
   return (
     <ModalContent title={`Avatar ${currentIndex + 1} of ${totalAvatars}`}>
       <div class="modal-body position-relative" style="min-height: 400px;">
-        {/* Main avatar display */}
-        <div class="d-flex justify-content-center align-items-center">
-          <div style="max-width: 600px; width: 100%;">
-            <AvatarDisplay character={character} avatarIndex={currentIndex} mode="display-only" />
-          </div>
+        {/* Main avatar display - show full uncropped image */}
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+          <img
+            src={currentAvatar.uploadUrl}
+            alt={`${character.name} avatar ${currentIndex + 1}`}
+            class="img-fluid"
+            style="max-height: 600px; object-fit: contain;"
+          />
         </div>
 
         {/* Navigation arrows */}

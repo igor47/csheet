@@ -54,7 +54,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   const result = await db`
     SELECT * FROM char_levels
     WHERE character_id = ${characterId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   return result.map((row: CharLevel) =>
@@ -71,7 +71,7 @@ export async function getCurrentLevels(db: SQL, characterId: string): Promise<Ch
     WITH ranked AS (
       SELECT
         *,
-        ROW_NUMBER() OVER (PARTITION BY class ORDER BY level DESC, created_at DESC) as rn
+        ROW_NUMBER() OVER (PARTITION BY class ORDER BY level DESC, id DESC) as rn
       FROM char_levels
       WHERE character_id = ${characterId}
     )

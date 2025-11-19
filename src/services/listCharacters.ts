@@ -31,8 +31,8 @@ export async function listCharacters(
             cl.class,
             cl.level,
             cl.subclass,
-            cl.created_at,
-            ROW_NUMBER() OVER (PARTITION BY cl.character_id, cl.class ORDER BY cl.created_at DESC) as rn
+            cl.id,
+            ROW_NUMBER() OVER (PARTITION BY cl.character_id, cl.class ORDER BY cl.id DESC) as rn
           FROM char_levels cl
           INNER JOIN characters c ON c.id = cl.character_id
           WHERE c.user_id = ${userId}
@@ -42,7 +42,7 @@ export async function listCharacters(
           COALESCE(
             json_agg(
               json_build_object('class', cl.class, 'level', cl.level, 'subclass', cl.subclass)
-              ORDER BY cl.created_at ASC
+              ORDER BY cl.id ASC
             ) FILTER (WHERE cl.class IS NOT NULL),
             '[]'
           ) as classes
@@ -59,8 +59,8 @@ export async function listCharacters(
             cl.class,
             cl.level,
             cl.subclass,
-            cl.created_at,
-            ROW_NUMBER() OVER (PARTITION BY cl.character_id, cl.class ORDER BY cl.created_at DESC) as rn
+            cl.id,
+            ROW_NUMBER() OVER (PARTITION BY cl.character_id, cl.class ORDER BY cl.id DESC) as rn
           FROM char_levels cl
           INNER JOIN characters c ON c.id = cl.character_id
           WHERE c.user_id = ${userId} AND c.archived_at IS NULL
@@ -70,7 +70,7 @@ export async function listCharacters(
           COALESCE(
             json_agg(
               json_build_object('class', cl.class, 'level', cl.level, 'subclass', cl.subclass)
-              ORDER BY cl.created_at ASC
+              ORDER BY cl.id ASC
             ) FILTER (WHERE cl.class IS NOT NULL),
             '[]'
           ) as classes

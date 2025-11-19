@@ -1,5 +1,6 @@
 import { type ChatMessage, create as saveChatMessage, type Usage } from "@src/db/chat_messages"
 import { getChatModel } from "@src/lib/ai"
+import { ulid } from "@src/lib/ids"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat } from "@src/services/computeChat"
@@ -7,7 +8,6 @@ import { executeTool } from "@src/services/toolExecution"
 import { TOOL_DEFINITIONS, TOOLS } from "@src/tools"
 import { type LanguageModel, streamText } from "ai"
 import type { SQL } from "bun"
-import { ulid } from "ulid"
 import { buildSystemPrompt } from "./prompts"
 
 export interface ChatResponse {

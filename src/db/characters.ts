@@ -1,7 +1,7 @@
 import { RulesetIdSchema } from "@src/lib/dnd/rulesets"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
+import { ulid } from "@src/lib/ids"
 import type { SQL } from "bun"
-import { ulid } from "ulid"
 import { z } from "zod"
 
 export const CharacterSchema = z.object({

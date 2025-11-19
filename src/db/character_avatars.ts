@@ -1,6 +1,6 @@
 import { beginOrSavepoint } from "@src/db"
+import { ulid } from "@src/lib/ids"
 import type { SQL, TransactionSQL } from "bun"
-import { ulid } from "ulid"
 import { z } from "zod"
 
 // Zod schemas

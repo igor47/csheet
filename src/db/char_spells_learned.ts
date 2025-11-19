@@ -1,5 +1,5 @@
+import { ulid } from "@src/lib/ids"
 import type { SQL } from "bun"
-import { ulid } from "ulid"
 import { z } from "zod"
 
 // Wizard spellbook: purely additive (wizards never forget spells)

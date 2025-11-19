@@ -121,7 +121,7 @@ export async function validateOtp(db: SQL, email: string, otpCode: string): Prom
     WHERE email = ${email}
       AND used_at IS NULL
       AND expires_at > ${now.toISOString()}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
   `
 
   // Use timing-safe comparison to prevent info leakage
@@ -165,7 +165,7 @@ export async function validateSessionToken(db: SQL, sessionToken: string): Promi
     FROM auth_tokens
     WHERE used_at IS NULL
       AND expires_at > ${now.toISOString()}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
   `
 
   // Use timing-safe comparison to prevent info leakage

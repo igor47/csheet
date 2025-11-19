@@ -56,7 +56,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   const result = await db`
     SELECT * FROM char_spell_slots
     WHERE character_id = ${characterId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod

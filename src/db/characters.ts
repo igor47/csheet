@@ -80,12 +80,12 @@ export async function findByUserId(
     ? await db`
         SELECT * FROM characters
         WHERE user_id = ${userId}
-        ORDER BY archived_at IS NULL DESC, created_at DESC
+        ORDER BY archived_at IS NULL DESC, id DESC
       `
     : await db`
         SELECT * FROM characters
         WHERE user_id = ${userId} AND archived_at IS NULL
-        ORDER BY created_at DESC
+        ORDER BY id DESC
       `
 
   return result.map(parseCharacter)

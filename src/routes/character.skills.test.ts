@@ -390,14 +390,15 @@ describe("GET /characters/:id/history/skills", () => {
 
     describe("with skill changes", () => {
       beforeEach(async () => {
-        // Create some skill history (use future timestamps to be after factory-created skills)
+        // Create some skill history
+        // Use IDs that sort in timestamp order: aaaa < bbbb < cccc < dddd
         await testCtx.db`
           INSERT INTO char_skills (id, character_id, skill, proficiency, note, created_at, updated_at)
           VALUES
-            ('skill-1', ${character.id}, 'acrobatics', 'none', 'Initial', NOW() + INTERVAL '1 second', NOW()),
-            ('skill-2', ${character.id}, 'acrobatics', 'proficient', 'Trained', NOW() + INTERVAL '2 seconds', NOW()),
-            ('skill-3', ${character.id}, 'stealth', 'none', 'Initial', NOW() + INTERVAL '1 second', NOW()),
-            ('skill-4', ${character.id}, 'stealth', 'expert', 'Mastered', NOW() + INTERVAL '2 seconds', NOW())
+            ('skill-aaaa', ${character.id}, 'acrobatics', 'none', 'Initial Acrobatics', NOW() + INTERVAL '1 second', NOW()),
+            ('skill-bbbb', ${character.id}, 'acrobatics', 'proficient', 'Trained', NOW() + INTERVAL '2 seconds', NOW()),
+            ('skill-cccc', ${character.id}, 'stealth', 'none', 'Initial Stealth', NOW() + INTERVAL '1 second', NOW()),
+            ('skill-dddd', ${character.id}, 'stealth', 'expert', 'Mastered', NOW() + INTERVAL '2 seconds', NOW())
         `
       })
 
@@ -455,7 +456,7 @@ describe("GET /characters/:id/history/skills", () => {
         )
 
         const html = await response.text()
-        expect(html).toContain("Initial")
+        expect(html).toContain("Initial Acrobatics")
         expect(html).toContain("Trained")
         expect(html).toContain("Mastered")
       })
@@ -469,10 +470,10 @@ describe("GET /characters/:id/history/skills", () => {
 
         const html = await response.text()
         const trainedIndex = html.indexOf("Trained")
-        const initialIndex = html.indexOf("Initial")
+        const initialAcrobaticsIndex = html.indexOf("Initial Acrobatics")
 
-        // "Trained" should appear before "Initial" in the HTML
-        expect(trainedIndex).toBeLessThan(initialIndex)
+        // "Trained" should appear before "Initial Acrobatics" in the HTML (both are acrobatics skill)
+        expect(trainedIndex).toBeLessThan(initialAcrobaticsIndex)
       })
 
       test("groups simultaneous changes with rowspan", async () => {

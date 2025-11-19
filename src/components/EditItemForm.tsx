@@ -480,7 +480,7 @@ export const EditItemForm = ({
               <button
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
-                onclick={`document.getElementById('damage_row_count').value = ${damageRowCount + 1}; document.getElementById('edit-item-form').dispatchEvent(new Event('change'));`}
+                onclick={`document.getElementById('edititem-damage-row-count').value = ${damageRowCount + 1}; document.getElementById('edititem-form').dispatchEvent(new Event('change'));`}
               >
                 <i class="bi bi-plus"></i> Add Damage
               </button>
@@ -488,7 +488,7 @@ export const EditItemForm = ({
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-secondary"
-                  onclick={`document.getElementById('damage_row_count').value = ${damageRowCount - 1}; document.getElementById('edit-item-form').dispatchEvent(new Event('change'));`}
+                  onclick={`document.getElementById('edititem-damage-row-count').value = ${damageRowCount - 1}; document.getElementById('edititem-form').dispatchEvent(new Event('change'));`}
                 >
                   <i class="bi bi-dash"></i> Remove
                 </button>

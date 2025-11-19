@@ -1,3 +1,4 @@
+import { AvatarDisplay } from "@src/components/AvatarDisplay"
 import type { ListCharacter } from "@src/services/listCharacters"
 
 export interface CharactersProps {
@@ -21,69 +22,73 @@ const formatClassLevel = (classes: ListCharacter["classes"]): string => {
     .join(" / ")
 }
 
-const CharacterRow = ({ char }: { char: ListCharacter }) => {
+const formatSpecies = (species: string, lineage: string | null): string => {
+  // Lineages already include the species name (e.g., "forest gnome", "hill dwarf")
+  // so we just display the lineage when present
+  return lineage || species
+}
+
+const CharacterCard = ({ char }: { char: ListCharacter }) => {
   const isArchived = char.archived_at !== null
 
   return (
-    <tr>
-      <td>
-        <a href={`/characters/${char.id}`} class="text-decoration-none">
-          <h5 class="mb-0">{char.name}</h5>
+    <div class="card h-100">
+      {/* Avatar as card header/image */}
+      <a href={`/characters/${char.id}`} class="text-decoration-none">
+        <AvatarDisplay character={char} mode="display-only" />
+      </a>
+
+      {/* Card Body */}
+      <div class="card-body">
+        <h5 class="card-title mb-2">
+          <a href={`/characters/${char.id}`} class="text-decoration-none text-body">
+            {char.name}
+          </a>
+          {isArchived && <span class="badge bg-secondary ms-2">Archived</span>}
+        </h5>
+        <p class="card-text text-muted mb-1">
+          <small>{formatClassLevel(char.classes)}</small>
+        </p>
+        <p class="card-text text-muted mb-1">
+          <small style="text-transform: capitalize;">
+            {formatSpecies(char.species, char.lineage)}
+          </small>
+        </p>
+        <p class="card-text text-muted mb-0">
+          <small style="text-transform: capitalize;">{char.background}</small>
+        </p>
+      </div>
+
+      {/* Card Footer with Actions */}
+      <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+        <a href={`/characters/${char.id}`} class="btn btn-primary btn-sm">
+          <i class="bi bi-eye"></i> View
         </a>
-        {isArchived && <span class="badge bg-secondary mt-1">Archived</span>}
-      </td>
-      <td>{formatClassLevel(char.classes)}</td>
-      <td class="d-none d-sm-table-cell">{char.species}</td>
-      <td class="d-none d-md-table-cell">{char.background}</td>
-      <td class="d-none d-lg-table-cell">{char.alignment || "-"}</td>
-      <td class="d-none d-lg-table-cell">{new Date(char.created_at).toLocaleDateString()}</td>
-      <td>
-        <div class="dropdown">
+        {isArchived ? (
           <button
-            class="btn btn-sm btn-outline-secondary dropdown-toggle"
             type="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            data-testid={`actions-${char.id}`}
+            class="btn btn-outline-secondary btn-sm"
+            hx-post={`/characters/${char.id}/unarchive`}
+            hx-confirm="Are you sure you want to restore this character?"
+            data-testid={`unarchive-${char.id}`}
+            title="Restore character"
           >
-            ⋯
+            <i class="bi bi-arrow-counterclockwise"></i>
           </button>
-          <ul class="dropdown-menu">
-            <li>
-              <a class="dropdown-item" href={`/characters/${char.id}`}>
-                View
-              </a>
-            </li>
-            <li>
-              <hr class="dropdown-divider" />
-            </li>
-            <li>
-              {isArchived ? (
-                <button
-                  type="button"
-                  class="dropdown-item"
-                  hx-post={`/characters/${char.id}/unarchive`}
-                  hx-confirm="Are you sure you want to restore this character?"
-                  data-testid={`unarchive-${char.id}`}
-                >
-                  Restore
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  class="dropdown-item"
-                  hx-post={`/characters/${char.id}/archive`}
-                  hx-confirm={`Are you sure you want to archive "${char.name}"? This will free up the name for reuse.`}
-                  data-testid={`archive-${char.id}`}
-                >
-                  Archive
-                </button>
-              )}
-            </li>
-          </ul>
-        </div>
-      </td>
-    </tr>
+        ) : (
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            hx-post={`/characters/${char.id}/archive`}
+            hx-confirm={`Are you sure you want to archive "${char.name}"? This will free up the name for reuse.`}
+            data-testid={`archive-${char.id}`}
+            title="Archive character"
+          >
+            <i class="bi bi-archive"></i>
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -105,25 +110,14 @@ const EmptyState = ({ showArchived }: { showArchived: boolean }) => (
   </div>
 )
 
-const CharacterTable = ({ characters }: { characters: ListCharacter[] }) => (
-  <table class="table table-hover">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Class</th>
-        <th class="d-none d-sm-table-cell">Species</th>
-        <th class="d-none d-md-table-cell">Background</th>
-        <th class="d-none d-lg-table-cell">Alignment</th>
-        <th class="d-none d-lg-table-cell">Created</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {characters.map((char) => (
-        <CharacterRow char={char} key={char.id} />
-      ))}
-    </tbody>
-  </table>
+const CharacterGrid = ({ characters }: { characters: ListCharacter[] }) => (
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {characters.map((char) => (
+      <div class="col" key={char.id}>
+        <CharacterCard char={char} />
+      </div>
+    ))}
+  </div>
 )
 
 export const Characters = ({ characters, showArchived, archivedCount }: CharactersProps) => {
@@ -161,7 +155,7 @@ export const Characters = ({ characters, showArchived, archivedCount }: Characte
       {characters.length === 0 ? (
         <EmptyState showArchived={showArchived} />
       ) : (
-        <CharacterTable characters={characters} />
+        <CharacterGrid characters={characters} />
       )}
     </div>
   )

@@ -1,5 +1,6 @@
 import type { Character } from "@src/db/characters"
 import type { ClassNameType } from "@src/lib/dnd"
+import type { CharacterAvatarWithUrl } from "@src/services/computeCharacter"
 import type { SQL } from "bun"
 
 export interface CharacterClass {
@@ -11,6 +12,10 @@ export interface CharacterClass {
 export interface ListCharacter extends Character {
   classes: CharacterClass[]
   totalLevel: number
+  avatars: Omit<
+    CharacterAvatarWithUrl,
+    "id" | "character_id" | "upload_id" | "created_at" | "updated_at"
+  >[]
 }
 
 /**
@@ -36,6 +41,19 @@ export async function listCharacters(
           FROM char_levels cl
           INNER JOIN characters c ON c.id = cl.character_id
           WHERE c.user_id = ${userId}
+        ),
+        primary_avatars AS (
+          SELECT DISTINCT ON (ca.character_id)
+            ca.character_id,
+            ca.crop_x_percent,
+            ca.crop_y_percent,
+            ca.crop_width_percent,
+            ca.crop_height_percent,
+            u.id as upload_id
+          FROM character_avatars ca
+          INNER JOIN uploads u ON u.id = ca.upload_id
+          WHERE ca.is_primary = true
+          ORDER BY ca.character_id, ca.created_at DESC
         )
         SELECT
           c.*,
@@ -45,11 +63,23 @@ export async function listCharacters(
               ORDER BY cl.id ASC
             ) FILTER (WHERE cl.class IS NOT NULL),
             '[]'
-          ) as classes
+          ) as classes,
+          CASE
+            WHEN pa.upload_id IS NOT NULL THEN
+              json_build_object(
+                'uploadUrl', '/uploads/' || pa.upload_id,
+                'crop_x_percent', pa.crop_x_percent,
+                'crop_y_percent', pa.crop_y_percent,
+                'crop_width_percent', pa.crop_width_percent,
+                'crop_height_percent', pa.crop_height_percent
+              )
+            ELSE NULL
+          END as primary_avatar
         FROM characters c
         LEFT JOIN current_levels cl ON cl.character_id = c.id AND cl.rn = 1
+        LEFT JOIN primary_avatars pa ON pa.character_id = c.id
         WHERE c.user_id = ${userId}
-        GROUP BY c.id
+        GROUP BY c.id, pa.upload_id, pa.crop_x_percent, pa.crop_y_percent, pa.crop_width_percent, pa.crop_height_percent
         ORDER BY c.archived_at IS NULL DESC, c.created_at DESC
       `
     : db`
@@ -64,6 +94,19 @@ export async function listCharacters(
           FROM char_levels cl
           INNER JOIN characters c ON c.id = cl.character_id
           WHERE c.user_id = ${userId} AND c.archived_at IS NULL
+        ),
+        primary_avatars AS (
+          SELECT DISTINCT ON (ca.character_id)
+            ca.character_id,
+            ca.crop_x_percent,
+            ca.crop_y_percent,
+            ca.crop_width_percent,
+            ca.crop_height_percent,
+            u.id as upload_id
+          FROM character_avatars ca
+          INNER JOIN uploads u ON u.id = ca.upload_id
+          WHERE ca.is_primary = true
+          ORDER BY ca.character_id, ca.created_at DESC
         )
         SELECT
           c.*,
@@ -73,11 +116,23 @@ export async function listCharacters(
               ORDER BY cl.id ASC
             ) FILTER (WHERE cl.class IS NOT NULL),
             '[]'
-          ) as classes
+          ) as classes,
+          CASE
+            WHEN pa.upload_id IS NOT NULL THEN
+              json_build_object(
+                'uploadUrl', '/uploads/' || pa.upload_id,
+                'crop_x_percent', pa.crop_x_percent,
+                'crop_y_percent', pa.crop_y_percent,
+                'crop_width_percent', pa.crop_width_percent,
+                'crop_height_percent', pa.crop_height_percent
+              )
+            ELSE NULL
+          END as primary_avatar
         FROM characters c
         LEFT JOIN current_levels cl ON cl.character_id = c.id AND cl.rn = 1
+        LEFT JOIN primary_avatars pa ON pa.character_id = c.id
         WHERE c.user_id = ${userId} AND c.archived_at IS NULL
-        GROUP BY c.id
+        GROUP BY c.id, pa.upload_id, pa.crop_x_percent, pa.crop_y_percent, pa.crop_width_percent, pa.crop_height_percent
         ORDER BY c.created_at DESC
       `
 
@@ -87,6 +142,20 @@ export async function listCharacters(
   return results.map((row: any): ListCharacter => {
     const classes: CharacterClass[] = Array.isArray(row.classes) ? row.classes : []
     const totalLevel = classes.reduce((sum, c) => sum + c.level, 0)
+
+    // Convert primary_avatar JSON to avatars array format
+    const avatars = row.primary_avatar
+      ? [
+          {
+            uploadUrl: row.primary_avatar.uploadUrl,
+            is_primary: true,
+            crop_x_percent: row.primary_avatar.crop_x_percent,
+            crop_y_percent: row.primary_avatar.crop_y_percent,
+            crop_width_percent: row.primary_avatar.crop_width_percent,
+            crop_height_percent: row.primary_avatar.crop_height_percent,
+          },
+        ]
+      : []
 
     return {
       id: row.id,
@@ -102,6 +171,7 @@ export async function listCharacters(
       updated_at: new Date(row.updated_at),
       classes,
       totalLevel,
+      avatars,
     }
   })
 }

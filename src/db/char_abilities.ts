@@ -52,7 +52,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   const result = await db`
     SELECT * FROM char_abilities
     WHERE character_id = ${characterId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
@@ -80,7 +80,7 @@ export async function currentByCharacterId(
         ability,
         score,
         proficiency,
-        ROW_NUMBER() OVER (PARTITION BY ability ORDER BY created_at DESC) as rn
+        ROW_NUMBER() OVER (PARTITION BY ability ORDER BY id DESC) as rn
       FROM char_abilities
       WHERE character_id = ${characterId}
     )

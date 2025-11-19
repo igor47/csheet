@@ -100,7 +100,7 @@ export async function findByChatId(db: SQL, chatId: string, limit = 50): Promise
   const result = await db`
     SELECT * FROM chat_messages
     WHERE chat_id = ${chatId}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT ${limit}
   `
 
@@ -131,7 +131,7 @@ export async function getChatsByCharacterId(db: SQL, characterId: string): Promi
         SELECT content
         FROM chat_messages cm2
         WHERE cm2.chat_id = cm.chat_id
-        ORDER BY created_at DESC
+        ORDER BY id DESC
         LIMIT 1
       ) as last_message,
       MAX(created_at) as last_message_at,
@@ -140,7 +140,7 @@ export async function getChatsByCharacterId(db: SQL, characterId: string): Promi
         FROM chat_messages cm2
         WHERE cm2.chat_id = cm.chat_id
           AND usage IS NOT NULL
-        ORDER BY created_at DESC
+        ORDER BY id DESC
         LIMIT 1
       ) as total_tokens
     FROM chat_messages cm

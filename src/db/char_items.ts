@@ -71,7 +71,7 @@ export async function getCurrentInventory(
         worn,
         wielded,
         dropped_at,
-        ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY created_at DESC) as rn
+        ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY id DESC) as rn
       FROM char_items
       WHERE character_id = ${characterId}
     )
@@ -118,7 +118,7 @@ export async function getCharItemHistory(
     FROM char_items ci
     JOIN items i ON i.id = ci.item_id
     WHERE ci.character_id = ${characterId}
-    ORDER BY ci.created_at DESC
+    ORDER BY ci.id DESC
   `
 
   // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod

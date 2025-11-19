@@ -62,7 +62,7 @@ export async function computeCharacterItems(
         worn,
         wielded,
         dropped_at,
-        ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY created_at DESC) as rn
+        ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY id DESC) as rn
       FROM char_items
       WHERE character_id = ${characterId}
     ),

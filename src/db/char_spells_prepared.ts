@@ -66,7 +66,7 @@ export async function findByCharacterId(
   const result = await db`
     SELECT * FROM char_spells_prepared
     WHERE character_id = ${characterId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod

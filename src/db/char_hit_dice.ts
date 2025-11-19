@@ -1,6 +1,6 @@
 import type { HitDieType } from "@src/lib/dnd"
+import { ulid } from "@src/lib/ids"
 import type { SQL } from "bun"
-import { ulid } from "ulid"
 import { z } from "zod"
 
 export const HitDiceActions = ["use", "restore"] as const

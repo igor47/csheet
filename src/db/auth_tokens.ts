@@ -1,6 +1,6 @@
 import { config } from "@src/config"
+import { ulid } from "@src/lib/ids"
 import type { SQL } from "bun"
-import { ulid } from "ulid"
 
 export interface AuthToken {
   id: string

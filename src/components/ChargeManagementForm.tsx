@@ -163,8 +163,9 @@ export const ChargeManagementForm = ({
               name="note"
               rows={2}
               placeholder={`Add a note about this ${chargeLabel.toLowerCase()} change...`}
-              value={values?.note || ""}
-            />
+            >
+              {values?.note || ""}
+            </textarea>
           </div>
 
           <div class="modal-footer">

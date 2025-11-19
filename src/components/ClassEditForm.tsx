@@ -170,8 +170,9 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
               name="note"
               rows={2}
               placeholder="Add a note about this level-up..."
-              value={values.note || ""}
-            />
+            >
+              {values.note || ""}
+            </textarea>
           </div>
 
           <div class="modal-footer">

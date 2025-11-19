@@ -162,8 +162,9 @@ export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesE
               name="note"
               rows={2}
               placeholder="Add a note about these ability changes..."
-              value={values.note ?? ""}
-            />
+            >
+              {values.note ?? ""}
+            </textarea>
           </div>
 
           {/* General Errors */}

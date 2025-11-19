@@ -212,8 +212,9 @@ export const CoinsEditForm = ({ character, values = {}, errors = {} }: CoinsEdit
               name="note"
               rows={2}
               placeholder="Add a note about this transaction (e.g., 'received quest reward', 'bought rope')..."
-              value={values?.note || ""}
-            />
+            >
+              {values?.note || ""}
+            </textarea>
           </div>
 
           {/* General Errors */}

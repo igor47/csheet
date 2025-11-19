@@ -183,8 +183,9 @@ export const SkillsEditForm = ({ character, values = {}, errors = {} }: SkillsEd
               name="note"
               rows={2}
               placeholder="Add a note about these skill changes..."
-              value={values?.note || ""}
-            />
+            >
+              {values?.note || ""}
+            </textarea>
           </div>
 
           {/* General Errors */}

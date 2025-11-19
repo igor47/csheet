@@ -87,8 +87,9 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
             name="note"
             rows={2}
             placeholder="Add a note about adding this spell to your spellbook..."
-            value={values?.note || ""}
-          />
+          >
+            {values?.note || ""}
+          </textarea>
         </div>
 
         <div class="modal-footer">

@@ -639,6 +639,7 @@ characterRoutes.post("/characters/:id/items/:itemId/wear", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )
@@ -660,6 +661,7 @@ characterRoutes.post("/characters/:id/items/:itemId/remove", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )
@@ -681,6 +683,7 @@ characterRoutes.post("/characters/:id/items/:itemId/wield", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )
@@ -702,6 +705,7 @@ characterRoutes.post("/characters/:id/items/:itemId/sheathe", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )
@@ -723,6 +727,7 @@ characterRoutes.post("/characters/:id/items/:itemId/drop", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )

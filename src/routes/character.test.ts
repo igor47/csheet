@@ -355,8 +355,8 @@ describe("GET /characters?show_archived=true", () => {
         const document = await parseHtml(response)
         const restoreButton = expectElement(document, `[data-testid="unarchive-${character.id}"]`)
 
-        expect(restoreButton.textContent?.trim()).toBe("Restore")
         expect(restoreButton.getAttribute("hx-post")).toBe(`/characters/${character.id}/unarchive`)
+        expect(restoreButton.getAttribute("title")).toBe("Restore character")
       })
 
       test("checkbox is checked", async () => {

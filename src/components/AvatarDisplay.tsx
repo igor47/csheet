@@ -1,8 +1,21 @@
 import type { CropPercents } from "@src/db/character_avatars"
-import type { CharacterAvatarWithUrl, ComputedCharacter } from "@src/services/computeCharacter"
+import type { CharacterAvatarWithUrl } from "@src/services/computeCharacter"
+
+// Minimal avatar type - only the fields actually used by this component
+type MinimalAvatar = Omit<
+  CharacterAvatarWithUrl,
+  "id" | "character_id" | "upload_id" | "created_at" | "updated_at"
+>
+
+// Minimal character type needed for avatar display
+interface CharacterWithAvatars {
+  id: string
+  name: string
+  avatars: MinimalAvatar[]
+}
 
 export interface AvatarDisplayProps {
-  character: ComputedCharacter
+  character: CharacterWithAvatars
   avatarIndex?: number
   mode: "clickable-gallery" | "clickable-lightbox" | "display-only"
   className?: string
@@ -65,7 +78,7 @@ export const AvatarDisplay = ({
 }: AvatarDisplayProps) => {
   // For clickable-gallery mode, use primary avatar
   // For other modes, use specified index or primary
-  let avatar: CharacterAvatarWithUrl | undefined
+  let avatar: MinimalAvatar | undefined
   if (mode === "clickable-gallery") {
     avatar = character.avatars.find((a) => a.is_primary) || character.avatars[0]
   } else {

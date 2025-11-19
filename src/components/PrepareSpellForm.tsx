@@ -238,8 +238,9 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
             name="note"
             rows={2}
             placeholder={`Add a note about ${values.current_spell_id ? "replacing" : "preparing"} this ${slotTypeLabel}...`}
-            value={values?.note || ""}
-          />
+          >
+            {values?.note || ""}
+          </textarea>
         </div>
 
         <div class="modal-footer">

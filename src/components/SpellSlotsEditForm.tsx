@@ -203,8 +203,9 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
               name="note"
               rows={2}
               placeholder="Add a note about this spell slot change..."
-              value={values?.note || ""}
-            />
+            >
+              {values?.note || ""}
+            </textarea>
           </div>
 
           <div class="modal-footer">

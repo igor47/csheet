@@ -161,8 +161,9 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
               name="note"
               rows={2}
               placeholder="Add a note about casting this spell..."
-              value={values?.note || ""}
-            />
+            >
+              {values?.note || ""}
+            </textarea>
           </div>
 
           <div class="modal-footer">

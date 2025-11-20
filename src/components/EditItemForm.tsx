@@ -398,7 +398,7 @@ export const EditItemForm = ({
 
           {/* Damage Rows */}
           <div class="mb-3">
-            <label class="form-label" for="damage_row_count">
+            <label class="form-label" for="edititem-damage-row-count">
               Damage
             </label>
             <input
@@ -467,7 +467,7 @@ export const EditItemForm = ({
                       value="true"
                       checked={entry.versatile}
                     />
-                    <label class="form-check-label small" for={`damage-versatile-${i}`}>
+                    <label class="form-check-label small" for={`edititem-damage-versatile-${i}`}>
                       Versatile
                     </label>
                   </div>

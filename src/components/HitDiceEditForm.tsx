@@ -116,7 +116,7 @@ export const HitDiceEditForm = ({
           {/* Restore: Die selection */}
           {action === "restore" && (
             <div class="mb-3">
-              <label for="die_value" class="form-label">
+              <label for="hitdice-die-value" class="form-label">
                 Select Die to Restore
               </label>
               <select
@@ -140,7 +140,7 @@ export const HitDiceEditForm = ({
           {action === "spend" && (
             <>
               <div class="mb-3">
-                <label for="die_value" class="form-label">
+                <label for="hitdice-die-value" class="form-label">
                   Select Die to Spend
                 </label>
                 <select
@@ -163,7 +163,7 @@ export const HitDiceEditForm = ({
 
               {dieValue && (
                 <div class="mb-3">
-                  <label for="hp_rolled" class="form-label">
+                  <label for="hitdice-hp-rolled" class="form-label">
                     HP Rolled (1-{dieValue})
                   </label>
                   <input
@@ -203,12 +203,12 @@ export const HitDiceEditForm = ({
 
           {/* Note */}
           <div class="mb-3">
-            <label for="note" class="form-label">
+            <label for="hitdice-note" class="form-label">
               Note (Optional)
             </label>
             <textarea
               class="form-control"
-              id="note"
+              id="hitdice-note"
               name="note"
               rows={2}
               placeholder="Add a note about this hit dice change..."

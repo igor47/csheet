@@ -205,7 +205,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
 
         {/* Category */}
         <div class="mb-3">
-          <label for="item-category" class="form-label">
+          <label for="createitem-category" class="form-label">
             Category <span class="text-danger">*</span>
           </label>
           <Select
@@ -244,7 +244,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           <h6 class="text-muted mb-3">Armor Properties</h6>
 
           <div class="mb-3">
-            <label for="armor-type" class="form-label">
+            <label for="createitem-armor-type" class="form-label">
               Armor Type
             </label>
             <Select
@@ -477,13 +477,13 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
 
           {/* Damage Rows */}
           <div class="mb-3">
-            <label class="form-label" for="damage_row_count">
+            <label class="form-label" for="damage-row-count">
               Damage
             </label>
             <input
               type="hidden"
               name="damage_row_count"
-              id="damage_row_count"
+              id="damage-row-count"
               value={damageRowCount}
             />
 
@@ -556,7 +556,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
               <button
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
-                onclick={`document.getElementById('damage_row_count').value = ${damageRowCount + 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
+                onclick={`document.getElementById('damage-row-count').value = ${damageRowCount + 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
               >
                 <i class="bi bi-plus"></i> Add Damage
               </button>
@@ -564,7 +564,7 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-secondary"
-                  onclick={`document.getElementById('damage_row_count').value = ${damageRowCount - 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
+                  onclick={`document.getElementById('damage-row-count').value = ${damageRowCount - 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
                 >
                   <i class="bi bi-dash"></i> Remove
                 </button>

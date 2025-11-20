@@ -113,11 +113,11 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
                   class="form-check-input"
                   type="checkbox"
                   name="as_ritual"
-                  id="as_ritual"
+                  id="as-ritual"
                   value="true"
                   checked={asRitual}
                 />
-                <label class="form-check-label" for="as_ritual">
+                <label class="form-check-label" for="as-ritual">
                   Cast as ritual (takes +10 minutes, no spell slot consumed)
                 </label>
               </div>
@@ -128,13 +128,13 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
           {/* Spell Slot Selection */}
           {!isCantrip && !asRitual && (
             <div class="mb-3">
-              <label class="form-label d-block" for="slot_level">
+              <label class="form-label d-block" for="slot-level">
                 Select Spell Slot Level
               </label>
 
               <Select
                 name="slot_level"
-                id="slot_level"
+                id="slot-level"
                 options={slotOptions}
                 placeholder="Select a spell slot level"
                 required={true}

@@ -78,7 +78,7 @@ const MultiClassSelector = ({ values = {}, errors = {} }: MultiClassSelectorProp
                     name={`classes_${cls}`}
                     checked={isSelected}
                   />
-                  <label class="form-check-label" for={`classes_${cls}`}>
+                  <label class="form-check-label" for={`charimport-classes-${cls}`}>
                     {toTitleCase(cls)}
                   </label>
                 </div>
@@ -143,7 +143,7 @@ const AbilityScoreInputs = ({ values = {}, errors = {} }: AbilityScoreInputsProp
 
           return (
             <div class="col-md-4 mb-3">
-              <label for={`ability_${ability}`} class="form-label">
+              <label for={`charimport-ability-${ability}`} class="form-label">
                 {toTitleCase(ability)}
               </label>
               <div class="input-group">
@@ -167,7 +167,7 @@ const AbilityScoreInputs = ({ values = {}, errors = {} }: AbilityScoreInputsProp
                   name={`save_${ability}`}
                   checked={isProficient}
                 />
-                <label class="form-check-label small" for={`save_${ability}`}>
+                <label class="form-check-label small" for={`charimport-save-${ability}`}>
                   Saving throw proficiency
                 </label>
               </div>
@@ -191,7 +191,7 @@ const MaxHPInput = ({ values = {}, errors = {} }: MaxHPInputProps) => {
 
   return (
     <div class="mb-3">
-      <label for="max_hp" class="form-label">
+      <label for="charimport-max-hp" class="form-label">
         Maximum Hit Points
       </label>
       <input
@@ -289,7 +289,7 @@ const SkillProficiencySelector = ({ values = {}, errors = {} }: SkillProficiency
                         "btn-outline-primary": level === "proficient",
                         "btn-outline-success": level === "expert",
                       })}
-                      for={`${proficiencyFieldName}_${level}`}
+                      for={`charimport-${proficiencyFieldName}-${level}`}
                       style="font-size: 0.7rem;"
                       title={level}
                     >
@@ -364,12 +364,12 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
               >
                 {/* Ruleset */}
                 <div class="mb-3">
-                  <label for="ruleset" class="form-label">
+                  <label for="charimport-ruleset" class="form-label">
                     Ruleset
                   </label>
                   <Select
                     name="ruleset"
-                    id="ruleset"
+                    id="charimport-ruleset"
                     options={RULESETS.map((r) => ({ value: r.id, label: r.description }))}
                     placeholder="Select a ruleset"
                     required
@@ -383,13 +383,13 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
 
                 {/* Character Name */}
                 <div class="mb-3">
-                  <label for="name" class="form-label">
+                  <label for="charimport-name" class="form-label">
                     Character Name
                   </label>
                   <input
                     type="text"
                     class={clsx("form-control", { "is-invalid": errors?.name })}
-                    id="name"
+                    id="charimport-name"
                     name="name"
                     value={values?.name || ""}
                     required
@@ -400,12 +400,12 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
 
                 {/* Species */}
                 <div class="mb-3">
-                  <label for="species" class="form-label">
+                  <label for="charimport-species" class="form-label">
                     Species
                   </label>
                   <Select
                     name="species"
-                    id="species"
+                    id="charimport-species"
                     options={speciesNames.map((species) => ({
                       value: species,
                       label: toTitleCase(species),
@@ -419,12 +419,12 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
 
                 {/* Lineage */}
                 <div class="mb-3">
-                  <label for="lineage" class="form-label">
+                  <label for="charimport-lineage" class="form-label">
                     Lineage
                   </label>
                   <Select
                     name="lineage"
-                    id="lineage"
+                    id="charimport-lineage"
                     options={lineages.map((lineage) => ({
                       value: lineage.name,
                       label: toTitleCase(lineage.name),
@@ -438,12 +438,12 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
 
                 {/* Background */}
                 <div class="mb-3">
-                  <label for="background" class="form-label">
+                  <label for="charimport-background" class="form-label">
                     Background
                   </label>
                   <Select
                     name="background"
-                    id="background"
+                    id="charimport-background"
                     options={[
                       ...backgroundNames.map((bg) => ({ value: bg, label: toTitleCase(bg) })),
                       { value: "_custom", label: "Other (Custom)" },
@@ -457,7 +457,7 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
                     <input
                       type="text"
                       class={clsx("form-control mt-2", { "is-invalid": errors?.custom_background })}
-                      id="custom_background"
+                      id="charimport-custom-background"
                       name="custom_background"
                       value={(values?.custom_background as string) || ""}
                       placeholder="Enter custom background name"
@@ -488,12 +488,12 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
 
                 {/* Alignment */}
                 <div class="mb-3">
-                  <label for="alignment" class="form-label">
+                  <label for="charimport-alignment" class="form-label">
                     Alignment (Optional)
                   </label>
                   <Select
                     name="alignment"
-                    id="alignment"
+                    id="charimport-alignment"
                     options={[
                       { value: "Lawful Good", label: "Lawful Good" },
                       { value: "Neutral Good", label: "Neutral Good" },

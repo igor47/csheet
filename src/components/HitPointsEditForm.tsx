@@ -66,13 +66,13 @@ export const HitPointsEditForm = ({
                 type="radio"
                 class="btn-check"
                 name="action"
-                id="action-restore"
+                id="hitpoints-action-restore"
                 value="restore"
                 checked={action === "restore"}
                 disabled={currentHP >= maxHitPoints}
                 autocomplete="off"
               />
-              <label class="btn btn-outline-success" for="action-restore">
+              <label class="btn btn-outline-success" for="hitpoints-action-restore">
                 Restore Hit Points
               </label>
 
@@ -80,13 +80,13 @@ export const HitPointsEditForm = ({
                 type="radio"
                 class="btn-check"
                 name="action"
-                id="action-lose"
+                id="hitpoints-action-lose"
                 value="lose"
                 checked={action === "lose"}
                 disabled={currentHP <= 0}
                 autocomplete="off"
               />
-              <label class="btn btn-outline-danger" for="action-lose">
+              <label class="btn btn-outline-danger" for="hitpoints-action-lose">
                 Lose Hit Points
               </label>
             </fieldset>
@@ -94,13 +94,13 @@ export const HitPointsEditForm = ({
 
           {/* Amount */}
           <div class="mb-3">
-            <label for="amount" class="form-label">
+            <label for="hitpoints-amount" class="form-label">
               Amount
             </label>
             <input
               type="number"
               class={clsx("form-control", { "is-invalid": errors?.amount })}
-              id="amount"
+              id="hitpoints-amount"
               name="amount"
               value={values?.amount || ""}
               min="1"
@@ -124,12 +124,12 @@ export const HitPointsEditForm = ({
 
           {/* Note */}
           <div class="mb-3">
-            <label for="note" class="form-label">
+            <label for="hitpoints-note" class="form-label">
               Note (Optional)
             </label>
             <textarea
               class="form-control"
-              id="note"
+              id="hitpoints-note"
               name="note"
               rows={2}
               placeholder="Add a note about this HP change..."

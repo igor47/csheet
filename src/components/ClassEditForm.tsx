@@ -83,12 +83,12 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
           novalidate
         >
           <div class="mb-3">
-            <label for="class" class="form-label">
+            <label for="classedit-class" class="form-label">
               Class
             </label>
             <Select
               name="class"
-              id="class"
+              id="classedit-class"
               options={ClassNames.map((cls) => ({ value: cls, label: toTitleCase(cls) }))}
               placeholder="Select a class"
               required
@@ -98,7 +98,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
           </div>
 
           <div class="mb-3">
-            <label for="level" class="form-label">
+            <label for="classedit-level" class="form-label">
               Level
             </label>
             <input
@@ -106,7 +106,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
               class={clsx("form-control", "bg-secondary-subtle", "text-muted", {
                 "is-invalid": errors?.level,
               })}
-              id="level"
+              id="classedit-level"
               name="level"
               value={isFirstLevelInClass ? "1" : values.level || ""}
               readonly
@@ -118,12 +118,12 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
           </div>
 
           <div class="mb-3">
-            <label for="subclass" class="form-label">
+            <label for="classedit-subclass" class="form-label">
               Subclass
             </label>
             <Select
               name="subclass"
-              id="subclass"
+              id="classedit-subclass"
               options={subclasses.map((subcls) => ({
                 value: subcls.name,
                 label: toTitleCase(subcls.name),
@@ -137,7 +137,7 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
           </div>
 
           <div class="mb-3">
-            <label for="hit_die_roll" class="form-label">
+            <label for="classedit-hit-die-roll" class="form-label">
               Hit Die Roll (1-{hitDieMax})
             </label>
             <input
@@ -161,12 +161,12 @@ export const ClassEditForm = ({ character, values, errors }: ClassEditFormProps)
           </div>
 
           <div class="mb-3">
-            <label for="note" class="form-label">
+            <label for="classedit-note" class="form-label">
               Note (Optional)
             </label>
             <textarea
               class="form-control"
-              id="note"
+              id="classedit-note"
               name="note"
               rows={2}
               placeholder="Add a note about this level-up..."

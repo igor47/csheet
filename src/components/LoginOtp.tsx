@@ -17,13 +17,13 @@ export const LoginOtp = ({ email, redirect }: LoginOtpProps) => (
               <input type="hidden" name="email" value={email} />
               {redirect && <input type="hidden" name="redirect" value={redirect} />}
               <div class="mb-3">
-                <label for="otp_code" class="form-label">
+                <label for="otp-code" class="form-label">
                   6-Digit Code
                 </label>
                 <input
                   type="text"
                   class="form-control text-center"
-                  id="otp_code"
+                  id="otp-code"
                   name="otp_code"
                   required
                   maxlength={6}

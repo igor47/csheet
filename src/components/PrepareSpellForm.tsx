@@ -164,11 +164,11 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
               type="radio"
               class="btn-check"
               name="spell_type"
-              id="spell_type_cantrip"
+              id="spell-type-cantrip"
               value="cantrip"
               checked={values.spell_type === "cantrip"}
             />
-            <label class="btn btn-outline-primary" for="spell_type_cantrip">
+            <label class="btn btn-outline-primary" for="spell-type-cantrip">
               Cantrips
             </label>
 
@@ -176,11 +176,11 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
               type="radio"
               class="btn-check"
               name="spell_type"
-              id="spell_type_spell"
+              id="spell-type-spell"
               value="spell"
               checked={values.spell_type === "spell"}
             />
-            <label class="btn btn-outline-primary" for="spell_type_spell">
+            <label class="btn btn-outline-primary" for="spell-type-spell">
               Spells
             </label>
           </fieldset>
@@ -198,12 +198,12 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
             </div>
 
             <div class="mb-3">
-              <label for="current_spell_id" class="form-label">
+              <label for="current-spell-id" class="form-label">
                 Replace Which {toTitleCase(slotTypeLabel)}?
               </label>
               <Select
                 name="current_spell_id"
-                id="current_spell_id"
+                id="current-spell-id"
                 placeholder={`Select a ${slotTypeLabel} to replace`}
                 required={true}
                 error={errors?.current_spell_id}

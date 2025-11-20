@@ -103,13 +103,13 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
                 type="radio"
                 class="btn-check"
                 name="action"
-                id="action-use"
+                id="spellslots-action-use"
                 value="use"
                 checked={action === "use"}
                 disabled={availableLevels.length === 0}
                 autocomplete="off"
               />
-              <label class="btn btn-outline-danger" for="action-use">
+              <label class="btn btn-outline-danger" for="spellslots-action-use">
                 Use Slot
               </label>
 
@@ -117,13 +117,13 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
                 type="radio"
                 class="btn-check"
                 name="action"
-                id="action-restore"
+                id="spellslots-action-restore"
                 value="restore"
                 checked={action === "restore"}
                 disabled={usedLevels.length === 0}
                 autocomplete="off"
               />
-              <label class="btn btn-outline-success" for="action-restore">
+              <label class="btn btn-outline-success" for="spellslots-action-restore">
                 Restore Slot
               </label>
             </fieldset>
@@ -132,12 +132,12 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
           {/* Use: Slot level selection */}
           {action === "use" && (
             <div class="mb-3">
-              <label for="slot_level" class="form-label">
+              <label for="spellslots-slot-level" class="form-label">
                 Select Slot Level to Use
               </label>
               <select
                 class={clsx("form-select", { "is-invalid": errors?.slot_level })}
-                id="slot_level"
+                id="spellslots-slot-level"
                 name="slot_level"
                 required
               >
@@ -157,12 +157,12 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
           {/* Restore: Slot level selection */}
           {action === "restore" && (
             <div class="mb-3">
-              <label for="slot_level" class="form-label">
+              <label for="spellslots-slot-level" class="form-label">
                 Select Slot Level to Restore
               </label>
               <select
                 class={clsx("form-select", { "is-invalid": errors?.slot_level })}
-                id="slot_level"
+                id="spellslots-slot-level"
                 name="slot_level"
                 required
               >
@@ -194,12 +194,12 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
 
           {/* Note */}
           <div class="mb-3">
-            <label for="note" class="form-label">
+            <label for="spellslots-note" class="form-label">
               Note (Optional)
             </label>
             <textarea
               class="form-control"
-              id="note"
+              id="spellslots-note"
               name="note"
               rows={2}
               placeholder="Add a note about this spell slot change..."

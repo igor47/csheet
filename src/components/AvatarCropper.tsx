@@ -38,10 +38,10 @@ export const AvatarCropper = ({ character, avatarIndex }: AvatarCropperProps) =>
               movable
               resizable
               zoomable
-              data-existingx={existingCrop.x || undefined}
-              data-existingy={existingCrop.y || undefined}
-              data-existingw={existingCrop.width || undefined}
-              data-existingh={existingCrop.height || undefined}
+              data-existingx={existingCrop.x ?? null}
+              data-existingy={existingCrop.y ?? null}
+              data-existingw={existingCrop.width ?? null}
+              data-existingh={existingCrop.height ?? null}
             >
               <cropper-grid role="grid" covered></cropper-grid>
               <cropper-crosshair centered></cropper-crosshair>

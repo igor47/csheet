@@ -2,6 +2,7 @@ import { Abilities, type AbilityType } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import clsx from "clsx"
 import { ModalContent } from "./ui/ModalContent"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface AbilitiesEditFormProps {
   character: ComputedCharacter
@@ -129,16 +130,7 @@ const AbilityEditBox = ({ ability, character, values, errors }: AbilityEditBoxPr
 export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesEditFormProps) => {
   return (
     <ModalContent title="Edit Abilities">
-      <form
-        id="abilities-edit-form"
-        hx-post={`/characters/${character.id}/edit/abilities`}
-        hx-vals='{"is_check": "true"}'
-        hx-trigger="change"
-        hx-target="#editModalContent"
-        hx-swap="morph:innerHTML"
-        class="needs-validation"
-        novalidate
-      >
+      <ModalForm id="abilities-edit-form" endpoint={`/characters/${character.id}/edit/abilities`}>
         <div class="modal-body">
           <div class="row row-cols-3 g-3 mb-3">
             {Abilities.map((ability) => (
@@ -178,18 +170,11 @@ export const AbilitiesEditForm = ({ character, values, errors = {} }: AbilitiesE
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button
-            type="submit"
-            class="btn btn-primary"
-            hx-post={`/characters/${character.id}/edit/abilities`}
-            hx-vals='{"is_check": "false"}'
-            hx-target="#editModalContent"
-            hx-swap="morph:innerHTML"
-          >
+          <ModalFormSubmit endpoint={`/characters/${character.id}/edit/abilities`}>
             Update Abilities
-          </button>
+          </ModalFormSubmit>
         </div>
-      </form>
+      </ModalForm>
     </ModalContent>
   )
 }

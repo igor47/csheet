@@ -1,5 +1,6 @@
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalContent } from "./ui/ModalContent"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface ShortRestFormProps {
   character: ComputedCharacter
@@ -60,16 +61,7 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
 
   return (
     <ModalContent title="Take a Short Rest">
-      <form
-        id="short-rest-form"
-        hx-post={`/characters/${character.id}/rest/short`}
-        hx-vals='{"is_check": "true"}'
-        hx-trigger="change"
-        hx-target="#editModalContent"
-        hx-swap="morph:innerHTML"
-        class="needs-validation"
-        novalidate
-      >
+      <ModalForm id="short-rest-form" endpoint={`/characters/${character.id}/rest/short`}>
         <div class="modal-body">
           <p class="text-muted mb-3">
             A short rest requires at least 1 hour of downtime. You can spend hit dice to recover HP.
@@ -228,19 +220,12 @@ export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps)
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button
-            type="submit"
-            class="btn btn-primary"
-            hx-post={`/characters/${character.id}/rest/short`}
-            hx-vals='{"is_check": "false"}'
-            hx-target="#editModalContent"
-            hx-swap="morph:innerHTML"
-          >
+          <ModalFormSubmit endpoint={`/characters/${character.id}/rest/short`}>
             <i class="bi bi-cup-hot me-2"></i>
             Complete Short Rest
-          </button>
+          </ModalFormSubmit>
         </div>
-      </form>
+      </ModalForm>
     </ModalContent>
   )
 }

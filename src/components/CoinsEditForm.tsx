@@ -2,6 +2,7 @@ import { applyDeltasWithChange } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import clsx from "clsx"
 import { ModalContent } from "./ui/ModalContent"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface CoinsEditFormProps {
   character: ComputedCharacter
@@ -117,16 +118,7 @@ export const CoinsEditForm = ({ character, values = {}, errors = {} }: CoinsEdit
 
   return (
     <ModalContent title="Edit Coins">
-      <form
-        id="coins-edit-form"
-        hx-post={`/characters/${character.id}/edit/coins`}
-        hx-vals='{"is_check": "true"}'
-        hx-trigger="change"
-        hx-target="#editModalContent"
-        hx-swap="morph:innerHTML"
-        class="needs-validation"
-        novalidate
-      >
+      <ModalForm id="coins-edit-form" endpoint={`/characters/${character.id}/edit/coins`}>
         <div class="modal-body">
           <div class="alert alert-info" role="alert">
             <strong>Enter the change amount</strong> (use negative numbers for spending):
@@ -228,19 +220,14 @@ export const CoinsEditForm = ({ character, values = {}, errors = {} }: CoinsEdit
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button
-            type="submit"
+          <ModalFormSubmit
             id="coinsedit-submit"
-            class="btn btn-primary"
-            hx-post={`/characters/${character.id}/edit/coins`}
-            hx-vals='{"is_check": "false"}'
-            hx-target="#editModalContent"
-            hx-swap="morph:innerHTML"
+            endpoint={`/characters/${character.id}/edit/coins`}
           >
             Update Coins
-          </button>
+          </ModalFormSubmit>
         </div>
-      </form>
+      </ModalForm>
     </ModalContent>
   )
 }

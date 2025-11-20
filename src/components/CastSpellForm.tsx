@@ -2,6 +2,7 @@ import { SpellDetail } from "@src/components/SpellDetail"
 import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalContent } from "./ui/ModalContent"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 import { Select } from "./ui/Select"
 
 export interface CastSpellFormProps {
@@ -84,16 +85,7 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
         {/* Spell Details */}
         <SpellDetail spell={spell} compact={true} class="mb-3" />
 
-        <form
-          id="cast-spell-form"
-          hx-post={`/characters/${character.id}/castspell`}
-          hx-vals='{"is_check": "true"}'
-          hx-trigger="change"
-          hx-target="#editModalContent"
-          hx-swap="morph:innerHTML"
-          class="needs-validation"
-          novalidate
-        >
+        <ModalForm id="cast-spell-form" endpoint={`/characters/${character.id}/castspell`}>
           {/* Hidden fields */}
           <input type="hidden" name="spell_id" value={values.spell_id} />
 
@@ -170,19 +162,12 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              hx-post={`/characters/${character.id}/castspell`}
-              hx-vals='{"is_check": "false"}'
-              hx-target="#editModalContent"
-              hx-swap="morph:innerHTML"
-            >
+            <ModalFormSubmit endpoint={`/characters/${character.id}/castspell`}>
               <i class="bi bi-lightning-fill me-1"></i>
               Cast {spell.name}
-            </button>
+            </ModalFormSubmit>
           </div>
-        </form>
+        </ModalForm>
       </div>
     </ModalContent>
   )

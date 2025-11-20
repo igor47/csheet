@@ -4,6 +4,7 @@ import { ArmorTypes, DamageTypes, ItemCategories, WeaponMasteries } from "@src/l
 import { getGroupedTemplates, getTemplateByName, type RulesetId } from "@src/lib/dnd/itemTemplates"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface CreateItemFormProps {
   character: ComputedCharacter
@@ -155,562 +156,560 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
 
   return (
     <ModalContent title="Add Item to Inventory">
-      <form
-        id="create-item-form"
-        hx-post={`/characters/${character.id}/edit/newitem`}
-        hx-vals='{"is_check": "true"}'
-        hx-trigger="change"
-        hx-target="#editModalContent"
-        hx-swap="morph:innerHTML"
-        class="modal-body needs-validation"
-      >
-        {/* General error message */}
-        {errors?.general && (
-          <div class="alert alert-danger" role="alert">
-            {errors.general}
-          </div>
-        )}
+      <ModalForm id="create-item-form" endpoint={`/characters/${character.id}/edit/newitem`}>
+        <div class="modal-body">
+          {/* General error message */}
+          {errors?.general && (
+            <div class="alert alert-danger" role="alert">
+              {errors.general}
+            </div>
+          )}
 
-        {/* Template Selection */}
-        <input type="hidden" name="prev_template" value={values.prev_template} />
-
-        <div class="mb-3">
-          <label for="item-template" class="form-label">
-            Template
-          </label>
-          <Select
-            id="item-template"
-            name="template"
-            placeholder="Create from scratch"
-            options={templateOptions}
-            value={values.template || ""}
-          />
-          <div class="form-text">Select a common item to auto-fill the form</div>
-        </div>
-
-        {/* Item Name */}
-        <div class="mb-3">
-          <label for="item-name" class="form-label">
-            Item Name <span class="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            class={clsx("form-control", { "is-invalid": errors?.name })}
-            id="item-name"
-            name="name"
-            value={values.name || ""}
-          />
-          {errors?.name && <div class="invalid-feedback d-block">{errors.name}</div>}
-        </div>
-
-        {/* Category */}
-        <div class="mb-3">
-          <label for="createitem-category" class="form-label">
-            Category <span class="text-danger">*</span>
-          </label>
-          <Select
-            id="createitem-category"
-            name="category"
-            placeholder="Select category..."
-            options={ItemCategories.map((cat) => ({
-              value: cat,
-              label: cat.charAt(0).toUpperCase() + cat.slice(1),
-            }))}
-            value={values.category}
-            error={errors?.category}
-            hx-preserve
-          />
-        </div>
-
-        {/* Description */}
-        <div class="mb-3">
-          <label for="item-description" class="form-label">
-            Description
-          </label>
-          <textarea
-            class={clsx("form-control", { "is-invalid": errors?.description })}
-            id="item-description"
-            name="description"
-            rows={3}
-            placeholder="Visual description, any special properties, etc..."
-          >
-            {values.description || ""}
-          </textarea>
-          {errors?.description && <div class="invalid-feedback d-block">{errors.description}</div>}
-        </div>
-
-        {/* Armor-specific fields */}
-        <div id="armor-fields" class={clsx({ "d-none": values.category !== "armor" })}>
-          <h6 class="text-muted mb-3">Armor Properties</h6>
+          {/* Template Selection */}
+          <input type="hidden" name="prev_template" value={values.prev_template} />
 
           <div class="mb-3">
-            <label for="createitem-armor-type" class="form-label">
-              Armor Type
+            <label for="item-template" class="form-label">
+              Template
             </label>
             <Select
-              id="createitem-armor-type"
-              name="armor_type"
-              placeholder="Select type..."
-              options={armorTypeOptions}
-              value={values.armor_type}
-              error={errors?.armor_type}
+              id="item-template"
+              name="template"
+              placeholder="Create from scratch"
+              options={templateOptions}
+              value={values.template || ""}
             />
-            <div class="form-text">Light, medium, or heavy armor classification</div>
+            <div class="form-text">Select a common item to auto-fill the form</div>
           </div>
 
+          {/* Item Name */}
           <div class="mb-3">
-            <label for="armor-class" class="form-label">
-              Armor Base AC
+            <label for="item-name" class="form-label">
+              Item Name <span class="text-danger">*</span>
             </label>
             <input
-              type="number"
-              class={clsx("form-control", { "is-invalid": errors?.armor_class })}
-              id="armor-class"
-              name="armor_class"
-              min="0"
-              value={values.armor_class || ""}
+              type="text"
+              class={clsx("form-control", { "is-invalid": errors?.name })}
+              id="item-name"
+              name="name"
+              value={values.name || ""}
             />
-            {errors?.armor_class && (
-              <div class="invalid-feedback d-block">{errors.armor_class}</div>
+            {errors?.name && <div class="invalid-feedback d-block">{errors.name}</div>}
+          </div>
+
+          {/* Category */}
+          <div class="mb-3">
+            <label for="createitem-category" class="form-label">
+              Category <span class="text-danger">*</span>
+            </label>
+            <Select
+              id="createitem-category"
+              name="category"
+              placeholder="Select category..."
+              options={ItemCategories.map((cat) => ({
+                value: cat,
+                label: cat.charAt(0).toUpperCase() + cat.slice(1),
+              }))}
+              value={values.category}
+              error={errors?.category}
+              hx-preserve
+            />
+          </div>
+
+          {/* Description */}
+          <div class="mb-3">
+            <label for="item-description" class="form-label">
+              Description
+            </label>
+            <textarea
+              class={clsx("form-control", { "is-invalid": errors?.description })}
+              id="item-description"
+              name="description"
+              rows={3}
+              placeholder="Visual description, any special properties, etc..."
+            >
+              {values.description || ""}
+            </textarea>
+            {errors?.description && (
+              <div class="invalid-feedback d-block">{errors.description}</div>
             )}
           </div>
 
-          <div class="form-check mb-3">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="armor-class-dex"
-              name="armor_class_dex"
-              value="true"
-              checked={values.armor_class_dex === "true"}
-            />
-            <label class="form-check-label" for="armor-class-dex">
-              Add Dexterity modifier to armor AC?
-            </label>
-          </div>
+          {/* Armor-specific fields */}
+          <div id="armor-fields" class={clsx({ "d-none": values.category !== "armor" })}>
+            <h6 class="text-muted mb-3">Armor Properties</h6>
 
-          {values.armor_class_dex === "true" && (
             <div class="mb-3">
-              <label for="armor-class-dex-max" class="form-label">
-                Max Dexterity Bonus
+              <label for="createitem-armor-type" class="form-label">
+                Armor Type
+              </label>
+              <Select
+                id="createitem-armor-type"
+                name="armor_type"
+                placeholder="Select type..."
+                options={armorTypeOptions}
+                value={values.armor_type}
+                error={errors?.armor_type}
+              />
+              <div class="form-text">Light, medium, or heavy armor classification</div>
+            </div>
+
+            <div class="mb-3">
+              <label for="armor-class" class="form-label">
+                Armor Base AC
               </label>
               <input
                 type="number"
-                class={clsx("form-control", { "is-invalid": errors?.armor_class_dex_max })}
-                id="armor-class-dex-max"
-                name="armor_class_dex_max"
+                class={clsx("form-control", { "is-invalid": errors?.armor_class })}
+                id="armor-class"
+                name="armor_class"
                 min="0"
-                value={values.armor_class_dex_max || ""}
-                placeholder="Unlimited"
+                value={values.armor_class || ""}
               />
-              {errors?.armor_class_dex_max && (
-                <div class="invalid-feedback d-block">{errors.armor_class_dex_max}</div>
+              {errors?.armor_class && (
+                <div class="invalid-feedback d-block">{errors.armor_class}</div>
               )}
             </div>
-          )}
 
-          <div class="mb-3">
-            <label for="min-strength" class="form-label">
-              Minimum Strength
-            </label>
-            <input
-              type="number"
-              class={clsx("form-control", { "is-invalid": errors?.min_strength })}
-              id="min-strength"
-              name="min_strength"
-              min="0"
-              value={values.min_strength || ""}
-              placeholder="None"
-            />
-            {errors?.min_strength && (
-              <div class="invalid-feedback d-block">{errors.min_strength}</div>
-            )}
-            <div class="form-text">Minimum Strength required to wear this armor</div>
-          </div>
-
-          <div class="form-check mb-3">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="stealth-disadvantage"
-              name="stealth_disadvantage"
-              value="true"
-              checked={values.stealth_disadvantage === "true"}
-            />
-            <label class="form-check-label" for="stealth-disadvantage">
-              Imposes disadvantage on Stealth checks
-            </label>
-          </div>
-        </div>
-
-        {/* Shield-specific fields */}
-        <div id="shield-fields" class={clsx({ "d-none": values.category !== "shield" })}>
-          <h6 class="text-muted mb-3">Shield Properties</h6>
-
-          <div class="mb-3">
-            <label for="armor-modifier" class="form-label">
-              AC Bonus
-            </label>
-            <input
-              type="number"
-              class={clsx("form-control", { "is-invalid": errors?.armor_modifier })}
-              id="armor-modifier"
-              name="armor_modifier"
-              value={values.armor_modifier || ""}
-            />
-            {errors?.armor_modifier && (
-              <div class="invalid-feedback d-block">{errors.armor_modifier}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Weapon-specific fields */}
-        <div id="weapon-fields" class={clsx({ "d-none": values.category !== "weapon" })}>
-          <h6 class="text-muted mb-3">Weapon Properties</h6>
-
-          {/* Weapon Type Radio */}
-          <fieldset class="mb-3">
-            <legend class="form-label">Weapon Type</legend>
-            <div class="d-flex gap-3">
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="radio"
-                  name="weapon_type"
-                  id="weapon-type-melee"
-                  value="melee"
-                  checked={values.weapon_type === "melee"}
-                />
-                <label class="form-check-label" for="weapon-type-melee">
-                  Melee
-                </label>
-              </div>
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="radio"
-                  name="weapon_type"
-                  id="weapon-type-ranged"
-                  value="ranged"
-                  checked={values.weapon_type === "ranged"}
-                />
-                <label class="form-check-label" for="weapon-type-ranged">
-                  Ranged
-                </label>
-              </div>
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="radio"
-                  name="weapon_type"
-                  id="weapon-type-thrown"
-                  value="thrown"
-                  checked={values.weapon_type === "thrown"}
-                />
-                <label class="form-check-label" for="weapon-type-thrown">
-                  Thrown
-                </label>
-              </div>
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="armor-class-dex"
+                name="armor_class_dex"
+                value="true"
+                checked={values.armor_class_dex === "true"}
+              />
+              <label class="form-check-label" for="armor-class-dex">
+                Add Dexterity modifier to armor AC?
+              </label>
             </div>
-          </fieldset>
 
-          {/* Range fields - shown for ranged and thrown */}
-          {(values.weapon_type === "ranged" || values.weapon_type === "thrown") && (
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="normal-range" class="form-label">
-                  Normal Range (ft)
+            {values.armor_class_dex === "true" && (
+              <div class="mb-3">
+                <label for="armor-class-dex-max" class="form-label">
+                  Max Dexterity Bonus
                 </label>
                 <input
                   type="number"
-                  class={clsx("form-control", { "is-invalid": errors?.normal_range })}
-                  id="normal-range"
-                  name="normal_range"
-                  min="1"
-                  value={values.normal_range || ""}
+                  class={clsx("form-control", { "is-invalid": errors?.armor_class_dex_max })}
+                  id="armor-class-dex-max"
+                  name="armor_class_dex_max"
+                  min="0"
+                  value={values.armor_class_dex_max || ""}
+                  placeholder="Unlimited"
                 />
-                {errors?.normal_range && (
-                  <div class="invalid-feedback d-block">{errors.normal_range}</div>
+                {errors?.armor_class_dex_max && (
+                  <div class="invalid-feedback d-block">{errors.armor_class_dex_max}</div>
                 )}
               </div>
+            )}
 
-              <div class="col-md-6 mb-3">
-                <label for="long-range" class="form-label">
-                  Long Range (ft)
-                </label>
-                <input
-                  type="number"
-                  class={clsx("form-control", { "is-invalid": errors?.long_range })}
-                  id="long-range"
-                  name="long_range"
-                  min="1"
-                  value={values.long_range || ""}
-                  placeholder="Optional"
-                />
-                {errors?.long_range && (
-                  <div class="invalid-feedback d-block">{errors.long_range}</div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Starting ammo - only for ranged */}
-          {values.weapon_type === "ranged" && (
             <div class="mb-3">
-              <label for="starting-ammo" class="form-label">
-                Starting Ammunition
+              <label for="min-strength" class="form-label">
+                Minimum Strength
               </label>
               <input
                 type="number"
-                class={clsx("form-control", { "is-invalid": errors?.starting_ammo })}
-                id="starting-ammo"
-                name="starting_ammo"
+                class={clsx("form-control", { "is-invalid": errors?.min_strength })}
+                id="min-strength"
+                name="min_strength"
                 min="0"
-                value={values.starting_ammo || "0"}
+                value={values.min_strength || ""}
+                placeholder="None"
               />
-              {errors?.starting_ammo && (
-                <div class="invalid-feedback d-block">{errors.starting_ammo}</div>
+              {errors?.min_strength && (
+                <div class="invalid-feedback d-block">{errors.min_strength}</div>
               )}
-              <div class="form-text">Number of arrows, bolts, etc. you start with</div>
+              <div class="form-text">Minimum Strength required to wear this armor</div>
             </div>
-          )}
 
-          {/* Damage Rows */}
-          <div class="mb-3">
-            <label class="form-label" for="damage-row-count">
-              Damage
-            </label>
-            <input
-              type="hidden"
-              name="damage_row_count"
-              id="damage-row-count"
-              value={damageRowCount}
-            />
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="stealth-disadvantage"
+                name="stealth_disadvantage"
+                value="true"
+                checked={values.stealth_disadvantage === "true"}
+              />
+              <label class="form-check-label" for="stealth-disadvantage">
+                Imposes disadvantage on Stealth checks
+              </label>
+            </div>
+          </div>
 
-            {damageEntries.map((entry, i) => {
-              const numDiceError = errors?.[`damage.${i}.num_dice`]
-              const dieValueError = errors?.[`damage.${i}.die_value`]
-              const damageTypeError = errors?.[`damage.${i}.type`]
+          {/* Shield-specific fields */}
+          <div id="shield-fields" class={clsx({ "d-none": values.category !== "shield" })}>
+            <h6 class="text-muted mb-3">Shield Properties</h6>
 
-              return (
-                <div class="mb-3">
-                  <div class="row mb-1">
-                    <div class="col-3">
-                      <input
-                        type="number"
-                        class={clsx("form-control form-control-sm", { "is-invalid": numDiceError })}
-                        name={`damage.${i}.num_dice`}
-                        placeholder="# dice"
-                        min="1"
-                        value={entry.num_dice}
-                      />
-                      {numDiceError && (
-                        <div class="invalid-feedback d-block small">{numDiceError}</div>
-                      )}
-                    </div>
-                    <div class="col-1 d-flex align-items-top justify-content-center">
-                      <span class="text-muted">d</span>
-                    </div>
-                    <div class="col-3">
-                      <Select
-                        class="form-select-sm"
-                        name={`damage.${i}.die_value`}
-                        placeholder="Die"
-                        options={dieValueOptions}
-                        value={entry.die_value}
-                        error={dieValueError}
-                        hideErrorMsg={true}
-                      />
-                    </div>
-                    <div class="col-5">
-                      <Select
-                        class="form-select-sm"
-                        name={`damage.${i}.type`}
-                        placeholder="Type"
-                        options={damageTypeOptions}
-                        value={entry.type}
-                        error={damageTypeError}
-                        hideErrorMsg={true}
-                      />
-                    </div>
-                  </div>
-                  <div class="form-check ms-1">
-                    <input
-                      class="form-check-input form-check-input-sm"
-                      type="checkbox"
-                      id={`damage-versatile-${i}`}
-                      name={`damage.${i}.versatile`}
-                      value="true"
-                      checked={entry.versatile}
-                    />
-                    <label class="form-check-label small" for={`damage-versatile-${i}`}>
-                      Versatile
-                    </label>
-                  </div>
+            <div class="mb-3">
+              <label for="armor-modifier" class="form-label">
+                AC Bonus
+              </label>
+              <input
+                type="number"
+                class={clsx("form-control", { "is-invalid": errors?.armor_modifier })}
+                id="armor-modifier"
+                name="armor_modifier"
+                value={values.armor_modifier || ""}
+              />
+              {errors?.armor_modifier && (
+                <div class="invalid-feedback d-block">{errors.armor_modifier}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Weapon-specific fields */}
+          <div id="weapon-fields" class={clsx({ "d-none": values.category !== "weapon" })}>
+            <h6 class="text-muted mb-3">Weapon Properties</h6>
+
+            {/* Weapon Type Radio */}
+            <fieldset class="mb-3">
+              <legend class="form-label">Weapon Type</legend>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="weapon_type"
+                    id="weapon-type-melee"
+                    value="melee"
+                    checked={values.weapon_type === "melee"}
+                  />
+                  <label class="form-check-label" for="weapon-type-melee">
+                    Melee
+                  </label>
                 </div>
-              )
-            })}
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="weapon_type"
+                    id="weapon-type-ranged"
+                    value="ranged"
+                    checked={values.weapon_type === "ranged"}
+                  />
+                  <label class="form-check-label" for="weapon-type-ranged">
+                    Ranged
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="weapon_type"
+                    id="weapon-type-thrown"
+                    value="thrown"
+                    checked={values.weapon_type === "thrown"}
+                  />
+                  <label class="form-check-label" for="weapon-type-thrown">
+                    Thrown
+                  </label>
+                </div>
+              </div>
+            </fieldset>
 
-            {/* Plus/Minus buttons */}
-            <div class="d-flex gap-2 mt-2">
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                onclick={`document.getElementById('damage-row-count').value = ${damageRowCount + 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
-              >
-                <i class="bi bi-plus"></i> Add Damage
-              </button>
-              {damageRowCount > 1 && (
+            {/* Range fields - shown for ranged and thrown */}
+            {(values.weapon_type === "ranged" || values.weapon_type === "thrown") && (
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="normal-range" class="form-label">
+                    Normal Range (ft)
+                  </label>
+                  <input
+                    type="number"
+                    class={clsx("form-control", { "is-invalid": errors?.normal_range })}
+                    id="normal-range"
+                    name="normal_range"
+                    min="1"
+                    value={values.normal_range || ""}
+                  />
+                  {errors?.normal_range && (
+                    <div class="invalid-feedback d-block">{errors.normal_range}</div>
+                  )}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label for="long-range" class="form-label">
+                    Long Range (ft)
+                  </label>
+                  <input
+                    type="number"
+                    class={clsx("form-control", { "is-invalid": errors?.long_range })}
+                    id="long-range"
+                    name="long_range"
+                    min="1"
+                    value={values.long_range || ""}
+                    placeholder="Optional"
+                  />
+                  {errors?.long_range && (
+                    <div class="invalid-feedback d-block">{errors.long_range}</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Starting ammo - only for ranged */}
+            {values.weapon_type === "ranged" && (
+              <div class="mb-3">
+                <label for="starting-ammo" class="form-label">
+                  Starting Ammunition
+                </label>
+                <input
+                  type="number"
+                  class={clsx("form-control", { "is-invalid": errors?.starting_ammo })}
+                  id="starting-ammo"
+                  name="starting_ammo"
+                  min="0"
+                  value={values.starting_ammo || "0"}
+                />
+                {errors?.starting_ammo && (
+                  <div class="invalid-feedback d-block">{errors.starting_ammo}</div>
+                )}
+                <div class="form-text">Number of arrows, bolts, etc. you start with</div>
+              </div>
+            )}
+
+            {/* Damage Rows */}
+            <div class="mb-3">
+              <label class="form-label" for="damage-row-count">
+                Damage
+              </label>
+              <input
+                type="hidden"
+                name="damage_row_count"
+                id="damage-row-count"
+                value={damageRowCount}
+              />
+
+              {damageEntries.map((entry, i) => {
+                const numDiceError = errors?.[`damage.${i}.num_dice`]
+                const dieValueError = errors?.[`damage.${i}.die_value`]
+                const damageTypeError = errors?.[`damage.${i}.type`]
+
+                return (
+                  <div class="mb-3">
+                    <div class="row mb-1">
+                      <div class="col-3">
+                        <input
+                          type="number"
+                          class={clsx("form-control form-control-sm", {
+                            "is-invalid": numDiceError,
+                          })}
+                          name={`damage.${i}.num_dice`}
+                          placeholder="# dice"
+                          min="1"
+                          value={entry.num_dice}
+                        />
+                        {numDiceError && (
+                          <div class="invalid-feedback d-block small">{numDiceError}</div>
+                        )}
+                      </div>
+                      <div class="col-1 d-flex align-items-top justify-content-center">
+                        <span class="text-muted">d</span>
+                      </div>
+                      <div class="col-3">
+                        <Select
+                          class="form-select-sm"
+                          name={`damage.${i}.die_value`}
+                          placeholder="Die"
+                          options={dieValueOptions}
+                          value={entry.die_value}
+                          error={dieValueError}
+                          hideErrorMsg={true}
+                        />
+                      </div>
+                      <div class="col-5">
+                        <Select
+                          class="form-select-sm"
+                          name={`damage.${i}.type`}
+                          placeholder="Type"
+                          options={damageTypeOptions}
+                          value={entry.type}
+                          error={damageTypeError}
+                          hideErrorMsg={true}
+                        />
+                      </div>
+                    </div>
+                    <div class="form-check ms-1">
+                      <input
+                        class="form-check-input form-check-input-sm"
+                        type="checkbox"
+                        id={`damage-versatile-${i}`}
+                        name={`damage.${i}.versatile`}
+                        value="true"
+                        checked={entry.versatile}
+                      />
+                      <label class="form-check-label small" for={`damage-versatile-${i}`}>
+                        Versatile
+                      </label>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Plus/Minus buttons */}
+              <div class="d-flex gap-2 mt-2">
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-secondary"
-                  onclick={`document.getElementById('damage-row-count').value = ${damageRowCount - 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
+                  onclick={`document.getElementById('damage-row-count').value = ${damageRowCount + 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
                 >
-                  <i class="bi bi-dash"></i> Remove
+                  <i class="bi bi-plus"></i> Add Damage
                 </button>
-              )}
+                {damageRowCount > 1 && (
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    onclick={`document.getElementById('damage-row-count').value = ${damageRowCount - 1}; document.getElementById('create-item-form').dispatchEvent(new Event('change'));`}
+                  >
+                    <i class="bi bi-dash"></i> Remove
+                  </button>
+                )}
+              </div>
+              {errors?.damage && <div class="text-danger small mt-2">{errors.damage}</div>}
             </div>
-            {errors?.damage && <div class="text-danger small mt-2">{errors.damage}</div>}
-          </div>
 
-          {/* Mastery - only for 2024 ruleset */}
-          {character.ruleset === "srd52" && (
-            <div class="mb-3">
-              <label for="mastery" class="form-label">
-                Weapon Mastery
-              </label>
-              <Select
-                id="mastery"
-                name="mastery"
-                placeholder="None"
-                options={weaponMasteryOptions}
-                value={values.mastery}
-                error={errors?.mastery}
+            {/* Mastery - only for 2024 ruleset */}
+            {character.ruleset === "srd52" && (
+              <div class="mb-3">
+                <label for="mastery" class="form-label">
+                  Weapon Mastery
+                </label>
+                <Select
+                  id="mastery"
+                  name="mastery"
+                  placeholder="None"
+                  options={weaponMasteryOptions}
+                  value={values.mastery}
+                  error={errors?.mastery}
+                />
+              </div>
+            )}
+
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="finesse"
+                name="finesse"
+                value="true"
+                checked={values.finesse === "true"}
               />
+              <label class="form-check-label" for="finesse">
+                Finesse
+              </label>
             </div>
-          )}
 
-          <div class="form-check mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="finesse"
-              name="finesse"
-              value="true"
-              checked={values.finesse === "true"}
-            />
-            <label class="form-check-label" for="finesse">
-              Finesse
-            </label>
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="martial"
+                name="martial"
+                value="true"
+                checked={values.martial === "true"}
+              />
+              <label class="form-check-label" for="martial">
+                Martial Weapon
+              </label>
+            </div>
+
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="light"
+                name="light"
+                value="true"
+                checked={values.light === "true"}
+              />
+              <label class="form-check-label" for="light">
+                Light
+              </label>
+            </div>
+
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="heavy"
+                name="heavy"
+                value="true"
+                checked={values.heavy === "true"}
+              />
+              <label class="form-check-label" for="heavy">
+                Heavy
+              </label>
+            </div>
+
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="two-handed"
+                name="two_handed"
+                value="true"
+                checked={values.two_handed === "true"}
+              />
+              <label class="form-check-label" for="two-handed">
+                Two-Handed
+              </label>
+            </div>
+
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="reach"
+                name="reach"
+                value="true"
+                checked={values.reach === "true"}
+              />
+              <label class="form-check-label" for="reach">
+                Reach
+              </label>
+            </div>
+
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="loading"
+                name="loading"
+                value="true"
+                checked={values.loading === "true"}
+              />
+              <label class="form-check-label" for="loading">
+                Loading
+              </label>
+            </div>
           </div>
 
-          <div class="form-check mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="martial"
-              name="martial"
-              value="true"
-              checked={values.martial === "true"}
-            />
-            <label class="form-check-label" for="martial">
-              Martial Weapon
+          {/* Note */}
+          <div class="mb-3">
+            <label for="item-note" class="form-label">
+              Note
             </label>
+            <textarea
+              class={clsx("form-control", { "is-invalid": errors?.note })}
+              id="item-note"
+              name="note"
+              rows={2}
+              placeholder="Where or how you acquired this item"
+            >
+              {values.note || ""}
+            </textarea>
+            {errors?.note && <div class="invalid-feedback d-block">{errors.note}</div>}
           </div>
 
-          <div class="form-check mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="light"
-              name="light"
-              value="true"
-              checked={values.light === "true"}
-            />
-            <label class="form-check-label" for="light">
-              Light
-            </label>
+          {/* Helper text */}
+          <div class="alert alert-info">
+            <small>
+              <i class="bi bi-info-circle"></i> Item effects can be configured after item creation.
+            </small>
           </div>
-
-          <div class="form-check mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="heavy"
-              name="heavy"
-              value="true"
-              checked={values.heavy === "true"}
-            />
-            <label class="form-check-label" for="heavy">
-              Heavy
-            </label>
-          </div>
-
-          <div class="form-check mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="two-handed"
-              name="two_handed"
-              value="true"
-              checked={values.two_handed === "true"}
-            />
-            <label class="form-check-label" for="two-handed">
-              Two-Handed
-            </label>
-          </div>
-
-          <div class="form-check mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="reach"
-              name="reach"
-              value="true"
-              checked={values.reach === "true"}
-            />
-            <label class="form-check-label" for="reach">
-              Reach
-            </label>
-          </div>
-
-          <div class="form-check mb-3">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="loading"
-              name="loading"
-              value="true"
-              checked={values.loading === "true"}
-            />
-            <label class="form-check-label" for="loading">
-              Loading
-            </label>
-          </div>
-        </div>
-
-        {/* Note */}
-        <div class="mb-3">
-          <label for="item-note" class="form-label">
-            Note
-          </label>
-          <textarea
-            class={clsx("form-control", { "is-invalid": errors?.note })}
-            id="item-note"
-            name="note"
-            rows={2}
-            placeholder="Where or how you acquired this item"
-          >
-            {values.note || ""}
-          </textarea>
-          {errors?.note && <div class="invalid-feedback d-block">{errors.note}</div>}
-        </div>
-
-        {/* Helper text */}
-        <div class="alert alert-info">
-          <small>
-            <i class="bi bi-info-circle"></i> Item effects can be configured after item creation.
-          </small>
         </div>
 
         {/* Submit Button */}
@@ -718,20 +717,14 @@ export const CreateItemForm = ({ character, values, errors }: CreateItemFormProp
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button
-            type="submit"
+          <ModalFormSubmit
             id="createitem-submit"
-            class="btn btn-primary"
-            hx-post={`/characters/${character.id}/edit/newitem`}
-            hx-vals='{"is_check": "false"}'
-            hx-target="#editModalContent"
-            hx-swap="morph:innerHTML"
-            hx-sync="closest form:abort"
+            endpoint={`/characters/${character.id}/edit/newitem`}
           >
             Add Item
-          </button>
+          </ModalFormSubmit>
         </div>
-      </form>
+      </ModalForm>
     </ModalContent>
   )
 }

@@ -1,6 +1,7 @@
 import { HitPointsBar } from "@src/components/ui/HitPointsBar"
 import { ignoreCheckEmptyErrors } from "@src/lib/formErrors"
 import clsx from "clsx"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface HitPointsEditFormProps {
   characterId: string
@@ -40,16 +41,7 @@ export const HitPointsEditForm = ({
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form
-          id="hp-edit-form"
-          hx-post={`/characters/${characterId}/edit/hitpoints`}
-          hx-vals='{"is_check": "true"}'
-          hx-trigger="change"
-          hx-target="#editModalContent"
-          hx-swap="morph:innerHTML"
-          class="needs-validation"
-          novalidate
-        >
+        <ModalForm id="hp-edit-form" endpoint={`/characters/${characterId}/edit/hitpoints`}>
           {/* Current HP */}
           <div class="mb-3">
             <p class="mb-2">Current Hit Points</p>
@@ -142,18 +134,11 @@ export const HitPointsEditForm = ({
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              hx-vals='{"is_check": "false"}'
-              hx-post={`/characters/${characterId}/edit/hitpoints`}
-              hx-target="#editModalContent"
-              hx-swap="morph:innerHTML"
-            >
+            <ModalFormSubmit endpoint={`/characters/${characterId}/edit/hitpoints`}>
               Update Hit Points
-            </button>
+            </ModalFormSubmit>
           </div>
-        </form>
+        </ModalForm>
       </div>
     </>
   )

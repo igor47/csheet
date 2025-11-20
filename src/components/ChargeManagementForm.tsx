@@ -1,5 +1,6 @@
 import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 import clsx from "clsx"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface ChargeManagementFormProps {
   characterId: string
@@ -43,15 +44,9 @@ export const ChargeManagementForm = ({
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form
+        <ModalForm
           id="charge-edit-form"
-          hx-post={`/characters/${characterId}/items/${item.id}/charges`}
-          hx-vals='{"is_check": "true"}'
-          hx-trigger="change"
-          hx-target="#editModalContent"
-          hx-swap="morph:innerHTML"
-          class="needs-validation"
-          novalidate
+          endpoint={`/characters/${characterId}/items/${item.id}/charges`}
         >
           {/* Hidden item_id field */}
           <input type="hidden" name="item_id" value={item.id} />
@@ -172,18 +167,11 @@ export const ChargeManagementForm = ({
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              hx-post={`/characters/${characterId}/items/${item.id}/charges`}
-              hx-vals='{"is_check": "false"}'
-              hx-target="#editModalContent"
-              hx-swap="morph:innerHTML"
-            >
+            <ModalFormSubmit endpoint={`/characters/${characterId}/items/${item.id}/charges`}>
               Update {chargeLabel}
-            </button>
+            </ModalFormSubmit>
           </div>
-        </form>
+        </ModalForm>
       </div>
     </>
   )

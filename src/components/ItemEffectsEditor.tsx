@@ -4,6 +4,7 @@ import { ItemEffectOps, ItemEffectTargets } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { EquippedComputedItem, ItemEffect } from "@src/services/computeCharacterItems"
 import { clsx } from "clsx"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface ItemEffectsEditorProps {
   character: ComputedCharacter
@@ -105,13 +106,10 @@ export const ItemEffectsEditor = ({
         {/* Add New Effect Form */}
         <div>
           <h6 class="mb-3">Add New Effect</h6>
-          <form
+          <ModalForm
             id="add-effect-form"
-            hx-post={`/characters/${character.id}/items/${item.id}/effects`}
-            hx-vals='{"is_check": "true"}'
-            hx-trigger="change"
-            hx-target="#editModalContent"
-            hx-swap="innerHTML"
+            endpoint={`/characters/${character.id}/items/${item.id}/effects`}
+            swap="innerHTML"
           >
             {/* Target */}
             <div class="mb-3">
@@ -234,18 +232,14 @@ export const ItemEffectsEditor = ({
 
             {/* Submit Button */}
             <div class="d-grid">
-              <button
-                type="submit"
-                class="btn btn-primary"
-                hx-post={`/characters/${character.id}/items/${item.id}/effects`}
-                hx-vals='{"is_check": "false"}'
-                hx-target="#editModalContent"
-                hx-swap="innerHTML"
+              <ModalFormSubmit
+                endpoint={`/characters/${character.id}/items/${item.id}/effects`}
+                swap="innerHTML"
               >
                 <i class="bi bi-plus-circle"></i> Add Effect
-              </button>
+              </ModalFormSubmit>
             </div>
-          </form>
+          </ModalForm>
         </div>
       </div>
 

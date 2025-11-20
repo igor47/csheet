@@ -2,6 +2,7 @@ import { SpellSlotsDisplay } from "@src/components/ui/SpellSlotsDisplay"
 import type { SpellLevelType, SpellSlotsType } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import clsx from "clsx"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface SpellSlotsEditFormProps {
   character: ComputedCharacter
@@ -77,15 +78,9 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form
+        <ModalForm
           id="spellslots-edit-form"
-          hx-post={`/characters/${character.id}/edit/spellslots`}
-          hx-vals='{"is_check": "true"}'
-          hx-trigger="change"
-          hx-target="#editModalContent"
-          hx-swap="morph:innerHTML"
-          class="needs-validation"
-          novalidate
+          endpoint={`/characters/${character.id}/edit/spellslots`}
         >
           {/* Current Spell Slots */}
           <div class="mb-3">
@@ -212,18 +207,11 @@ export const SpellSlotsEditForm = ({ character, values, errors }: SpellSlotsEdit
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              hx-post={`/characters/${character.id}/edit/spellslots`}
-              hx-vals='{"is_check": "false"}'
-              hx-target="#editModalContent"
-              hx-swap="morph:innerHTML"
-            >
+            <ModalFormSubmit endpoint={`/characters/${character.id}/edit/spellslots`}>
               Update Spell Slots
-            </button>
+            </ModalFormSubmit>
           </div>
-        </form>
+        </ModalForm>
       </div>
     </>
   )

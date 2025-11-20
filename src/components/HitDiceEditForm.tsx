@@ -2,6 +2,7 @@ import { HitDiceDisplay } from "@src/components/ui/HitDiceDisplay"
 import type { HitDieType } from "@src/lib/dnd"
 import { ignoreCheckEmptyErrors } from "@src/lib/formErrors"
 import clsx from "clsx"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface HitDiceEditFormProps {
   characterId: string
@@ -61,16 +62,7 @@ export const HitDiceEditForm = ({
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form
-          id="hitdice-edit-form"
-          hx-post={`/characters/${characterId}/edit/hitdice`}
-          hx-vals='{"is_check": "true"}'
-          hx-trigger="change"
-          hx-target="#editModalContent"
-          hx-swap="morph:innerHTML"
-          class="needs-validation"
-          novalidate
-        >
+        <ModalForm id="hitdice-edit-form" endpoint={`/characters/${characterId}/edit/hitdice`}>
           {/* Current Hit Dice */}
           <div class="mb-3">
             <p class="mb-2">Current Hit Dice</p>
@@ -221,20 +213,14 @@ export const HitDiceEditForm = ({
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancel
             </button>
-            <button
-              type="submit"
+            <ModalFormSubmit
               id="hitdice-edit-submit"
-              class="btn btn-primary"
-              hx-vals='{"is_check": "false"}'
-              hx-post={`/characters/${characterId}/edit/hitdice`}
-              hx-target="#editModalContent"
-              hx-swap="morph:innerHTML"
-              hx-sync="closest form:replace"
+              endpoint={`/characters/${characterId}/edit/hitdice`}
             >
               Update Hit Dice
-            </button>
+            </ModalFormSubmit>
           </div>
-        </form>
+        </ModalForm>
       </div>
     </>
   )

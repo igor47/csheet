@@ -8,6 +8,7 @@ import { toTitleCase } from "@src/lib/strings"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 import { ModalContent } from "./ui/ModalContent"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface PrepareSpellFormProps {
   character: ComputedCharacter
@@ -123,15 +124,10 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
 
   return (
     <div class="modal-body">
-      <form
+      <ModalForm
         id="prepare-spell-form"
-        hx-post={`/characters/${character.id}/edit/prepspell`}
-        hx-vals='{"is_check": "true"}'
-        hx-trigger="input from:[name='spell_search'] changed delay:300ms, change"
-        hx-target="#editModalContent"
-        hx-swap="morph:innerHTML"
-        class="needs-validation"
-        novalidate
+        endpoint={`/characters/${character.id}/edit/prepspell`}
+        trigger="input from:[name='spell_search'] changed delay:300ms, change"
       >
         {/* Class Selection */}
         <div class="mb-3">
@@ -247,19 +243,14 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button
-            type="submit"
-            class="btn btn-primary"
-            hx-post={`/characters/${character.id}/edit/prepspell`}
-            hx-vals='{"is_check": "false"}'
-            hx-target="#editModalContent"
-            hx-swap="morph:innerHTML"
+          <ModalFormSubmit
+            endpoint={`/characters/${character.id}/edit/prepspell`}
             disabled={!selectedSpell}
           >
             {actionText} {toTitleCase(slotTypeLabel)}
-          </button>
+          </ModalFormSubmit>
         </div>
-      </form>
+      </ModalForm>
     </div>
   )
 }

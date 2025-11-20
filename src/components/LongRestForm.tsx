@@ -1,5 +1,6 @@
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalContent } from "./ui/ModalContent"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface LongRestFormProps {
   character: ComputedCharacter
@@ -35,16 +36,7 @@ export const LongRestForm = ({ character, values, errors }: LongRestFormProps) =
 
   return (
     <ModalContent title="Take a Long Rest">
-      <form
-        id="long-rest-form"
-        hx-post={`/characters/${character.id}/rest/long`}
-        hx-vals='{"is_check": "true"}'
-        hx-trigger="change"
-        hx-target="#editModalContent"
-        hx-swap="morph:innerHTML"
-        class="needs-validation"
-        novalidate
-      >
+      <ModalForm id="long-rest-form" endpoint={`/characters/${character.id}/rest/long`}>
         <div class="modal-body">
           <p class="text-muted mb-3">
             A long rest requires at least 8 hours of downtime. You will restore HP, hit dice, and
@@ -123,19 +115,12 @@ export const LongRestForm = ({ character, values, errors }: LongRestFormProps) =
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button
-            type="submit"
-            class="btn btn-primary"
-            hx-post={`/characters/${character.id}/rest/long`}
-            hx-vals='{"is_check": "false"}'
-            hx-target="#editModalContent"
-            hx-swap="morph:innerHTML"
-          >
+          <ModalFormSubmit endpoint={`/characters/${character.id}/rest/long`}>
             <i class="bi bi-moon-stars me-2"></i>
             Complete Long Rest
-          </button>
+          </ModalFormSubmit>
         </div>
-      </form>
+      </ModalForm>
     </ModalContent>
   )
 }

@@ -3,6 +3,7 @@ import { SpellPicker } from "@src/components/ui/SpellPicker"
 import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalContent } from "./ui/ModalContent"
+import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface LearnSpellFormProps {
   character: ComputedCharacter
@@ -33,15 +34,10 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
 
   return (
     <div class="modal-body">
-      <form
+      <ModalForm
         id="learn-spell-form"
-        hx-post={`/characters/${character.id}/edit/spellbook`}
-        hx-vals='{"is_check": "true"}'
-        hx-trigger="input from:[name='spell_search'] changed delay:300ms, change"
-        hx-target="#editModalContent"
-        hx-swap="morph:innerHTML"
-        class="needs-validation"
-        novalidate
+        endpoint={`/characters/${character.id}/edit/spellbook`}
+        trigger="input from:[name='spell_search'] changed delay:300ms, change"
       >
         {/* Allow High-Level Spells */}
         <div class="mb-3">
@@ -96,20 +92,15 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button
-            type="submit"
+          <ModalFormSubmit
             id="learnspell-submit"
-            class="btn btn-primary"
-            hx-post={`/characters/${character.id}/edit/spellbook`}
-            hx-vals='{"is_check": "false"}'
-            hx-target="#editModalContent"
-            hx-swap="morph:innerHTML"
+            endpoint={`/characters/${character.id}/edit/spellbook`}
             disabled={!selectedSpell}
           >
             Add to Spellbook
-          </button>
+          </ModalFormSubmit>
         </div>
-      </form>
+      </ModalForm>
     </div>
   )
 }

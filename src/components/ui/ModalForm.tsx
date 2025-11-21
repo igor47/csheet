@@ -23,6 +23,7 @@ export const ModalForm = ({
       hx-trigger={trigger}
       hx-target="#editModalContent"
       hx-swap={swap}
+      hx-ext="morph"
       class="needs-validation"
       novalidate
     >
@@ -55,6 +56,8 @@ export const ModalFormSubmit = ({
       hx-vals='{"is_check": "false"}'
       hx-target="#editModalContent"
       hx-swap={swap}
+      hx-sync="closest form:replace"
+      hx-ext="morph"
       disabled={disabled}
     >
       {children}

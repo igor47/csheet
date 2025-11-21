@@ -318,6 +318,7 @@ export const CharacterNew = ({ values = {}, errors = {} }: CharacterNewProps) =>
                 hx-trigger="change"
                 hx-target="#character-new"
                 hx-swap="morph:outerHTML focus-scroll:false"
+                hx-ext="morph"
                 class="needs-validation"
                 novalidate
               >
@@ -329,6 +330,8 @@ export const CharacterNew = ({ values = {}, errors = {} }: CharacterNewProps) =>
                     id="character-new-submit"
                     hx-post="/characters/new"
                     hx-vals='{"is_check": "false"}'
+                    hx-sync="closest form:replace"
+                    hx-ext="morph"
                     class="btn btn-primary"
                   >
                     Create Character

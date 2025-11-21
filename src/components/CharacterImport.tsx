@@ -359,6 +359,7 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
                 hx-trigger="change"
                 hx-target="#character-import"
                 hx-swap="morph:outerHTML focus-scroll:false"
+                hx-ext="morph"
                 class="needs-validation"
                 novalidate
               >
@@ -517,6 +518,8 @@ export const CharacterImport = ({ values = {}, errors = {} }: CharacterImportPro
                     id="character-import-submit"
                     hx-post="/characters/import"
                     hx-vals='{"is_check": "false"}'
+                    hx-sync="closest form:replace"
+                    hx-ext="morph"
                     class="btn btn-primary"
                   >
                     Import Character

@@ -72,7 +72,7 @@ async function handleAvatarUpload(characterId) {
   }
 
   // Validate file size (5MB)
-  if (file.size > 5 * 1024 * 1024) {
+  if (file.size > 10 * 1024 * 1024) {
     errorDiv.textContent = 'File too large. Maximum size is 5MB.';
     errorDiv.classList.remove('d-none');
     return;

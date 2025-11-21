@@ -11,7 +11,7 @@ export const UploadAvatarForm = ({ character, errors }: UploadAvatarFormProps) =
     <div class="modal-body" id="avatarUploadModalBody">
       <div class="mb-3">
         <label for="avatarFileInput" class="form-label">
-          Choose an image (max 5MB)
+          Choose an image (max 10MB)
         </label>
         <input
           class="form-control"

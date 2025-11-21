@@ -28,14 +28,14 @@ export async function initiateUpload(
   // Validate content type
   if (!isValidContentType(contentType)) {
     throw new Error(
-      `Invalid content type: ${contentType}. Allowed types: ${uploads.ALLOWED_IMAGE_TYPES.join(", ")}`
+      `Unsupported file type '${contentType}'; allowed types: ${uploads.ALLOWED_IMAGE_TYPES.join(", ")}`
     )
   }
 
   // Validate size
   if (!isValidSize(sizeBytes)) {
     throw new Error(
-      `Invalid file size: ${sizeBytes} bytes. Maximum allowed: ${uploads.MAX_UPLOAD_SIZE} bytes`
+      `File size (${sizeBytes / (1024 * 1024)} MB) too big; max allowed: ${uploads.MAX_UPLOAD_SIZE / (1024 * 1024)} MB`
     )
   }
 

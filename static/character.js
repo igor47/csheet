@@ -63,21 +63,6 @@ async function handleAvatarUpload(characterId) {
     return;
   }
 
-  // Validate file type
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  if (!validTypes.includes(file.type)) {
-    errorDiv.textContent = 'Invalid file type. Please select a JPEG, PNG, WebP, or GIF image.';
-    errorDiv.classList.remove('d-none');
-    return;
-  }
-
-  // Validate file size (5MB)
-  if (file.size > 10 * 1024 * 1024) {
-    errorDiv.textContent = 'File too large. Maximum size is 5MB.';
-    errorDiv.classList.remove('d-none');
-    return;
-  }
-
   // Hide error/success, show progress
   errorDiv.classList.add('d-none');
   successDiv.classList.add('d-none');

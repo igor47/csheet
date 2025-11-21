@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 import type { Upload } from "@src/db/uploads"
-import { UploadStatus } from "@src/db/uploads"
+import { MAX_UPLOAD_SIZE, UploadStatus } from "@src/db/uploads"
 import type { User } from "@src/db/users"
 import { useTestApp } from "@src/test/app"
 import { uploadFactory } from "@src/test/factories/upload"
@@ -55,7 +55,7 @@ describe("POST /uploads/initiate", () => {
       })
     })
 
-    describe("with invalid content type", () => {
+    describe("with unsupported type", () => {
       test("returns 400", async () => {
         const response = await makeRequest(testCtx.app, "/uploads/initiate", {
           user,
@@ -69,7 +69,7 @@ describe("POST /uploads/initiate", () => {
 
         expect(response.status).toBe(400)
         const data = await response.json()
-        expect(data.error).toContain("Invalid content type")
+        expect(data.error).toContain("Unsupported file type")
       })
     })
 
@@ -81,13 +81,13 @@ describe("POST /uploads/initiate", () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             content_type: "image/jpeg",
-            size_bytes: 10 * 1024 * 1024, // 10MB
+            size_bytes: MAX_UPLOAD_SIZE + 10,
           }),
         })
 
         expect(response.status).toBe(400)
         const data = await response.json()
-        expect(data.error).toContain("Invalid file size")
+        expect(data.error).toContain("too big")
       })
     })
   })

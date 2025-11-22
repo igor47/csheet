@@ -8,12 +8,12 @@ const CampaignCard = ({ campaign }: { campaign: ListCampaign }) => {
   return (
     <div class="card h-100">
       {/* Campaign avatar as card header/image */}
-      <a href={`/campaigns/${campaign.id}`} class="text-decoration-none">
+      <a href={`/campaigns/${campaign.id}`} class="text-decoration-none ratio ratio-1x1">
         <img
           src="/static/placeholder-party.png"
           alt={campaign.name}
           class="card-img-top"
-          style="height: 200px; object-fit: cover;"
+          style="object-fit: cover;"
         />
       </a>
 

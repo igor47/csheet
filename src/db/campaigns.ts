@@ -45,3 +45,25 @@ export async function create(db: SQL, campaign: CreateCampaign): Promise<Campaig
 
   return parseCampaign(result[0])
 }
+
+export async function findById(db: SQL, id: string): Promise<Campaign | null> {
+  const result = await db`
+    SELECT * FROM campaigns
+    WHERE id = ${id}
+    LIMIT 1
+  `
+
+  if (!result[0]) return null
+
+  return parseCampaign(result[0])
+}
+
+export async function nameExistsForUser(db: SQL, userId: string, name: string): Promise<boolean> {
+  const result = await db`
+    SELECT COUNT(*) as count FROM campaigns
+    WHERE created_by = ${userId} AND LOWER(name) = LOWER(${name})
+    LIMIT 1
+  `
+
+  return result[0].count > 0
+}

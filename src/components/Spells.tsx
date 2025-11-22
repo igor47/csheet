@@ -1,5 +1,6 @@
 import { SpellDetail } from "@src/components/SpellDetail"
 import { SpellsTable } from "@src/components/SpellsTable"
+import { DetailModal } from "@src/components/ui/DetailModal"
 import { ClassNames } from "@src/lib/dnd"
 import type { Spell } from "@src/lib/dnd/spells"
 import { SpellSchools } from "@src/lib/dnd/spells"
@@ -143,13 +144,7 @@ export const Spells = ({
       </div>
 
       {/* Spell Detail Modal */}
-      <div class="modal fade" id="spellModal" tabindex={-1} aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content" id="spellModalContent">
-            {openSpell ? <SpellDetail spell={openSpell} /> : null}
-          </div>
-        </div>
-      </div>
+      <DetailModal size="lg">{openSpell ? <SpellDetail spell={openSpell} /> : null}</DetailModal>
 
       {/* Character-specific scripts */}
       <script src="/static/spells.js"></script>

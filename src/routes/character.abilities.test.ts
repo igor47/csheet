@@ -282,7 +282,7 @@ describe("POST /characters/:id/edit/abilities", () => {
           }
         )
 
-        expect(response.headers.get("HX-Trigger")).toContain("closeEditModal")
+        expect(response.headers.get("HX-Trigger")).toContain("closeDetailModal")
       })
     })
 

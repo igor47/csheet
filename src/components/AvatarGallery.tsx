@@ -1,6 +1,6 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { AvatarDisplay } from "./AvatarDisplay"
-import { ModalContent } from "./ui/ModalContent"
 
 export interface AvatarGalleryProps {
   character: ComputedCharacter
@@ -44,7 +44,7 @@ export const AvatarGallery = ({ character }: AvatarGalleryProps) => {
                           type="button"
                           class="btn btn-sm btn-outline-primary"
                           hx-post={`/characters/${character.id}/avatars/${avatar.id}/set-primary`}
-                          hx-target="#editModalContent"
+                          hx-target="#detailModalContent"
                           hx-swap="innerHTML"
                         >
                           <i class="bi bi-star"></i> Primary
@@ -56,7 +56,7 @@ export const AvatarGallery = ({ character }: AvatarGalleryProps) => {
                         type="button"
                         class="btn btn-sm btn-outline-secondary"
                         hx-get={`/characters/${character.id}/avatars/${index}/crop-editor`}
-                        hx-target="#editModalContent"
+                        hx-target="#detailModalContent"
                         hx-swap="innerHTML"
                       >
                         <i class="bi bi-crop"></i> Crop
@@ -87,7 +87,7 @@ export const AvatarGallery = ({ character }: AvatarGalleryProps) => {
           type="button"
           class="btn btn-primary"
           hx-get={`/characters/${character.id}/edit/avatar`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
         >
           <i class="bi bi-upload"></i> Upload New Avatar

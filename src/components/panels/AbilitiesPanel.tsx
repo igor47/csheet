@@ -88,10 +88,10 @@ export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
           type="button"
           class="btn btn-sm btn-outline-secondary"
           hx-get={`/characters/${character.id}/edit/abilities`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal"
+          data-bs-target="#detailModal"
         >
           <i class="bi bi-pencil"></i> Edit Abilities
         </button>
@@ -99,10 +99,10 @@ export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
           type="button"
           class="btn btn-sm btn-outline-secondary"
           hx-get={`/characters/${character.id}/history/abilities`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal"
+          data-bs-target="#detailModal"
         >
           <i class="bi bi-clock-history"></i> History
         </button>

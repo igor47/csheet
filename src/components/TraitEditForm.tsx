@@ -1,4 +1,4 @@
-import { ModalContent } from "@src/components/ui/ModalContent"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"

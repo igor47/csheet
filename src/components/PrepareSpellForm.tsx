@@ -1,5 +1,5 @@
 import { SpellDetail } from "@src/components/SpellDetail"
-
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { Select } from "@src/components/ui/Select"
 import { SpellPicker } from "@src/components/ui/SpellPicker"
 import type { ClassNameType } from "@src/lib/dnd"
@@ -7,7 +7,6 @@ import { type Spell, spells } from "@src/lib/dnd/spells"
 import { toTitleCase } from "@src/lib/strings"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
-import { ModalContent } from "./ui/ModalContent"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface PrepareSpellFormProps {

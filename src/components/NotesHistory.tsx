@@ -1,5 +1,5 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { CharNote } from "@src/db/char_notes"
-import { ModalContent } from "./ui/ModalContent"
 
 export interface NotesHistoryProps {
   characterId: string

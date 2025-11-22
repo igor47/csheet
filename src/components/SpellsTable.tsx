@@ -131,9 +131,9 @@ export const SpellsTable = ({
                     type="button"
                     class="btn btn-link p-0 text-start"
                     data-bs-toggle="modal"
-                    data-bs-target="#spellModal"
+                    data-bs-target="#detailModal"
                     hx-get={`/spells/${spell.id}`}
-                    hx-target="#spellModalContent"
+                    hx-target="#detailModalContent"
                     hx-swap="innerHTML"
                     hx-push-url={`/spells?${params.toString()}`}
                   >

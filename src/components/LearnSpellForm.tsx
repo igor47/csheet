@@ -1,8 +1,8 @@
 import { SpellDetail } from "@src/components/SpellDetail"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { SpellPicker } from "@src/components/ui/SpellPicker"
 import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { ModalContent } from "./ui/ModalContent"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface LearnSpellFormProps {

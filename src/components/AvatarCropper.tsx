@@ -1,5 +1,5 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { ModalContent } from "./ui/ModalContent"
 
 export interface AvatarCropperProps {
   character: ComputedCharacter
@@ -78,7 +78,7 @@ export const AvatarCropper = ({ character, avatarIndex }: AvatarCropperProps) =>
           type="button"
           class="btn btn-secondary"
           hx-get={`/characters/${character.id}/avatars`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
         >
           <i class="bi bi-grid-3x3"></i> Back to Gallery
@@ -88,7 +88,7 @@ export const AvatarCropper = ({ character, avatarIndex }: AvatarCropperProps) =>
           class="btn btn-primary"
           hx-post={action}
           hx-include="#cropForm"
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
         >
           Save Crop

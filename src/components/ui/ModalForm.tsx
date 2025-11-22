@@ -1,5 +1,7 @@
 import type { Child } from "hono/jsx"
 
+const DETAIL_MODAL_CONTENT_ID = "#detailModalContent"
+
 export interface ModalFormProps {
   id: string
   endpoint: string
@@ -21,7 +23,7 @@ export const ModalForm = ({
       hx-post={endpoint}
       hx-vals='{"is_check": "true"}'
       hx-trigger={trigger}
-      hx-target="#editModalContent"
+      hx-target={DETAIL_MODAL_CONTENT_ID}
       hx-swap={swap}
       hx-ext="morph"
       class="needs-validation"
@@ -54,7 +56,7 @@ export const ModalFormSubmit = ({
       class="btn btn-primary"
       hx-post={endpoint}
       hx-vals='{"is_check": "false"}'
-      hx-target="#editModalContent"
+      hx-target={DETAIL_MODAL_CONTENT_ID}
       hx-swap={swap}
       hx-sync="closest form:replace"
       hx-ext="morph"

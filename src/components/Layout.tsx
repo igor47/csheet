@@ -129,6 +129,7 @@ export const Layout = ({
           integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
           crossorigin="anonymous"
         />
+        <script src="/static/detail-modal.js"></script>
         <script src="/static/flash.js"></script>
         <script src="/static/htmx-auth.js"></script>
       </body>

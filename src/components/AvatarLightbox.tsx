@@ -1,5 +1,5 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { ModalContent } from "./ui/ModalContent"
 
 export interface AvatarLightboxProps {
   character: ComputedCharacter
@@ -45,7 +45,7 @@ export const AvatarLightbox = ({ character, currentIndex }: AvatarLightboxProps)
               class="btn btn-lg btn-dark position-absolute top-50 start-0 translate-middle-y ms-2"
               style="opacity: 0.7; z-index: 10;"
               hx-get={`/characters/${character.id}/avatars/lightbox?index=${prevIndex}`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
             >
               <i class="bi bi-chevron-left"></i>
@@ -56,7 +56,7 @@ export const AvatarLightbox = ({ character, currentIndex }: AvatarLightboxProps)
               class="btn btn-lg btn-dark position-absolute top-50 end-0 translate-middle-y me-2"
               style="opacity: 0.7; z-index: 10;"
               hx-get={`/characters/${character.id}/avatars/lightbox?index=${nextIndex}`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
             >
               <i class="bi bi-chevron-right"></i>
@@ -70,7 +70,7 @@ export const AvatarLightbox = ({ character, currentIndex }: AvatarLightboxProps)
           type="button"
           class="btn btn-secondary"
           hx-get={`/characters/${character.id}/avatars`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
         >
           <i class="bi bi-grid-3x3"></i> Back to Gallery

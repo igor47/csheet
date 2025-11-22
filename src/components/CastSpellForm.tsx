@@ -1,7 +1,7 @@
 import { SpellDetail } from "@src/components/SpellDetail"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { ModalContent } from "./ui/ModalContent"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 import { Select } from "./ui/Select"
 

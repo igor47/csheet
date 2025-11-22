@@ -1,8 +1,8 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { ProficiencyLevel, SkillType } from "@src/lib/dnd"
 import { ProficiencyLevels, SkillAbilities, Skills } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import clsx from "clsx"
-import { ModalContent } from "./ui/ModalContent"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface SkillsEditFormProps {

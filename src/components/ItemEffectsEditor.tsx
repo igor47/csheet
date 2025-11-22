@@ -1,4 +1,4 @@
-import { ModalContent } from "@src/components/ui/ModalContent"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { Select } from "@src/components/ui/Select"
 import { ItemEffectOps, ItemEffectTargets } from "@src/lib/dnd"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
@@ -82,7 +82,7 @@ export const ItemEffectsEditor = ({
                     type="button"
                     class="btn btn-sm btn-outline-danger"
                     hx-delete={`/characters/${character.id}/items/${item.id}/effects/${effect.id}`}
-                    hx-target="#editModalContent"
+                    hx-target="#detailModalContent"
                     hx-swap="innerHTML"
                     hx-confirm="Are you sure you want to delete this effect?"
                   >

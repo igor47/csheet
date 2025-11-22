@@ -88,9 +88,9 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
             type="button"
             class="btn btn-sm btn-outline-secondary"
             hx-get={`/characters/${character.id}/chats`}
-            hx-target="#editModalContent"
+            hx-target="#detailModalContent"
             data-bs-toggle="modal"
-            data-bs-target="#editModal"
+            data-bs-target="#detailModal"
           >
             <i class="bi bi-clock-history"></i> History
           </button>

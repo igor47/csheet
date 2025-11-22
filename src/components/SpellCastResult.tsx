@@ -1,7 +1,7 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { spells } from "@src/lib/dnd/spells"
 import type { AttackInfo } from "@src/services/castSpell"
 import { SpellDetail } from "./SpellDetail"
-import { ModalContent } from "./ui/ModalContent"
 
 export interface SpellCastResultProps {
   message: string

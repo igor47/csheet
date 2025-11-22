@@ -1,6 +1,6 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { Character } from "@src/db/characters"
 import { MAX_UPLOAD_SIZE } from "@src/db/uploads"
-import { ModalContent } from "./ui/ModalContent"
 
 export interface UploadAvatarFormProps {
   character: Character

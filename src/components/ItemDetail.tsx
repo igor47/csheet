@@ -1,4 +1,4 @@
-import { ModalContent } from "@src/components/ui/ModalContent"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 
 export interface ItemDetailProps {

@@ -24,9 +24,9 @@ export const SessionNotes = ({ characterId, currentNote }: SessionNotesProps) =>
             type="button"
             class="btn btn-sm btn-outline-secondary"
             hx-get={`/characters/${characterId}/history/notes`}
-            hx-target="#editModalContent"
+            hx-target="#detailModalContent"
             data-bs-toggle="modal"
-            data-bs-target="#editModal"
+            data-bs-target="#detailModal"
           >
             <i class="bi bi-clock-history" /> History
           </button>

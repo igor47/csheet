@@ -1,4 +1,4 @@
-import { ModalContent } from "@src/components/ui/ModalContent"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { Select } from "@src/components/ui/Select"
 import type { ItemDamage } from "@src/db/item_damage"
 import type { Item } from "@src/db/items"

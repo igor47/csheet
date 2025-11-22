@@ -88,10 +88,10 @@ export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
           type="button"
           class="btn btn-sm btn-outline-primary"
           hx-get={`/characters/${character.id}/edit/trait`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal"
+          data-bs-target="#detailModal"
         >
           <i class="bi bi-plus-circle"></i> Add Custom Trait
         </button>
@@ -99,10 +99,10 @@ export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
           type="button"
           class="btn btn-sm btn-outline-secondary"
           hx-get={`/characters/${character.id}/history/traits`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal"
+          data-bs-target="#detailModal"
         >
           <i class="bi bi-clock-history"></i> History
         </button>

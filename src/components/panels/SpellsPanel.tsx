@@ -56,10 +56,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
               aria-label="Edit spell slots"
               title="Edit spell slots"
               hx-get={`/characters/${character.id}/edit/spellslots`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-pencil"></i>
             </button>
@@ -70,10 +70,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
               aria-label="Spell splot history"
               title="Spell slot history"
               hx-get={`/characters/${character.id}/history/spellslots`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-clock-history"></i>
             </button>
@@ -139,10 +139,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                   aria-label="Spell preparation history"
                   title="Spell preparation history"
                   hx-get={`/characters/${character.id}/history/prepared-spells`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-clock-history"></i>
                 </button>
@@ -174,10 +174,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                                   <a
                                     href="/spells/{spell.id}"
                                     hx-get={`/spells/${spell.id}`}
-                                    hx-target="#editModalContent"
+                                    hx-target="#detailModalContent"
                                     hx-swap="innerHTML"
                                     data-bs-toggle="modal"
-                                    data-bs-target="#editModal"
+                                    data-bs-target="#detailModal"
                                     class="text-decoration-none"
                                   >
                                     {spell.name}
@@ -205,10 +205,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                                   title="Edit slot"
                                   disabled={row.alwaysPrepared}
                                   hx-get={`/characters/${character.id}/edit/prepspell?class=${row.className}&spell_type=${row.type.toLowerCase()}${row.spell_id ? `&current_spell_id=${row.spell_id}` : ""}`}
-                                  hx-target="#editModalContent"
+                                  hx-target="#detailModalContent"
                                   hx-swap="innerHTML"
                                   data-bs-toggle="modal"
-                                  data-bs-target="#editModal"
+                                  data-bs-target="#detailModal"
                                 >
                                   <i class="bi bi-pencil"></i>
                                 </button>
@@ -220,10 +220,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                                     aria-label="Cast spell"
                                     title="Cast spell"
                                     hx-get={`/characters/${character.id}/castspell?spell_id=${spell.id}`}
-                                    hx-target="#editModalContent"
+                                    hx-target="#detailModalContent"
                                     hx-swap="innerHTML"
                                     data-bs-toggle="modal"
-                                    data-bs-target="#editModal"
+                                    data-bs-target="#detailModal"
                                   >
                                     <i class="bi bi-lightning-fill"></i>
                                   </button>
@@ -270,10 +270,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                     aria-label="Add to spellbook"
                     title="Add to spellbook"
                     hx-get={`/characters/${character.id}/edit/spellbook`}
-                    hx-target="#editModalContent"
+                    hx-target="#detailModalContent"
                     hx-swap="innerHTML"
                     data-bs-toggle="modal"
-                    data-bs-target="#editModal"
+                    data-bs-target="#detailModal"
                   >
                     <i class="bi bi-plus"></i>
                   </button>
@@ -284,10 +284,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                     aria-label="Spellbook history"
                     title="Spellbook history"
                     hx-get={`/characters/${character.id}/history/spellbook`}
-                    hx-target="#editModalContent"
+                    hx-target="#detailModalContent"
                     hx-swap="innerHTML"
                     data-bs-toggle="modal"
-                    data-bs-target="#editModal"
+                    data-bs-target="#detailModal"
                   >
                     <i class="bi bi-clock-history"></i>
                   </button>
@@ -341,10 +341,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                           aria-label="Add to prepared spells"
                           title="Add to prepared spells"
                           hx-get={`/characters/${character.id}/edit/prepspell?class=${wizardInfo.class}&spell_type=${spell.level === 0 ? "cantrip" : "spell"}&spell_id=${spell.id}`}
-                          hx-target="#editModalContent"
+                          hx-target="#detailModalContent"
                           hx-swap="innerHTML"
                           data-bs-toggle="modal"
-                          data-bs-target="#editModal"
+                          data-bs-target="#detailModal"
                           disabled={isInPreparedSlot || isInCantripSlot}
                         >
                           <i class="bi bi-plus-circle" />
@@ -358,10 +358,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                           aria-label="Cast spell as ritual"
                           title="Cast spell as ritual"
                           hx-get={`/characters/${character.id}/castspell?spell_id=${spell.id}&as_ritual=true`}
-                          hx-target="#editModalContent"
+                          hx-target="#detailModalContent"
                           hx-swap="innerHTML"
                           data-bs-toggle="modal"
-                          data-bs-target="#editModal"
+                          data-bs-target="#detailModal"
                         >
                           <i class="bi bi-lightning-fill"></i>
                         </button>
@@ -373,10 +373,10 @@ export const SpellsPanel = ({ character, swapOob }: SpellsPanelProps) => {
                             <a
                               href="/spells/{spell.id}"
                               hx-get={`/spells/${spell.id}`}
-                              hx-target="#editModalContent"
+                              hx-target="#detailModalContent"
                               hx-swap="innerHTML"
                               data-bs-toggle="modal"
-                              data-bs-target="#editModal"
+                              data-bs-target="#detailModal"
                               class="text-decoration-none"
                             >
                               {spell.name}

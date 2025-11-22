@@ -66,10 +66,10 @@ export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
           type="button"
           class="btn btn-sm btn-outline-secondary"
           hx-get={`/characters/${character.id}/edit/skills`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal"
+          data-bs-target="#detailModal"
         >
           <i class="bi bi-pencil"></i> Edit Skills
         </button>
@@ -77,10 +77,10 @@ export const SkillsPanel = ({ character, swapOob }: SkillsPanelProps) => {
           type="button"
           class="btn btn-sm btn-outline-secondary"
           hx-get={`/characters/${character.id}/history/skills`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
           data-bs-toggle="modal"
-          data-bs-target="#editModal"
+          data-bs-target="#detailModal"
         >
           <i class="bi bi-clock-history"></i> History
         </button>

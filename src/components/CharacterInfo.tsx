@@ -28,9 +28,9 @@ const WieldedWeaponRow = ({ item, characterId }: WieldedWeaponRowProps) => {
           type="button"
           class="btn btn-link p-0 text-start fw-bold"
           data-bs-toggle="modal"
-          data-bs-target="#editModal"
+          data-bs-target="#detailModal"
           hx-get={`/characters/${characterId}/items/${item.id}`}
-          hx-target="#editModalContent"
+          hx-target="#detailModalContent"
           hx-swap="innerHTML"
         >
           {item.name}
@@ -46,10 +46,10 @@ const WieldedWeaponRow = ({ item, characterId }: WieldedWeaponRowProps) => {
             type="button"
             class="btn btn-sm btn-outline-info"
             hx-get={`/characters/${characterId}/items/${item.id}/charges`}
-            hx-target="#editModalContent"
+            hx-target="#detailModalContent"
             hx-swap="innerHTML"
             data-bs-toggle="modal"
-            data-bs-target="#editModal"
+            data-bs-target="#detailModal"
           >
             <i class="bi bi-lightning-charge"></i>{" "}
             {item.chargeLabel === "ammunition" ? "Ammo" : "Charges"}
@@ -112,10 +112,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   aria-label="edit class"
                   title="edit class"
                   hx-get={`/characters/${character.id}/edit/class`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-pencil"></i>
                 </button>
@@ -126,10 +126,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   aria-label="class history"
                   title="class history"
                   hx-get={`/characters/${character.id}/history/class`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-clock-history"></i>
                 </button>
@@ -258,10 +258,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   aria-label="edit hit points"
                   title="edit hit points"
                   hx-get={`/characters/${character.id}/edit/hitpoints`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-pencil"></i>
                 </button>
@@ -272,10 +272,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   aria-label="hit points history"
                   title="hit points history"
                   hx-get={`/characters/${character.id}/history/hitpoints`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-clock-history"></i>
                 </button>
@@ -301,10 +301,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   aria-label="edit hit dice"
                   title="edit hit dice"
                   hx-get={`/characters/${character.id}/edit/hitdice`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-pencil"></i>
                 </button>
@@ -315,10 +315,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   aria-label="hit dice history"
                   title="hit dice history"
                   hx-get={`/characters/${character.id}/history/hitdice`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-clock-history"></i>
                 </button>
@@ -332,10 +332,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   type="button"
                   class="btn btn-sm btn-outline-primary"
                   hx-get={`/characters/${character.id}/rest/short`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-cup-hot me-1"></i>
                   Short Rest
@@ -344,10 +344,10 @@ export const CharacterInfo = ({ character, swapOob }: CharacterInfoProps) => {
                   type="button"
                   class="btn btn-sm btn-outline-primary"
                   hx-get={`/characters/${character.id}/rest/long`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-swap="innerHTML"
                   data-bs-toggle="modal"
-                  data-bs-target="#editModal"
+                  data-bs-target="#detailModal"
                 >
                   <i class="bi bi-moon-stars me-1"></i>
                   Long Rest

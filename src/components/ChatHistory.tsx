@@ -85,7 +85,7 @@ export const ChatHistory = ({ character, chats }: ChatHistoryProps) => {
                   type="button"
                   class="btn btn-sm btn-outline-danger"
                   hx-delete={`/characters/${character.id}/chat/${chat.chat_id}`}
-                  hx-target="#editModalContent"
+                  hx-target="#detailModalContent"
                   hx-confirm="Are you sure you want to delete this conversation? This cannot be undone."
                   onclick="event.preventDefault(); event.stopPropagation();"
                 >

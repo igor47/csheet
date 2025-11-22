@@ -111,10 +111,10 @@ export const AvatarDisplay = ({
         class="avatar-button position-relative ratio ratio-1x1 rounded overflow-hidden border-0 p-0"
         tabindex={0}
         hx-get={`/characters/${character.id}/avatars`}
-        hx-target="#editModalContent"
+        hx-target="#detailModalContent"
         hx-swap="innerHTML"
         data-bs-toggle="modal"
-        data-bs-target="#editModal"
+        data-bs-target="#detailModal"
         style={cropStyle.containerStyle}
       >
         <img
@@ -138,7 +138,7 @@ export const AvatarDisplay = ({
         type="button"
         class="btn p-0 border-0 w-100"
         hx-get={`/characters/${character.id}/avatars/lightbox?index=${avatarIndex ?? 0}`}
-        hx-target="#editModalContent"
+        hx-target="#detailModalContent"
         hx-swap="innerHTML"
       >
         <div

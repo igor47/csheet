@@ -8,6 +8,7 @@ import { SkillsPanel } from "./panels/SkillsPanel"
 import { SpellsPanel } from "./panels/SpellsPanel"
 import { TraitsPanel } from "./panels/TraitsPanel"
 import { SessionNotes } from "./SessionNotes"
+import { DetailModal } from "./ui/DetailModal"
 
 type CharacterProps = {
   character: ComputedCharacter
@@ -145,14 +146,7 @@ export const Character = ({ character, currentNote }: CharacterProps) => {
         </div>
       </div>
 
-      {/* Edit/History Modal */}
-      <div class="modal fade" id="editModal" tabindex={-1} aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content" id="editModalContent">
-            {/* Content loaded via htmx */}
-          </div>
-        </div>
-      </div>
+      <DetailModal />
 
       {/* Character-specific scripts */}
       <script src="/static/character.js"></script>

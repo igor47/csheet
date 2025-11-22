@@ -45,7 +45,7 @@ import { SpellSlotsHistory } from "@src/components/SpellSlotsHistory"
 import { TraitEditForm } from "@src/components/TraitEditForm"
 import { TraitHistory } from "@src/components/TraitHistory"
 import { UploadAvatarForm } from "@src/components/UploadAvatarForm"
-import { ModalContent } from "@src/components/ui/ModalContent"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { findByCharacterId as findCoinChanges } from "@src/db/char_coins"
@@ -231,7 +231,7 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
@@ -267,7 +267,7 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
 
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
 })
 
@@ -294,7 +294,7 @@ characterRoutes.post("/characters/:id/edit/hitdice", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
 })
 
@@ -315,7 +315,7 @@ characterRoutes.post("/characters/:id/edit/spellslots", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -336,7 +336,7 @@ characterRoutes.post("/characters/:id/edit/prepspell", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -355,7 +355,7 @@ characterRoutes.post("/characters/:id/edit/spellbook", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -387,7 +387,7 @@ characterRoutes.post("/characters/:id/edit/trait", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<TraitsPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -412,7 +412,7 @@ characterRoutes.post("/characters/:id/edit/newitem", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -490,7 +490,7 @@ characterRoutes.post("/characters/:id/items/:itemId/edit", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -793,7 +793,7 @@ characterRoutes.post("/characters/:id/items/:itemId/charges", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -905,7 +905,7 @@ characterRoutes.post("/characters/:id/rest/short", async (c) => {
 
   // Return updated components and close modal
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
@@ -946,7 +946,7 @@ characterRoutes.post("/characters/:id/rest/long", async (c) => {
 
   // Return updated components and close modal
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
@@ -1059,7 +1059,7 @@ characterRoutes.post("/characters/:id/edit/abilities", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(
     <>
       <AbilitiesPanel character={updatedChar} swapOob={true} />
@@ -1086,7 +1086,7 @@ characterRoutes.post("/characters/:id/edit/skills", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(
     <>
       <SkillsPanel character={updatedChar} swapOob={true} />
@@ -1111,7 +1111,7 @@ characterRoutes.post("/characters/:id/edit/coins", async (c) => {
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
 })
 
@@ -1443,6 +1443,6 @@ characterRoutes.post("/characters/:id/notes/restore/:noteId", async (c) => {
     restored_from_id: noteId,
   })
 
-  c.header("HX-Trigger", "closeEditModal")
+  c.header("HX-Trigger", "closeDetailModal")
   return c.html(<SessionNotes characterId={characterId} currentNote={restoredNote} />)
 })

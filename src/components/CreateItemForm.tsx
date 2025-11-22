@@ -1,4 +1,4 @@
-import { ModalContent } from "@src/components/ui/ModalContent"
+import { ModalContent } from "@src/components/ui/DetailModal"
 import { Select } from "@src/components/ui/Select"
 import { ArmorTypes, DamageTypes, ItemCategories, WeaponMasteries } from "@src/lib/dnd"
 import { getGroupedTemplates, getTemplateByName, type RulesetId } from "@src/lib/dnd/itemTemplates"

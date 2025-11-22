@@ -228,7 +228,7 @@ describe("POST /characters/:id/edit/skills", () => {
           body: formData,
         })
 
-        expect(response.headers.get("HX-Trigger")).toContain("closeEditModal")
+        expect(response.headers.get("HX-Trigger")).toContain("closeDetailModal")
       })
     })
 

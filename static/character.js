@@ -1,23 +1,3 @@
-// Close edit modal when backend triggers closeEditModal event
-document.body.addEventListener('closeEditModal', function() {
-  const modalElement = document.getElementById('editModal');
-  if (modalElement) {
-    const modal = bootstrap.Modal.getInstance(modalElement);
-    if (modal) {
-      modal.hide();
-    }
-  }
-});
-
-// Open edit modal when backend triggers openEditModal event
-document.body.addEventListener('openEditModal', function() {
-  const modalElement = document.getElementById('editModal');
-  if (modalElement) {
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
-  }
-});
-
 // scroll position restore and modal opening
 document.body.addEventListener('htmx:afterSwap', (e) => {
   const container = e.target;
@@ -116,7 +96,7 @@ async function handleAvatarUpload(characterId) {
 
     // Use htmx to assign avatar and update UI (shows gallery)
     htmx.ajax('POST', `/characters/${characterId}/avatars`, {
-      target: '#editModalContent',
+      target: '#detailModalContent',
       swap: 'innerHTML',
       values: { upload_id }
     })

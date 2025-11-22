@@ -1,5 +1,5 @@
+import { ModalContent } from "@src/components/ui/DetailModal"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { ModalContent } from "./ui/ModalContent"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface ShortRestFormProps {

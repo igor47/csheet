@@ -22,9 +22,9 @@ const InventoryItemRow = ({ item, characterId }: InventoryItemRowProps) => {
             type="button"
             class="btn btn-link p-0 text-start fw-bold"
             data-bs-toggle="modal"
-            data-bs-target="#editModal"
+            data-bs-target="#detailModal"
             hx-get={`/characters/${characterId}/items/${item.id}`}
-            hx-target="#editModalContent"
+            hx-target="#detailModalContent"
             hx-swap="innerHTML"
           >
             {item.name}
@@ -85,10 +85,10 @@ const InventoryItemRow = ({ item, characterId }: InventoryItemRowProps) => {
                 type="button"
                 class="btn btn-sm btn-outline-info"
                 hx-get={`/characters/${characterId}/items/${item.id}/charges`}
-                hx-target="#editModalContent"
+                hx-target="#detailModalContent"
                 hx-swap="innerHTML"
                 data-bs-toggle="modal"
-                data-bs-target="#editModal"
+                data-bs-target="#detailModal"
               >
                 <i class="bi bi-lightning-charge"></i>{" "}
                 {item.chargeLabel === "ammunition" ? "Ammo" : "Charges"}
@@ -103,10 +103,10 @@ const InventoryItemRow = ({ item, characterId }: InventoryItemRowProps) => {
               type="button"
               class="btn btn-sm btn-outline-secondary"
               hx-get={`/characters/${characterId}/items/${item.id}/edit`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-pencil"></i> Edit
             </button>
@@ -114,10 +114,10 @@ const InventoryItemRow = ({ item, characterId }: InventoryItemRowProps) => {
               type="button"
               class="btn btn-sm btn-outline-secondary"
               hx-get={`/characters/${characterId}/items/${item.id}/effects`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-stars"></i> Effects
               {item.effects.length > 0 &&
@@ -163,10 +163,10 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
               type="button"
               class="btn btn-sm btn-outline-secondary"
               hx-get={`/characters/${character.id}/edit/coins`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-pencil"></i> Edit Coins
             </button>
@@ -174,10 +174,10 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
               type="button"
               class="btn btn-sm btn-outline-secondary"
               hx-get={`/characters/${character.id}/history/coins`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-clock-history"></i> History
             </button>
@@ -212,10 +212,10 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
               type="button"
               class="btn btn-sm btn-outline-primary"
               hx-get={`/characters/${character.id}/edit/newitem`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-plus-circle"></i> Add Item
             </button>
@@ -223,10 +223,10 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
               type="button"
               class="btn btn-sm btn-outline-secondary"
               hx-get={`/characters/${character.id}/history/items`}
-              hx-target="#editModalContent"
+              hx-target="#detailModalContent"
               hx-swap="innerHTML"
               data-bs-toggle="modal"
-              data-bs-target="#editModal"
+              data-bs-target="#detailModal"
             >
               <i class="bi bi-clock-history"></i> History
             </button>

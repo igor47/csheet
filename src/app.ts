@@ -7,6 +7,7 @@ import { applyMiddleware } from "./middleware"
 import { requireAuth } from "./middleware/auth"
 import { cachingServeStatic } from "./middleware/cachingServeStatic"
 import { authRoutes } from "./routes/auth"
+import { campaignsRoutes } from "./routes/campaigns"
 import { characterRoutes } from "./routes/character"
 import { chatRoutes } from "./routes/chat"
 import { healthRoutes } from "./routes/health"
@@ -69,6 +70,7 @@ export function createApp(db?: SQL) {
   const protectedRoutes = new Hono()
   protectedRoutes.use("*", requireAuth)
   protectedRoutes.route("/", characterRoutes)
+  protectedRoutes.route("/", campaignsRoutes)
   protectedRoutes.route("/", chatRoutes)
   protectedRoutes.route("/", uploadsRoutes)
 

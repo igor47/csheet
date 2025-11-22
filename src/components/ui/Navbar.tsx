@@ -20,6 +20,12 @@ const NavLinks: NavLink[] = [
     isActive: (currentPage) => (currentPage ? currentPage.startsWith("/characters") : false),
   },
   {
+    href: "/campaigns",
+    label: "Campaigns",
+    requiresAuth: true,
+    isActive: (currentPage) => (currentPage ? currentPage.startsWith("/campaigns") : false),
+  },
+  {
     href: "/spells",
     label: "Spells",
     isActive: (currentPage) => (currentPage ? currentPage.startsWith("/spells") : false),

@@ -1,4 +1,4 @@
-\restrict Dg0ksc8IIsh0chvkrHOQy7LtnwsmjF3WyModqIXmKLfbi99THWiNyWMb9U47Fk5
+\restrict MspOcTiXckef21dM6kFZSB8asA42fXYgHIb0leVOdMn5cGwCtrfQOALsCm6RqD1
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.0
@@ -45,6 +45,56 @@ CREATE TABLE public.auth_tokens (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     expires_at timestamp with time zone NOT NULL,
     used_at timestamp with time zone
+);
+
+
+--
+-- Name: campaign_characters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.campaign_characters (
+    id character varying(26) NOT NULL,
+    campaign_id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    revealed_at timestamp with time zone,
+    added_by character varying(26) NOT NULL,
+    added_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: campaign_members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.campaign_members (
+    id character varying(26) NOT NULL,
+    campaign_id character varying(26) NOT NULL,
+    user_id character varying(26) NOT NULL,
+    role text NOT NULL,
+    invited_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    invited_by character varying(26) NOT NULL,
+    accepted_at timestamp with time zone,
+    declined_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT campaign_members_not_both_accepted_and_declined CHECK ((NOT ((accepted_at IS NOT NULL) AND (declined_at IS NOT NULL)))),
+    CONSTRAINT campaign_members_role_check CHECK ((role = ANY (ARRAY['dm'::text, 'player'::text, 'viewer'::text])))
+);
+
+
+--
+-- Name: campaigns; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.campaigns (
+    id character varying(26) NOT NULL,
+    name text NOT NULL,
+    description text,
+    created_by character varying(26) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -456,6 +506,46 @@ ALTER TABLE ONLY public.auth_tokens
 
 
 --
+-- Name: campaign_characters campaign_characters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_characters
+    ADD CONSTRAINT campaign_characters_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: campaign_characters campaign_characters_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_characters
+    ADD CONSTRAINT campaign_characters_unique UNIQUE (campaign_id, character_id);
+
+
+--
+-- Name: campaign_members campaign_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_members
+    ADD CONSTRAINT campaign_members_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: campaign_members campaign_members_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_members
+    ADD CONSTRAINT campaign_members_unique UNIQUE (campaign_id, user_id);
+
+
+--
+-- Name: campaigns campaigns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaigns
+    ADD CONSTRAINT campaigns_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_abilities char_abilities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -658,6 +748,41 @@ CREATE INDEX idx_auth_tokens_expires_at ON public.auth_tokens USING btree (expir
 --
 
 CREATE INDEX idx_auth_tokens_session_token_hash ON public.auth_tokens USING btree (session_token_hash);
+
+
+--
+-- Name: idx_campaign_characters_campaign_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_campaign_characters_campaign_id ON public.campaign_characters USING btree (campaign_id);
+
+
+--
+-- Name: idx_campaign_characters_character_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_campaign_characters_character_id ON public.campaign_characters USING btree (character_id);
+
+
+--
+-- Name: idx_campaign_members_campaign_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_campaign_members_campaign_id ON public.campaign_members USING btree (campaign_id);
+
+
+--
+-- Name: idx_campaign_members_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_campaign_members_user_id ON public.campaign_members USING btree (user_id);
+
+
+--
+-- Name: idx_campaigns_created_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_campaigns_created_by ON public.campaigns USING btree (created_by);
 
 
 --
@@ -864,6 +989,27 @@ CREATE UNIQUE INDEX idx_users_email ON public.users USING btree (email);
 
 
 --
+-- Name: campaign_characters campaign_characters_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER campaign_characters_updated_at BEFORE UPDATE ON public.campaign_characters FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: campaign_members campaign_members_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER campaign_members_updated_at BEFORE UPDATE ON public.campaign_members FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: campaigns campaigns_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER campaigns_updated_at BEFORE UPDATE ON public.campaigns FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: char_abilities char_abilities_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -973,6 +1119,62 @@ CREATE TRIGGER update_char_notes_updated_at BEFORE UPDATE ON public.char_notes F
 --
 
 CREATE TRIGGER users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: campaign_characters campaign_characters_added_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_characters
+    ADD CONSTRAINT campaign_characters_added_by_fkey FOREIGN KEY (added_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaign_characters campaign_characters_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_characters
+    ADD CONSTRAINT campaign_characters_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.campaigns(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaign_characters campaign_characters_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_characters
+    ADD CONSTRAINT campaign_characters_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaign_members campaign_members_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_members
+    ADD CONSTRAINT campaign_members_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.campaigns(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaign_members campaign_members_invited_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_members
+    ADD CONSTRAINT campaign_members_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaign_members campaign_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaign_members
+    ADD CONSTRAINT campaign_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaigns campaigns_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.campaigns
+    ADD CONSTRAINT campaigns_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1163,7 +1365,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Dg0ksc8IIsh0chvkrHOQy7LtnwsmjF3WyModqIXmKLfbi99THWiNyWMb9U47Fk5
+\unrestrict MspOcTiXckef21dM6kFZSB8asA42fXYgHIb0leVOdMn5cGwCtrfQOALsCm6RqD1
 
 
 --
@@ -1206,4 +1408,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251111221748'),
     ('20251112060352'),
     ('20251112060400'),
-    ('20251112060500');
+    ('20251112060500'),
+    ('20251122030300');

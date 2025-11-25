@@ -100,7 +100,6 @@ const MemberCard = ({ member }: MemberCardProps) => (
 )
 
 export const Campaign = ({ campaign }: CampaignProps) => {
-  console.dir(campaign)
   const isDM = campaign.userRole === "dm"
 
   // Filter members by role

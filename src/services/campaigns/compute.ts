@@ -139,6 +139,6 @@ export async function computeCampaign(
     canAddCharacters: isDM || isPlayer,
     canRevealCharacters: isDM,
     canManageViewers: isDM || isPlayer,
-    canChangeDMRole: isDM && (dmCount > 1),
+    canChangeDMRole: isDM && dmCount > 1,
   }
 }

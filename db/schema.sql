@@ -1,4 +1,4 @@
-\restrict MspOcTiXckef21dM6kFZSB8asA42fXYgHIb0leVOdMn5cGwCtrfQOALsCm6RqD1
+\restrict vNVSluC2Xx0w0BGYUuem3RiuOI6yRyhqfkWgT22Oe5Jr4wmXAQzwIanfAvXBOgB
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.0
@@ -94,7 +94,8 @@ CREATE TABLE public.campaigns (
     description text,
     created_by character varying(26) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    archived_at timestamp with time zone
 );
 
 
@@ -786,6 +787,13 @@ CREATE INDEX idx_campaigns_created_by ON public.campaigns USING btree (created_b
 
 
 --
+-- Name: idx_campaigns_created_by_archived_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_campaigns_created_by_archived_at ON public.campaigns USING btree (created_by, archived_at);
+
+
+--
 -- Name: idx_char_abilities_char_id_ability_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1365,7 +1373,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict MspOcTiXckef21dM6kFZSB8asA42fXYgHIb0leVOdMn5cGwCtrfQOALsCm6RqD1
+\unrestrict vNVSluC2Xx0w0BGYUuem3RiuOI6yRyhqfkWgT22Oe5Jr4wmXAQzwIanfAvXBOgB
 
 
 --
@@ -1409,4 +1417,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251112060352'),
     ('20251112060400'),
     ('20251112060500'),
-    ('20251122030300');
+    ('20251122030300'),
+    ('20251125200357');

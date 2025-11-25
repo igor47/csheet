@@ -1,4 +1,5 @@
 import { beginOrSavepoint } from "@src/db"
+import { create as createCampaignMemberDb } from "@src/db/campaign_members"
 import { type Campaign, create as createCampaignDb, nameExistsForUser } from "@src/db/campaigns"
 import type { User } from "@src/db/users"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
@@ -69,6 +70,16 @@ export async function createCampaign(
       name: validated.name,
       description: validated.description || null,
       created_by: user.id,
+    })
+
+    // Add creator as DM member
+    await createCampaignMemberDb(tx, {
+      campaign_id: campaign.id,
+      user_id: user.id,
+      role: "dm",
+      invited_by: user.id,
+      accepted_at: new Date(),
+      declined_at: null,
     })
 
     return campaign

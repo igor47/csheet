@@ -107,7 +107,10 @@ characterRoutes.get("/characters", async (c) => {
   const user = c.var.user!
   const showArchived = c.req.query("show_archived") === "true"
 
-  const characters = await listCharacters(getDb(c), user.id, showArchived)
+  const characters = await listCharacters(getDb(c), {
+    userId: user.id,
+    includeArchived: showArchived,
+  })
   const archivedCount = await countArchivedByUserId(getDb(c), user.id)
 
   return c.render(

@@ -54,3 +54,30 @@ export async function create(
 
   return parseCampaignCharacter(result[0])
 }
+
+export interface CampaignCharacterWithAddedBy extends CampaignCharacter {
+  added_by_email: string
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
+function parseCampaignCharacterWithAddedBy(row: any): CampaignCharacterWithAddedBy {
+  return {
+    ...parseCampaignCharacter(row),
+    added_by_email: row.added_by_email,
+  }
+}
+
+export async function findByCampaignId(
+  db: SQL,
+  campaignId: string
+): Promise<CampaignCharacterWithAddedBy[]> {
+  const result = await db`
+    SELECT cc.*, u.email as added_by_email
+    FROM campaign_characters cc
+    JOIN users u ON u.id = cc.added_by
+    WHERE cc.campaign_id = ${campaignId}
+    ORDER BY cc.added_at ASC
+  `
+
+  return result.map(parseCampaignCharacterWithAddedBy)
+}

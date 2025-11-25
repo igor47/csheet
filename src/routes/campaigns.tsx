@@ -2,8 +2,8 @@ import { Campaign } from "@src/components/Campaign"
 import { CampaignNew } from "@src/components/CampaignNew"
 import { Campaigns } from "@src/components/Campaigns"
 import { getDb } from "@src/db"
-import { findById } from "@src/db/campaigns"
 import { setFlashMsg } from "@src/middleware/flash"
+import { authorizeCampaign, handleCampaignUnallowed } from "@src/services/campaigns/authorize"
 import { createCampaign } from "@src/services/campaigns/create"
 import { listCampaigns } from "@src/services/campaigns/list"
 import { Hono } from "hono"
@@ -42,14 +42,12 @@ campaignsRoutes.post("/campaigns/new", async (c) => {
 campaignsRoutes.get("/campaigns/:id", async (c) => {
   const id = c.req.param("id") as string
 
-  const campaign = await findById(getDb(c), id)
-  if (!campaign) {
-    await setFlashMsg(c, "Campaign not found", "error")
-    c.header("HX-Redirect", "/campaigns")
-    return c.body(null, 404)
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
   }
 
-  return c.render(<Campaign campaign={campaign} />, {
-    title: campaign.name,
+  return c.render(<Campaign campaign={authResult.campaign} />, {
+    title: authResult.campaign.name,
   })
 })

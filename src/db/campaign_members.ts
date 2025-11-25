@@ -59,3 +59,30 @@ export async function create(db: SQL, member: CreateCampaignMember): Promise<Cam
 
   return parseCampaignMember(result[0])
 }
+
+export interface CampaignMemberWithUser extends CampaignMember {
+  email: string
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
+function parseCampaignMemberWithUser(row: any): CampaignMemberWithUser {
+  return {
+    ...parseCampaignMember(row),
+    email: row.email,
+  }
+}
+
+export async function findByCampaignId(
+  db: SQL,
+  campaignId: string
+): Promise<CampaignMemberWithUser[]> {
+  const result = await db`
+    SELECT cm.*, u.email
+    FROM campaign_members cm
+    JOIN users u ON u.id = cm.user_id
+    WHERE cm.campaign_id = ${campaignId}
+    ORDER BY cm.invited_at ASC
+  `
+
+  return result.map(parseCampaignMemberWithUser)
+}

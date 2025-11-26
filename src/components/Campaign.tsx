@@ -38,6 +38,19 @@ const PendingInviteCard = ({ member }: PendingInviteCardProps) => (
   </div>
 )
 
+interface DeclinedInviteCardProps {
+  member: ComputedCampaignMember
+}
+
+const DeclinedInviteCard = ({ member }: DeclinedInviteCardProps) => (
+  <div class="card h-100">
+    <div class="card-body">
+      <h6 class="card-title">{member.email}</h6>
+      <span class="badge bg-danger">Declined</span>
+    </div>
+  </div>
+)
+
 const NoCharacterCard = ({ member, isCurrentUser, canAdd }: NoCharacterCardProps) => (
   <div class="card h-100">
     <div class="card-body">
@@ -102,8 +115,16 @@ const MemberCard = ({ member }: MemberCardProps) => (
 export const Campaign = ({ campaign }: CampaignProps) => {
   const isDM = campaign.userRole === "dm"
 
-  // Filter members by role
-  const partyMembers = campaign.members.filter((m) => m.role !== "viewer")
+  // Filter members by role, excluding declined members for non-DMs
+  const allPartyMembers = campaign.members.filter((m) => m.role !== "viewer")
+  const partyMembers = allPartyMembers
+    .filter((m) => isDM || !m.declined_at) // Only DMs see declined members
+    .sort((a, b) => {
+      // Sort declined members to the end
+      if (a.declined_at && !b.declined_at) return 1
+      if (!a.declined_at && b.declined_at) return -1
+      return 0
+    })
   const dms = campaign.members.filter((m) => m.role === "dm" && m.accepted_at)
   const viewers = campaign.members.filter((m) => m.role === "viewer" && m.accepted_at)
 
@@ -128,7 +149,15 @@ export const Campaign = ({ campaign }: CampaignProps) => {
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h3>Characters & Members</h3>
               {campaign.canInviteMembers && (
-                <button type="button" class="btn btn-primary btn-sm">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#detailModal"
+                  hx-get={`/campaigns/${campaign.id}/invite`}
+                  hx-target="#detailModalContent"
+                  hx-swap="innerHTML"
+                >
                   <i class="bi bi-person-plus"></i> Invite Member
                 </button>
               )}
@@ -167,6 +196,14 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                           isCurrentUser={false}
                           canAdd={campaign.canAddCharacters}
                         />
+                      </div>
+                    )
+                  }
+                  if (member.declined_at) {
+                    // Declined invite (only visible to DMs)
+                    return (
+                      <div class="col" key={member.user_id}>
+                        <DeclinedInviteCard member={member} />
                       </div>
                     )
                   }

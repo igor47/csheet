@@ -1,8 +1,10 @@
 import type { User } from "@src/db/users"
+import type { Notifications } from "@src/middleware/notifications"
 
 export interface NavbarProps {
   currentPage?: string
   user?: User
+  notifications?: Notifications
 }
 
 interface NavLink {
@@ -51,9 +53,14 @@ const LoggedOutContent = () => (
   </a>
 )
 
-export const Navbar = ({ currentPage, user }: NavbarProps) => {
+export const Navbar = ({ currentPage, user, notifications }: NavbarProps) => {
   const collapseId = "navbarContent"
   const navLinks = NavLinks.filter((link) => !link.requiresAuth || user)
+
+  // Check for campaign notifications
+  const hasPendingInvites = (notifications?.pendingInvites ?? 0) > 0
+  const hasNeedsCharacter = (notifications?.needsCharacter ?? 0) > 0
+  const hasCampaignNotification = hasPendingInvites || hasNeedsCharacter
 
   return (
     <nav class="navbar navbar-expand-md bg-body-tertiary">
@@ -91,6 +98,16 @@ export const Navbar = ({ currentPage, user }: NavbarProps) => {
                   href={link.href}
                 >
                   {link.label}
+                  {link.href === "/campaigns" && hasCampaignNotification && (
+                    <i
+                      class={`bi ms-1 ${hasPendingInvites ? "bi-envelope-exclamation text-warning" : "bi-person-plus text-info"}`}
+                      title={
+                        hasPendingInvites
+                          ? "You have pending campaign invites"
+                          : "Add a character to a campaign"
+                      }
+                    ></i>
+                  )}
                 </a>
               </li>
             ))}

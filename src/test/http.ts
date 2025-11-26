@@ -59,7 +59,13 @@ export async function parseHtml(response: Response): Promise<Document> {
     throw new Error(`Cannot parse empty HTML response. Status: ${response.status}`)
   }
 
-  const { document } = parseHTML(html)
+  // Wrap HTML fragments (content not starting with <!DOCTYPE or <html)
+  // in body tags so linkedom parses them correctly into document.body
+  const trimmed = html.trim().toLowerCase()
+  const needsWrapper = !trimmed.startsWith("<!doctype") && !trimmed.startsWith("<html")
+  const wrappedHtml = needsWrapper ? `<html><body>${html}</body></html>` : html
+
+  const { document } = parseHTML(wrappedHtml)
   return document
 }
 

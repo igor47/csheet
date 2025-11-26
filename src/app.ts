@@ -50,7 +50,8 @@ export function createApp(db?: SQL) {
       const user = c.get("user")
       const currentPage = c.req.path
       const flash = c.get("flash")
-      return Layout({ ...props, user, currentPage, flash })
+      const notifications = c.get("notifications")
+      return Layout({ ...props, user, currentPage, flash, notifications })
     })
   )
 

@@ -1,6 +1,7 @@
 import { Navbar } from "@src/components/ui/Navbar"
 import type { User } from "@src/db/users"
 import type { Flash } from "@src/middleware/flash"
+import type { Notifications } from "@src/middleware/notifications"
 import { clsx } from "clsx"
 import type { Child } from "hono/jsx"
 
@@ -13,6 +14,7 @@ export interface LayoutProps {
   user?: User
   currentPage?: string
   flash: Flash
+  notifications?: Notifications
 }
 
 export const Layout = ({
@@ -24,6 +26,7 @@ export const Layout = ({
   user,
   currentPage,
   flash,
+  notifications,
 }: LayoutProps) => {
   // Map flash level to Bootstrap alert classes (Bootstrap uses "danger" not "error")
   const flashBootstrapClass = flash?.level === "error" ? "danger" : flash?.level
@@ -87,7 +90,7 @@ export const Layout = ({
         <script src="/static/cropper.min.js"></script>
       </head>
       <body data-bs-theme="dark">
-        <Navbar user={user} currentPage={currentPage} />
+        <Navbar user={user} currentPage={currentPage} notifications={notifications} />
         {flash ? (
           <div class="container-fluid mt-3" id="messages">
             <div class="row">

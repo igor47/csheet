@@ -8,25 +8,46 @@ export interface CampaignsProps {
 
 const CampaignCard = ({ campaign }: { campaign: ListCampaign }) => {
   const isArchived = campaign.archived_at !== null
+  const isPending = campaign.invite_status === "pending"
+  const needsCharacter = campaign.invite_status === "needs_character"
+  const needsAction = isPending || needsCharacter
+
+  // Card border style for campaigns needing action
+  const cardClass = needsAction ? "card h-100 border-warning border-2" : "card h-100"
 
   return (
-    <div class="card h-100">
+    <div class={cardClass}>
       {/* Campaign avatar as card header/image */}
-      <a href={`/campaigns/${campaign.id}`} class="text-decoration-none ratio ratio-1x1">
-        <img
-          src="/static/placeholder-party.png"
-          alt={campaign.name}
-          class="card-img-top"
-          style="object-fit: cover;"
-        />
-      </a>
+      {isPending ? (
+        <div class="ratio ratio-1x1">
+          <img
+            src="/static/placeholder-party.png"
+            alt={campaign.name}
+            class="card-img-top"
+            style="object-fit: cover;"
+          />
+        </div>
+      ) : (
+        <a href={`/campaigns/${campaign.id}`} class="text-decoration-none ratio ratio-1x1">
+          <img
+            src="/static/placeholder-party.png"
+            alt={campaign.name}
+            class="card-img-top"
+            style="object-fit: cover;"
+          />
+        </a>
+      )}
 
       {/* Card Body */}
       <div class="card-body">
         <h5 class="card-title mb-2">
-          <a href={`/campaigns/${campaign.id}`} class="text-decoration-none text-body">
-            {campaign.name}
-          </a>
+          {isPending ? (
+            <span class="text-body">{campaign.name}</span>
+          ) : (
+            <a href={`/campaigns/${campaign.id}`} class="text-decoration-none text-body">
+              {campaign.name}
+            </a>
+          )}
           {isArchived && <span class="badge bg-secondary ms-2">Archived</span>}
         </h5>
         {campaign.description && (
@@ -46,35 +67,80 @@ const CampaignCard = ({ campaign }: { campaign: ListCampaign }) => {
             {campaign.character_count === 1 ? "character" : "characters"}
           </small>
         </p>
+
+        {/* Action needed badges */}
+        {isPending && (
+          <div class="mt-2">
+            <span class="badge bg-warning text-dark">
+              <i class="bi bi-envelope-exclamation"></i> Pending Invite
+            </span>
+            {campaign.invited_by_email && (
+              <p class="text-muted mb-0 mt-1">
+                <small>from {campaign.invited_by_email}</small>
+              </p>
+            )}
+          </div>
+        )}
+        {needsCharacter && (
+          <div class="mt-2">
+            <span class="badge bg-info">
+              <i class="bi bi-person-plus"></i> Add Character
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Card Footer with Actions */}
-      <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-        <a href={`/campaigns/${campaign.id}`} class="btn btn-primary btn-sm">
-          <i class="bi bi-eye"></i> View
-        </a>
-        {isArchived ? (
-          <button
-            type="button"
-            class="btn btn-outline-secondary btn-sm"
-            hx-post={`/campaigns/${campaign.id}/unarchive`}
-            hx-confirm="Are you sure you want to restore this campaign?"
-            data-testid={`unarchive-${campaign.id}`}
-            title="Restore campaign"
-          >
-            <i class="bi bi-arrow-counterclockwise"></i>
-          </button>
+      <div class="card-footer bg-transparent">
+        {isPending ? (
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn btn-success btn-sm flex-grow-1"
+              hx-post={`/campaigns/${campaign.id}/accept`}
+              data-testid={`accept-${campaign.id}`}
+            >
+              <i class="bi bi-check-circle"></i> Accept
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-danger btn-sm"
+              hx-post={`/campaigns/${campaign.id}/decline`}
+              hx-confirm="Are you sure you want to decline this invitation?"
+              data-testid={`decline-${campaign.id}`}
+            >
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
         ) : (
-          <button
-            type="button"
-            class="btn btn-outline-secondary btn-sm"
-            hx-post={`/campaigns/${campaign.id}/archive`}
-            hx-confirm={`Are you sure you want to archive "${campaign.name}"?`}
-            data-testid={`archive-${campaign.id}`}
-            title="Archive campaign"
-          >
-            <i class="bi bi-archive"></i>
-          </button>
+          <div class="d-flex justify-content-between align-items-center">
+            <a href={`/campaigns/${campaign.id}`} class="btn btn-primary btn-sm">
+              <i class="bi bi-eye"></i> View
+            </a>
+            {isArchived ? (
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                hx-post={`/campaigns/${campaign.id}/unarchive`}
+                hx-confirm="Are you sure you want to restore this campaign?"
+                data-testid={`unarchive-${campaign.id}`}
+                title="Restore campaign"
+              >
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </button>
+            ) : (
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                hx-post={`/campaigns/${campaign.id}/archive`}
+                hx-confirm={`Are you sure you want to archive "${campaign.name}"?`}
+                data-testid={`archive-${campaign.id}`}
+                title="Archive campaign"
+              >
+                <i class="bi bi-archive"></i>
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

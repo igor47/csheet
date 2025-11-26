@@ -1,4 +1,4 @@
-\restrict vNVSluC2Xx0w0BGYUuem3RiuOI6yRyhqfkWgT22Oe5Jr4wmXAQzwIanfAvXBOgB
+\restrict ci2up3gcDgxEVyH75VngJaFQTGXiviTOgJgEjTVjWSOVVoIVPvVc33m4EzMsqEM
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.0
@@ -79,6 +79,7 @@ CREATE TABLE public.campaign_members (
     declined_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    invite_token character varying(26),
     CONSTRAINT campaign_members_not_both_accepted_and_declined CHECK ((NOT ((accepted_at IS NOT NULL) AND (declined_at IS NOT NULL)))),
     CONSTRAINT campaign_members_role_check CHECK ((role = ANY (ARRAY['dm'::text, 'player'::text, 'viewer'::text])))
 );
@@ -773,6 +774,13 @@ CREATE INDEX idx_campaign_members_campaign_id ON public.campaign_members USING b
 
 
 --
+-- Name: idx_campaign_members_invite_token; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_campaign_members_invite_token ON public.campaign_members USING btree (invite_token);
+
+
+--
 -- Name: idx_campaign_members_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1373,7 +1381,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict vNVSluC2Xx0w0BGYUuem3RiuOI6yRyhqfkWgT22Oe5Jr4wmXAQzwIanfAvXBOgB
+\unrestrict ci2up3gcDgxEVyH75VngJaFQTGXiviTOgJgEjTVjWSOVVoIVPvVc33m4EzMsqEM
 
 
 --
@@ -1418,4 +1426,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251112060400'),
     ('20251112060500'),
     ('20251122030300'),
-    ('20251125200357');
+    ('20251125200357'),
+    ('20251126134731');

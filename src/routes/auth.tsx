@@ -1,11 +1,14 @@
+import { InviteSwitchAccount } from "@src/components/InviteSwitchAccount"
 import { Login } from "@src/components/Login"
 import { LoginOtp } from "@src/components/LoginOtp"
 import { isSmtpConfigured } from "@src/config"
 import { getDb } from "@src/db"
 import * as authTokens from "@src/db/auth_tokens"
+import * as campaignMembers from "@src/db/campaign_members"
 import { create, findByEmail } from "@src/db/users"
 import { sendOtpEmail } from "@src/lib/email"
 import { logger } from "@src/lib/logger"
+import { getBaseUrl } from "@src/lib/url"
 import { clearAuthCookie, setAuthCookie } from "@src/middleware/auth"
 import { setFlashMsg } from "@src/middleware/flash"
 import { Hono } from "hono"
@@ -59,9 +62,7 @@ authRoutes.post("/login", async (c) => {
   const token = await authTokens.create(db, email)
 
   // Build magic link URL
-  const protocol = c.req.header("x-forwarded-proto") || new URL(c.req.url).protocol.replace(":", "")
-  const host = c.req.header("host") || new URL(c.req.url).host
-  const magicLink = new URL(`${protocol}://${host}/login/token`)
+  const magicLink = new URL(`${getBaseUrl(c)}/login/token`)
   magicLink.searchParams.set("token", token.sessionToken)
   if (redirect) {
     magicLink.searchParams.set("redirect", redirect)
@@ -174,5 +175,55 @@ authRoutes.get("/login/token", async (c) => {
 authRoutes.get("/logout", async (c) => {
   clearAuthCookie(c)
   await setFlashMsg(c, "You have been logged out.", "warning")
-  return c.redirect("/")
+
+  // Support redirect param for flows like invite account switching
+  const redirect = c.req.query("redirect")
+  return c.redirect(redirect || "/")
+})
+
+// View campaign invite via magic link
+// Token is NOT consumed here - it's just proof of email access (like OTP)
+// Accept/decline happens via /campaigns/:id/accept and /campaigns/:id/decline
+authRoutes.get("/invite/view", async (c) => {
+  const token = c.req.query("token")
+
+  if (!token) {
+    await setFlashMsg(c, "Invalid invitation link.", "error")
+    return c.redirect("/login")
+  }
+
+  // Find pending invite by token
+  const db = getDb(c)
+  const tokenResult = await campaignMembers.findByInviteToken(db, token)
+
+  if (!tokenResult) {
+    await setFlashMsg(c, "Invalid or expired invitation link.", "error")
+    return c.redirect("/login")
+  }
+
+  const currentUser = c.var.user
+
+  // Flow 2: Logged in as different user - show switch account page
+  if (currentUser && currentUser.email !== tokenResult.email) {
+    return c.render(
+      <InviteSwitchAccount
+        currentEmail={currentUser.email!}
+        inviteEmail={tokenResult.email}
+        token={token}
+      />,
+      { title: "Switch Account?" }
+    )
+  }
+
+  // Flow 1: Not logged in, or logged in as correct user
+  // Log in as the invited email and redirect to campaigns
+  let user = await findByEmail(db, tokenResult.email)
+  if (!user) {
+    user = await create(db, tokenResult.email)
+    logger.info("Created user from invite", { email: tokenResult.email })
+  }
+
+  await setAuthCookie(c, user.id)
+  await setFlashMsg(c, "You have a pending campaign invite - accept or decline below", "info")
+  return c.redirect("/campaigns")
 })

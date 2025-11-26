@@ -1,4 +1,5 @@
-import { config } from "@src/config"
+import { config, isSmtpConfigured } from "@src/config"
+import type { CampaignMemberRole } from "@src/db/campaign_members"
 import { logger } from "@src/lib/logger"
 import type { Transporter } from "nodemailer"
 import nodemailer from "nodemailer"
@@ -11,7 +12,7 @@ let transporter: Transporter | null = null
 export function getTransporter(): Transporter {
   if (!transporter) {
     // Use stream transport in test mode to avoid sending real emails
-    if (config.isTest) {
+    if (config.isTest || !isSmtpConfigured()) {
       transporter = nodemailer.createTransport({
         streamTransport: true,
         newline: "unix",
@@ -177,5 +178,145 @@ Security Notice: This code and link can only be used once and will expire in ${c
   } catch (error) {
     logger.error("Failed to send OTP email", error as Error, { to })
     throw new Error("Failed to send email")
+  }
+}
+
+export interface SendCampaignInviteEmailParams {
+  to: string
+  campaignName: string
+  inviterEmail: string
+  role: CampaignMemberRole
+  magicLink: string
+}
+
+/**
+ * Send campaign invite email with magic link
+ */
+export async function sendCampaignInviteEmail({
+  to,
+  campaignName,
+  inviterEmail,
+  role,
+  magicLink,
+}: SendCampaignInviteEmailParams): Promise<void> {
+  const transport = getTransporter()
+
+  const roleDisplay = role === "dm" ? "Dungeon Master" : role === "player" ? "Player" : "Viewer"
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campaign Invitation</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+    }
+    .campaign-name {
+      font-size: 28px;
+      font-weight: bold;
+      color: #0d6efd;
+      margin: 20px 0;
+    }
+    .role-badge {
+      display: inline-block;
+      background: #198754;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      margin: 10px 0;
+    }
+    .button {
+      display: inline-block;
+      background: #0d6efd;
+      color: white !important;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 6px;
+      font-weight: 500;
+      margin: 20px 0;
+    }
+    .footer {
+      margin-top: 40px;
+      font-size: 14px;
+      color: #6c757d;
+      text-align: center;
+    }
+    .info {
+      background: #e7f3ff;
+      border-left: 4px solid #0d6efd;
+      padding: 12px;
+      margin: 20px 0;
+      text-align: left;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>You've Been Invited!</h1>
+
+    <p><strong>${inviterEmail}</strong> has invited you to join their DnD campaign:</p>
+
+    <div class="campaign-name">${campaignName}</div>
+
+    <p>You've been invited as a:</p>
+    <span class="role-badge">${roleDisplay}</span>
+
+    <div style="margin-top: 30px;">
+      <a href="${magicLink}" class="button">View Invitation</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>This invitation was sent from CSheet. If you didn't expect this, you can safely ignore it.</p>
+  </div>
+</body>
+</html>
+  `
+
+  const textContent = `
+You've Been Invited to a Campaign!
+
+${inviterEmail} has invited you to join their DnD campaign: ${campaignName}
+
+You've been invited as a: ${roleDisplay}
+
+Click the link below to view the invitation and join the campaign:
+${magicLink}
+
+---
+This invitation was sent from CSheet. If you didn't expect this, you can safely ignore it.
+  `
+
+  try {
+    await transport.sendMail({
+      from: config.smtpFrom,
+      to,
+      subject: `You're invited to join "${campaignName}" on CSheet`,
+      text: textContent.trim(),
+      html: htmlContent.trim(),
+    })
+
+    logger.info("Campaign invite email sent", { to, campaignName })
+  } catch (error) {
+    logger.error("Failed to send campaign invite email", error as Error, { to, campaignName })
+    throw new Error("Failed to send invite email")
   }
 }

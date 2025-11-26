@@ -77,6 +77,7 @@ export async function createCampaign(
       campaign_id: campaign.id,
       user_id: user.id,
       role: "dm",
+      invite_token: null,
       invited_by: user.id,
       accepted_at: new Date(),
       declined_at: null,

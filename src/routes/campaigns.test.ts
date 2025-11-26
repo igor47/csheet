@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test"
-import { create as createCampaignMemberDb } from "@src/db/campaign_members"
 import type { Campaign } from "@src/db/campaigns"
 import type { User } from "@src/db/users"
 import { useTestApp } from "@src/test/app"
-import { campaignFactory } from "@src/test/factories/campaign"
+import { campaignFactory, campaignMemberFactory } from "@src/test/factories/campaign"
 import { userFactory } from "@src/test/factories/user"
 import { expectElement, makeRequest, parseHtml } from "@src/test/http"
 
@@ -190,14 +189,10 @@ describe("GET /campaigns?show_archived=true", () => {
           testCtx.db
         )
         // Add current user as player member
-        await createCampaignMemberDb(testCtx.db, {
-          campaign_id: campaign.id,
-          user_id: user.id,
-          role: "player",
-          invited_by: dmUser.id,
-          accepted_at: new Date(),
-          declined_at: null,
-        })
+        await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: user.id, invited_by: dmUser.id },
+          testCtx.db
+        )
         // Archive the campaign
         await testCtx.db`UPDATE campaigns SET archived_at = CURRENT_TIMESTAMP WHERE id = ${campaign.id}`
       })
@@ -298,14 +293,10 @@ describe("GET /campaigns/:id", () => {
       beforeEach(async () => {
         playerUser = await userFactory.create({}, testCtx.db)
         // Add player member
-        await createCampaignMemberDb(testCtx.db, {
-          campaign_id: campaign.id,
-          user_id: playerUser.id,
-          role: "player",
-          invited_by: user.id,
-          accepted_at: new Date(),
-          declined_at: null,
-        })
+        await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: playerUser.id, invited_by: user.id },
+          testCtx.db
+        )
         // Archive the campaign
         await testCtx.db`UPDATE campaigns SET archived_at = CURRENT_TIMESTAMP WHERE id = ${campaign.id}`
       })
@@ -392,14 +383,10 @@ describe("POST /campaigns/:id/archive", () => {
       beforeEach(async () => {
         playerUser = await userFactory.create({}, testCtx.db)
         // Add as player member
-        await createCampaignMemberDb(testCtx.db, {
-          campaign_id: campaign.id,
-          user_id: playerUser.id,
-          role: "player",
-          invited_by: user.id,
-          accepted_at: new Date(),
-          declined_at: null,
-        })
+        await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: playerUser.id, invited_by: user.id },
+          testCtx.db
+        )
       })
 
       test("returns 403 forbidden", async () => {
@@ -519,14 +506,10 @@ describe("POST /campaigns/:id/unarchive", () => {
       beforeEach(async () => {
         playerUser = await userFactory.create({}, testCtx.db)
         // Add as player member
-        await createCampaignMemberDb(testCtx.db, {
-          campaign_id: campaign.id,
-          user_id: playerUser.id,
-          role: "player",
-          invited_by: user.id,
-          accepted_at: new Date(),
-          declined_at: null,
-        })
+        await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: playerUser.id, invited_by: user.id },
+          testCtx.db
+        )
       })
 
       test("returns 403 forbidden", async () => {
@@ -596,6 +579,329 @@ describe("Campaign archiving - name reuse", () => {
       expect(body).toContain("You haven't created or joined any campaigns yet")
       // Should show checkbox since archived campaigns exist
       expect(body).toContain("Show archived campaigns")
+    })
+  })
+})
+
+describe("GET /campaigns/:id/invite", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a DM", () => {
+    let user: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: user.id }, testCtx.db)
+    })
+
+    test("returns the invite modal form", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, { user })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("Invite Member")
+      expect(body).toContain("Email Address")
+    })
+  })
+
+  describe("when user is a player", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+    })
+
+    test("redirects with error flash", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+        user: playerUser,
+      })
+
+      expect(response.status).toBe(403)
+      expect(response.headers.get("HX-Redirect")).toBe(`/campaigns/${campaign.id}`)
+    })
+  })
+})
+
+describe("POST /campaigns/:id/invite", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a DM", () => {
+    let user: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: user.id }, testCtx.db)
+    })
+
+    test("creates an invite and returns success", async () => {
+      const formData = new FormData()
+      formData.append("email", "newplayer@example.com")
+      formData.append("role", "player")
+
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+        user,
+        method: "POST",
+        body: formData,
+      })
+
+      // Success returns 204 with HX-Refresh to reload the page
+      expect(response.status).toBe(204)
+      expect(response.headers.get("HX-Refresh")).toBe("true")
+      expect(response.headers.get("HX-Trigger")).toBe("closeModal")
+    })
+
+    test("creates a campaign member with pending status", async () => {
+      const formData = new FormData()
+      formData.append("email", "newplayer@example.com")
+      formData.append("role", "player")
+
+      await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+        user,
+        method: "POST",
+        body: formData,
+      })
+
+      // Check that a pending member was created
+      const members = await testCtx.db`
+        SELECT cm.*, u.email
+        FROM campaign_members cm
+        JOIN users u ON u.id = cm.user_id
+        WHERE cm.campaign_id = ${campaign.id} AND u.email = 'newplayer@example.com'
+      `
+
+      expect(members.length).toBe(1)
+      expect(members[0].accepted_at).toBeNull()
+      expect(members[0].role).toBe("player")
+    })
+
+    test("fails if email is already a member", async () => {
+      const existingUser = await userFactory.create({ email: "existing@example.com" }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: existingUser.id, invited_by: user.id },
+        testCtx.db
+      )
+
+      const formData = new FormData()
+      formData.append("email", "existing@example.com")
+      formData.append("role", "player")
+
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+        user,
+        method: "POST",
+        body: formData,
+      })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("already a member")
+    })
+  })
+
+  describe("when user is not a DM", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+    })
+
+    test("redirects with error flash", async () => {
+      const formData = new FormData()
+      formData.append("email", "newplayer@example.com")
+      formData.append("role", "player")
+
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+        user: playerUser,
+        method: "POST",
+        body: formData,
+      })
+
+      expect(response.status).toBe(403)
+      expect(response.headers.get("HX-Redirect")).toBe(`/campaigns/${campaign.id}`)
+    })
+  })
+})
+
+describe("POST /campaigns/:id/accept", () => {
+  const testCtx = useTestApp()
+
+  describe("when user has a pending invite", () => {
+    let dmUser: User
+    let invitedUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      // Create pending invite
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, pending: true },
+        testCtx.db
+      )
+    })
+
+    test("accepts the invite and redirects to campaign", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/accept`, {
+        user: invitedUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("HX-Redirect")).toBe(`/campaigns/${campaign.id}`)
+    })
+
+    test("updates the membership to accepted", async () => {
+      await makeRequest(testCtx.app, `/campaigns/${campaign.id}/accept`, {
+        user: invitedUser,
+        method: "POST",
+      })
+
+      const members = await testCtx.db`
+        SELECT * FROM campaign_members
+        WHERE campaign_id = ${campaign.id} AND user_id = ${invitedUser.id}
+      `
+
+      expect(members[0].accepted_at).not.toBeNull()
+    })
+  })
+
+  describe("when user has no invite", () => {
+    let dmUser: User
+    let otherUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      otherUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+    })
+
+    test("returns 400 with error", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/accept`, {
+        user: otherUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(400)
+      expect(response.headers.get("HX-Redirect")).toBe("/campaigns")
+    })
+  })
+})
+
+describe("POST /campaigns/:id/decline", () => {
+  const testCtx = useTestApp()
+
+  describe("when user has a pending invite", () => {
+    let dmUser: User
+    let invitedUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      // Create pending invite
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, pending: true },
+        testCtx.db
+      )
+    })
+
+    test("declines the invite and redirects to campaigns", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/decline`, {
+        user: invitedUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("HX-Redirect")).toBe("/campaigns")
+    })
+
+    test("updates the membership to declined", async () => {
+      await makeRequest(testCtx.app, `/campaigns/${campaign.id}/decline`, {
+        user: invitedUser,
+        method: "POST",
+      })
+
+      const members = await testCtx.db`
+        SELECT * FROM campaign_members
+        WHERE campaign_id = ${campaign.id} AND user_id = ${invitedUser.id}
+      `
+
+      expect(members[0].declined_at).not.toBeNull()
+    })
+  })
+})
+
+describe("GET /campaigns with pending invites", () => {
+  const testCtx = useTestApp()
+
+  describe("when user has a pending invite", () => {
+    let dmUser: User
+    let invitedUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      // Create pending invite
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, pending: true },
+        testCtx.db
+      )
+    })
+
+    test("shows the campaign with pending invite badge and inviter", async () => {
+      const response = await makeRequest(testCtx.app, "/campaigns", { user: invitedUser })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain(campaign.name)
+      expect(body).toContain("Pending Invite")
+      expect(body).toContain(`from ${dmUser.email}`)
+    })
+
+    test("shows accept button", async () => {
+      const response = await makeRequest(testCtx.app, "/campaigns", { user: invitedUser })
+
+      const document = await parseHtml(response)
+      const acceptButton = expectElement(document, `[data-testid="accept-${campaign.id}"]`)
+
+      expect(acceptButton.getAttribute("hx-post")).toBe(`/campaigns/${campaign.id}/accept`)
+    })
+
+    test("shows decline button", async () => {
+      const response = await makeRequest(testCtx.app, "/campaigns", { user: invitedUser })
+
+      const document = await parseHtml(response)
+      const declineButton = expectElement(document, `[data-testid="decline-${campaign.id}"]`)
+
+      expect(declineButton.getAttribute("hx-post")).toBe(`/campaigns/${campaign.id}/decline`)
     })
   })
 })

@@ -1,13 +1,17 @@
 import { Campaign } from "@src/components/Campaign"
+import { CampaignInviteForm } from "@src/components/CampaignInviteForm"
 import { CampaignNew } from "@src/components/CampaignNew"
 import { Campaigns } from "@src/components/Campaigns"
 import { getDb } from "@src/db"
 import { countArchivedByUserId } from "@src/db/campaigns"
+import { getBaseUrl } from "@src/lib/url"
 import { setFlashMsg } from "@src/middleware/flash"
 import { archiveCampaign } from "@src/services/campaigns/archive"
 import { authorizeCampaign, handleCampaignUnallowed } from "@src/services/campaigns/authorize"
 import { createCampaign } from "@src/services/campaigns/create"
+import { createInvite } from "@src/services/campaigns/invite"
 import { listCampaigns } from "@src/services/campaigns/list"
+import { respondToInvite } from "@src/services/campaigns/respond"
 import { unarchiveCampaign } from "@src/services/campaigns/unarchive"
 import { Hono } from "hono"
 
@@ -113,4 +117,102 @@ campaignsRoutes.post("/campaigns/:id/unarchive", async (c) => {
   await setFlashMsg(c, `Campaign "${authResult.campaign.name}" has been restored`, "success")
   c.header("HX-Redirect", "/campaigns")
   return c.body(null, 204)
+})
+
+// Invite modal content (GET returns form)
+campaignsRoutes.get("/campaigns/:id/invite", async (c) => {
+  const id = c.req.param("id") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Only DMs can invite
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can invite members", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  return c.html(<CampaignInviteForm campaignId={id} />)
+})
+
+// Send invite (POST)
+campaignsRoutes.post("/campaigns/:id/invite", async (c) => {
+  const id = c.req.param("id") as string
+  const user = c.var.user!
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Only DMs can invite
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can invite members", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const result = await createInvite(getDb(c), authResult.campaign, user, {
+    ...body,
+    baseUrl: getBaseUrl(c),
+  })
+
+  // Validation failed - re-render form with values and errors
+  if (!result.complete) {
+    return c.html(
+      <CampaignInviteForm campaignId={id} values={result.values} errors={result.errors} />
+    )
+  }
+
+  // Success - close the modal and set flash message
+  // The user can see the new pending member when they refresh or navigate to the campaign
+  await setFlashMsg(c, `Invitation sent to ${body.email}`, "success")
+  c.header("HX-Trigger", "closeModal")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
+})
+
+// Accept invite from campaigns list (already logged in)
+// Note: Cannot use authorizeCampaign here because pending invites have accepted_at=null,
+// so getUserRole() returns null and the user would be treated as "not_member".
+// The respondToInvite service handles membership lookup directly.
+campaignsRoutes.post("/campaigns/:id/accept", async (c) => {
+  const id = c.req.param("id") as string
+  const user = c.var.user!
+
+  const result = await respondToInvite(getDb(c), id, user, "accept")
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors._form || "Failed to accept invitation", "error")
+    c.header("HX-Redirect", "/campaigns")
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, "Welcome to the campaign!", "success")
+  c.header("HX-Redirect", `/campaigns/${id}`)
+  return c.body(null, 200)
+})
+
+// Decline invite from campaigns list
+// Note: Same as accept - cannot use authorizeCampaign for pending invites.
+campaignsRoutes.post("/campaigns/:id/decline", async (c) => {
+  const id = c.req.param("id") as string
+  const user = c.var.user!
+
+  const result = await respondToInvite(getDb(c), id, user, "decline")
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors._form || "Failed to decline invitation", "error")
+    c.header("HX-Redirect", "/campaigns")
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, "Invitation declined", "info")
+  c.header("HX-Redirect", "/campaigns")
+  return c.body(null, 200)
 })

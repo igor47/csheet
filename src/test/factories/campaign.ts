@@ -1,7 +1,9 @@
 import { faker } from "@faker-js/faker"
+import type { CampaignMember, CampaignMemberRole } from "@src/db/campaign_members"
 import { create as createCampaignMemberDb } from "@src/db/campaign_members"
 import type { Campaign, CreateCampaign } from "@src/db/campaigns"
 import { create as createCampaign } from "@src/db/campaigns"
+import { ulid } from "@src/lib/ids"
 import type { SQL } from "bun"
 import { Factory } from "fishery"
 
@@ -52,11 +54,46 @@ export const campaignFactory = {
       campaign_id: campaign.id,
       user_id: built.created_by,
       role: "dm",
+      invite_token: null,
       invited_by: built.created_by,
       accepted_at: new Date(),
       declined_at: null,
     })
 
     return campaign
+  },
+}
+
+interface CampaignMemberFactoryParams {
+  campaign_id: string
+  user_id: string
+  role?: CampaignMemberRole
+  invited_by: string
+  // If true, generates an invite_token (for pending invites)
+  pending?: boolean
+}
+
+/**
+ * Create a test campaign member in the database
+ * Usage:
+ *   // Accepted member (default)
+ *   await campaignMemberFactory.create({ campaign_id, user_id, invited_by }, db)
+ *
+ *   // Pending invite
+ *   await campaignMemberFactory.create({ campaign_id, user_id, invited_by, pending: true }, db)
+ */
+export const campaignMemberFactory = {
+  create: async (params: CampaignMemberFactoryParams, db: SQL): Promise<CampaignMember> => {
+    const isPending = params.pending ?? false
+
+    return await createCampaignMemberDb(db, {
+      campaign_id: params.campaign_id,
+      user_id: params.user_id,
+      role: params.role ?? "player",
+      invite_token: isPending ? ulid() : null,
+      invited_by: params.invited_by,
+      accepted_at: isPending ? null : new Date(),
+      declined_at: null,
+    })
   },
 }

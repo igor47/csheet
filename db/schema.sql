@@ -1,4 +1,4 @@
-\restrict ci2up3gcDgxEVyH75VngJaFQTGXiviTOgJgEjTVjWSOVVoIVPvVc33m4EzMsqEM
+\restrict hitsB7Gsm3HAge4eMoF1p4j4aecLU5c5w5oCPVQX6oUzpqPSbANChSvxe8QgMhA
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.0
@@ -80,6 +80,7 @@ CREATE TABLE public.campaign_members (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     invite_token character varying(26),
+    deleted_at timestamp without time zone,
     CONSTRAINT campaign_members_not_both_accepted_and_declined CHECK ((NOT ((accepted_at IS NOT NULL) AND (declined_at IS NOT NULL)))),
     CONSTRAINT campaign_members_role_check CHECK ((role = ANY (ARRAY['dm'::text, 'player'::text, 'viewer'::text])))
 );
@@ -1381,7 +1382,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ci2up3gcDgxEVyH75VngJaFQTGXiviTOgJgEjTVjWSOVVoIVPvVc33m4EzMsqEM
+\unrestrict hitsB7Gsm3HAge4eMoF1p4j4aecLU5c5w5oCPVQX6oUzpqPSbANChSvxe8QgMhA
 
 
 --
@@ -1427,4 +1428,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251112060500'),
     ('20251122030300'),
     ('20251125200357'),
-    ('20251126134731');
+    ('20251126134731'),
+    ('20251205001836');

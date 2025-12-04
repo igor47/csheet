@@ -1,3 +1,4 @@
+import { AvatarDisplay } from "@src/components/AvatarDisplay"
 import { DetailModal } from "@src/components/ui/DetailModal"
 import type {
   ComputedCampaign,
@@ -21,6 +22,8 @@ interface CharacterCardProps {
 
 interface PendingInviteCardProps {
   member: ComputedCampaignMember
+  campaignId: string
+  isDM: boolean
 }
 
 interface NoCharacterCardProps {
@@ -29,77 +32,170 @@ interface NoCharacterCardProps {
   canAdd: boolean
 }
 
-const PendingInviteCard = ({ member }: PendingInviteCardProps) => (
+const PendingInviteCard = ({ member, campaignId, isDM }: PendingInviteCardProps) => (
   <div class="card h-100">
-    <div class="card-body">
-      <h6 class="card-title">{member.email}</h6>
-      <span class="badge bg-warning text-dark">Pending Invite</span>
+    <div class="row g-0">
+      <div class="col-3">
+        <div class="ratio ratio-1x1">
+          <img
+            src="/static/placeholder.png"
+            alt="No avatar"
+            class="rounded-start"
+            style="object-fit: cover;"
+          />
+        </div>
+      </div>
+      <div class="col-9">
+        <div class="card-body">
+          <h6 class="card-title">{member.email}</h6>
+          <span class="badge bg-warning text-dark">Pending Invite</span>
+        </div>
+      </div>
     </div>
+    {isDM && (
+      <div class="card-footer bg-transparent">
+        <button
+          type="button"
+          class="btn btn-outline-danger btn-sm"
+          hx-delete={`/campaigns/${campaignId}/members/${member.id}`}
+          hx-confirm={`Are you sure you want to delete the invitation for ${member.email}?`}
+          data-testid={`delete-invite-${member.id}`}
+        >
+          <i class="bi bi-trash" /> Delete Invite
+        </button>
+      </div>
+    )}
   </div>
 )
 
 interface DeclinedInviteCardProps {
   member: ComputedCampaignMember
+  campaignId: string
+  isDM: boolean
 }
 
-const DeclinedInviteCard = ({ member }: DeclinedInviteCardProps) => (
+const DeclinedInviteCard = ({ member, campaignId, isDM }: DeclinedInviteCardProps) => (
   <div class="card h-100">
-    <div class="card-body">
-      <h6 class="card-title">{member.email}</h6>
-      <span class="badge bg-danger">Declined</span>
+    <div class="row g-0">
+      <div class="col-3">
+        <div class="ratio ratio-1x1">
+          <img
+            src="/static/placeholder.png"
+            alt="No avatar"
+            class="rounded-start"
+            style="object-fit: cover;"
+          />
+        </div>
+      </div>
+      <div class="col-9">
+        <div class="card-body">
+          <h6 class="card-title">{member.email}</h6>
+          <span class="badge bg-danger">Declined</span>
+        </div>
+      </div>
     </div>
+    {isDM && (
+      <div class="card-footer bg-transparent">
+        <button
+          type="button"
+          class="btn btn-outline-danger btn-sm"
+          hx-delete={`/campaigns/${campaignId}/members/${member.id}`}
+          hx-confirm={`Are you sure you want to delete the declined invitation for ${member.email}?`}
+          data-testid={`delete-invite-${member.id}`}
+        >
+          <i class="bi bi-trash" /> Delete
+        </button>
+      </div>
+    )}
   </div>
 )
 
 const NoCharacterCard = ({ member, isCurrentUser, canAdd }: NoCharacterCardProps) => (
   <div class="card h-100">
-    <div class="card-body">
-      <h6 class="card-title">{member.email}</h6>
-      <span class="badge bg-secondary">No Character</span>
-      {canAdd && isCurrentUser && (
-        <div class="mt-2">
-          <button type="button" class="btn btn-sm btn-primary">
-            <i class="bi bi-plus-circle"></i> Add Character
-          </button>
+    <div class="row g-0">
+      <div class="col-3">
+        <div class="ratio ratio-1x1">
+          <img
+            src="/static/placeholder.png"
+            alt="No avatar"
+            class="rounded-start"
+            style="object-fit: cover;"
+          />
         </div>
-      )}
+      </div>
+      <div class="col-9">
+        <div class="card-body">
+          <h6 class="card-title">{member.email}</h6>
+          <span class="badge bg-secondary">No Character</span>
+          {canAdd && isCurrentUser && (
+            <div class="mt-2">
+              <button type="button" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-circle" /> Add Character
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   </div>
 )
 
-const CharacterCard = ({ character, canReveal, isDM }: CharacterCardProps) => (
-  <div class="card h-100">
-    <div class="card-body">
-      <h5 class="card-title">{character.name}</h5>
-      <p class="card-text text-muted">
-        Level {character.level} {character.class_name}
-      </p>
-      <small class="text-muted">
-        {character.isNPC
-          ? `Added by: ${character.added_by_email}`
-          : `Played by: ${character.added_by_email}`}
-      </small>
-      {isDM && !character.revealed_at && character.isNPC && (
-        <div class="mt-2">
-          <span class="badge bg-secondary">Hidden from Players</span>
+const CharacterCard = ({ character, canReveal, isDM }: CharacterCardProps) => {
+  // Build a minimal character object for AvatarDisplay
+  const charForAvatar = {
+    id: character.character_id,
+    name: character.name,
+    avatars: character.avatars,
+  }
+
+  return (
+    <div class="card h-100">
+      <div class="row g-0">
+        <div class="col-3">
+          <div
+            class="h-100"
+            data-bs-toggle="modal"
+            data-bs-target="#detailModal"
+            style="cursor: pointer;"
+          >
+            <AvatarDisplay character={charForAvatar} mode="clickable-lightbox" avatarIndex={0} />
+          </div>
         </div>
-      )}
-      {canReveal && character.isNPC && (
-        <div class="mt-2">
-          {character.revealed_at ? (
-            <button type="button" class="btn btn-sm btn-outline-secondary">
-              <i class="bi bi-eye-slash"></i> Hide
-            </button>
-          ) : (
-            <button type="button" class="btn btn-sm btn-outline-primary">
-              <i class="bi bi-eye"></i> Reveal
-            </button>
-          )}
+        <div class="col-9">
+          <div class="card-body">
+            <h5 class="card-title">{character.name}</h5>
+            <p class="card-text text-muted mb-1">
+              Level {character.level} {character.class_name}
+            </p>
+            <small class="text-muted">
+              {character.isNPC
+                ? `Added by: ${character.added_by_email}`
+                : `Played by: ${character.added_by_email}`}
+            </small>
+            {isDM && !character.revealed_at && character.isNPC && (
+              <div class="mt-2">
+                <span class="badge bg-secondary">Hidden from Players</span>
+              </div>
+            )}
+            {canReveal && character.isNPC && (
+              <div class="mt-2">
+                {character.revealed_at ? (
+                  <button type="button" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-eye-slash" /> Hide
+                  </button>
+                ) : (
+                  <button type="button" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye" /> Reveal
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 const MemberCard = ({ member }: MemberCardProps) => (
   <div class="card h-100">
@@ -115,8 +211,9 @@ const MemberCard = ({ member }: MemberCardProps) => (
 export const Campaign = ({ campaign }: CampaignProps) => {
   const isDM = campaign.userRole === "dm"
 
-  // Filter members by role, excluding declined members for non-DMs
-  const allPartyMembers = campaign.members.filter((m) => m.role !== "viewer")
+  // Filter members by role, excluding DMs (they have their own section) and viewers
+  // Also exclude declined members for non-DMs
+  const allPartyMembers = campaign.members.filter((m) => m.role !== "viewer" && m.role !== "dm")
   const partyMembers = allPartyMembers
     .filter((m) => isDM || !m.declined_at) // Only DMs see declined members
     .sort((a, b) => {
@@ -203,14 +300,14 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                     // Declined invite (only visible to DMs)
                     return (
                       <div class="col" key={member.user_id}>
-                        <DeclinedInviteCard member={member} />
+                        <DeclinedInviteCard member={member} campaignId={campaign.id} isDM={isDM} />
                       </div>
                     )
                   }
                   // Pending invite
                   return (
                     <div class="col" key={member.user_id}>
-                      <PendingInviteCard member={member} />
+                      <PendingInviteCard member={member} campaignId={campaign.id} isDM={isDM} />
                     </div>
                   )
                 })}

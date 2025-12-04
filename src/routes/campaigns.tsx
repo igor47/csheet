@@ -9,6 +9,7 @@ import { setFlashMsg } from "@src/middleware/flash"
 import { archiveCampaign } from "@src/services/campaigns/archive"
 import { authorizeCampaign, handleCampaignUnallowed } from "@src/services/campaigns/authorize"
 import { createCampaign } from "@src/services/campaigns/create"
+import { deleteInvite } from "@src/services/campaigns/deleteInvite"
 import { createInvite } from "@src/services/campaigns/invite"
 import { listCampaigns } from "@src/services/campaigns/list"
 import { respondToInvite } from "@src/services/campaigns/respond"
@@ -215,4 +216,34 @@ campaignsRoutes.post("/campaigns/:id/decline", async (c) => {
   await setFlashMsg(c, "Invitation declined", "info")
   c.header("HX-Redirect", "/campaigns")
   return c.body(null, 200)
+})
+
+// Delete invite (DM only) - for pending or declined invites
+campaignsRoutes.delete("/campaigns/:id/members/:memberId", async (c) => {
+  const id = c.req.param("id") as string
+  const memberId = c.req.param("memberId") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Only DMs can delete invites
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can delete invitations", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  const result = await deleteInvite(getDb(c), id, memberId)
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors._form || "Failed to delete invitation", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, "Invitation deleted", "success")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
 })

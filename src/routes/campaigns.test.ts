@@ -311,6 +311,33 @@ describe("GET /campaigns/:id", () => {
         expect(body).toContain(campaign.name)
       })
     })
+
+    describe("with soft-deleted invites", () => {
+      let invitedUser: User
+
+      beforeEach(async () => {
+        invitedUser = await userFactory.create({}, testCtx.db)
+        // Create a pending invite and soft-delete it
+        await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: user.id, pending: true },
+          testCtx.db
+        )
+        await testCtx.db`
+          UPDATE campaign_members
+          SET deleted_at = CURRENT_TIMESTAMP
+          WHERE campaign_id = ${campaign.id} AND user_id = ${invitedUser.id}
+        `
+      })
+
+      test("soft-deleted members do not appear in the campaign view", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, { user })
+
+        expect(response.status).toBe(200)
+        const body = await response.text()
+        // The soft-deleted user's email should not appear
+        expect(body).not.toContain(invitedUser.email)
+      })
+    })
   })
 })
 
@@ -902,6 +929,240 @@ describe("GET /campaigns with pending invites", () => {
       const declineButton = expectElement(document, `[data-testid="decline-${campaign.id}"]`)
 
       expect(declineButton.getAttribute("hx-post")).toBe(`/campaigns/${campaign.id}/decline`)
+    })
+  })
+})
+
+describe("DELETE /campaigns/:id/members/:memberId", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a DM", () => {
+    let dmUser: User
+    let invitedUser: User
+    let campaign: Campaign
+    let memberId: string
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+    })
+
+    describe("with a pending invite", () => {
+      beforeEach(async () => {
+        const member = await campaignMemberFactory.create(
+          {
+            campaign_id: campaign.id,
+            user_id: invitedUser.id,
+            invited_by: dmUser.id,
+            pending: true,
+          },
+          testCtx.db
+        )
+        memberId = member.id
+      })
+
+      test("soft-deletes the pending invite", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/${memberId}`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        expect(response.status).toBe(204)
+        expect(response.headers.get("HX-Refresh")).toBe("true")
+
+        // Verify member was soft-deleted (deleted_at is set)
+        const members = await testCtx.db`
+          SELECT * FROM campaign_members WHERE id = ${memberId}
+        `
+        expect(members.length).toBe(1)
+        expect(members[0].deleted_at).not.toBeNull()
+      })
+
+      test("sets success flash message", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/${memberId}`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        const setCookie = response.headers.get("Set-Cookie")
+        expect(setCookie).toContain("flash")
+      })
+    })
+
+    describe("with a declined invite", () => {
+      beforeEach(async () => {
+        const member = await campaignMemberFactory.create(
+          {
+            campaign_id: campaign.id,
+            user_id: invitedUser.id,
+            invited_by: dmUser.id,
+            pending: true,
+          },
+          testCtx.db
+        )
+        memberId = member.id
+        // Decline the invite
+        await testCtx.db`
+          UPDATE campaign_members
+          SET declined_at = CURRENT_TIMESTAMP
+          WHERE id = ${memberId}
+        `
+      })
+
+      test("soft-deletes the declined invite", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/${memberId}`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        expect(response.status).toBe(204)
+
+        // Verify member was soft-deleted (deleted_at is set)
+        const members = await testCtx.db`
+          SELECT * FROM campaign_members WHERE id = ${memberId}
+        `
+        expect(members.length).toBe(1)
+        expect(members[0].deleted_at).not.toBeNull()
+      })
+    })
+
+    describe("with an accepted member", () => {
+      beforeEach(async () => {
+        const member = await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id },
+          testCtx.db
+        )
+        memberId = member.id
+      })
+
+      test("returns error and does not delete", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/${memberId}`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        expect(response.status).toBe(400)
+
+        // Verify member was not deleted
+        const members = await testCtx.db`
+          SELECT * FROM campaign_members WHERE id = ${memberId}
+        `
+        expect(members.length).toBe(1)
+      })
+    })
+
+    describe("with non-existent member", () => {
+      test("returns error", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/nonexistent`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        expect(response.status).toBe(400)
+      })
+    })
+
+    describe("with member from different campaign", () => {
+      let otherCampaign: Campaign
+      let otherMemberId: string
+
+      beforeEach(async () => {
+        otherCampaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+        const member = await campaignMemberFactory.create(
+          {
+            campaign_id: otherCampaign.id,
+            user_id: invitedUser.id,
+            invited_by: dmUser.id,
+            pending: true,
+          },
+          testCtx.db
+        )
+        otherMemberId = member.id
+      })
+
+      test("returns error", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/${otherMemberId}`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        expect(response.status).toBe(400)
+      })
+    })
+  })
+
+  describe("when user is a player", () => {
+    let dmUser: User
+    let playerUser: User
+    let invitedUser: User
+    let campaign: Campaign
+    let memberId: string
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      // Add player member
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      // Create pending invite
+      const member = await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, pending: true },
+        testCtx.db
+      )
+      memberId = member.id
+    })
+
+    test("returns 403 forbidden", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/members/${memberId}`,
+        { user: playerUser, method: "DELETE" }
+      )
+
+      expect(response.status).toBe(403)
+    })
+  })
+
+  describe("when user is not a member", () => {
+    let dmUser: User
+    let otherUser: User
+    let invitedUser: User
+    let campaign: Campaign
+    let memberId: string
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      otherUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      // Create pending invite
+      const member = await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, pending: true },
+        testCtx.db
+      )
+      memberId = member.id
+    })
+
+    test("returns unauthorized", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/members/${memberId}`,
+        { user: otherUser, method: "DELETE" }
+      )
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/campaigns")
     })
   })
 })

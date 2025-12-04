@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 import type { CreateAuthTokenResult } from "@src/db/auth_tokens"
+import type { Campaign } from "@src/db/campaigns"
+import type { User } from "@src/db/users"
 import { useTestApp } from "@src/test/app"
 import { authTokenFactory } from "@src/test/factories/auth_token"
+import { campaignFactory, campaignMemberFactory } from "@src/test/factories/campaign"
 import { userFactory } from "@src/test/factories/user"
 import { expectElement, makeRequest, parseHtml } from "@src/test/http"
 
@@ -431,5 +434,101 @@ describe("OTP rate limiting", () => {
     // Check for error flash message
     const setCookie = response.headers.get("Set-Cookie")
     expect(setCookie).toContain("flash")
+  })
+})
+
+describe("GET /invite/view", () => {
+  const testCtx = useTestApp()
+
+  describe("with a valid pending invite token", () => {
+    let dmUser: User
+    let invitedUser: User
+    let campaign: Campaign
+    let inviteToken: string
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      const member = await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, pending: true },
+        testCtx.db
+      )
+      inviteToken = member.invite_token!
+    })
+
+    test("logs in user and redirects to campaigns with info flash", async () => {
+      const response = await makeRequest(testCtx.app, `/invite/view?token=${inviteToken}`)
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/campaigns")
+
+      // Check for auth cookie
+      const setCookie = response.headers.get("Set-Cookie")
+      expect(setCookie).toContain("user_id")
+      expect(setCookie).toContain("flash")
+    })
+  })
+
+  describe("with a soft-deleted invite token", () => {
+    let dmUser: User
+    let invitedUser: User
+    let campaign: Campaign
+    let inviteToken: string
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      invitedUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      const member = await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, pending: true },
+        testCtx.db
+      )
+      inviteToken = member.invite_token!
+      // Soft-delete the invite
+      await testCtx.db`
+        UPDATE campaign_members
+        SET deleted_at = CURRENT_TIMESTAMP
+        WHERE id = ${member.id}
+      `
+    })
+
+    test("logs in user and redirects to campaigns with warning flash", async () => {
+      const response = await makeRequest(testCtx.app, `/invite/view?token=${inviteToken}`)
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/campaigns")
+
+      // Check for auth cookie - user is still logged in
+      const setCookie = response.headers.get("Set-Cookie")
+      expect(setCookie).toContain("user_id")
+      expect(setCookie).toContain("flash")
+    })
+  })
+
+  describe("with an invalid token", () => {
+    test("redirects to login with error", async () => {
+      const response = await makeRequest(testCtx.app, "/invite/view?token=invalid-token")
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/login")
+
+      // Check for error flash message
+      const setCookie = response.headers.get("Set-Cookie")
+      expect(setCookie).toContain("flash")
+    })
+  })
+
+  describe("with no token", () => {
+    test("redirects to login with error", async () => {
+      const response = await makeRequest(testCtx.app, "/invite/view")
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/login")
+
+      // Check for error flash message
+      const setCookie = response.headers.get("Set-Cookie")
+      expect(setCookie).toContain("flash")
+    })
   })
 })

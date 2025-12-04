@@ -224,6 +224,17 @@ authRoutes.get("/invite/view", async (c) => {
   }
 
   await setAuthCookie(c, user.id)
-  await setFlashMsg(c, "You have a pending campaign invite - accept or decline below", "info")
+
+  // Check if invite was deleted - show warning instead of normal message
+  if (tokenResult.deletedAt) {
+    await setFlashMsg(
+      c,
+      "This invitation has been deleted. Contact the campaign organizer if you believe this is a mistake.",
+      "warning"
+    )
+  } else {
+    await setFlashMsg(c, "You have a pending campaign invite - accept or decline below", "info")
+  }
+
   return c.redirect("/campaigns")
 })

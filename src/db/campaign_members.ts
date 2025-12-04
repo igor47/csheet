@@ -83,6 +83,7 @@ export async function findByCampaignId(
     FROM campaign_members cm
     JOIN users u ON u.id = cm.user_id
     WHERE cm.campaign_id = ${campaignId}
+      AND cm.deleted_at IS NULL
     ORDER BY cm.invited_at ASC
   `
 
@@ -213,15 +214,17 @@ export interface InviteTokenResult {
   memberId: string
   campaignId: string
   email: string
+  deletedAt: Date | null
 }
 
 /**
- * Find a pending invite by its token
+ * Find an invite by its token
  * Returns null if token not found or invite already accepted/declined
+ * Note: Also returns soft-deleted invites (check deletedAt field)
  */
 export async function findByInviteToken(db: SQL, token: string): Promise<InviteTokenResult | null> {
   const result = await db`
-    SELECT cm.id, cm.campaign_id, u.email
+    SELECT cm.id, cm.campaign_id, cm.deleted_at, u.email
     FROM campaign_members cm
     JOIN users u ON u.id = cm.user_id
     WHERE cm.invite_token = ${token}
@@ -237,5 +240,18 @@ export async function findByInviteToken(db: SQL, token: string): Promise<InviteT
     memberId: result[0].id,
     campaignId: result[0].campaign_id,
     email: result[0].email,
+    deletedAt: result[0].deleted_at ? new Date(result[0].deleted_at) : null,
   }
+}
+
+/**
+ * Soft-delete a campaign member by ID (sets deleted_at)
+ */
+export async function softDelete(db: SQL, id: string): Promise<void> {
+  const now = new Date()
+  await db`
+    UPDATE campaign_members
+    SET deleted_at = ${now.toISOString()}, updated_at = ${now.toISOString()}
+    WHERE id = ${id}
+  `
 }

@@ -21,6 +21,7 @@ export interface ComputedCampaignCharacter extends CampaignCharacterWithAddedBy 
   class_name: string
   user_id: string // owner of character
   isNPC: boolean
+  avatars: ListCharacter["avatars"]
 }
 
 export interface ComputedCampaign extends Campaign {
@@ -97,6 +98,7 @@ function buildComputedCharacters(
       class_name: details?.classes[0]?.class || "Unknown",
       user_id: details?.user_id || "",
       isNPC: dmUserIds.has(cc.added_by),
+      avatars: details?.avatars || [],
     }
   })
 }

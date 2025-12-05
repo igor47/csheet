@@ -81,3 +81,17 @@ export async function findByCampaignId(
 
   return result.map(parseCampaignCharacterWithAddedBy)
 }
+
+export async function deleteByCharacterId(
+  db: SQL,
+  campaignId: string,
+  characterId: string
+): Promise<boolean> {
+  const result = await db`
+    DELETE FROM campaign_characters
+    WHERE campaign_id = ${campaignId} AND character_id = ${characterId}
+    RETURNING id
+  `
+
+  return result.length > 0
+}

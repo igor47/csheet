@@ -1,4 +1,4 @@
-import { AvatarDisplay } from "@src/components/AvatarDisplay"
+import { CampaignCharacterCard } from "@src/components/ui/CampaignCharacterCard"
 import { DetailModal } from "@src/components/ui/DetailModal"
 import type {
   ComputedCampaign,
@@ -17,7 +17,9 @@ interface MemberCardProps {
 
 interface CharacterCardProps {
   character: ComputedCampaignCharacter
+  campaignId: string
   canReveal: boolean
+  canRemove: boolean
   isDM: boolean
   isCurrentUser: boolean
 }
@@ -149,60 +151,112 @@ const NoCharacterCard = ({ member, isCurrentUser }: NoCharacterCardProps) => (
   </div>
 )
 
-const CharacterCard = ({ character, canReveal, isDM, isCurrentUser }: CharacterCardProps) => {
-  // Build a minimal character object for AvatarDisplay
-  const charForAvatar = {
-    id: character.character_id,
-    name: character.name,
-    avatars: character.avatars,
-  }
+const CharacterCard = ({
+  character,
+  campaignId,
+  canReveal,
+  canRemove,
+  isDM,
+  isCurrentUser,
+}: CharacterCardProps) => {
+  const subtitle = character.isNPC
+    ? `Added by: ${character.added_by_email}`
+    : `Played by: ${character.added_by_email}`
+
+  // Determine what actions to show
+  const showView = isCurrentUser
+  const showRemove = canRemove
+  const showAddAnother = isCurrentUser && !character.isNPC
 
   return (
-    <div class={`card h-100 ${isCurrentUser ? "border-primary border-2" : ""}`}>
-      <div class="row g-0">
-        <div class="col-3">
-          <div
-            class="h-100"
-            data-bs-toggle="modal"
-            data-bs-target="#detailModal"
-            style="cursor: pointer;"
+    <CampaignCharacterCard
+      character={{
+        id: character.character_id,
+        name: character.name,
+        avatars: character.avatars,
+        level: character.level,
+        className: character.class_name,
+      }}
+      subtitle={subtitle}
+      isCurrentUser={isCurrentUser}
+    >
+      {/* NPC-specific badges and reveal button */}
+      {isDM && !character.revealed_at && character.isNPC && (
+        <span class="badge bg-secondary">Hidden from Players</span>
+      )}
+      {canReveal && character.isNPC && character.revealed_at && (
+        <button type="button" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-eye-slash" /> Hide
+        </button>
+      )}
+      {canReveal && character.isNPC && !character.revealed_at && (
+        <button type="button" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-eye" /> Reveal
+        </button>
+      )}
+
+      {/* Player character actions */}
+      {showView && (
+        <a href={`/characters/${character.character_id}`} class="btn btn-sm btn-outline-primary">
+          View
+        </a>
+      )}
+
+      {/* Overflow menu for owner or Remove button for DM */}
+      {isCurrentUser && (showRemove || showAddAnother) ? (
+        <div class="dropdown">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary dropdown-toggle"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
           >
-            <AvatarDisplay character={charForAvatar} mode="clickable-lightbox" avatarIndex={0} />
-          </div>
-        </div>
-        <div class="col-9">
-          <div class="card-body">
-            <h5 class="card-title">{character.name}</h5>
-            <p class="card-text text-muted mb-1">
-              Level {character.level} {character.class_name}
-            </p>
-            <small class="text-muted">
-              {character.isNPC
-                ? `Added by: ${character.added_by_email}`
-                : `Played by: ${character.added_by_email}`}
-            </small>
-            {isDM && !character.revealed_at && character.isNPC && (
-              <div class="mt-2">
-                <span class="badge bg-secondary">Hidden from Players</span>
-              </div>
+            <i class="bi bi-three-dots-vertical" />
+          </button>
+          <ul class="dropdown-menu">
+            {showRemove && (
+              <li>
+                <button
+                  type="button"
+                  class="dropdown-item text-danger"
+                  hx-delete={`/campaigns/${campaignId}/characters/${character.character_id}`}
+                  hx-confirm={`Remove ${character.name} from this campaign?`}
+                >
+                  <i class="bi bi-x-circle" /> Remove from Campaign
+                </button>
+              </li>
             )}
-            {canReveal && character.isNPC && (
-              <div class="mt-2">
-                {character.revealed_at ? (
-                  <button type="button" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-eye-slash" /> Hide
-                  </button>
-                ) : (
-                  <button type="button" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-eye" /> Reveal
-                  </button>
-                )}
-              </div>
+            {showAddAnother && (
+              <li>
+                <button
+                  type="button"
+                  class="dropdown-item"
+                  data-bs-toggle="modal"
+                  data-bs-target="#detailModal"
+                  hx-get={`/campaigns/${campaignId}/add-character`}
+                  hx-target="#detailModalContent"
+                  hx-swap="innerHTML"
+                >
+                  <i class="bi bi-plus-circle" /> Add Another Character
+                </button>
+              </li>
             )}
-          </div>
+          </ul>
         </div>
-      </div>
-    </div>
+      ) : (
+        showRemove &&
+        !isCurrentUser && (
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger"
+            hx-delete={`/campaigns/${campaignId}/characters/${character.character_id}`}
+            hx-confirm={`Remove ${character.name} from this campaign?`}
+          >
+            Remove
+          </button>
+        )
+      )}
+    </CampaignCharacterCard>
   )
 }
 
@@ -283,13 +337,16 @@ export const Campaign = ({ campaign }: CampaignProps) => {
 
                   if (memberChar) {
                     // Has character - render character-first
+                    const isOwner = memberChar.user_id === campaign.currentUserId
                     return (
                       <div class="col" key={member.user_id}>
                         <CharacterCard
                           character={memberChar}
+                          campaignId={campaign.id}
                           canReveal={campaign.canRevealCharacters}
+                          canRemove={isOwner || isDM}
                           isDM={isDM}
-                          isCurrentUser={memberChar.user_id === campaign.currentUserId}
+                          isCurrentUser={isOwner}
                         />
                       </div>
                     )
@@ -343,16 +400,21 @@ export const Campaign = ({ campaign }: CampaignProps) => {
               </div>
             ) : (
               <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                {visibleNPCs.map((npc) => (
-                  <div class="col" key={npc.id}>
-                    <CharacterCard
-                      character={npc}
-                      canReveal={campaign.canRevealCharacters}
-                      isDM={isDM}
-                      isCurrentUser={npc.added_by === campaign.currentUserId}
-                    />
-                  </div>
-                ))}
+                {visibleNPCs.map((npc) => {
+                  const isOwner = npc.added_by === campaign.currentUserId
+                  return (
+                    <div class="col" key={npc.id}>
+                      <CharacterCard
+                        character={npc}
+                        campaignId={campaign.id}
+                        canReveal={campaign.canRevealCharacters}
+                        canRemove={isOwner || isDM}
+                        isDM={isDM}
+                        isCurrentUser={isOwner}
+                      />
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

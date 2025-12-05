@@ -1,4 +1,6 @@
 import { faker } from "@faker-js/faker"
+import type { CampaignCharacter } from "@src/db/campaign_characters"
+import { create as createCampaignCharacterDb } from "@src/db/campaign_characters"
 import type { CampaignMember, CampaignMemberRole } from "@src/db/campaign_members"
 import { create as createCampaignMemberDb } from "@src/db/campaign_members"
 import type { Campaign, CreateCampaign } from "@src/db/campaigns"
@@ -94,6 +96,29 @@ export const campaignMemberFactory = {
       invited_by: params.invited_by,
       accepted_at: isPending ? null : new Date(),
       declined_at: null,
+    })
+  },
+}
+
+interface CampaignCharacterFactoryParams {
+  campaign_id: string
+  character_id: string
+  added_by: string
+  revealed_at?: Date | null
+}
+
+/**
+ * Create a test campaign character in the database
+ * Usage:
+ *   await campaignCharacterFactory.create({ campaign_id, character_id, added_by }, db)
+ */
+export const campaignCharacterFactory = {
+  create: async (params: CampaignCharacterFactoryParams, db: SQL): Promise<CampaignCharacter> => {
+    return await createCampaignCharacterDb(db, {
+      campaign_id: params.campaign_id,
+      character_id: params.character_id,
+      added_by: params.added_by,
+      revealed_at: params.revealed_at ?? new Date(),
     })
   },
 }

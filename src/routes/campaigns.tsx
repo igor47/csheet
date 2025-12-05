@@ -14,6 +14,7 @@ import { createCampaign } from "@src/services/campaigns/create"
 import { deleteInvite } from "@src/services/campaigns/deleteInvite"
 import { createInvite } from "@src/services/campaigns/invite"
 import { listCampaigns } from "@src/services/campaigns/list"
+import { removeCharacterFromCampaign } from "@src/services/campaigns/removeCharacter"
 import { respondToInvite } from "@src/services/campaigns/respond"
 import { unarchiveCampaign } from "@src/services/campaigns/unarchive"
 import { listCharacters } from "@src/services/listCharacters"
@@ -299,6 +300,29 @@ campaignsRoutes.post("/campaigns/:id/characters/:characterId", async (c) => {
 
   await setFlashMsg(c, "Character added to campaign!", "success")
   c.header("HX-Trigger", "closeModal")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
+})
+
+// Remove character from campaign - DELETE
+campaignsRoutes.delete("/campaigns/:id/characters/:characterId", async (c) => {
+  const id = c.req.param("id") as string
+  const characterId = c.req.param("characterId") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  const result = await removeCharacterFromCampaign(getDb(c), authResult.campaign, characterId)
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors.general || "Failed to remove character", "error")
+    c.header("HX-Refresh", "true")
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, "Character removed from campaign", "success")
   c.header("HX-Refresh", "true")
   return c.body(null, 204)
 })

@@ -4,7 +4,11 @@ import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import { ulid } from "@src/lib/ids"
 import { useTestApp } from "@src/test/app"
-import { campaignFactory, campaignMemberFactory } from "@src/test/factories/campaign"
+import {
+  campaignCharacterFactory,
+  campaignFactory,
+  campaignMemberFactory,
+} from "@src/test/factories/campaign"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { expectElement, makeRequest, parseHtml } from "@src/test/http"
@@ -1420,6 +1424,163 @@ describe("POST /campaigns/:id/characters/:characterId", () => {
         testCtx.app,
         `/campaigns/${campaign.id}/characters/${character.id}`,
         { user: otherUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/campaigns")
+    })
+  })
+})
+
+describe("DELETE /campaigns/:id/characters/:characterId", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is not authenticated", () => {
+    test("redirects to login page", async () => {
+      const response = await makeRequest(testCtx.app, "/campaigns/123/characters/456", {
+        method: "DELETE",
+      })
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toContain("/login")
+    })
+  })
+
+  describe("when user is the character owner", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: playerUser.id }, testCtx.db)
+
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      await campaignCharacterFactory.create(
+        { campaign_id: campaign.id, character_id: character.id, added_by: playerUser.id },
+        testCtx.db
+      )
+    })
+
+    test("removes the character from the campaign", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: playerUser, method: "DELETE" }
+      )
+
+      expect(response.status).toBe(204)
+      expect(response.headers.get("HX-Refresh")).toBe("true")
+    })
+
+    test("cannot remove another player's character", async () => {
+      const otherPlayer = await userFactory.create({}, testCtx.db)
+      const otherCharacter = await characterFactory.create({ user_id: otherPlayer.id }, testCtx.db)
+
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: otherPlayer.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      await campaignCharacterFactory.create(
+        { campaign_id: campaign.id, character_id: otherCharacter.id, added_by: otherPlayer.id },
+        testCtx.db
+      )
+
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${otherCharacter.id}`,
+        { user: playerUser, method: "DELETE" }
+      )
+
+      expect(response.status).toBe(400)
+    })
+  })
+
+  describe("when user is DM", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: playerUser.id }, testCtx.db)
+
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      await campaignCharacterFactory.create(
+        { campaign_id: campaign.id, character_id: character.id, added_by: playerUser.id },
+        testCtx.db
+      )
+    })
+
+    test("can remove any character from the campaign", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: dmUser, method: "DELETE" }
+      )
+
+      expect(response.status).toBe(204)
+      expect(response.headers.get("HX-Refresh")).toBe("true")
+    })
+  })
+
+  describe("when character is not in campaign", () => {
+    let dmUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+    })
+
+    test("returns error", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: dmUser, method: "DELETE" }
+      )
+
+      expect(response.status).toBe(400)
+    })
+  })
+
+  describe("when user is not a member", () => {
+    let dmUser: User
+    let otherUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      otherUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+
+      await campaignCharacterFactory.create(
+        { campaign_id: campaign.id, character_id: character.id, added_by: dmUser.id },
+        testCtx.db
+      )
+    })
+
+    test("redirects to campaigns list", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: otherUser, method: "DELETE" }
       )
 
       expect(response.status).toBe(302)

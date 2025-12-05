@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 import type { Campaign } from "@src/db/campaigns"
+import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
+import { ulid } from "@src/lib/ids"
 import { useTestApp } from "@src/test/app"
 import { campaignFactory, campaignMemberFactory } from "@src/test/factories/campaign"
+import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { expectElement, makeRequest, parseHtml } from "@src/test/http"
 
@@ -1159,6 +1162,264 @@ describe("DELETE /campaigns/:id/members/:memberId", () => {
         testCtx.app,
         `/campaigns/${campaign.id}/members/${memberId}`,
         { user: otherUser, method: "DELETE" }
+      )
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/campaigns")
+    })
+  })
+})
+
+describe("GET /campaigns/:id/add-character", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a campaign member", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+    })
+
+    describe("with available characters", () => {
+      let character: Character
+
+      beforeEach(async () => {
+        character = await characterFactory.create(
+          { user_id: playerUser.id, class: "fighter", level: 3 },
+          testCtx.db
+        )
+      })
+
+      test("returns modal with character selection", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/add-character`, {
+          user: playerUser,
+        })
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("Add Character")
+        expect(body).toContain(character.name)
+        expect(body).toContain("Add to Campaign")
+      })
+    })
+
+    describe("with no available characters", () => {
+      test("returns modal with empty state", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/add-character`, {
+          user: playerUser,
+        })
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("No Characters Available")
+        expect(body).toContain("Create a character first")
+      })
+    })
+
+    describe("with character already in campaign", () => {
+      let character: Character
+
+      beforeEach(async () => {
+        character = await characterFactory.create(
+          { user_id: playerUser.id, class: "wizard", level: 5 },
+          testCtx.db
+        )
+        // Add character to campaign
+        await testCtx.db`
+          INSERT INTO campaign_characters (id, campaign_id, character_id, added_by, revealed_at)
+          VALUES (${ulid()}, ${campaign.id}, ${character.id}, ${playerUser.id}, CURRENT_TIMESTAMP)
+        `
+      })
+
+      test("does not show character in the list", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/add-character`, {
+          user: playerUser,
+        })
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        // Character should not be in the list since it's already in the campaign
+        expect(body).toContain("No Characters Available")
+      })
+    })
+  })
+
+  describe("when user is not a member", () => {
+    let dmUser: User
+    let otherUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      otherUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+    })
+
+    test("redirects to campaigns list", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/add-character`, {
+        user: otherUser,
+      })
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/campaigns")
+    })
+  })
+})
+
+describe("POST /campaigns/:id/characters/:characterId", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a campaign member", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      character = await characterFactory.create(
+        { user_id: playerUser.id, class: "rogue", level: 2 },
+        testCtx.db
+      )
+    })
+
+    test("adds character to campaign and returns success", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: playerUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(204)
+      expect(response.headers.get("HX-Refresh")).toBe("true")
+      expect(response.headers.get("HX-Trigger")).toBe("closeModal")
+    })
+
+    test("creates campaign_character record", async () => {
+      await makeRequest(testCtx.app, `/campaigns/${campaign.id}/characters/${character.id}`, {
+        user: playerUser,
+        method: "POST",
+      })
+
+      const campaignChars = await testCtx.db`
+        SELECT * FROM campaign_characters
+        WHERE campaign_id = ${campaign.id} AND character_id = ${character.id}
+      `
+
+      expect(campaignChars.length).toBe(1)
+      expect(campaignChars[0].added_by).toBe(playerUser.id)
+      expect(campaignChars[0].revealed_at).not.toBeNull()
+    })
+
+    describe("when character is already in campaign", () => {
+      beforeEach(async () => {
+        // Add the character to the campaign
+        await testCtx.db`
+          INSERT INTO campaign_characters (id, campaign_id, character_id, added_by, revealed_at)
+          VALUES (${ulid()}, ${campaign.id}, ${character.id}, ${playerUser.id}, CURRENT_TIMESTAMP)
+        `
+        // Create another character so modal has something to display with the error
+        await characterFactory.create(
+          { user_id: playerUser.id, class: "wizard", level: 5 },
+          testCtx.db
+        )
+      })
+
+      test("returns modal with error", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/characters/${character.id}`,
+          { user: playerUser, method: "POST" }
+        )
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("Character already in this campaign")
+      })
+    })
+
+    describe("when character does not exist", () => {
+      test("returns modal with error", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/characters/nonexistent`,
+          { user: playerUser, method: "POST" }
+        )
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("Character not found")
+      })
+    })
+
+    describe("when character belongs to another user", () => {
+      let otherCharacter: Character
+
+      beforeEach(async () => {
+        otherCharacter = await characterFactory.create(
+          { user_id: dmUser.id, class: "cleric", level: 4 },
+          testCtx.db
+        )
+      })
+
+      test("returns modal with error", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/characters/${otherCharacter.id}`,
+          { user: playerUser, method: "POST" }
+        )
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("You don't own this character")
+      })
+    })
+  })
+
+  describe("when user is not a member", () => {
+    let dmUser: User
+    let otherUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      otherUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: otherUser.id }, testCtx.db)
+    })
+
+    test("redirects to campaigns list", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: otherUser, method: "POST" }
       )
 
       expect(response.status).toBe(302)

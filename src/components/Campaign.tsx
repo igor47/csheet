@@ -12,12 +12,14 @@ export interface CampaignProps {
 
 interface MemberCardProps {
   member: ComputedCampaignMember
+  isCurrentUser: boolean
 }
 
 interface CharacterCardProps {
   character: ComputedCampaignCharacter
   canReveal: boolean
   isDM: boolean
+  isCurrentUser: boolean
 }
 
 interface PendingInviteCardProps {
@@ -29,7 +31,6 @@ interface PendingInviteCardProps {
 interface NoCharacterCardProps {
   member: ComputedCampaignMember
   isCurrentUser: boolean
-  canAdd: boolean
 }
 
 const PendingInviteCard = ({ member, campaignId, isDM }: PendingInviteCardProps) => (
@@ -110,8 +111,8 @@ const DeclinedInviteCard = ({ member, campaignId, isDM }: DeclinedInviteCardProp
   </div>
 )
 
-const NoCharacterCard = ({ member, isCurrentUser, canAdd }: NoCharacterCardProps) => (
-  <div class="card h-100">
+const NoCharacterCard = ({ member, isCurrentUser }: NoCharacterCardProps) => (
+  <div class={`card h-100 ${isCurrentUser ? "border-primary border-2" : ""}`}>
     <div class="row g-0">
       <div class="col-3">
         <div class="ratio ratio-1x1">
@@ -127,9 +128,17 @@ const NoCharacterCard = ({ member, isCurrentUser, canAdd }: NoCharacterCardProps
         <div class="card-body">
           <h6 class="card-title">{member.email}</h6>
           <span class="badge bg-secondary">No Character</span>
-          {canAdd && isCurrentUser && (
+          {isCurrentUser && (
             <div class="mt-2">
-              <button type="button" class="btn btn-sm btn-primary">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+                hx-get={`/campaigns/${member.campaign_id}/add-character`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+              >
                 <i class="bi bi-plus-circle" /> Add Character
               </button>
             </div>
@@ -140,7 +149,7 @@ const NoCharacterCard = ({ member, isCurrentUser, canAdd }: NoCharacterCardProps
   </div>
 )
 
-const CharacterCard = ({ character, canReveal, isDM }: CharacterCardProps) => {
+const CharacterCard = ({ character, canReveal, isDM, isCurrentUser }: CharacterCardProps) => {
   // Build a minimal character object for AvatarDisplay
   const charForAvatar = {
     id: character.character_id,
@@ -149,7 +158,7 @@ const CharacterCard = ({ character, canReveal, isDM }: CharacterCardProps) => {
   }
 
   return (
-    <div class="card h-100">
+    <div class={`card h-100 ${isCurrentUser ? "border-primary border-2" : ""}`}>
       <div class="row g-0">
         <div class="col-3">
           <div
@@ -197,8 +206,8 @@ const CharacterCard = ({ character, canReveal, isDM }: CharacterCardProps) => {
   )
 }
 
-const MemberCard = ({ member }: MemberCardProps) => (
-  <div class="card h-100">
+const MemberCard = ({ member, isCurrentUser }: MemberCardProps) => (
+  <div class={`card h-100 ${isCurrentUser ? "border-primary border-2" : ""}`}>
     <div class="card-body">
       <h6 class="card-title">{member.email}</h6>
       <span class={`badge ${member.role === "dm" ? "bg-primary" : "bg-info"}`}>
@@ -280,6 +289,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                           character={memberChar}
                           canReveal={campaign.canRevealCharacters}
                           isDM={isDM}
+                          isCurrentUser={memberChar.user_id === campaign.currentUserId}
                         />
                       </div>
                     )
@@ -290,8 +300,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                       <div class="col" key={member.user_id}>
                         <NoCharacterCard
                           member={member}
-                          isCurrentUser={false}
-                          canAdd={campaign.canAddCharacters}
+                          isCurrentUser={member.user_id === campaign.currentUserId}
                         />
                       </div>
                     )
@@ -340,6 +349,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                       character={npc}
                       canReveal={campaign.canRevealCharacters}
                       isDM={isDM}
+                      isCurrentUser={npc.added_by === campaign.currentUserId}
                     />
                   </div>
                 ))}
@@ -363,7 +373,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
               {dms.map((dm) => (
                 <div class="col" key={dm.user_id}>
-                  <MemberCard member={dm} />
+                  <MemberCard member={dm} isCurrentUser={dm.user_id === campaign.currentUserId} />
                 </div>
               ))}
             </div>
@@ -390,7 +400,10 @@ export const Campaign = ({ campaign }: CampaignProps) => {
               <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
                 {viewers.map((viewer) => (
                   <div class="col" key={viewer.user_id}>
-                    <MemberCard member={viewer} />
+                    <MemberCard
+                      member={viewer}
+                      isCurrentUser={viewer.user_id === campaign.currentUserId}
+                    />
                   </div>
                 ))}
               </div>

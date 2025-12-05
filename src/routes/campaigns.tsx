@@ -1,3 +1,4 @@
+import { AddCharacterToCampaign } from "@src/components/AddCharacterToCampaign"
 import { Campaign } from "@src/components/Campaign"
 import { CampaignInviteForm } from "@src/components/CampaignInviteForm"
 import { CampaignNew } from "@src/components/CampaignNew"
@@ -6,6 +7,7 @@ import { getDb } from "@src/db"
 import { countArchivedByUserId } from "@src/db/campaigns"
 import { getBaseUrl } from "@src/lib/url"
 import { setFlashMsg } from "@src/middleware/flash"
+import { addCharacterToCampaign } from "@src/services/campaigns/addCharacter"
 import { archiveCampaign } from "@src/services/campaigns/archive"
 import { authorizeCampaign, handleCampaignUnallowed } from "@src/services/campaigns/authorize"
 import { createCampaign } from "@src/services/campaigns/create"
@@ -14,6 +16,7 @@ import { createInvite } from "@src/services/campaigns/invite"
 import { listCampaigns } from "@src/services/campaigns/list"
 import { respondToInvite } from "@src/services/campaigns/respond"
 import { unarchiveCampaign } from "@src/services/campaigns/unarchive"
+import { listCharacters } from "@src/services/listCharacters"
 import { Hono } from "hono"
 
 export const campaignsRoutes = new Hono()
@@ -244,6 +247,58 @@ campaignsRoutes.delete("/campaigns/:id/members/:memberId", async (c) => {
   }
 
   await setFlashMsg(c, "Invitation deleted", "success")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
+})
+
+// Add character to campaign - show modal with user's characters
+campaignsRoutes.get("/campaigns/:id/add-character", async (c) => {
+  const id = c.req.param("id") as string
+  const user = c.var.user!
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Get user's characters not already in this campaign
+  const userCharacters = await listCharacters(getDb(c), { userId: user.id })
+  const campaignCharIds = new Set(authResult.campaign.characters.map((cc) => cc.character_id))
+  const availableCharacters = userCharacters.filter((ch) => !campaignCharIds.has(ch.id))
+
+  return c.html(<AddCharacterToCampaign campaignId={id} characters={availableCharacters} />)
+})
+
+// Add character to campaign - POST
+campaignsRoutes.post("/campaigns/:id/characters/:characterId", async (c) => {
+  const id = c.req.param("id") as string
+  const characterId = c.req.param("characterId") as string
+  const user = c.var.user!
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  const result = await addCharacterToCampaign(getDb(c), authResult.campaign, characterId, user.id)
+
+  if (!result.complete) {
+    // Re-render modal with error
+    const userCharacters = await listCharacters(getDb(c), { userId: user.id })
+    const campaignCharIds = new Set(authResult.campaign.characters.map((cc) => cc.character_id))
+    const availableCharacters = userCharacters.filter((ch) => !campaignCharIds.has(ch.id))
+
+    return c.html(
+      <AddCharacterToCampaign
+        campaignId={id}
+        characters={availableCharacters}
+        errors={result.errors}
+      />
+    )
+  }
+
+  await setFlashMsg(c, "Character added to campaign!", "success")
+  c.header("HX-Trigger", "closeModal")
   c.header("HX-Refresh", "true")
   return c.body(null, 204)
 })

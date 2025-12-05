@@ -26,6 +26,7 @@ export interface ComputedCampaignCharacter extends CampaignCharacterWithAddedBy 
 
 export interface ComputedCampaign extends Campaign {
   userRole: CampaignMemberRole | null
+  currentUserId: string
   members: ComputedCampaignMember[]
   characters: ComputedCampaignCharacter[]
   canInviteMembers: boolean
@@ -135,6 +136,7 @@ export async function computeCampaign(
   return {
     ...campaign,
     userRole,
+    currentUserId: userId,
     members: computedMembers,
     characters: computedCharacters,
     canInviteMembers: isDM,

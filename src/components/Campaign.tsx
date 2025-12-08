@@ -1,18 +1,10 @@
 import { CampaignCharacterCard } from "@src/components/ui/CampaignCharacterCard"
+import { CampaignMemberCard } from "@src/components/ui/CampaignMemberCard"
 import { DetailModal } from "@src/components/ui/DetailModal"
-import type {
-  ComputedCampaign,
-  ComputedCampaignCharacter,
-  ComputedCampaignMember,
-} from "@src/services/campaigns/compute"
+import type { ComputedCampaign, ComputedCampaignCharacter } from "@src/services/campaigns/compute"
 
 export interface CampaignProps {
   campaign: ComputedCampaign
-}
-
-interface MemberCardProps {
-  member: ComputedCampaignMember
-  isCurrentUser: boolean
 }
 
 interface CharacterCardProps {
@@ -23,133 +15,6 @@ interface CharacterCardProps {
   isDM: boolean
   isCurrentUser: boolean
 }
-
-interface PendingInviteCardProps {
-  member: ComputedCampaignMember
-  campaignId: string
-  isDM: boolean
-}
-
-interface NoCharacterCardProps {
-  member: ComputedCampaignMember
-  isCurrentUser: boolean
-}
-
-const PendingInviteCard = ({ member, campaignId, isDM }: PendingInviteCardProps) => (
-  <div class="card h-100">
-    <div class="row g-0">
-      <div class="col-3">
-        <div class="ratio ratio-1x1">
-          <img
-            src="/static/placeholder.png"
-            alt="No avatar"
-            class="rounded-start"
-            style="object-fit: cover;"
-          />
-        </div>
-      </div>
-      <div class="col-9">
-        <div class="card-body">
-          <h6 class="card-title">{member.email}</h6>
-          <span class="badge bg-warning text-dark">Pending Invite</span>
-        </div>
-      </div>
-    </div>
-    {isDM && (
-      <div class="card-footer bg-transparent">
-        <button
-          type="button"
-          class="btn btn-outline-danger btn-sm"
-          hx-delete={`/campaigns/${campaignId}/members/${member.id}`}
-          hx-confirm={`Are you sure you want to delete the invitation for ${member.email}?`}
-          data-testid={`delete-invite-${member.id}`}
-        >
-          <i class="bi bi-trash" /> Delete Invite
-        </button>
-      </div>
-    )}
-  </div>
-)
-
-interface DeclinedInviteCardProps {
-  member: ComputedCampaignMember
-  campaignId: string
-  isDM: boolean
-}
-
-const DeclinedInviteCard = ({ member, campaignId, isDM }: DeclinedInviteCardProps) => (
-  <div class="card h-100">
-    <div class="row g-0">
-      <div class="col-3">
-        <div class="ratio ratio-1x1">
-          <img
-            src="/static/placeholder.png"
-            alt="No avatar"
-            class="rounded-start"
-            style="object-fit: cover;"
-          />
-        </div>
-      </div>
-      <div class="col-9">
-        <div class="card-body">
-          <h6 class="card-title">{member.email}</h6>
-          <span class="badge bg-danger">Declined</span>
-        </div>
-      </div>
-    </div>
-    {isDM && (
-      <div class="card-footer bg-transparent">
-        <button
-          type="button"
-          class="btn btn-outline-danger btn-sm"
-          hx-delete={`/campaigns/${campaignId}/members/${member.id}`}
-          hx-confirm={`Are you sure you want to delete the declined invitation for ${member.email}?`}
-          data-testid={`delete-invite-${member.id}`}
-        >
-          <i class="bi bi-trash" /> Delete
-        </button>
-      </div>
-    )}
-  </div>
-)
-
-const NoCharacterCard = ({ member, isCurrentUser }: NoCharacterCardProps) => (
-  <div class={`card h-100 ${isCurrentUser ? "border-primary border-2" : ""}`}>
-    <div class="row g-0">
-      <div class="col-3">
-        <div class="ratio ratio-1x1">
-          <img
-            src="/static/placeholder.png"
-            alt="No avatar"
-            class="rounded-start"
-            style="object-fit: cover;"
-          />
-        </div>
-      </div>
-      <div class="col-9">
-        <div class="card-body">
-          <h6 class="card-title">{member.email}</h6>
-          <span class="badge bg-secondary">No Character</span>
-          {isCurrentUser && (
-            <div class="mt-2">
-              <button
-                type="button"
-                class="btn btn-sm btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#detailModal"
-                hx-get={`/campaigns/${member.campaign_id}/add-character`}
-                hx-target="#detailModalContent"
-                hx-swap="innerHTML"
-              >
-                <i class="bi bi-plus-circle" /> Add Character
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  </div>
-)
 
 const CharacterCard = ({
   character,
@@ -162,6 +27,12 @@ const CharacterCard = ({
   const subtitle = character.isNPC
     ? `Added by: ${character.added_by_email}`
     : `Played by: ${character.added_by_email}`
+
+  // Show "Hidden" badge for hidden NPCs (only visible to DMs)
+  const badge =
+    isDM && character.isNPC && !character.revealed_at
+      ? { text: "Hidden", variant: "secondary" as const }
+      : undefined
 
   // Determine what actions to show
   const showView = isCurrentUser
@@ -178,12 +49,10 @@ const CharacterCard = ({
         className: character.class_name,
       }}
       subtitle={subtitle}
+      badge={badge}
       isCurrentUser={isCurrentUser}
     >
-      {/* NPC-specific badges and reveal button */}
-      {isDM && !character.revealed_at && character.isNPC && (
-        <span class="badge bg-secondary">Hidden from Players</span>
-      )}
+      {/* NPC reveal/hide buttons */}
       {canReveal && character.isNPC && character.revealed_at && (
         <button
           type="button"
@@ -270,17 +139,6 @@ const CharacterCard = ({
   )
 }
 
-const MemberCard = ({ member, isCurrentUser }: MemberCardProps) => (
-  <div class={`card h-100 ${isCurrentUser ? "border-primary border-2" : ""}`}>
-    <div class="card-body">
-      <h6 class="card-title">{member.email}</h6>
-      <span class={`badge ${member.role === "dm" ? "bg-primary" : "bg-info"}`}>
-        {member.role.toUpperCase()}
-      </span>
-    </div>
-  </div>
-)
-
 export const Campaign = ({ campaign }: CampaignProps) => {
   const isDM = campaign.userRole === "dm"
 
@@ -295,8 +153,31 @@ export const Campaign = ({ campaign }: CampaignProps) => {
       if (!a.declined_at && b.declined_at) return -1
       return 0
     })
-  const dms = campaign.members.filter((m) => m.role === "dm" && m.accepted_at)
-  const viewers = campaign.members.filter((m) => m.role === "viewer" && m.accepted_at)
+  // Filter DMs - show pending/declined only to DMs
+  const allDMs = campaign.members.filter((m) => m.role === "dm")
+  const dmMembers = allDMs
+    .filter((m) => isDM || m.accepted_at)
+    .sort((a, b) => {
+      // Sort: accepted first, then pending, then declined
+      if (a.accepted_at && !b.accepted_at) return -1
+      if (!a.accepted_at && b.accepted_at) return 1
+      if (a.declined_at && !b.declined_at) return 1
+      if (!a.declined_at && b.declined_at) return -1
+      return 0
+    })
+
+  // Filter Viewers - show pending/declined only to DMs
+  const allViewers = campaign.members.filter((m) => m.role === "viewer")
+  const viewerMembers = allViewers
+    .filter((m) => isDM || m.accepted_at)
+    .sort((a, b) => {
+      // Sort: accepted first, then pending, then declined
+      if (a.accepted_at && !b.accepted_at) return -1
+      if (!a.accepted_at && b.accepted_at) return 1
+      if (a.declined_at && !b.declined_at) return 1
+      if (!a.declined_at && b.declined_at) return -1
+      return 0
+    })
 
   // Filter NPCs (characters added by DMs)
   const allNPCs = campaign.characters.filter((c) => c.isNPC)
@@ -361,14 +242,42 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                       </div>
                     )
                   }
+                  const isCurrentUser = member.user_id === campaign.currentUserId
+
                   if (member.accepted_at) {
                     // Accepted but no character
                     return (
                       <div class="col" key={member.user_id}>
-                        <NoCharacterCard
-                          member={member}
-                          isCurrentUser={member.user_id === campaign.currentUserId}
-                        />
+                        <CampaignMemberCard
+                          title={member.email}
+                          badge={{ text: "No Character", variant: "secondary" }}
+                          isCurrentUser={isCurrentUser}
+                        >
+                          {isCurrentUser && (
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-primary"
+                              data-bs-toggle="modal"
+                              data-bs-target="#detailModal"
+                              hx-get={`/campaigns/${campaign.id}/add-character`}
+                              hx-target="#detailModalContent"
+                              hx-swap="innerHTML"
+                            >
+                              <i class="bi bi-plus-circle" /> Add Character
+                            </button>
+                          )}
+                          {isDM && !isCurrentUser && (
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              hx-delete={`/campaigns/${campaign.id}/members/${member.id}`}
+                              hx-confirm={`Are you sure you want to remove ${member.email} from the campaign?`}
+                              data-testid={`delete-member-${member.id}`}
+                            >
+                              <i class="bi bi-trash" /> Remove
+                            </button>
+                          )}
+                        </CampaignMemberCard>
                       </div>
                     )
                   }
@@ -376,14 +285,44 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                     // Declined invite (only visible to DMs)
                     return (
                       <div class="col" key={member.user_id}>
-                        <DeclinedInviteCard member={member} campaignId={campaign.id} isDM={isDM} />
+                        <CampaignMemberCard
+                          title={member.email}
+                          badge={{ text: "Declined", variant: "danger" }}
+                        >
+                          {isDM && (
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              hx-delete={`/campaigns/${campaign.id}/members/${member.id}`}
+                              hx-confirm={`Are you sure you want to delete the declined invitation for ${member.email}?`}
+                              data-testid={`delete-invite-${member.id}`}
+                            >
+                              <i class="bi bi-trash" /> Delete
+                            </button>
+                          )}
+                        </CampaignMemberCard>
                       </div>
                     )
                   }
                   // Pending invite
                   return (
                     <div class="col" key={member.user_id}>
-                      <PendingInviteCard member={member} campaignId={campaign.id} isDM={isDM} />
+                      <CampaignMemberCard
+                        title={member.email}
+                        badge={{ text: "Pending Invite", variant: "warning", darkText: true }}
+                      >
+                        {isDM && (
+                          <button
+                            type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            hx-delete={`/campaigns/${campaign.id}/members/${member.id}`}
+                            hx-confirm={`Are you sure you want to delete the invitation for ${member.email}?`}
+                            data-testid={`delete-invite-${member.id}`}
+                          >
+                            <i class="bi bi-trash" /> Delete Invite
+                          </button>
+                        )}
+                      </CampaignMemberCard>
                     </div>
                   )
                 })}
@@ -452,13 +391,74 @@ export const Campaign = ({ campaign }: CampaignProps) => {
               )}
             </div>
 
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-              {dms.map((dm) => (
-                <div class="col" key={dm.user_id}>
-                  <MemberCard member={dm} isCurrentUser={dm.user_id === campaign.currentUserId} />
-                </div>
-              ))}
-            </div>
+            {dmMembers.length === 0 ? (
+              <div class="text-center text-muted py-4">
+                <p>No dungeon masters yet.</p>
+              </div>
+            ) : (
+              <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                {dmMembers.map((dm) => {
+                  const isCurrentUser = dm.user_id === campaign.currentUserId
+
+                  if (dm.accepted_at) {
+                    // Accepted DM
+                    return (
+                      <div class="col" key={dm.user_id}>
+                        <CampaignMemberCard
+                          title={dm.email}
+                          badge={{ text: "DM", variant: "primary" }}
+                          isCurrentUser={isCurrentUser}
+                        />
+                      </div>
+                    )
+                  }
+                  if (dm.declined_at) {
+                    // Declined DM invite
+                    return (
+                      <div class="col" key={dm.user_id}>
+                        <CampaignMemberCard
+                          title={dm.email}
+                          badge={{ text: "Declined", variant: "danger" }}
+                        >
+                          {isDM && (
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              hx-delete={`/campaigns/${campaign.id}/members/${dm.id}`}
+                              hx-confirm={`Are you sure you want to delete the declined DM invitation for ${dm.email}?`}
+                              data-testid={`delete-dm-invite-${dm.id}`}
+                            >
+                              <i class="bi bi-trash" /> Delete
+                            </button>
+                          )}
+                        </CampaignMemberCard>
+                      </div>
+                    )
+                  }
+                  // Pending DM invite
+                  return (
+                    <div class="col" key={dm.user_id}>
+                      <CampaignMemberCard
+                        title={dm.email}
+                        badge={{ text: "Pending DM Invite", variant: "warning", darkText: true }}
+                      >
+                        {isDM && (
+                          <button
+                            type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            hx-delete={`/campaigns/${campaign.id}/members/${dm.id}`}
+                            hx-confirm={`Are you sure you want to delete the DM invitation for ${dm.email}?`}
+                            data-testid={`delete-dm-invite-${dm.id}`}
+                          >
+                            <i class="bi bi-trash" /> Delete Invite
+                          </button>
+                        )}
+                      </CampaignMemberCard>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -474,20 +474,76 @@ export const Campaign = ({ campaign }: CampaignProps) => {
               )}
             </div>
 
-            {viewers.length === 0 ? (
+            {viewerMembers.length === 0 ? (
               <div class="text-center text-muted py-4">
                 <p>No viewers yet.</p>
               </div>
             ) : (
               <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                {viewers.map((viewer) => (
-                  <div class="col" key={viewer.user_id}>
-                    <MemberCard
-                      member={viewer}
-                      isCurrentUser={viewer.user_id === campaign.currentUserId}
-                    />
-                  </div>
-                ))}
+                {viewerMembers.map((viewer) => {
+                  const isCurrentUser = viewer.user_id === campaign.currentUserId
+
+                  if (viewer.accepted_at) {
+                    // Accepted viewer
+                    return (
+                      <div class="col" key={viewer.user_id}>
+                        <CampaignMemberCard
+                          title={viewer.email}
+                          badge={{ text: "Viewer", variant: "info" }}
+                          isCurrentUser={isCurrentUser}
+                        />
+                      </div>
+                    )
+                  }
+                  if (viewer.declined_at) {
+                    // Declined viewer invite
+                    return (
+                      <div class="col" key={viewer.user_id}>
+                        <CampaignMemberCard
+                          title={viewer.email}
+                          badge={{ text: "Declined", variant: "danger" }}
+                        >
+                          {isDM && (
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              hx-delete={`/campaigns/${campaign.id}/members/${viewer.id}`}
+                              hx-confirm={`Are you sure you want to delete the declined viewer invitation for ${viewer.email}?`}
+                              data-testid={`delete-viewer-invite-${viewer.id}`}
+                            >
+                              <i class="bi bi-trash" /> Delete
+                            </button>
+                          )}
+                        </CampaignMemberCard>
+                      </div>
+                    )
+                  }
+                  // Pending viewer invite
+                  return (
+                    <div class="col" key={viewer.user_id}>
+                      <CampaignMemberCard
+                        title={viewer.email}
+                        badge={{
+                          text: "Pending Viewer Invite",
+                          variant: "warning",
+                          darkText: true,
+                        }}
+                      >
+                        {isDM && (
+                          <button
+                            type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            hx-delete={`/campaigns/${campaign.id}/members/${viewer.id}`}
+                            hx-confirm={`Are you sure you want to delete the viewer invitation for ${viewer.email}?`}
+                            data-testid={`delete-viewer-invite-${viewer.id}`}
+                          >
+                            <i class="bi bi-trash" /> Delete Invite
+                          </button>
+                        )}
+                      </CampaignMemberCard>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

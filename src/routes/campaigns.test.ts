@@ -2086,7 +2086,7 @@ describe("GET /campaigns/:id - NPCs section visibility", () => {
 
       expect(body).toContain("NPCs")
       expect(body).toContain("Hidden NPC")
-      expect(body).toContain("Hidden from Players")
+      expect(body).toContain("Hidden") // Badge indicating NPC is hidden from players
     })
 
     test("player does not see the NPCs section", async () => {

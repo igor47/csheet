@@ -1,4 +1,5 @@
 import { AvatarDisplay } from "@src/components/AvatarDisplay"
+import type { BadgeVariant } from "@src/components/ui/CampaignMemberCard"
 import type { ListCharacter } from "@src/services/listCharacters"
 import type { Child } from "hono/jsx"
 
@@ -11,6 +12,11 @@ export interface CampaignCharacterCardProps {
     className: string
   }
   subtitle?: string
+  badge?: {
+    text: string
+    variant: BadgeVariant
+    darkText?: boolean
+  }
   isCurrentUser?: boolean
   children?: Child
 }
@@ -18,6 +24,7 @@ export interface CampaignCharacterCardProps {
 export const CampaignCharacterCard = ({
   character,
   subtitle,
+  badge,
   isCurrentUser,
   children,
 }: CampaignCharacterCardProps) => (
@@ -36,7 +43,12 @@ export const CampaignCharacterCard = ({
           <small class="text-muted d-block">
             Level {character.level} {character.className}
           </small>
-          {subtitle && <small class="text-muted">{subtitle}</small>}
+          {subtitle && <small class="text-muted d-block">{subtitle}</small>}
+          {badge && (
+            <span class={`badge bg-${badge.variant}${badge.darkText ? " text-dark" : ""}`}>
+              {badge.text}
+            </span>
+          )}
         </div>
       </div>
       {children && <div class="d-flex justify-content-center gap-2">{children}</div>}

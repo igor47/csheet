@@ -13,6 +13,7 @@ import { authorizeCampaign, handleCampaignUnallowed } from "@src/services/campai
 import { createCampaign } from "@src/services/campaigns/create"
 import { deleteInvite } from "@src/services/campaigns/deleteInvite"
 import { createInvite } from "@src/services/campaigns/invite"
+import { leaveCampaign } from "@src/services/campaigns/leaveCampaign"
 import { listCampaigns } from "@src/services/campaigns/list"
 import { removeCharacterFromCampaign } from "@src/services/campaigns/removeCharacter"
 import { respondToInvite } from "@src/services/campaigns/respond"
@@ -141,7 +142,9 @@ campaignsRoutes.get("/campaigns/:id/invite", async (c) => {
     return c.body(null, 403)
   }
 
-  return c.html(<CampaignInviteForm campaignId={id} />)
+  // Pre-select role if provided in query param
+  const defaultRole = c.req.query("role") || "player"
+  return c.html(<CampaignInviteForm campaignId={id} values={{ role: defaultRole }} />)
 })
 
 // Send invite (POST)
@@ -219,6 +222,24 @@ campaignsRoutes.post("/campaigns/:id/decline", async (c) => {
   }
 
   await setFlashMsg(c, "Invitation declined", "info")
+  c.header("HX-Redirect", "/campaigns")
+  return c.body(null, 200)
+})
+
+// Leave campaign (self-removal)
+campaignsRoutes.post("/campaigns/:id/leave", async (c) => {
+  const id = c.req.param("id") as string
+  const user = c.var.user!
+
+  const result = await leaveCampaign(getDb(c), id, user.id)
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors._form || "Failed to leave campaign", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, "You have left the campaign", "info")
   c.header("HX-Redirect", "/campaigns")
   return c.body(null, 200)
 })

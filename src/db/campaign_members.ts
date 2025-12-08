@@ -15,6 +15,7 @@ export const CampaignMemberSchema = z.object({
   invited_by: z.string(),
   accepted_at: z.date().nullable().default(null),
   declined_at: z.date().nullable().default(null),
+  deleted_at: z.date().nullable().default(null),
   created_at: z.date(),
   updated_at: z.date(),
 })
@@ -22,6 +23,7 @@ export const CampaignMemberSchema = z.object({
 export const CreateCampaignMemberSchema = CampaignMemberSchema.omit({
   id: true,
   invited_at: true,
+  deleted_at: true,
   created_at: true,
   updated_at: true,
 })
@@ -36,6 +38,7 @@ function parseCampaignMember(row: any): CampaignMember {
     invited_at: new Date(row.invited_at),
     accepted_at: row.accepted_at ? new Date(row.accepted_at) : null,
     declined_at: row.declined_at ? new Date(row.declined_at) : null,
+    deleted_at: row.deleted_at ? new Date(row.deleted_at) : null,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   })
@@ -101,7 +104,35 @@ export async function findByCampaignAndUser(
   const result = await db`
     SELECT *
     FROM campaign_members
-    WHERE campaign_id = ${campaignId} AND user_id = ${userId}
+    WHERE campaign_id = ${campaignId}
+      AND user_id = ${userId}
+      AND deleted_at IS NULL
+  `
+
+  if (result.length === 0) {
+    return null
+  }
+
+  return parseCampaignMember(result[0])
+}
+
+/**
+ * Find any campaign member by campaign and user (including deleted)
+ * Returns the most recent record if multiple exist
+ * Used for invite logic to check all membership states
+ */
+export async function findAnyByCampaignAndUser(
+  db: SQL,
+  campaignId: string,
+  userId: string
+): Promise<CampaignMember | null> {
+  const result = await db`
+    SELECT *
+    FROM campaign_members
+    WHERE campaign_id = ${campaignId}
+      AND user_id = ${userId}
+    ORDER BY id DESC
+    LIMIT 1
   `
 
   if (result.length === 0) {
@@ -172,42 +203,51 @@ export async function decline(db: SQL, memberId: string): Promise<CampaignMember
   return parseCampaignMember(result[0])
 }
 
-/**
- * Count pending invites for a user (campaigns they haven't accepted/declined yet)
- */
-export async function countPendingInvites(db: SQL, userId: string): Promise<number> {
-  const result = await db`
-    SELECT COUNT(*) as count
-    FROM campaign_members cm
-    JOIN campaigns c ON c.id = cm.campaign_id
-    WHERE cm.user_id = ${userId}
-      AND cm.accepted_at IS NULL
-      AND cm.declined_at IS NULL
-      AND c.archived_at IS NULL
-  `
-
-  return Number(result[0].count)
+export interface NotificationCounts {
+  pendingInvites: number
+  pendingViewerInvites: number
+  needsCharacter: number
 }
 
 /**
- * Count campaigns where user is accepted but has no character assigned
+ * Get all notification counts for a user in a single query
  */
-export async function countNeedsCharacter(db: SQL, userId: string): Promise<number> {
+export async function getNotificationCounts(db: SQL, userId: string): Promise<NotificationCounts> {
   const result = await db`
-    SELECT COUNT(*) as count
+    SELECT
+      COUNT(*) FILTER (
+        WHERE cm.accepted_at IS NULL
+          AND cm.declined_at IS NULL
+          AND cm.deleted_at IS NULL
+      ) as pending_invites,
+      COUNT(*) FILTER (
+        WHERE cm.role = 'viewer'
+          AND cm.accepted_at IS NULL
+          AND cm.declined_at IS NULL
+          AND cm.deleted_at IS NULL
+      ) as pending_viewer_invites,
+      COUNT(*) FILTER (
+        WHERE cm.accepted_at IS NOT NULL
+          AND cm.declined_at IS NULL
+          AND cm.deleted_at IS NULL
+          AND cm.role = 'player'
+          AND NOT EXISTS (
+            SELECT 1 FROM campaign_characters cc
+            WHERE cc.campaign_id = cm.campaign_id
+              AND cc.added_by = cm.user_id
+          )
+      ) as needs_character
     FROM campaign_members cm
     JOIN campaigns c ON c.id = cm.campaign_id
-    LEFT JOIN campaign_characters cc ON cc.campaign_id = cm.campaign_id
-      AND cc.added_by = cm.user_id
     WHERE cm.user_id = ${userId}
-      AND cm.accepted_at IS NOT NULL
-      AND cm.declined_at IS NULL
-      AND cm.role = 'player'
       AND c.archived_at IS NULL
-      AND cc.id IS NULL
   `
 
-  return Number(result[0].count)
+  return {
+    pendingInvites: Number(result[0].pending_invites),
+    pendingViewerInvites: Number(result[0].pending_viewer_invites),
+    needsCharacter: Number(result[0].needs_character),
+  }
 }
 
 export interface InviteTokenResult {
@@ -258,7 +298,7 @@ export async function softDelete(db: SQL, id: string): Promise<void> {
 
 /**
  * Reset an invite to pending state with a new token
- * Used when DM wants to re-invite someone who previously declined or resend expired invites
+ * Used when DM wants to re-invite someone who previously declined, removed, or resend expired invites
  */
 export async function resetInvite(
   db: SQL,
@@ -271,6 +311,7 @@ export async function resetInvite(
   const result = await db`
     UPDATE campaign_members
     SET
+      accepted_at = NULL,
       declined_at = NULL,
       deleted_at = NULL,
       invite_token = ${newToken},

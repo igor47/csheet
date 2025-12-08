@@ -65,14 +65,32 @@ export async function createInvite(
       user = await users.create(tx, email)
     }
 
-    // Check if user is already a member
-    const existingMember = await campaignMembers.findByCampaignAndUser(tx, campaign.id, user.id)
+    // Check if user has any membership record (including deleted)
+    const existingMember = await campaignMembers.findAnyByCampaignAndUser(tx, campaign.id, user.id)
     let member: campaignMembers.CampaignMember
     if (existingMember) {
-      if (existingMember.accepted_at) {
+      // Check if member was deleted (removed from campaign)
+      if (existingMember.deleted_at) {
+        if (!forceReinvite) {
+          return {
+            error: new InviteError("This user was previously removed from this campaign", "email"),
+            canReinvite: true,
+          }
+        }
+        // Reset the deleted member's invite
+        const resetMember = await campaignMembers.resetInvite(
+          tx,
+          existingMember.id,
+          inviteToken,
+          inviter.id
+        )
+        if (!resetMember) {
+          return { error: new InviteError("Failed to reset invitation", "_form") }
+        }
+        member = resetMember
+      } else if (existingMember.accepted_at) {
         return { error: new InviteError("This user is already a member of this campaign", "email") }
-      }
-      if (existingMember.declined_at) {
+      } else if (existingMember.declined_at) {
         if (!forceReinvite) {
           return {
             error: new InviteError("This user has previously declined this invitation", "email"),

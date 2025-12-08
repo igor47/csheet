@@ -254,17 +254,28 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                           isCurrentUser={isCurrentUser}
                         >
                           {isCurrentUser && (
-                            <button
-                              type="button"
-                              class="btn btn-sm btn-primary"
-                              data-bs-toggle="modal"
-                              data-bs-target="#detailModal"
-                              hx-get={`/campaigns/${campaign.id}/add-character`}
-                              hx-target="#detailModalContent"
-                              hx-swap="innerHTML"
-                            >
-                              <i class="bi bi-plus-circle" /> Add Character
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#detailModal"
+                                hx-get={`/campaigns/${campaign.id}/add-character`}
+                                hx-target="#detailModalContent"
+                                hx-swap="innerHTML"
+                              >
+                                <i class="bi bi-plus-circle" /> Add Character
+                              </button>
+                              <button
+                                type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                hx-post={`/campaigns/${campaign.id}/leave`}
+                                hx-confirm="Are you sure you want to leave this campaign?"
+                                data-testid="leave-campaign"
+                              >
+                                <i class="bi bi-box-arrow-right" /> Leave
+                              </button>
+                            </>
                           )}
                           {isDM && !isCurrentUser && (
                             <button
@@ -384,11 +395,26 @@ export const Campaign = ({ campaign }: CampaignProps) => {
           <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h3>Dungeon Masters</h3>
-              {campaign.canChangeDMRole && (
-                <button type="button" class="btn btn-outline-secondary btn-sm">
-                  <i class="bi bi-arrow-down-circle"></i> Change My Role
-                </button>
-              )}
+              <div class="d-flex gap-2">
+                {campaign.canChangeDMRole && (
+                  <button type="button" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-down-circle"></i> Change My Role
+                  </button>
+                )}
+                {isDM && (
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#detailModal"
+                    hx-get={`/campaigns/${campaign.id}/invite?role=dm`}
+                    hx-target="#detailModalContent"
+                    hx-swap="innerHTML"
+                  >
+                    <i class="bi bi-person-plus"></i> Add DM
+                  </button>
+                )}
+              </div>
             </div>
 
             {dmMembers.length === 0 ? (
@@ -408,7 +434,19 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                           title={dm.email}
                           badge={{ text: "DM", variant: "primary" }}
                           isCurrentUser={isCurrentUser}
-                        />
+                        >
+                          {isCurrentUser && (
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              hx-post={`/campaigns/${campaign.id}/leave`}
+                              hx-confirm="Are you sure you want to leave this campaign?"
+                              data-testid="leave-campaign"
+                            >
+                              <i class="bi bi-box-arrow-right" /> Leave
+                            </button>
+                          )}
+                        </CampaignMemberCard>
                       </div>
                     )
                   }
@@ -468,7 +506,15 @@ export const Campaign = ({ campaign }: CampaignProps) => {
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h3>Viewers</h3>
               {campaign.canManageViewers && (
-                <button type="button" class="btn btn-primary btn-sm">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#detailModal"
+                  hx-get={`/campaigns/${campaign.id}/invite?role=viewer`}
+                  hx-target="#detailModalContent"
+                  hx-swap="innerHTML"
+                >
                   <i class="bi bi-person-plus"></i> Add Viewer
                 </button>
               )}
@@ -491,7 +537,30 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                           title={viewer.email}
                           badge={{ text: "Viewer", variant: "info" }}
                           isCurrentUser={isCurrentUser}
-                        />
+                        >
+                          {isCurrentUser && (
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              hx-post={`/campaigns/${campaign.id}/leave`}
+                              hx-confirm="Are you sure you want to leave this campaign?"
+                              data-testid="leave-campaign"
+                            >
+                              <i class="bi bi-box-arrow-right" /> Leave
+                            </button>
+                          )}
+                          {isDM && !isCurrentUser && (
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              hx-delete={`/campaigns/${campaign.id}/members/${viewer.id}`}
+                              hx-confirm={`Are you sure you want to remove ${viewer.email} from the campaign?`}
+                              data-testid={`remove-viewer-${viewer.id}`}
+                            >
+                              <i class="bi bi-trash" /> Remove
+                            </button>
+                          )}
+                        </CampaignMemberCard>
                       </div>
                     )
                   }

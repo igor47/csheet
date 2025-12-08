@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import { faker } from "@faker-js/faker"
 import type { Campaign } from "@src/db/campaigns"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
-import { ulid } from "@src/lib/ids"
 import { useTestApp } from "@src/test/app"
 import {
   campaignCharacterFactory,
@@ -11,7 +11,7 @@ import {
 } from "@src/test/factories/campaign"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
-import { expectElement, makeRequest, parseHtml } from "@src/test/http"
+import { elementExists, expectElement, makeRequest, parseHtml } from "@src/test/http"
 
 describe("GET /campaigns", () => {
   const testCtx = useTestApp()
@@ -720,12 +720,20 @@ describe("POST /campaigns/:id/invite", () => {
     })
 
     describe("when email is already a member", () => {
+      let existingMemberEmail: string
+
       beforeEach(async () => {
-        const existingUser = await userFactory.create({ email: inviteEmail }, testCtx.db)
+        // Create a member with a unique email for this test case
+        existingMemberEmail = faker.internet.email()
+        const existingUser = await userFactory.create({ email: existingMemberEmail }, testCtx.db)
         await campaignMemberFactory.create(
           { campaign_id: campaign.id, user_id: existingUser.id, invited_by: user.id },
           testCtx.db
         )
+        // Update formData to use this existing member's email
+        formData = new FormData()
+        formData.append("email", existingMemberEmail)
+        formData.append("role", "player")
       })
 
       test("shows error message", async () => {
@@ -740,6 +748,67 @@ describe("POST /campaigns/:id/invite", () => {
         const body = document.body.textContent || ""
 
         expect(body).toContain("already a member")
+      })
+    })
+
+    describe("when member was previously removed", () => {
+      let removedUser: User
+
+      beforeEach(async () => {
+        removedUser = await userFactory.create({}, testCtx.db)
+        const member = await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: removedUser.id, invited_by: user.id },
+          testCtx.db
+        )
+        // Remove the member (soft delete)
+        await testCtx.db`
+          UPDATE campaign_members
+          SET deleted_at = CURRENT_TIMESTAMP
+          WHERE id = ${member.id}
+        `
+
+        // Update formData to use removed user's email
+        formData = new FormData()
+        formData.append("email", removedUser.email!)
+        formData.append("role", "player")
+      })
+
+      test("shows error and re-invite checkbox", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("previously removed")
+        // Should show the re-invite checkbox
+        expect(elementExists(document, 'input[name="forceReinvite"]')).toBe(true)
+      })
+
+      test("re-invites when forceReinvite is checked", async () => {
+        formData.append("forceReinvite", "on")
+
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
+
+        expect(response.status).toBe(204)
+        expect(response.headers.get("HX-Refresh")).toBe("true")
+
+        // Verify the member was reset (deleted_at cleared)
+        const members = await testCtx.db`
+          SELECT * FROM campaign_members
+          WHERE campaign_id = ${campaign.id} AND user_id = ${removedUser.id}
+        `
+        expect(members.length).toBe(1)
+        expect(members[0].deleted_at).toBeNull()
+        expect(members[0].accepted_at).toBeNull()
       })
     })
 
@@ -1138,10 +1207,37 @@ describe("DELETE /campaigns/:id/members/:memberId", () => {
       })
     })
 
-    describe("with an accepted member", () => {
+    describe("with an accepted player", () => {
       beforeEach(async () => {
         const member = await campaignMemberFactory.create(
           { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id },
+          testCtx.db
+        )
+        memberId = member.id
+      })
+
+      test("removes the player", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/${memberId}`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        expect(response.status).toBe(204)
+
+        // Verify player was soft-deleted
+        const members = await testCtx.db`
+          SELECT * FROM campaign_members WHERE id = ${memberId}
+        `
+        expect(members.length).toBe(1)
+        expect(members[0].deleted_at).not.toBeNull()
+      })
+    })
+
+    describe("with an accepted DM", () => {
+      beforeEach(async () => {
+        const member = await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: invitedUser.id, invited_by: dmUser.id, role: "dm" },
           testCtx.db
         )
         memberId = member.id
@@ -1156,11 +1252,44 @@ describe("DELETE /campaigns/:id/members/:memberId", () => {
 
         expect(response.status).toBe(400)
 
-        // Verify member was not deleted
+        // Verify DM was not deleted
         const members = await testCtx.db`
           SELECT * FROM campaign_members WHERE id = ${memberId}
         `
         expect(members.length).toBe(1)
+        expect(members[0].deleted_at).toBeNull()
+      })
+    })
+
+    describe("with an accepted viewer", () => {
+      beforeEach(async () => {
+        const member = await campaignMemberFactory.create(
+          {
+            campaign_id: campaign.id,
+            user_id: invitedUser.id,
+            invited_by: dmUser.id,
+            role: "viewer",
+          },
+          testCtx.db
+        )
+        memberId = member.id
+      })
+
+      test("removes the viewer", async () => {
+        const response = await makeRequest(
+          testCtx.app,
+          `/campaigns/${campaign.id}/members/${memberId}`,
+          { user: dmUser, method: "DELETE" }
+        )
+
+        expect(response.status).toBe(204)
+
+        // Verify viewer was soft-deleted
+        const members = await testCtx.db`
+          SELECT * FROM campaign_members WHERE id = ${memberId}
+        `
+        expect(members.length).toBe(1)
+        expect(members[0].deleted_at).not.toBeNull()
       })
     })
 
@@ -1342,10 +1471,10 @@ describe("GET /campaigns/:id/add-character", () => {
           testCtx.db
         )
         // Add character to campaign
-        await testCtx.db`
-          INSERT INTO campaign_characters (id, campaign_id, character_id, added_by, revealed_at)
-          VALUES (${ulid()}, ${campaign.id}, ${character.id}, ${playerUser.id}, CURRENT_TIMESTAMP)
-        `
+        await campaignCharacterFactory.create(
+          { campaign_id: campaign.id, character_id: character.id, added_by: playerUser.id },
+          testCtx.db
+        )
       })
 
       test("does not show character in the list", async () => {
@@ -1439,10 +1568,10 @@ describe("POST /campaigns/:id/characters/:characterId", () => {
     describe("when character is already in campaign", () => {
       beforeEach(async () => {
         // Add the character to the campaign
-        await testCtx.db`
-          INSERT INTO campaign_characters (id, campaign_id, character_id, added_by, revealed_at)
-          VALUES (${ulid()}, ${campaign.id}, ${character.id}, ${playerUser.id}, CURRENT_TIMESTAMP)
-        `
+        await campaignCharacterFactory.create(
+          { campaign_id: campaign.id, character_id: character.id, added_by: playerUser.id },
+          testCtx.db
+        )
         // Create another character so modal has something to display with the error
         await characterFactory.create(
           { user_id: playerUser.id, class: "wizard", level: 5 },
@@ -2157,6 +2286,268 @@ describe("GET /campaigns/:id - NPCs section visibility", () => {
       expect(body).toContain("Revealed NPC")
       // Player should not see Hide button
       expect(body).not.toContain("Hide")
+    })
+  })
+})
+
+describe("GET /campaigns/:id/invite with role query param", () => {
+  const testCtx = useTestApp()
+
+  let user: User
+  let campaign: Campaign
+
+  beforeEach(async () => {
+    user = await userFactory.create({}, testCtx.db)
+    campaign = await campaignFactory.create({ created_by: user.id }, testCtx.db)
+  })
+
+  test("pre-selects viewer role when ?role=viewer", async () => {
+    const response = await makeRequest(
+      testCtx.app,
+      `/campaigns/${campaign.id}/invite?role=viewer`,
+      {
+        user,
+      }
+    )
+
+    expect(response.status).toBe(200)
+    const document = await parseHtml(response)
+    const html = document.body.innerHTML
+
+    // Check that viewer option has selected attribute
+    expect(html).toContain('value="viewer" selected')
+  })
+
+  test("pre-selects dm role when ?role=dm", async () => {
+    const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite?role=dm`, {
+      user,
+    })
+
+    expect(response.status).toBe(200)
+    const document = await parseHtml(response)
+    const html = document.body.innerHTML
+
+    // Check that dm option has selected attribute
+    expect(html).toContain('value="dm" selected')
+  })
+
+  test("defaults to player role when no query param", async () => {
+    const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+      user,
+    })
+
+    expect(response.status).toBe(200)
+    const document = await parseHtml(response)
+    const html = document.body.innerHTML
+
+    // Check that player option has selected attribute
+    expect(html).toContain('value="player" selected')
+  })
+})
+
+describe("POST /campaigns/:id/leave", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a viewer", () => {
+    let dmUser: User
+    let viewerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      viewerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: viewerUser.id, invited_by: dmUser.id, role: "viewer" },
+        testCtx.db
+      )
+    })
+
+    test("can leave the campaign", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/leave`, {
+        user: viewerUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("HX-Redirect")).toBe("/campaigns")
+    })
+  })
+
+  describe("when user is a player", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id, role: "player" },
+        testCtx.db
+      )
+    })
+
+    test("can leave the campaign", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/leave`, {
+        user: playerUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("HX-Redirect")).toBe("/campaigns")
+    })
+
+    describe("with a character in the campaign", () => {
+      beforeEach(async () => {
+        const character = await characterFactory.create({ user_id: playerUser.id }, testCtx.db)
+        await campaignCharacterFactory.create(
+          { campaign_id: campaign.id, character_id: character.id, added_by: playerUser.id },
+          testCtx.db
+        )
+      })
+
+      test("cannot leave until character is removed", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/leave`, {
+          user: playerUser,
+          method: "POST",
+        })
+
+        expect(response.status).toBe(400)
+        expect(response.headers.get("HX-Redirect")).toBe(`/campaigns/${campaign.id}`)
+      })
+    })
+  })
+
+  describe("when user is a DM", () => {
+    let dmUser: User
+    let otherDmUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      otherDmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+    })
+
+    test("can leave if there are multiple DMs", async () => {
+      // Add second DM
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: otherDmUser.id, invited_by: dmUser.id, role: "dm" },
+        testCtx.db
+      )
+
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/leave`, {
+        user: dmUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("HX-Redirect")).toBe("/campaigns")
+    })
+
+    test("cannot leave as sole DM", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/leave`, {
+        user: dmUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(400)
+      expect(response.headers.get("HX-Redirect")).toBe(`/campaigns/${campaign.id}`)
+    })
+  })
+
+  describe("when user is not a member", () => {
+    let dmUser: User
+    let nonMemberUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      nonMemberUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+    })
+
+    test("returns error", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/leave`, {
+        user: nonMemberUser,
+        method: "POST",
+      })
+
+      expect(response.status).toBe(400)
+    })
+  })
+})
+
+describe("Campaign page buttons", () => {
+  const testCtx = useTestApp()
+
+  describe("Add DM button", () => {
+    let user: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: user.id }, testCtx.db)
+    })
+
+    test("is visible to DMs", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, { user })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("Add DM")
+    })
+  })
+
+  describe("Add Viewer button", () => {
+    let user: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: user.id }, testCtx.db)
+    })
+
+    test("is visible to DMs", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, { user })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("Add Viewer")
+    })
+  })
+
+  describe("Leave button for viewers", () => {
+    let dmUser: User
+    let viewerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      viewerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: viewerUser.id, invited_by: dmUser.id, role: "viewer" },
+        testCtx.db
+      )
+    })
+
+    test("viewer sees Leave button on their own card", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, {
+        user: viewerUser,
+      })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const leaveButton = document.querySelector('[data-testid="leave-campaign"]')
+
+      expect(leaveButton).not.toBeNull()
     })
   })
 })

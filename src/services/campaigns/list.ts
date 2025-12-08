@@ -67,6 +67,7 @@ export async function listCampaigns(db: SQL, filter: ListCampaignsFilter): Promi
         END as invite_status
       FROM campaign_members cm
       WHERE cm.user_id = ${userId}
+        AND cm.deleted_at IS NULL
     )
     SELECT
       c.*,
@@ -85,6 +86,7 @@ export async function listCampaigns(db: SQL, filter: ListCampaignsFilter): Promi
          FROM campaign_members
          WHERE user_id = ${userId}
            AND declined_at IS NULL
+           AND deleted_at IS NULL
        ))
       AND ${archiveFilterQ}
     ORDER BY

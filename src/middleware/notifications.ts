@@ -1,11 +1,8 @@
 import { getDb } from "@src/db"
-import * as campaignMembers from "@src/db/campaign_members"
+import { getNotificationCounts, type NotificationCounts } from "@src/db/campaign_members"
 import { createMiddleware } from "hono/factory"
 
-export interface Notifications {
-  pendingInvites: number
-  needsCharacter: number
-}
+export type Notifications = NotificationCounts
 
 export interface NotificationsVariables {
   notifications: Notifications
@@ -13,6 +10,7 @@ export interface NotificationsVariables {
 
 const defaultNotifications: Notifications = {
   pendingInvites: 0,
+  pendingViewerInvites: 0,
   needsCharacter: 0,
 }
 
@@ -28,17 +26,8 @@ export const notificationsMiddleware = createMiddleware<{
   }
 
   const db = getDb(c)
-
-  // Query counts in parallel for efficiency
-  const [pendingInvites, needsCharacter] = await Promise.all([
-    campaignMembers.countPendingInvites(db, user.id),
-    campaignMembers.countNeedsCharacter(db, user.id),
-  ])
-
-  c.set("notifications", {
-    pendingInvites,
-    needsCharacter,
-  })
+  const notifications = await getNotificationCounts(db, user.id)
+  c.set("notifications", notifications)
 
   await next()
 })

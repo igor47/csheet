@@ -58,6 +58,7 @@ export const Navbar = ({ currentPage, user, notifications }: NavbarProps) => {
   const navLinks = NavLinks.filter((link) => !link.requiresAuth || user)
 
   // Check for campaign notifications
+  const hasPendingViewerInvites = (notifications?.pendingViewerInvites ?? 0) > 0
   const hasPendingInvites = (notifications?.pendingInvites ?? 0) > 0
   const hasNeedsCharacter = (notifications?.needsCharacter ?? 0) > 0
   const hasCampaignNotification = hasPendingInvites || hasNeedsCharacter
@@ -100,11 +101,19 @@ export const Navbar = ({ currentPage, user, notifications }: NavbarProps) => {
                   {link.label}
                   {link.href === "/campaigns" && hasCampaignNotification && (
                     <i
-                      class={`bi ms-1 ${hasPendingInvites ? "bi-envelope-exclamation text-warning" : "bi-person-plus text-info"}`}
+                      class={`bi ms-1 ${
+                        hasPendingViewerInvites
+                          ? "bi-eye text-warning"
+                          : hasPendingInvites
+                            ? "bi-envelope-exclamation text-warning"
+                            : "bi-person-plus text-info"
+                      }`}
                       title={
-                        hasPendingInvites
-                          ? "You have pending campaign invites"
-                          : "Add a character to a campaign"
+                        hasPendingViewerInvites
+                          ? "You have pending viewer invites"
+                          : hasPendingInvites
+                            ? "You have pending campaign invites"
+                            : "Add a character to a campaign"
                       }
                     ></i>
                   )}

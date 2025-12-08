@@ -54,7 +54,7 @@ export const CampaignInviteForm = ({
               name="forceReinvite"
             />
             <label class="form-check-label" for="force-reinvite">
-              Re-send invitation (user previously declined)
+              Send new invitation
             </label>
           </div>
         )}

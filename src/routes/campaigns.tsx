@@ -16,6 +16,7 @@ import { createInvite } from "@src/services/campaigns/invite"
 import { listCampaigns } from "@src/services/campaigns/list"
 import { removeCharacterFromCampaign } from "@src/services/campaigns/removeCharacter"
 import { respondToInvite } from "@src/services/campaigns/respond"
+import { hideCharacter, revealCharacter } from "@src/services/campaigns/revealCharacter"
 import { unarchiveCampaign } from "@src/services/campaigns/unarchive"
 import { listCharacters } from "@src/services/listCharacters"
 import { Hono } from "hono"
@@ -253,6 +254,7 @@ campaignsRoutes.delete("/campaigns/:id/members/:memberId", async (c) => {
 })
 
 // Add character to campaign - show modal with user's characters
+// DMs see "Add NPC" mode, players see "Add Character" mode
 campaignsRoutes.get("/campaigns/:id/add-character", async (c) => {
   const id = c.req.param("id") as string
   const user = c.var.user!
@@ -267,10 +269,16 @@ campaignsRoutes.get("/campaigns/:id/add-character", async (c) => {
   const campaignCharIds = new Set(authResult.campaign.characters.map((cc) => cc.character_id))
   const availableCharacters = userCharacters.filter((ch) => !campaignCharIds.has(ch.id))
 
-  return c.html(<AddCharacterToCampaign campaignId={id} characters={availableCharacters} />)
+  // DMs add NPCs, players add characters
+  const mode = authResult.role === "dm" ? "npc" : "character"
+
+  return c.html(
+    <AddCharacterToCampaign campaignId={id} characters={availableCharacters} mode={mode} />
+  )
 })
 
 // Add character to campaign - POST
+// DMs add NPCs (hidden), players add characters (visible)
 campaignsRoutes.post("/campaigns/:id/characters/:characterId", async (c) => {
   const id = c.req.param("id") as string
   const characterId = c.req.param("characterId") as string
@@ -281,24 +289,34 @@ campaignsRoutes.post("/campaigns/:id/characters/:characterId", async (c) => {
     return handleCampaignUnallowed(c, authResult.reason)
   }
 
-  const result = await addCharacterToCampaign(getDb(c), authResult.campaign, characterId, user.id)
+  const result = await addCharacterToCampaign(
+    getDb(c),
+    authResult.campaign,
+    characterId,
+    user.id,
+    authResult.role
+  )
 
   if (!result.complete) {
     // Re-render modal with error
     const userCharacters = await listCharacters(getDb(c), { userId: user.id })
     const campaignCharIds = new Set(authResult.campaign.characters.map((cc) => cc.character_id))
     const availableCharacters = userCharacters.filter((ch) => !campaignCharIds.has(ch.id))
+    const mode = authResult.role === "dm" ? "npc" : "character"
 
     return c.html(
       <AddCharacterToCampaign
         campaignId={id}
         characters={availableCharacters}
         errors={result.errors}
+        mode={mode}
       />
     )
   }
 
-  await setFlashMsg(c, "Character added to campaign!", "success")
+  const successMsg =
+    authResult.role === "dm" ? "NPC added to campaign!" : "Character added to campaign!"
+  await setFlashMsg(c, successMsg, "success")
   c.header("HX-Trigger", "closeModal")
   c.header("HX-Refresh", "true")
   return c.body(null, 204)
@@ -323,6 +341,66 @@ campaignsRoutes.delete("/campaigns/:id/characters/:characterId", async (c) => {
   }
 
   await setFlashMsg(c, "Character removed from campaign", "success")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
+})
+
+// Reveal NPC to players - DM only
+campaignsRoutes.post("/campaigns/:id/characters/:characterId/reveal", async (c) => {
+  const id = c.req.param("id") as string
+  const characterId = c.req.param("characterId") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Only DMs can reveal NPCs
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can reveal NPCs", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  const result = await revealCharacter(getDb(c), id, characterId)
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors.general || "Failed to reveal NPC", "error")
+    c.header("HX-Refresh", "true")
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, "NPC revealed to players", "success")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
+})
+
+// Hide NPC from players - DM only
+campaignsRoutes.post("/campaigns/:id/characters/:characterId/hide", async (c) => {
+  const id = c.req.param("id") as string
+  const characterId = c.req.param("characterId") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Only DMs can hide NPCs
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can hide NPCs", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  const result = await hideCharacter(getDb(c), id, characterId)
+
+  if (!result.complete) {
+    await setFlashMsg(c, result.errors.general || "Failed to hide NPC", "error")
+    c.header("HX-Refresh", "true")
+    return c.body(null, 400)
+  }
+
+  await setFlashMsg(c, "NPC hidden from players", "success")
   c.header("HX-Refresh", "true")
   return c.body(null, 204)
 })

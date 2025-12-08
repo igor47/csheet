@@ -1689,3 +1689,474 @@ describe("DELETE /campaigns/:id/characters/:characterId", () => {
     })
   })
 })
+
+describe("GET /campaigns/:id/add-character - mode based on role", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a DM", () => {
+    let dmUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      // Create a character so the modal has something to display
+      await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+    })
+
+    test("renders 'Add NPC' mode", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/add-character`, {
+        user: dmUser,
+      })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("Add NPC")
+      expect(body).toContain("Add as NPC")
+    })
+  })
+
+  describe("when user is a player", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      // Create a character so the modal has something to display
+      await characterFactory.create({ user_id: playerUser.id }, testCtx.db)
+    })
+
+    test("renders 'Add Character' mode", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/add-character`, {
+        user: playerUser,
+      })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("Add Character")
+      expect(body).toContain("Add to Campaign")
+    })
+  })
+})
+
+describe("POST /campaigns/:id/characters/:characterId - NPC vs character based on role", () => {
+  const testCtx = useTestApp()
+
+  describe("when DM adds a character", () => {
+    let dmUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+    })
+
+    test("adds as NPC with revealed_at = null (hidden)", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: dmUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(204)
+
+      const campaignChars = await testCtx.db`
+        SELECT * FROM campaign_characters
+        WHERE campaign_id = ${campaign.id} AND character_id = ${character.id}
+      `
+
+      expect(campaignChars.length).toBe(1)
+      expect(campaignChars[0].revealed_at).toBeNull()
+    })
+  })
+
+  describe("when player adds a character", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      character = await characterFactory.create({ user_id: playerUser.id }, testCtx.db)
+    })
+
+    test("adds as character with revealed_at set (visible)", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}`,
+        { user: playerUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(204)
+
+      const campaignChars = await testCtx.db`
+        SELECT * FROM campaign_characters
+        WHERE campaign_id = ${campaign.id} AND character_id = ${character.id}
+      `
+
+      expect(campaignChars.length).toBe(1)
+      expect(campaignChars[0].revealed_at).not.toBeNull()
+    })
+  })
+})
+
+describe("POST /campaigns/:id/characters/:characterId/reveal", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a DM", () => {
+    let dmUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+      // Add as hidden NPC
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: character.id,
+          added_by: dmUser.id,
+          revealed_at: null,
+        },
+        testCtx.db
+      )
+    })
+
+    test("reveals the NPC to players", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}/reveal`,
+        { user: dmUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(204)
+      expect(response.headers.get("HX-Refresh")).toBe("true")
+
+      const campaignChars = await testCtx.db`
+        SELECT * FROM campaign_characters
+        WHERE campaign_id = ${campaign.id} AND character_id = ${character.id}
+      `
+
+      expect(campaignChars[0].revealed_at).not.toBeNull()
+    })
+  })
+
+  describe("when user is a player", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: character.id,
+          added_by: dmUser.id,
+          revealed_at: null,
+        },
+        testCtx.db
+      )
+    })
+
+    test("returns 403 forbidden", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}/reveal`,
+        { user: playerUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(403)
+    })
+  })
+
+  describe("when character is not in campaign", () => {
+    let dmUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+    })
+
+    test("returns error", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}/reveal`,
+        { user: dmUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(400)
+    })
+  })
+})
+
+describe("POST /campaigns/:id/characters/:characterId/hide", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is a DM", () => {
+    let dmUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+      // Add as visible NPC
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: character.id,
+          added_by: dmUser.id,
+          revealed_at: new Date(),
+        },
+        testCtx.db
+      )
+    })
+
+    test("hides the NPC from players", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}/hide`,
+        { user: dmUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(204)
+      expect(response.headers.get("HX-Refresh")).toBe("true")
+
+      const campaignChars = await testCtx.db`
+        SELECT * FROM campaign_characters
+        WHERE campaign_id = ${campaign.id} AND character_id = ${character.id}
+      `
+
+      expect(campaignChars[0].revealed_at).toBeNull()
+    })
+  })
+
+  describe("when user is a player", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let character: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      character = await characterFactory.create({ user_id: dmUser.id }, testCtx.db)
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: character.id,
+          added_by: dmUser.id,
+          revealed_at: new Date(),
+        },
+        testCtx.db
+      )
+    })
+
+    test("returns 403 forbidden", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/campaigns/${campaign.id}/characters/${character.id}/hide`,
+        { user: playerUser, method: "POST" }
+      )
+
+      expect(response.status).toBe(403)
+    })
+  })
+})
+
+describe("GET /campaigns/:id - NPCs section visibility", () => {
+  const testCtx = useTestApp()
+
+  describe("when there are no NPCs", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+    })
+
+    test("DM sees the NPCs section with Add NPC button", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, { user: dmUser })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("NPCs")
+      expect(body).toContain("Add NPC")
+    })
+
+    test("player does not see the NPCs section", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, {
+        user: playerUser,
+      })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+
+      // Check that the NPCs heading is not present
+      const headings = document.querySelectorAll("h3")
+      const npcHeading = Array.from(headings).find((h) => h.textContent?.includes("NPCs"))
+      expect(npcHeading).toBeUndefined()
+    })
+  })
+
+  describe("when there are hidden NPCs only", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let npcCharacter: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      npcCharacter = await characterFactory.create(
+        { user_id: dmUser.id, name: "Hidden NPC" },
+        testCtx.db
+      )
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: npcCharacter.id,
+          added_by: dmUser.id,
+          revealed_at: null,
+        },
+        testCtx.db
+      )
+    })
+
+    test("DM sees the hidden NPC", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, { user: dmUser })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("NPCs")
+      expect(body).toContain("Hidden NPC")
+      expect(body).toContain("Hidden from Players")
+    })
+
+    test("player does not see the NPCs section", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, {
+        user: playerUser,
+      })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+
+      const headings = document.querySelectorAll("h3")
+      const npcHeading = Array.from(headings).find((h) => h.textContent?.includes("NPCs"))
+      expect(npcHeading).toBeUndefined()
+    })
+  })
+
+  describe("when there are revealed NPCs", () => {
+    let dmUser: User
+    let playerUser: User
+    let campaign: Campaign
+    let npcCharacter: Character
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      playerUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
+        testCtx.db
+      )
+      npcCharacter = await characterFactory.create(
+        { user_id: dmUser.id, name: "Revealed NPC" },
+        testCtx.db
+      )
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: npcCharacter.id,
+          added_by: dmUser.id,
+          revealed_at: new Date(),
+        },
+        testCtx.db
+      )
+    })
+
+    test("DM sees the revealed NPC with Hide button", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, { user: dmUser })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("NPCs")
+      expect(body).toContain("Revealed NPC")
+      expect(body).toContain("Hide")
+    })
+
+    test("player sees the NPCs section and the revealed NPC", async () => {
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}`, {
+        user: playerUser,
+      })
+
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      const body = document.body.textContent || ""
+
+      expect(body).toContain("NPCs")
+      expect(body).toContain("Revealed NPC")
+      // Player should not see Hide button
+      expect(body).not.toContain("Hide")
+    })
+  })
+})

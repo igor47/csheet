@@ -118,7 +118,8 @@ export const campaignCharacterFactory = {
       campaign_id: params.campaign_id,
       character_id: params.character_id,
       added_by: params.added_by,
-      revealed_at: params.revealed_at ?? new Date(),
+      // Use explicit undefined check to allow null for hidden NPCs
+      revealed_at: params.revealed_at !== undefined ? params.revealed_at : new Date(),
     })
   },
 }

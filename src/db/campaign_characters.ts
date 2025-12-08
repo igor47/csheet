@@ -95,3 +95,23 @@ export async function deleteByCharacterId(
 
   return result.length > 0
 }
+
+export async function updateRevealedAt(
+  db: SQL,
+  campaignId: string,
+  characterId: string,
+  revealedAt: Date | null
+): Promise<CampaignCharacter | null> {
+  const result = await db`
+    UPDATE campaign_characters
+    SET revealed_at = ${revealedAt}, updated_at = CURRENT_TIMESTAMP
+    WHERE campaign_id = ${campaignId} AND character_id = ${characterId}
+    RETURNING *
+  `
+
+  if (result.length === 0) {
+    return null
+  }
+
+  return parseCampaignCharacter(result[0])
+}

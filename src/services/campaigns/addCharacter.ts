@@ -1,4 +1,5 @@
 import * as campaignCharacters from "@src/db/campaign_characters"
+import type { CampaignMemberRole } from "@src/db/campaign_members"
 import * as characters from "@src/db/characters"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import type { SQL } from "bun"
@@ -8,12 +9,15 @@ export type AddCharacterResult = ServiceResult<{ campaignCharacterId: string }>
 
 /**
  * Add a character to a campaign
+ *
+ * @param role - The user's role in the campaign. DMs add NPCs (hidden), players add characters (visible).
  */
 export async function addCharacterToCampaign(
   db: SQL,
   campaign: ComputedCampaign,
   characterId: string,
-  userId: string
+  userId: string,
+  role: CampaignMemberRole
 ): Promise<AddCharacterResult> {
   // Verify character exists
   const character = await characters.findById(db, characterId)
@@ -36,12 +40,14 @@ export async function addCharacterToCampaign(
     }
   }
 
-  // Add to campaign - player characters are immediately visible
+  // DMs add NPCs (hidden by default), players add characters (immediately visible)
+  const revealedAt = role === "dm" ? null : new Date()
+
   const campaignCharacter = await campaignCharacters.create(db, {
     campaign_id: campaign.id,
     character_id: characterId,
     added_by: userId,
-    revealed_at: new Date(),
+    revealed_at: revealedAt,
   })
 
   return { complete: true, result: { campaignCharacterId: campaignCharacter.id } }

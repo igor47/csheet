@@ -185,12 +185,22 @@ const CharacterCard = ({
         <span class="badge bg-secondary">Hidden from Players</span>
       )}
       {canReveal && character.isNPC && character.revealed_at && (
-        <button type="button" class="btn btn-sm btn-outline-secondary">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          hx-post={`/campaigns/${campaignId}/characters/${character.character_id}/hide`}
+          hx-confirm={`Hide ${character.name} from players?`}
+        >
           <i class="bi bi-eye-slash" /> Hide
         </button>
       )}
       {canReveal && character.isNPC && !character.revealed_at && (
-        <button type="button" class="btn btn-sm btn-outline-primary">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-primary"
+          hx-post={`/campaigns/${campaignId}/characters/${character.character_id}/reveal`}
+          hx-confirm={`Reveal ${character.name} to players?`}
+        >
           <i class="bi bi-eye" /> Reveal
         </button>
       )}
@@ -382,43 +392,53 @@ export const Campaign = ({ campaign }: CampaignProps) => {
           </div>
         </div>
 
-        {/* Section 2: NPCs */}
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h3>NPCs</h3>
-              {isDM && (
-                <button type="button" class="btn btn-primary btn-sm">
-                  <i class="bi bi-plus-circle"></i> Add NPC
-                </button>
+        {/* Section 2: NPCs - only show to players if there are visible NPCs */}
+        {(isDM || visibleNPCs.length > 0) && (
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>NPCs</h3>
+                {isDM && (
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#detailModal"
+                    hx-get={`/campaigns/${campaign.id}/add-character`}
+                    hx-target="#detailModalContent"
+                    hx-swap="innerHTML"
+                  >
+                    <i class="bi bi-plus-circle"></i> Add NPC
+                  </button>
+                )}
+              </div>
+
+              {visibleNPCs.length === 0 ? (
+                <div class="text-center text-muted py-4">
+                  <p>No NPCs {isDM ? "added" : "revealed"} yet.</p>
+                </div>
+              ) : (
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                  {visibleNPCs.map((npc) => {
+                    const isOwner = npc.added_by === campaign.currentUserId
+                    return (
+                      <div class="col" key={npc.id}>
+                        <CharacterCard
+                          character={npc}
+                          campaignId={campaign.id}
+                          canReveal={campaign.canRevealCharacters}
+                          canRemove={isOwner || isDM}
+                          isDM={isDM}
+                          isCurrentUser={isOwner}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
-
-            {visibleNPCs.length === 0 ? (
-              <div class="text-center text-muted py-4">
-                <p>No NPCs {isDM ? "added" : "revealed"} yet.</p>
-              </div>
-            ) : (
-              <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                {visibleNPCs.map((npc) => {
-                  const isOwner = npc.added_by === campaign.currentUserId
-                  return (
-                    <div class="col" key={npc.id}>
-                      <CharacterCard
-                        character={npc}
-                        campaignId={campaign.id}
-                        canReveal={campaign.canRevealCharacters}
-                        canRemove={isOwner || isDM}
-                        isDM={isDM}
-                        isCurrentUser={isOwner}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Section 3: DMs */}
         <div class="row mb-4">

@@ -6,6 +6,7 @@ import type { Campaign } from "@src/db/campaigns"
 import type { User } from "@src/db/users"
 import * as users from "@src/db/users"
 import { sendCampaignInviteEmail } from "@src/lib/email"
+import { Checkbox } from "@src/lib/formSchemas"
 import { ulid } from "@src/lib/ids"
 import { logger } from "@src/lib/logger"
 import type { ServiceResult } from "@src/lib/serviceResult"
@@ -16,6 +17,7 @@ export const CreateInviteSchema = z.object({
   email: z.email("Invalid email address"),
   role: CampaignMemberRoleSchema,
   baseUrl: z.url({ protocol: /^https?$/ }),
+  forceReinvite: Checkbox(),
 })
 
 export type InviteResult = ServiceResult<{ memberId: string }>
@@ -49,7 +51,7 @@ export async function createInvite(
     return { complete: false, values: data, errors }
   }
 
-  const { email, role, baseUrl } = parsed.data
+  const { email, role, baseUrl, forceReinvite } = parsed.data
 
   // Build magic link URL
   const inviteToken = ulid()
@@ -65,29 +67,47 @@ export async function createInvite(
 
     // Check if user is already a member
     const existingMember = await campaignMembers.findByCampaignAndUser(tx, campaign.id, user.id)
+    let member: campaignMembers.CampaignMember
     if (existingMember) {
       if (existingMember.accepted_at) {
         return { error: new InviteError("This user is already a member of this campaign", "email") }
       }
       if (existingMember.declined_at) {
+        if (!forceReinvite) {
+          return {
+            error: new InviteError("This user has previously declined this invitation", "email"),
+            canReinvite: true,
+          }
+        }
+        // Reset the declined invite
+        const resetMember = await campaignMembers.resetInvite(
+          tx,
+          existingMember.id,
+          inviteToken,
+          inviter.id
+        )
+        if (!resetMember) {
+          return { error: new InviteError("Failed to reset invitation", "_form") }
+        }
+        member = resetMember
+      } else {
+        // Pending invite exists
         return {
-          error: new InviteError("This user has previously declined this invitation", "email"),
+          error: new InviteError("An invitation has already been sent to this user", "email"),
         }
       }
-      // Pending invite exists
-      return { error: new InviteError("An invitation has already been sent to this user", "email") }
+    } else {
+      // Create campaign member with pending status and invite token
+      member = await campaignMembers.create(tx, {
+        campaign_id: campaign.id,
+        user_id: user.id,
+        role,
+        invite_token: inviteToken,
+        invited_by: inviter.id,
+        accepted_at: null,
+        declined_at: null,
+      })
     }
-
-    // Create campaign member with pending status and invite token
-    const member = await campaignMembers.create(tx, {
-      campaign_id: campaign.id,
-      user_id: user.id,
-      role,
-      invite_token: inviteToken,
-      invited_by: inviter.id,
-      accepted_at: null,
-      declined_at: null,
-    })
 
     // Send invite email (inside transaction so we rollback on failure)
     if (isSmtpConfigured()) {
@@ -116,7 +136,11 @@ export async function createInvite(
   })
 
   if ("error" in result && result.error) {
-    return { complete: false, values: data, errors: { [result.error.field]: result.error.message } }
+    const errors: Record<string, string> = { [result.error.field]: result.error.message }
+    if ("canReinvite" in result && result.canReinvite) {
+      errors._canReinvite = "true"
+    }
+    return { complete: false, values: data, errors }
   }
 
   if ("member" in result) {

@@ -673,17 +673,20 @@ describe("POST /campaigns/:id/invite", () => {
   describe("when user is a DM", () => {
     let user: User
     let campaign: Campaign
+    let formData: FormData
+    let inviteEmail: string
 
     beforeEach(async () => {
       user = await userFactory.create({}, testCtx.db)
       campaign = await campaignFactory.create({ created_by: user.id }, testCtx.db)
+
+      inviteEmail = "newplayer@example.com"
+      formData = new FormData()
+      formData.append("email", inviteEmail)
+      formData.append("role", "player")
     })
 
     test("creates an invite and returns success", async () => {
-      const formData = new FormData()
-      formData.append("email", "newplayer@example.com")
-      formData.append("role", "player")
-
       const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
         user,
         method: "POST",
@@ -697,10 +700,6 @@ describe("POST /campaigns/:id/invite", () => {
     })
 
     test("creates a campaign member with pending status", async () => {
-      const formData = new FormData()
-      formData.append("email", "newplayer@example.com")
-      formData.append("role", "player")
-
       await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
         user,
         method: "POST",
@@ -712,7 +711,7 @@ describe("POST /campaigns/:id/invite", () => {
         SELECT cm.*, u.email
         FROM campaign_members cm
         JOIN users u ON u.id = cm.user_id
-        WHERE cm.campaign_id = ${campaign.id} AND u.email = 'newplayer@example.com'
+        WHERE cm.campaign_id = ${campaign.id} AND u.email = ${inviteEmail}
       `
 
       expect(members.length).toBe(1)
@@ -720,28 +719,129 @@ describe("POST /campaigns/:id/invite", () => {
       expect(members[0].role).toBe("player")
     })
 
-    test("fails if email is already a member", async () => {
-      const existingUser = await userFactory.create({ email: "existing@example.com" }, testCtx.db)
-      await campaignMemberFactory.create(
-        { campaign_id: campaign.id, user_id: existingUser.id, invited_by: user.id },
-        testCtx.db
-      )
-
-      const formData = new FormData()
-      formData.append("email", "existing@example.com")
-      formData.append("role", "player")
-
-      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
-        user,
-        method: "POST",
-        body: formData,
+    describe("when email is already a member", () => {
+      beforeEach(async () => {
+        const existingUser = await userFactory.create({ email: inviteEmail }, testCtx.db)
+        await campaignMemberFactory.create(
+          { campaign_id: campaign.id, user_id: existingUser.id, invited_by: user.id },
+          testCtx.db
+        )
       })
 
-      expect(response.status).toBe(200)
-      const document = await parseHtml(response)
-      const body = document.body.textContent || ""
+      test("shows error message", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
 
-      expect(body).toContain("already a member")
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("already a member")
+      })
+    })
+
+    describe("when user has previously declined", () => {
+      let declinedUser: User
+
+      beforeEach(async () => {
+        declinedUser = await userFactory.create({}, testCtx.db)
+        await campaignMemberFactory.create(
+          {
+            campaign_id: campaign.id,
+            user_id: declinedUser.id,
+            invited_by: user.id,
+            pending: true,
+          },
+          testCtx.db
+        )
+        // Decline the invite
+        await testCtx.db`
+          UPDATE campaign_members
+          SET declined_at = CURRENT_TIMESTAMP
+          WHERE campaign_id = ${campaign.id} AND user_id = ${declinedUser.id}
+        `
+
+        // Update formData to use declined user's email
+        formData.set("email", declinedUser.email!)
+      })
+
+      test("shows error and re-invite checkbox", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+
+        expect(body).toContain("previously declined")
+        // Should show the re-invite checkbox
+        const checkbox = document.querySelector("#force-reinvite")
+        expect(checkbox).not.toBeNull()
+      })
+
+      describe("when forceReinvite is checked", () => {
+        beforeEach(() => {
+          formData.append("forceReinvite", "on")
+        })
+
+        test("re-invites successfully", async () => {
+          const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+            user,
+            method: "POST",
+            body: formData,
+          })
+
+          expect(response.status).toBe(204)
+          expect(response.headers.get("HX-Refresh")).toBe("true")
+          expect(response.headers.get("HX-Trigger")).toBe("closeModal")
+        })
+
+        test("resets declined_at and generates new token", async () => {
+          await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+            user,
+            method: "POST",
+            body: formData,
+          })
+
+          const members = await testCtx.db`
+            SELECT * FROM campaign_members
+            WHERE campaign_id = ${campaign.id} AND user_id = ${declinedUser.id}
+          `
+
+          expect(members.length).toBe(1)
+          expect(members[0].declined_at).toBeNull()
+          expect(members[0].accepted_at).toBeNull()
+          expect(members[0].invite_token).not.toBeNull()
+        })
+
+        test("updates invited_by to current user", async () => {
+          // Create another DM to re-invite
+          const otherDm = await userFactory.create({}, testCtx.db)
+          await campaignMemberFactory.create(
+            { campaign_id: campaign.id, user_id: otherDm.id, invited_by: user.id, role: "dm" },
+            testCtx.db
+          )
+
+          await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
+            user: otherDm,
+            method: "POST",
+            body: formData,
+          })
+
+          const members = await testCtx.db`
+            SELECT * FROM campaign_members
+            WHERE campaign_id = ${campaign.id} AND user_id = ${declinedUser.id}
+          `
+
+          expect(members[0].invited_by).toBe(otherDm.id)
+        })
+      })
     })
   })
 
@@ -749,6 +849,7 @@ describe("POST /campaigns/:id/invite", () => {
     let dmUser: User
     let playerUser: User
     let campaign: Campaign
+    let formData: FormData
 
     beforeEach(async () => {
       dmUser = await userFactory.create({}, testCtx.db)
@@ -758,13 +859,13 @@ describe("POST /campaigns/:id/invite", () => {
         { campaign_id: campaign.id, user_id: playerUser.id, invited_by: dmUser.id },
         testCtx.db
       )
+
+      formData = new FormData()
+      formData.append("email", "newplayer@example.com")
+      formData.append("role", "player")
     })
 
     test("redirects with error flash", async () => {
-      const formData = new FormData()
-      formData.append("email", "newplayer@example.com")
-      formData.append("role", "player")
-
       const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/invite`, {
         user: playerUser,
         method: "POST",

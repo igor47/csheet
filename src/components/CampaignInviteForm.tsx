@@ -45,6 +45,20 @@ export const CampaignInviteForm = ({
           )}
         </div>
 
+        {errors._canReinvite && (
+          <div class="mb-3 form-check">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              id="force-reinvite"
+              name="forceReinvite"
+            />
+            <label class="form-check-label" for="force-reinvite">
+              Re-send invitation (user previously declined)
+            </label>
+          </div>
+        )}
+
         <div class="mb-3">
           <label for="invite-role" class="form-label">
             Role

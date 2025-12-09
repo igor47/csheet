@@ -83,7 +83,7 @@ const CampaignCard = ({ campaign }: { campaign: ListCampaign }) => {
         )}
         {needsCharacter && (
           <div class="mt-2">
-            <span class="badge bg-info">
+            <span class="badge bg-warning text-dark">
               <i class="bi bi-person-plus"></i> Add Character
             </span>
           </div>

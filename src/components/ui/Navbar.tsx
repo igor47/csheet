@@ -106,7 +106,7 @@ export const Navbar = ({ currentPage, user, notifications }: NavbarProps) => {
                           ? "bi-eye text-warning"
                           : hasPendingInvites
                             ? "bi-envelope-exclamation text-warning"
-                            : "bi-person-plus text-info"
+                            : "bi-person-plus text-warning"
                       }`}
                       title={
                         hasPendingViewerInvites

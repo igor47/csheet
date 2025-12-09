@@ -245,13 +245,18 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                   const isCurrentUser = member.user_id === campaign.currentUserId
 
                   if (member.accepted_at) {
-                    // Accepted but no character
+                    // Accepted but no character - current user needs to add one
                     return (
                       <div class="col" key={member.user_id}>
                         <CampaignMemberCard
                           title={member.email}
-                          badge={{ text: "No Character", variant: "secondary" }}
+                          badge={
+                            isCurrentUser
+                              ? { text: "Add Character", variant: "warning", darkText: true }
+                              : { text: "No Character", variant: "secondary" }
+                          }
                           isCurrentUser={isCurrentUser}
+                          needsAction={isCurrentUser}
                         >
                           {isCurrentUser && (
                             <>

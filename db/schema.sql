@@ -1,7 +1,7 @@
-\restrict hitsB7Gsm3HAge4eMoF1p4j4aecLU5c5w5oCPVQX6oUzpqPSbANChSvxe8QgMhA
+\restrict EIvSglJHygsNcIKc7gr1LRqCWzak1b2BYTPO17s7oUnsrweJPJORd0ywNzjCr4G
 
 -- Dumped from database version 16.10
--- Dumped by pg_dump version 18.0
+-- Dumped by pg_dump version 18.1
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -496,7 +496,8 @@ CREATE TABLE public.users (
     id character varying(26) NOT NULL,
     email text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    name text
 );
 
 
@@ -1382,7 +1383,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict hitsB7Gsm3HAge4eMoF1p4j4aecLU5c5w5oCPVQX6oUzpqPSbANChSvxe8QgMhA
+\unrestrict EIvSglJHygsNcIKc7gr1LRqCWzak1b2BYTPO17s7oUnsrweJPJORd0ywNzjCr4G
 
 
 --
@@ -1429,4 +1430,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251122030300'),
     ('20251125200357'),
     ('20251126134731'),
-    ('20251205001836');
+    ('20251205001836'),
+    ('20251209195618');

@@ -12,6 +12,7 @@ import { characterRoutes } from "./routes/character"
 import { chatRoutes } from "./routes/chat"
 import { healthRoutes } from "./routes/health"
 import { indexRoutes } from "./routes/index"
+import { profileRoutes } from "./routes/profile"
 import { spellsRoutes } from "./routes/spells"
 import { uploadsRoutes } from "./routes/uploads"
 
@@ -73,6 +74,7 @@ export function createApp(db?: SQL) {
   protectedRoutes.route("/", characterRoutes)
   protectedRoutes.route("/", campaignsRoutes)
   protectedRoutes.route("/", chatRoutes)
+  protectedRoutes.route("/", profileRoutes)
   protectedRoutes.route("/", uploadsRoutes)
 
   app.route("/", protectedRoutes)

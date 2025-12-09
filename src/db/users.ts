@@ -4,6 +4,7 @@ import type { SQL } from "bun"
 export interface User {
   id: string
   email: string
+  name: string | null
   created_at: string
   updated_at: string
 }
@@ -35,6 +36,21 @@ export async function findByEmail(db: SQL, email: string): Promise<User | null> 
     SELECT * FROM users
     WHERE email = ${email}
     LIMIT 1
+  `
+
+  return (result[0] as User) || null
+}
+
+export interface UpdateUserData {
+  name?: string | null
+}
+
+export async function update(db: SQL, id: string, data: UpdateUserData): Promise<User | null> {
+  const result = await db`
+    UPDATE users
+    SET name = ${data.name ?? null}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+    RETURNING *
   `
 
   return (result[0] as User) || null

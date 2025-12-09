@@ -28,9 +28,8 @@ const CharacterCard = ({
   isDM,
   isCurrentUser,
 }: CharacterCardProps) => {
-  const subtitle = character.isNPC
-    ? `Added by: ${character.added_by_email}`
-    : `Played by: ${character.added_by_email}`
+  const addedByDisplay = character.added_by_name || character.added_by_email
+  const subtitle = character.isNPC ? `Added by: ${addedByDisplay}` : `Played by: ${addedByDisplay}`
 
   // Show "Hidden" badge for hidden NPCs (only visible to DMs)
   const badge =
@@ -237,7 +236,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                     return (
                       <div class="col" key={member.user_id}>
                         <CampaignMemberCard
-                          title={member.email}
+                          title={member.name || member.email}
                           badge={
                             isCurrentUser
                               ? { text: "Add Character", variant: "warning", darkText: true }
@@ -303,7 +302,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                     return (
                       <div class="col" key={member.user_id}>
                         <CampaignMemberCard
-                          title={member.email}
+                          title={member.name || member.email}
                           badge={{ text: "Declined", variant: "danger" }}
                         >
                           {isDM && (
@@ -325,7 +324,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                   return (
                     <div class="col" key={member.user_id}>
                       <CampaignMemberCard
-                        title={member.email}
+                        title={member.name || member.email}
                         badge={{ text: "Pending Invite", variant: "warning", darkText: true }}
                       >
                         {isDM && (

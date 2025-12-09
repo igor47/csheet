@@ -57,6 +57,7 @@ export async function create(
 
 export interface CampaignCharacterWithAddedBy extends CampaignCharacter {
   added_by_email: string
+  added_by_name: string | null
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
@@ -64,6 +65,7 @@ function parseCampaignCharacterWithAddedBy(row: any): CampaignCharacterWithAdded
   return {
     ...parseCampaignCharacter(row),
     added_by_email: row.added_by_email,
+    added_by_name: row.added_by_name ?? null,
   }
 }
 
@@ -72,7 +74,7 @@ export async function findByCampaignId(
   campaignId: string
 ): Promise<CampaignCharacterWithAddedBy[]> {
   const result = await db`
-    SELECT cc.*, u.email as added_by_email
+    SELECT cc.*, u.email as added_by_email, u.name as added_by_name
     FROM campaign_characters cc
     JOIN users u ON u.id = cc.added_by
     WHERE cc.campaign_id = ${campaignId}

@@ -35,11 +35,13 @@ const NavLinks: NavLink[] = [
 ] as const
 
 const LoggedInContent = ({ user }: { user: User }) => {
-  const username = user.email?.split("@")[0]
+  const displayName = user.name || user.email?.split("@")[0]
 
   return (
     <div class="d-flex align-items-center">
-      <span class="navbar-text me-3">{username}</span>
+      <a href="/profile" class="navbar-text me-3 text-decoration-none">
+        {displayName}
+      </a>
       <a href="/logout" class="btn btn-outline-secondary btn-sm">
         Logout
       </a>

@@ -115,3 +115,44 @@ export async function updateRevealedAt(
 
   return parseCampaignCharacter(result[0])
 }
+
+/**
+ * Reveal all hidden characters added by a specific user in a campaign
+ * Used when DM becomes player - their NPCs become player characters
+ * Returns the number of characters revealed
+ */
+export async function revealAllByAddedBy(
+  db: SQL,
+  campaignId: string,
+  addedBy: string
+): Promise<number> {
+  const result = await db`
+    UPDATE campaign_characters
+    SET revealed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE campaign_id = ${campaignId}
+      AND added_by = ${addedBy}
+      AND revealed_at IS NULL
+    RETURNING id
+  `
+
+  return result.length
+}
+
+/**
+ * Count characters added by a specific user in a campaign
+ * Used for validation when changing roles
+ */
+export async function countByAddedBy(
+  db: SQL,
+  campaignId: string,
+  addedBy: string
+): Promise<number> {
+  const result = await db`
+    SELECT COUNT(*) as count
+    FROM campaign_characters
+    WHERE campaign_id = ${campaignId}
+      AND added_by = ${addedBy}
+  `
+
+  return Number(result[0].count)
+}

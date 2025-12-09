@@ -80,14 +80,13 @@ export async function listCampaigns(db: SQL, filter: ListCampaignsFilter): Promi
     LEFT JOIN campaign_character_counts cc ON cc.campaign_id = c.id
     LEFT JOIN user_membership um ON um.campaign_id = c.id
     LEFT JOIN users inviter ON inviter.id = um.invited_by
-    WHERE (c.created_by = ${userId}
-       OR c.id IN (
+    WHERE c.id IN (
          SELECT campaign_id
          FROM campaign_members
          WHERE user_id = ${userId}
            AND declined_at IS NULL
            AND deleted_at IS NULL
-       ))
+       )
       AND ${archiveFilterQ}
     ORDER BY
       CASE WHEN um.invite_status = 'pending' THEN 0

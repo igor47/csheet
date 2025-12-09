@@ -297,6 +297,31 @@ export async function softDelete(db: SQL, id: string): Promise<void> {
 }
 
 /**
+ * Update a campaign member's role
+ */
+export async function updateRole(
+  db: SQL,
+  memberId: string,
+  newRole: CampaignMemberRole
+): Promise<CampaignMember | null> {
+  const now = new Date()
+
+  const result = await db`
+    UPDATE campaign_members
+    SET role = ${newRole}, updated_at = ${now.toISOString()}
+    WHERE id = ${memberId}
+      AND deleted_at IS NULL
+    RETURNING *
+  `
+
+  if (result.length === 0) {
+    return null
+  }
+
+  return parseCampaignMember(result[0])
+}
+
+/**
  * Reset an invite to pending state with a new token
  * Used when DM wants to re-invite someone who previously declined, removed, or resend expired invites
  */

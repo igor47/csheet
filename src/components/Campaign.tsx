@@ -10,8 +10,10 @@ export interface CampaignProps {
 interface CharacterCardProps {
   character: ComputedCampaignCharacter
   campaignId: string
+  memberId?: string // Member ID for change-role button (not available for NPCs)
   canReveal: boolean
   canRemove: boolean
+  canChangeRole: boolean // DM viewing another user's character
   isDM: boolean
   isCurrentUser: boolean
 }
@@ -19,8 +21,10 @@ interface CharacterCardProps {
 const CharacterCard = ({
   character,
   campaignId,
+  memberId,
   canReveal,
   canRemove,
+  canChangeRole,
   isDM,
   isCurrentUser,
 }: CharacterCardProps) => {
@@ -33,11 +37,6 @@ const CharacterCard = ({
     isDM && character.isNPC && !character.revealed_at
       ? { text: "Hidden", variant: "secondary" as const }
       : undefined
-
-  // Determine what actions to show
-  const showView = isCurrentUser
-  const showRemove = canRemove
-  const showAddAnother = isCurrentUser && !character.isNPC
 
   return (
     <CampaignCharacterCard
@@ -74,66 +73,53 @@ const CharacterCard = ({
         </button>
       )}
 
-      {/* Player character actions */}
-      {showView && (
+      {/* View button for owner */}
+      {isCurrentUser && (
         <a href={`/characters/${character.character_id}`} class="btn btn-sm btn-outline-primary">
           View
         </a>
       )}
 
-      {/* Overflow menu for owner or Remove button for DM */}
-      {isCurrentUser && (showRemove || showAddAnother) ? (
-        <div class="dropdown">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-secondary dropdown-toggle"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-          >
-            <i class="bi bi-three-dots-vertical" />
-          </button>
-          <ul class="dropdown-menu">
-            {showRemove && (
-              <li>
-                <button
-                  type="button"
-                  class="dropdown-item text-danger"
-                  hx-delete={`/campaigns/${campaignId}/characters/${character.character_id}`}
-                  hx-confirm={`Remove ${character.name} from this campaign?`}
-                >
-                  <i class="bi bi-x-circle" /> Remove from Campaign
-                </button>
-              </li>
-            )}
-            {showAddAnother && (
-              <li>
-                <button
-                  type="button"
-                  class="dropdown-item"
-                  data-bs-toggle="modal"
-                  data-bs-target="#detailModal"
-                  hx-get={`/campaigns/${campaignId}/add-character`}
-                  hx-target="#detailModalContent"
-                  hx-swap="innerHTML"
-                >
-                  <i class="bi bi-plus-circle" /> Add Another Character
-                </button>
-              </li>
-            )}
-          </ul>
-        </div>
-      ) : (
-        showRemove &&
-        !isCurrentUser && (
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-danger"
-            hx-delete={`/campaigns/${campaignId}/characters/${character.character_id}`}
-            hx-confirm={`Remove ${character.name} from this campaign?`}
-          >
-            Remove
-          </button>
-        )
+      {/* Add another character button for owner (non-NPC only) */}
+      {isCurrentUser && !character.isNPC && (
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          data-bs-toggle="modal"
+          data-bs-target="#detailModal"
+          hx-get={`/campaigns/${campaignId}/add-character`}
+          hx-target="#detailModalContent"
+          hx-swap="innerHTML"
+        >
+          <i class="bi bi-plus-circle" /> Add Another
+        </button>
+      )}
+
+      {/* Change role button for DM viewing another user's character */}
+      {canChangeRole && memberId && (
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          data-bs-toggle="modal"
+          data-bs-target="#detailModal"
+          hx-get={`/campaigns/${campaignId}/members/${memberId}/change-role`}
+          hx-target="#detailModalContent"
+          hx-swap="innerHTML"
+        >
+          <i class="bi bi-arrow-repeat" /> Change Role
+        </button>
+      )}
+
+      {/* Remove button */}
+      {canRemove && (
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-danger"
+          hx-delete={`/campaigns/${campaignId}/characters/${character.character_id}`}
+          hx-confirm={`Remove ${character.name} from this campaign?`}
+        >
+          Remove
+        </button>
       )}
     </CampaignCharacterCard>
   )
@@ -234,8 +220,10 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                         <CharacterCard
                           character={memberChar}
                           campaignId={campaign.id}
+                          memberId={member.id}
                           canReveal={campaign.canRevealCharacters}
                           canRemove={isOwner || isDM}
+                          canChangeRole={isDM && !isOwner}
                           isDM={isDM}
                           isCurrentUser={isOwner}
                         />
@@ -283,15 +271,28 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                             </>
                           )}
                           {isDM && !isCurrentUser && (
-                            <button
-                              type="button"
-                              class="btn btn-outline-danger btn-sm"
-                              hx-delete={`/campaigns/${campaign.id}/members/${member.id}`}
-                              hx-confirm={`Are you sure you want to remove ${member.email} from the campaign?`}
-                              data-testid={`delete-member-${member.id}`}
-                            >
-                              <i class="bi bi-trash" /> Remove
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#detailModal"
+                                hx-get={`/campaigns/${campaign.id}/members/${member.id}/change-role`}
+                                hx-target="#detailModalContent"
+                                hx-swap="innerHTML"
+                              >
+                                <i class="bi bi-arrow-repeat" /> Change Role
+                              </button>
+                              <button
+                                type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                hx-delete={`/campaigns/${campaign.id}/members/${member.id}`}
+                                hx-confirm={`Are you sure you want to remove ${member.email} from the campaign?`}
+                                data-testid={`delete-member-${member.id}`}
+                              >
+                                <i class="bi bi-trash" /> Remove
+                              </button>
+                            </>
                           )}
                         </CampaignMemberCard>
                       </div>
@@ -383,6 +384,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                           campaignId={campaign.id}
                           canReveal={campaign.canRevealCharacters}
                           canRemove={isOwner || isDM}
+                          canChangeRole={false}
                           isDM={isDM}
                           isCurrentUser={isOwner}
                         />
@@ -402,7 +404,15 @@ export const Campaign = ({ campaign }: CampaignProps) => {
               <h3>Dungeon Masters</h3>
               <div class="d-flex gap-2">
                 {campaign.canChangeDMRole && (
-                  <button type="button" class="btn btn-outline-secondary btn-sm">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#detailModal"
+                    hx-get={`/campaigns/${campaign.id}/change-role`}
+                    hx-target="#detailModalContent"
+                    hx-swap="innerHTML"
+                  >
                     <i class="bi bi-arrow-down-circle"></i> Change My Role
                   </button>
                 )}
@@ -555,15 +565,28 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                             </button>
                           )}
                           {isDM && !isCurrentUser && (
-                            <button
-                              type="button"
-                              class="btn btn-outline-danger btn-sm"
-                              hx-delete={`/campaigns/${campaign.id}/members/${viewer.id}`}
-                              hx-confirm={`Are you sure you want to remove ${viewer.email} from the campaign?`}
-                              data-testid={`remove-viewer-${viewer.id}`}
-                            >
-                              <i class="bi bi-trash" /> Remove
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#detailModal"
+                                hx-get={`/campaigns/${campaign.id}/members/${viewer.id}/change-role`}
+                                hx-target="#detailModalContent"
+                                hx-swap="innerHTML"
+                              >
+                                <i class="bi bi-arrow-repeat" /> Change Role
+                              </button>
+                              <button
+                                type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                hx-delete={`/campaigns/${campaign.id}/members/${viewer.id}`}
+                                hx-confirm={`Are you sure you want to remove ${viewer.email} from the campaign?`}
+                                data-testid={`remove-viewer-${viewer.id}`}
+                              >
+                                <i class="bi bi-trash" /> Remove
+                              </button>
+                            </>
                           )}
                         </CampaignMemberCard>
                       </div>

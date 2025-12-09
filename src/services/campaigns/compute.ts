@@ -36,16 +36,7 @@ export interface ComputedCampaign extends Campaign {
   canChangeDMRole: boolean
 }
 
-function getUserRole(
-  campaign: Campaign,
-  members: CampaignMemberWithUser[],
-  userId: string
-): CampaignMemberRole | null {
-  if (campaign.created_by === userId) {
-    // Creator is implicitly a DM if not explicitly a member
-    const explicitMembership = members.find((m) => m.user_id === userId)
-    return explicitMembership?.role || "dm"
-  }
+function getUserRole(members: CampaignMemberWithUser[], userId: string): CampaignMemberRole | null {
   const membership = members.find((m) => m.user_id === userId)
   if (membership?.accepted_at) {
     return membership.role
@@ -53,11 +44,8 @@ function getUserRole(
   return null
 }
 
-function getDMUserIds(campaign: Campaign, members: CampaignMemberWithUser[]): Set<string> {
+function getDMUserIds(members: CampaignMemberWithUser[]): Set<string> {
   const dmUserIds = new Set<string>()
-  if (campaign.created_by) {
-    dmUserIds.add(campaign.created_by)
-  }
   for (const member of members) {
     if (member.role === "dm" && member.accepted_at) {
       dmUserIds.add(member.user_id)
@@ -121,8 +109,8 @@ export async function computeCampaign(
   ])
 
   // Compute user role and DM set
-  const userRole = getUserRole(campaign, members, userId)
-  const dmUserIds = getDMUserIds(campaign, members)
+  const userRole = getUserRole(members, userId)
+  const dmUserIds = getDMUserIds(members)
 
   // Build computed members and characters
   const computedMembers = buildComputedMembers(members, campaignChars)

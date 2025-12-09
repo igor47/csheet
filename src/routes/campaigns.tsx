@@ -3,6 +3,7 @@ import { Campaign } from "@src/components/Campaign"
 import { CampaignInviteForm } from "@src/components/CampaignInviteForm"
 import { CampaignNew } from "@src/components/CampaignNew"
 import { Campaigns } from "@src/components/Campaigns"
+import { ChangeRoleForm } from "@src/components/ChangeRoleForm"
 import { getDb } from "@src/db"
 import { countArchivedByUserId } from "@src/db/campaigns"
 import { getBaseUrl } from "@src/lib/url"
@@ -10,6 +11,7 @@ import { setFlashMsg } from "@src/middleware/flash"
 import { addCharacterToCampaign } from "@src/services/campaigns/addCharacter"
 import { archiveCampaign } from "@src/services/campaigns/archive"
 import { authorizeCampaign, handleCampaignUnallowed } from "@src/services/campaigns/authorize"
+import { changeRole } from "@src/services/campaigns/changeRole"
 import { createCampaign } from "@src/services/campaigns/create"
 import { deleteInvite } from "@src/services/campaigns/deleteInvite"
 import { createInvite } from "@src/services/campaigns/invite"
@@ -422,6 +424,166 @@ campaignsRoutes.post("/campaigns/:id/characters/:characterId/hide", async (c) =>
   }
 
   await setFlashMsg(c, "NPC hidden from players", "success")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
+})
+
+// Self role change - show modal form (GET)
+campaignsRoutes.get("/campaigns/:id/change-role", async (c) => {
+  const id = c.req.param("id") as string
+  const user = c.var.user!
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Only DMs can change their own role (players/viewers cannot self-promote)
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can change their role", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  // Find the current user's member record
+  const currentMember = authResult.campaign.members.find((m) => m.user_id === user.id)
+  if (!currentMember) {
+    await setFlashMsg(c, "Member not found", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 400)
+  }
+
+  return c.html(
+    <ChangeRoleForm campaign={authResult.campaign} member={currentMember} isSelfChange={true} />
+  )
+})
+
+// Self role change - process (POST)
+campaignsRoutes.post("/campaigns/:id/change-role", async (c) => {
+  const id = c.req.param("id") as string
+  const user = c.var.user!
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can change their role", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  const currentMember = authResult.campaign.members.find((m) => m.user_id === user.id)
+  if (!currentMember) {
+    await setFlashMsg(c, "Member not found", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 400)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await changeRole(getDb(c), authResult.campaign, currentMember, user.id, body)
+
+  if (!result.complete) {
+    return c.html(
+      <ChangeRoleForm
+        campaign={authResult.campaign}
+        member={currentMember}
+        isSelfChange={true}
+        values={result.values}
+        errors={result.errors}
+      />
+    )
+  }
+
+  const msg = result.result.npcsRevealed
+    ? `Role changed! ${result.result.npcsRevealed} NPC(s) were revealed.`
+    : "Role changed successfully!"
+
+  await setFlashMsg(c, msg, "success")
+  c.header("HX-Trigger", "closeModal")
+  c.header("HX-Refresh", "true")
+  return c.body(null, 204)
+})
+
+// DM changing another member's role - show modal form (GET)
+campaignsRoutes.get("/campaigns/:id/members/:memberId/change-role", async (c) => {
+  const id = c.req.param("id") as string
+  const memberId = c.req.param("memberId") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  // Only DMs can change others' roles
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can change member roles", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  // Find the target member
+  const targetMember = authResult.campaign.members.find((m) => m.id === memberId)
+  if (!targetMember) {
+    await setFlashMsg(c, "Member not found", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 404)
+  }
+
+  // Cannot change other DMs' roles (they must do it themselves)
+  if (targetMember.role === "dm") {
+    await setFlashMsg(c, "DMs must change their own role", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 400)
+  }
+
+  return c.html(
+    <ChangeRoleForm campaign={authResult.campaign} member={targetMember} isSelfChange={false} />
+  )
+})
+
+// DM changing another member's role - process (POST)
+campaignsRoutes.post("/campaigns/:id/members/:memberId/change-role", async (c) => {
+  const id = c.req.param("id") as string
+  const memberId = c.req.param("memberId") as string
+  const user = c.var.user!
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) {
+    return handleCampaignUnallowed(c, authResult.reason)
+  }
+
+  if (authResult.role !== "dm") {
+    await setFlashMsg(c, "Only DMs can change member roles", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 403)
+  }
+
+  const targetMember = authResult.campaign.members.find((m) => m.id === memberId)
+  if (!targetMember) {
+    await setFlashMsg(c, "Member not found", "error")
+    c.header("HX-Redirect", `/campaigns/${id}`)
+    return c.body(null, 404)
+  }
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await changeRole(getDb(c), authResult.campaign, targetMember, user.id, body)
+
+  if (!result.complete) {
+    return c.html(
+      <ChangeRoleForm
+        campaign={authResult.campaign}
+        member={targetMember}
+        isSelfChange={false}
+        values={result.values}
+        errors={result.errors}
+      />
+    )
+  }
+
+  await setFlashMsg(c, `Role changed for ${targetMember.email}`, "success")
+  c.header("HX-Trigger", "closeModal")
   c.header("HX-Refresh", "true")
   return c.body(null, 204)
 })

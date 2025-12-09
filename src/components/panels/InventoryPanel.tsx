@@ -5,14 +5,16 @@ import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 interface InventoryPanelProps {
   character: ComputedCharacter
   swapOob?: boolean
+  isReadOnly?: boolean
 }
 
 interface InventoryItemRowProps {
   item: EquippedComputedItem
   characterId: string
+  isReadOnly?: boolean
 }
 
-const InventoryItemRow = ({ item, characterId }: InventoryItemRowProps) => {
+const InventoryItemRow = ({ item, characterId, isReadOnly = false }: InventoryItemRowProps) => {
   return (
     <div class="row g-2 border-bottom pb-2 mb-2">
       {/* Item name and badges */}
@@ -35,121 +37,123 @@ const InventoryItemRow = ({ item, characterId }: InventoryItemRowProps) => {
         </div>
       </div>
 
-      {/* Button groups */}
-      <div class="col-12 col-md-6">
-        <div class="d-flex flex-column gap-1">
-          {/* Row 1: State and charge buttons */}
-          <div class="d-flex gap-2 justify-content-start justify-content-md-end flex-wrap">
-            {item.wearable && !item.worn && (
+      {/* Button groups - only shown in edit mode */}
+      {!isReadOnly && (
+        <div class="col-12 col-md-6">
+          <div class="d-flex flex-column gap-1">
+            {/* Row 1: State and charge buttons */}
+            <div class="d-flex gap-2 justify-content-start justify-content-md-end flex-wrap">
+              {item.wearable && !item.worn && (
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  hx-post={`/characters/${characterId}/items/${item.id}/wear`}
+                  hx-swap="none"
+                >
+                  <i class="bi bi-person-fill-up"></i> Wear
+                </button>
+              )}
+              {item.wearable && item.worn && (
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  hx-post={`/characters/${characterId}/items/${item.id}/remove`}
+                  hx-swap="none"
+                >
+                  <i class="bi bi-person-fill-dash"></i> Remove
+                </button>
+              )}
+              {item.wieldable && !item.wielded && (
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  hx-post={`/characters/${characterId}/items/${item.id}/wield`}
+                  hx-swap="none"
+                >
+                  <i class="bi bi-hand-thumbs-up"></i> Wield
+                </button>
+              )}
+              {item.wieldable && item.wielded && (
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  hx-post={`/characters/${characterId}/items/${item.id}/sheathe`}
+                  hx-swap="none"
+                >
+                  <i class="bi bi-hand-thumbs-down"></i> Sheathe
+                </button>
+              )}
+              {item.chargeLabel && (
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-info"
+                  hx-get={`/characters/${characterId}/items/${item.id}/charges`}
+                  hx-target="#detailModalContent"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#detailModal"
+                >
+                  <i class="bi bi-lightning-charge"></i>{" "}
+                  {item.chargeLabel === "ammunition" ? "Ammo" : "Charges"}
+                  <span class="badge bg-info ms-1">{item.currentCharges}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Row 2: Management buttons */}
+            <div class="d-flex gap-2 justify-content-start justify-content-md-end flex-wrap">
               <button
                 type="button"
-                class="btn btn-sm btn-outline-primary"
-                hx-post={`/characters/${characterId}/items/${item.id}/wear`}
-                hx-swap="none"
-              >
-                <i class="bi bi-person-fill-up"></i> Wear
-              </button>
-            )}
-            {item.wearable && item.worn && (
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                hx-post={`/characters/${characterId}/items/${item.id}/remove`}
-                hx-swap="none"
-              >
-                <i class="bi bi-person-fill-dash"></i> Remove
-              </button>
-            )}
-            {item.wieldable && !item.wielded && (
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                hx-post={`/characters/${characterId}/items/${item.id}/wield`}
-                hx-swap="none"
-              >
-                <i class="bi bi-hand-thumbs-up"></i> Wield
-              </button>
-            )}
-            {item.wieldable && item.wielded && (
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                hx-post={`/characters/${characterId}/items/${item.id}/sheathe`}
-                hx-swap="none"
-              >
-                <i class="bi bi-hand-thumbs-down"></i> Sheathe
-              </button>
-            )}
-            {item.chargeLabel && (
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-info"
-                hx-get={`/characters/${characterId}/items/${item.id}/charges`}
+                class="btn btn-sm btn-outline-secondary"
+                hx-get={`/characters/${characterId}/items/${item.id}/edit`}
                 hx-target="#detailModalContent"
                 hx-swap="innerHTML"
                 data-bs-toggle="modal"
                 data-bs-target="#detailModal"
               >
-                <i class="bi bi-lightning-charge"></i>{" "}
-                {item.chargeLabel === "ammunition" ? "Ammo" : "Charges"}
-                <span class="badge bg-info ms-1">{item.currentCharges}</span>
+                <i class="bi bi-pencil"></i> Edit
               </button>
-            )}
-          </div>
-
-          {/* Row 2: Management buttons */}
-          <div class="d-flex gap-2 justify-content-start justify-content-md-end flex-wrap">
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-secondary"
-              hx-get={`/characters/${characterId}/items/${item.id}/edit`}
-              hx-target="#detailModalContent"
-              hx-swap="innerHTML"
-              data-bs-toggle="modal"
-              data-bs-target="#detailModal"
-            >
-              <i class="bi bi-pencil"></i> Edit
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-secondary"
-              hx-get={`/characters/${characterId}/items/${item.id}/effects`}
-              hx-target="#detailModalContent"
-              hx-swap="innerHTML"
-              data-bs-toggle="modal"
-              data-bs-target="#detailModal"
-            >
-              <i class="bi bi-stars"></i> Effects
-              {item.effects.length > 0 &&
-                (() => {
-                  const activeCount = item.effects.filter((e) => e.isActive).length
-                  if (activeCount > 0) {
-                    return (
-                      <span class="badge bg-success ms-1">
-                        {activeCount}/{item.effects.length}
-                      </span>
-                    )
-                  }
-                  return <span class="badge bg-secondary ms-1">{item.effects.length}</span>
-                })()}
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-danger"
-              hx-post={`/characters/${characterId}/items/${item.id}/drop`}
-              hx-swap="none"
-              hx-confirm={`Are you sure you want to drop ${item.name}?`}
-            >
-              <i class="bi bi-trash"></i> Drop
-            </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                hx-get={`/characters/${characterId}/items/${item.id}/effects`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+              >
+                <i class="bi bi-stars"></i> Effects
+                {item.effects.length > 0 &&
+                  (() => {
+                    const activeCount = item.effects.filter((e) => e.isActive).length
+                    if (activeCount > 0) {
+                      return (
+                        <span class="badge bg-success ms-1">
+                          {activeCount}/{item.effects.length}
+                        </span>
+                      )
+                    }
+                    return <span class="badge bg-secondary ms-1">{item.effects.length}</span>
+                  })()}
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                hx-post={`/characters/${characterId}/items/${item.id}/drop`}
+                hx-swap="none"
+                hx-confirm={`Are you sure you want to drop ${item.name}?`}
+              >
+                <i class="bi bi-trash"></i> Drop
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
 
-export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
+export const InventoryPanel = ({ character, swapOob, isReadOnly = false }: InventoryPanelProps) => {
   const coins = character.coins || { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }
 
   return (
@@ -158,30 +162,32 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
       <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h6 class="mb-0">Coins</h6>
-          <div class="d-flex gap-2">
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-secondary"
-              hx-get={`/characters/${character.id}/edit/coins`}
-              hx-target="#detailModalContent"
-              hx-swap="innerHTML"
-              data-bs-toggle="modal"
-              data-bs-target="#detailModal"
-            >
-              <i class="bi bi-pencil"></i> Edit Coins
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-secondary"
-              hx-get={`/characters/${character.id}/history/coins`}
-              hx-target="#detailModalContent"
-              hx-swap="innerHTML"
-              data-bs-toggle="modal"
-              data-bs-target="#detailModal"
-            >
-              <i class="bi bi-clock-history"></i> History
-            </button>
-          </div>
+          {!isReadOnly && (
+            <div class="d-flex gap-2">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                hx-get={`/characters/${character.id}/edit/coins`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+              >
+                <i class="bi bi-pencil"></i> Edit Coins
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                hx-get={`/characters/${character.id}/history/coins`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+              >
+                <i class="bi bi-clock-history"></i> History
+              </button>
+            </div>
+          )}
         </div>
 
         <div class="row row-cols-5 g-2">
@@ -207,30 +213,32 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
       <div>
         <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2 mb-2">
           <h5 class="mb-0">Items</h5>
-          <div class="d-flex gap-2">
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-primary"
-              hx-get={`/characters/${character.id}/edit/newitem`}
-              hx-target="#detailModalContent"
-              hx-swap="innerHTML"
-              data-bs-toggle="modal"
-              data-bs-target="#detailModal"
-            >
-              <i class="bi bi-plus-circle"></i> Add Item
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-secondary"
-              hx-get={`/characters/${character.id}/history/items`}
-              hx-target="#detailModalContent"
-              hx-swap="innerHTML"
-              data-bs-toggle="modal"
-              data-bs-target="#detailModal"
-            >
-              <i class="bi bi-clock-history"></i> History
-            </button>
-          </div>
+          {!isReadOnly && (
+            <div class="d-flex gap-2">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary"
+                hx-get={`/characters/${character.id}/edit/newitem`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+              >
+                <i class="bi bi-plus-circle"></i> Add Item
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                hx-get={`/characters/${character.id}/history/items`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+              >
+                <i class="bi bi-clock-history"></i> History
+              </button>
+            </div>
+          )}
         </div>
 
         {character.equippedItems.length === 0 ? (
@@ -238,7 +246,7 @@ export const InventoryPanel = ({ character, swapOob }: InventoryPanelProps) => {
         ) : (
           <div class="d-flex flex-column gap-2">
             {character.equippedItems.map((item) => (
-              <InventoryItemRow item={item} characterId={character.id} />
+              <InventoryItemRow item={item} characterId={character.id} isReadOnly={isReadOnly} />
             ))}
           </div>
         )}

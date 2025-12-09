@@ -73,8 +73,8 @@ const CharacterCard = ({
         </button>
       )}
 
-      {/* View button for owner */}
-      {isCurrentUser && (
+      {/* View button for owner or DM */}
+      {(isCurrentUser || isDM) && (
         <a href={`/characters/${character.character_id}`} class="btn btn-sm btn-outline-primary">
           View
         </a>

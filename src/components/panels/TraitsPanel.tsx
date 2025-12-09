@@ -5,6 +5,7 @@ import type { ComputedCharacter } from "@src/services/computeCharacter"
 export interface TraitsPanelProps {
   character: ComputedCharacter
   swapOob?: boolean
+  isReadOnly?: boolean
 }
 
 interface TraitBadgesProps {
@@ -61,7 +62,7 @@ const TraitGroup = ({ source, traits }: TraitGroupProps) => {
   )
 }
 
-export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
+export const TraitsPanel = ({ character, swapOob, isReadOnly = false }: TraitsPanelProps) => {
   const traits = character.traits
 
   // Group traits by source for organized display
@@ -83,30 +84,32 @@ export const TraitsPanel = ({ character, swapOob }: TraitsPanelProps) => {
 
   return (
     <div class="accordion-body" id="traits-panel" {...(swapOob && { "hx-swap-oob": "true" })}>
-      <div class="d-flex justify-content-end gap-2 mb-3">
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-primary"
-          hx-get={`/characters/${character.id}/edit/trait`}
-          hx-target="#detailModalContent"
-          hx-swap="innerHTML"
-          data-bs-toggle="modal"
-          data-bs-target="#detailModal"
-        >
-          <i class="bi bi-plus-circle"></i> Add Custom Trait
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-secondary"
-          hx-get={`/characters/${character.id}/history/traits`}
-          hx-target="#detailModalContent"
-          hx-swap="innerHTML"
-          data-bs-toggle="modal"
-          data-bs-target="#detailModal"
-        >
-          <i class="bi bi-clock-history"></i> History
-        </button>
-      </div>
+      {!isReadOnly && (
+        <div class="d-flex justify-content-end gap-2 mb-3">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            hx-get={`/characters/${character.id}/edit/trait`}
+            hx-target="#detailModalContent"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#detailModal"
+          >
+            <i class="bi bi-plus-circle"></i> Add Custom Trait
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary"
+            hx-get={`/characters/${character.id}/history/traits`}
+            hx-target="#detailModalContent"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#detailModal"
+          >
+            <i class="bi bi-clock-history"></i> History
+          </button>
+        </div>
+      )}
 
       {traits.length === 0 ? (
         <p class="text-muted">No traits yet.</p>

@@ -156,3 +156,31 @@ export async function countByAddedBy(
 
   return Number(result[0].count)
 }
+
+/**
+ * Check if a user is a DM of any campaign containing a specific character.
+ * Returns true if:
+ * - User is an accepted DM member of a campaign containing the character, OR
+ * - User is the creator of a campaign containing the character (implicit DM)
+ */
+export async function isUserDMOfCharacterCampaign(
+  db: SQL,
+  characterId: string,
+  userId: string
+): Promise<boolean> {
+  const result = await db`
+    SELECT 1
+    FROM campaign_characters cc
+    JOIN campaigns c ON c.id = cc.campaign_id
+    LEFT JOIN campaign_members cm ON cm.campaign_id = cc.campaign_id
+      AND cm.user_id = ${userId}
+      AND cm.role = 'dm'
+      AND cm.accepted_at IS NOT NULL
+      AND cm.deleted_at IS NULL
+    WHERE cc.character_id = ${characterId}
+      AND (c.created_by = ${userId} OR cm.id IS NOT NULL)
+    LIMIT 1
+  `
+
+  return result.length > 0
+}

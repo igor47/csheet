@@ -1,4 +1,5 @@
 import { getDb } from "@src/db"
+import { isUserDMOfCharacterCampaign } from "@src/db/campaign_characters"
 import { setFlashMsg } from "@src/middleware/flash"
 import type { Context } from "hono"
 import { type ComputedCharacter, computeCharacter } from "./computeCharacter"
@@ -9,14 +10,19 @@ import { type ComputedCharacter, computeCharacter } from "./computeCharacter"
 export type UnallowedReason = "not_authenticated" | "character_not_found" | "not_owner"
 
 /**
+ * Access type for a character - how the user is authorized to access it
+ */
+export type AccessType = "owner" | "dm"
+
+/**
  * Result of authorization check - discriminated union
  */
 export type AllowedResult =
-  | { allowed: true; character: ComputedCharacter }
+  | { allowed: true; character: ComputedCharacter; accessType: AccessType }
   | { allowed: false; reason: UnallowedReason }
 
 /**
- * Authorize access to a character
+ * Authorize access to a character (owner only)
  *
  * Checks:
  * 1. User is authenticated
@@ -46,7 +52,48 @@ export async function authorizeCharacter(c: Context, characterId: string): Promi
   }
 
   // Success!
-  return { allowed: true, character }
+  return { allowed: true, character, accessType: "owner" }
+}
+
+/**
+ * Authorize view access to a character (owner or DM)
+ *
+ * Wraps authorizeCharacter and additionally allows DMs of campaigns
+ * containing this character to view it.
+ *
+ * @param c - Hono context (must have user from auth middleware)
+ * @param characterId - ID of character to authorize
+ * @returns AllowedResult with either the character and access type, or a reason for denial
+ */
+export async function authorizeCharacterView(
+  c: Context,
+  characterId: string
+): Promise<AllowedResult> {
+  // First try owner authorization
+  const ownerResult = await authorizeCharacter(c, characterId)
+  if (ownerResult.allowed) {
+    return ownerResult
+  }
+
+  // If not owner, check if user is DM of a campaign with this character
+  // (only makes sense if user is authenticated and character exists)
+  if (ownerResult.reason === "not_owner") {
+    const user = c.var.user
+    if (user) {
+      const db = getDb(c)
+      const isDM = await isUserDMOfCharacterCampaign(db, characterId, user.id)
+      if (isDM) {
+        // Re-fetch character for the result (authorizeCharacter already validated it exists)
+        const character = await computeCharacter(db, characterId)
+        if (character) {
+          return { allowed: true, character, accessType: "dm" }
+        }
+      }
+    }
+  }
+
+  // Not authorized
+  return ownerResult
 }
 
 /**

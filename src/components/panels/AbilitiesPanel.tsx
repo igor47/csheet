@@ -78,35 +78,38 @@ const AbilityBox = ({
 interface AbilitiesPanelProps {
   character: ComputedCharacter
   swapOob?: boolean
+  isReadOnly?: boolean
 }
 
-export const AbilitiesPanel = ({ character, swapOob }: AbilitiesPanelProps) => {
+export const AbilitiesPanel = ({ character, swapOob, isReadOnly = false }: AbilitiesPanelProps) => {
   return (
     <div class="accordion-body" id="abilities-panel" {...(swapOob && { "hx-swap-oob": "true" })}>
-      <div class="d-flex justify-content-end gap-2 mb-3">
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-secondary"
-          hx-get={`/characters/${character.id}/edit/abilities`}
-          hx-target="#detailModalContent"
-          hx-swap="innerHTML"
-          data-bs-toggle="modal"
-          data-bs-target="#detailModal"
-        >
-          <i class="bi bi-pencil"></i> Edit Abilities
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-secondary"
-          hx-get={`/characters/${character.id}/history/abilities`}
-          hx-target="#detailModalContent"
-          hx-swap="innerHTML"
-          data-bs-toggle="modal"
-          data-bs-target="#detailModal"
-        >
-          <i class="bi bi-clock-history"></i> History
-        </button>
-      </div>
+      {!isReadOnly && (
+        <div class="d-flex justify-content-end gap-2 mb-3">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary"
+            hx-get={`/characters/${character.id}/edit/abilities`}
+            hx-target="#detailModalContent"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#detailModal"
+          >
+            <i class="bi bi-pencil"></i> Edit Abilities
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary"
+            hx-get={`/characters/${character.id}/history/abilities`}
+            hx-target="#detailModalContent"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#detailModal"
+          >
+            <i class="bi bi-clock-history"></i> History
+          </button>
+        </div>
+      )}
       <div class="row row-cols-3 g-2">
         {Abilities.map((ability) => {
           const abilityScore = character.abilityScores[ability]

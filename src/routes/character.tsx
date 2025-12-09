@@ -73,7 +73,11 @@ import { setFlashMsg } from "@src/middleware/flash"
 import { addLevel } from "@src/services/addLevel"
 import { addTrait } from "@src/services/addTrait"
 import { archiveCharacter } from "@src/services/archiveCharacter"
-import { authorizeCharacter, handleUnallowed } from "@src/services/authorize"
+import {
+  authorizeCharacter,
+  authorizeCharacterView,
+  handleUnallowed,
+} from "@src/services/authorize"
 import { castSpell } from "@src/services/castSpell"
 import { computeCharacter } from "@src/services/computeCharacter"
 import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
@@ -166,17 +170,22 @@ characterRoutes.post("/characters/import", async (c) => {
 characterRoutes.get("/characters/:id", async (c) => {
   const id = c.req.param("id") as string
 
-  const authResult = await authorizeCharacter(c, id)
+  // Use authorizeCharacterView to allow DMs to view characters in their campaigns
+  const authResult = await authorizeCharacterView(c, id)
   if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
   const char = authResult.character
+  const isReadOnly = authResult.accessType === "dm"
 
   const currentNote = await getCurrentNote(getDb(c), id)
 
   // ChatBox always starts with a new chat (chatId=null)
   // Users can load old chats via the history button
-  return c.render(<Character character={char} currentNote={currentNote} />, {
-    title: "Character Sheet",
-  })
+  return c.render(
+    <Character character={char} currentNote={currentNote} isReadOnly={isReadOnly} />,
+    {
+      title: "Character Sheet",
+    }
+  )
 })
 
 characterRoutes.post("/characters/:id/archive", async (c) => {
@@ -570,6 +579,7 @@ characterRoutes.post("/characters/:id/items/:itemId/effects", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )
@@ -621,6 +631,7 @@ characterRoutes.delete("/characters/:id/items/:itemId/effects/:effectId", async 
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
     </>
   )

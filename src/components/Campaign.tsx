@@ -174,8 +174,22 @@ export const Campaign = ({ campaign }: CampaignProps) => {
         {/* Campaign Header */}
         <div class="row mb-4">
           <div class="col-12">
-            <h1>{campaign.name}</h1>
-            {campaign.description && <p class="text-muted">{campaign.description}</p>}
+            <div class="d-flex align-items-center gap-3">
+              <div style="width: 80px;">
+                <div class="ratio ratio-1x1">
+                  <img
+                    src="/static/placeholder-party.png"
+                    alt={campaign.name}
+                    class="rounded"
+                    style="object-fit: cover;"
+                  />
+                </div>
+              </div>
+              <div>
+                <h1 class="mb-0">{campaign.name}</h1>
+                {campaign.description && <p class="text-muted mb-0 mt-1">{campaign.description}</p>}
+              </div>
+            </div>
           </div>
         </div>
 

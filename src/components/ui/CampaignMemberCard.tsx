@@ -36,7 +36,7 @@ export const CampaignMemberCard = ({
           <div class="col-3">
             <div class="ratio ratio-1x1">
               <img
-                src="/static/placeholder.png"
+                src="/static/placeholder-person.png"
                 alt="No avatar"
                 class="rounded"
                 style="object-fit: cover;"

@@ -132,7 +132,20 @@ export const AvatarDisplay = ({
   }
 
   // Clickable-lightbox mode: Opens lightbox at specific index
+  // Only clickable if there's an actual avatar (not placeholder)
   if (mode === "clickable-lightbox") {
+    if (!avatar) {
+      // No avatar - render as display-only (not clickable)
+      return (
+        <div
+          class="ratio ratio-1x1 position-relative overflow-hidden"
+          style={cropStyle.containerStyle}
+        >
+          <img src={imgUrl} alt={imgAlt} class={className} style={cropStyle.imageStyle} />
+        </div>
+      )
+    }
+
     return (
       <button
         type="button"
@@ -140,6 +153,8 @@ export const AvatarDisplay = ({
         hx-get={`/characters/${character.id}/avatars/lightbox?index=${avatarIndex ?? 0}`}
         hx-target="#detailModalContent"
         hx-swap="innerHTML"
+        data-bs-toggle="modal"
+        data-bs-target="#detailModal"
       >
         <div
           class="ratio ratio-1x1 position-relative overflow-hidden"

@@ -1,5 +1,5 @@
 import { getDb } from "@src/db"
-import { isUserDMOfCharacterCampaign } from "@src/db/campaign_characters"
+import { getUserCharacterCampaignRole } from "@src/db/campaign_characters"
 import { setFlashMsg } from "@src/middleware/flash"
 import type { Context } from "hono"
 import { type ComputedCharacter, computeCharacter } from "./computeCharacter"
@@ -11,8 +11,11 @@ export type UnallowedReason = "not_authenticated" | "character_not_found" | "not
 
 /**
  * Access type for a character - how the user is authorized to access it
+ * - owner: User owns the character (full access)
+ * - dm: User is DM of a campaign containing this character (read-only view)
+ * - party: User is a member of a campaign containing this character (lightbox only)
  */
-export type AccessType = "owner" | "dm"
+export type AccessType = "owner" | "dm" | "party"
 
 /**
  * Result of authorization check - discriminated union
@@ -75,18 +78,57 @@ export async function authorizeCharacterView(
     return ownerResult
   }
 
-  // If not owner, check if user is DM of a campaign with this character
-  // (only makes sense if user is authenticated and character exists)
+  // If not owner, check campaign membership role
   if (ownerResult.reason === "not_owner") {
     const user = c.var.user
     if (user) {
       const db = getDb(c)
-      const isDM = await isUserDMOfCharacterCampaign(db, characterId, user.id)
-      if (isDM) {
+      const campaignRole = await getUserCharacterCampaignRole(db, characterId, user.id)
+      if (campaignRole === "dm") {
         // Re-fetch character for the result (authorizeCharacter already validated it exists)
         const character = await computeCharacter(db, characterId)
         if (character) {
           return { allowed: true, character, accessType: "dm" }
+        }
+      }
+    }
+  }
+
+  // Not authorized
+  return ownerResult
+}
+
+/**
+ * Authorize lightbox access to a character (owner, DM, or party member)
+ *
+ * Extends authorizeCharacterView to also allow any campaign member
+ * (players, viewers) to view the character's avatar lightbox.
+ *
+ * @param c - Hono context (must have user from auth middleware)
+ * @param characterId - ID of character to authorize
+ * @returns AllowedResult with either the character and access type, or a reason for denial
+ */
+export async function authorizeCharacterLightbox(
+  c: Context,
+  characterId: string
+): Promise<AllowedResult> {
+  // First try owner authorization
+  const ownerResult = await authorizeCharacter(c, characterId)
+  if (ownerResult.allowed) {
+    return ownerResult
+  }
+
+  // If not owner, check campaign membership role (dm or party)
+  if (ownerResult.reason === "not_owner") {
+    const user = c.var.user
+    if (user) {
+      const db = getDb(c)
+      const campaignRole = await getUserCharacterCampaignRole(db, characterId, user.id)
+      if (campaignRole) {
+        // Re-fetch character for the result (authorizeCharacter already validated it exists)
+        const character = await computeCharacter(db, characterId)
+        if (character) {
+          return { allowed: true, character, accessType: campaignRole }
         }
       }
     }

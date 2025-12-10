@@ -34,7 +34,7 @@ export const CampaignCharacterCard = ({
         <div class="col-3">
           <AvatarDisplay
             character={{ id: character.id, name: character.name, avatars: character.avatars }}
-            mode="display-only"
+            mode="clickable-lightbox"
             avatarIndex={0}
           />
         </div>

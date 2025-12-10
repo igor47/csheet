@@ -10,7 +10,12 @@ import {
 } from "@src/test/factories/campaign"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
-import { authorizeCharacter, authorizeCharacterView, handleUnallowed } from "./authorize"
+import {
+  authorizeCharacter,
+  authorizeCharacterLightbox,
+  authorizeCharacterView,
+  handleUnallowed,
+} from "./authorize"
 
 describe("authorizeCharacter", () => {
   const testCtx = useTestApp()
@@ -403,6 +408,175 @@ describe("authorizeCharacterView", () => {
       } as any
 
       const result = await authorizeCharacterView(mockContext, player1Character.id)
+
+      expect(result.allowed).toBe(false)
+      if (!result.allowed) {
+        expect(result.reason).toBe("not_owner")
+      }
+    })
+  })
+})
+
+describe("authorizeCharacterLightbox", () => {
+  const testCtx = useTestApp()
+
+  describe("when user owns the character", () => {
+    let user: User
+    let character: Character
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      character = await characterFactory.create({ user_id: user.id }, testCtx.db)
+    })
+
+    test("returns allowed with owner accessType", async () => {
+      const mockContext = {
+        var: { user },
+        get: () => testCtx.db,
+        // biome-ignore lint/suspicious/noExplicitAny: test mock
+      } as any
+
+      const result = await authorizeCharacterLightbox(mockContext, character.id)
+
+      expect(result.allowed).toBe(true)
+      if (result.allowed) {
+        expect(result.character.id).toBe(character.id)
+        expect(result.accessType).toBe("owner")
+      }
+    })
+  })
+
+  describe("when user is DM of a campaign containing the character", () => {
+    let dm: User
+    let player: User
+    let campaign: Campaign
+    let playerCharacter: Character
+
+    beforeEach(async () => {
+      dm = await userFactory.create({}, testCtx.db)
+      player = await userFactory.create({}, testCtx.db)
+
+      campaign = await campaignFactory.create({ created_by: dm.id }, testCtx.db)
+
+      await campaignMemberFactory.create(
+        {
+          campaign_id: campaign.id,
+          user_id: player.id,
+          role: "player",
+          invited_by: dm.id,
+        },
+        testCtx.db
+      )
+
+      playerCharacter = await characterFactory.create({ user_id: player.id }, testCtx.db)
+
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: playerCharacter.id,
+          added_by: player.id,
+        },
+        testCtx.db
+      )
+    })
+
+    test("returns allowed with dm accessType", async () => {
+      const mockContext = {
+        var: { user: dm },
+        get: () => testCtx.db,
+        // biome-ignore lint/suspicious/noExplicitAny: test mock
+      } as any
+
+      const result = await authorizeCharacterLightbox(mockContext, playerCharacter.id)
+
+      expect(result.allowed).toBe(true)
+      if (result.allowed) {
+        expect(result.character.id).toBe(playerCharacter.id)
+        expect(result.accessType).toBe("dm")
+      }
+    })
+  })
+
+  describe("when user is a player in the campaign (party member)", () => {
+    let dm: User
+    let player1: User
+    let player2: User
+    let campaign: Campaign
+    let player1Character: Character
+
+    beforeEach(async () => {
+      dm = await userFactory.create({}, testCtx.db)
+      player1 = await userFactory.create({}, testCtx.db)
+      player2 = await userFactory.create({}, testCtx.db)
+
+      campaign = await campaignFactory.create({ created_by: dm.id }, testCtx.db)
+
+      await campaignMemberFactory.create(
+        {
+          campaign_id: campaign.id,
+          user_id: player1.id,
+          role: "player",
+          invited_by: dm.id,
+        },
+        testCtx.db
+      )
+      await campaignMemberFactory.create(
+        {
+          campaign_id: campaign.id,
+          user_id: player2.id,
+          role: "player",
+          invited_by: dm.id,
+        },
+        testCtx.db
+      )
+
+      player1Character = await characterFactory.create({ user_id: player1.id }, testCtx.db)
+      await campaignCharacterFactory.create(
+        {
+          campaign_id: campaign.id,
+          character_id: player1Character.id,
+          added_by: player1.id,
+        },
+        testCtx.db
+      )
+    })
+
+    test("player2 can access player1 character lightbox with party accessType", async () => {
+      const mockContext = {
+        var: { user: player2 },
+        get: () => testCtx.db,
+        // biome-ignore lint/suspicious/noExplicitAny: test mock
+      } as any
+
+      const result = await authorizeCharacterLightbox(mockContext, player1Character.id)
+
+      expect(result.allowed).toBe(true)
+      if (result.allowed) {
+        expect(result.character.id).toBe(player1Character.id)
+        expect(result.accessType).toBe("party")
+      }
+    })
+  })
+
+  describe("when user is not a member of any campaign with the character", () => {
+    let randomUser: User
+    let owner: User
+    let character: Character
+
+    beforeEach(async () => {
+      owner = await userFactory.create({}, testCtx.db)
+      randomUser = await userFactory.create({}, testCtx.db)
+      character = await characterFactory.create({ user_id: owner.id }, testCtx.db)
+    })
+
+    test("returns not_owner reason", async () => {
+      const mockContext = {
+        var: { user: randomUser },
+        get: () => testCtx.db,
+        // biome-ignore lint/suspicious/noExplicitAny: test mock
+      } as any
+
+      const result = await authorizeCharacterLightbox(mockContext, character.id)
 
       expect(result.allowed).toBe(false)
       if (!result.allowed) {

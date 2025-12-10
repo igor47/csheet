@@ -75,6 +75,7 @@ import { addTrait } from "@src/services/addTrait"
 import { archiveCharacter } from "@src/services/archiveCharacter"
 import {
   authorizeCharacter,
+  authorizeCharacterLightbox,
   authorizeCharacterView,
   handleUnallowed,
 } from "@src/services/authorize"
@@ -1141,20 +1142,24 @@ characterRoutes.get("/characters/:id/avatars", async (c) => {
 })
 
 // GET /characters/:id/avatars/lightbox - Show avatar lightbox at specific index
+// Uses authorizeCharacterLightbox to allow any campaign member to view avatars
 characterRoutes.get("/characters/:id/avatars/lightbox", async (c) => {
   const characterId = c.req.param("id")
   const indexParam = c.req.query("index")
   const currentIndex = indexParam ? Number.parseInt(indexParam, 10) : 0
 
-  const authResult = await authorizeCharacter(c, characterId)
+  const authResult = await authorizeCharacterLightbox(c, characterId)
   if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
 
-  const char = (await computeCharacter(getDb(c), characterId))!
+  const char = authResult.character
+  const isReadOnly = authResult.accessType !== "owner"
 
   // Validate index is in bounds
   const validIndex = currentIndex >= 0 && currentIndex < char.avatars.length ? currentIndex : 0
 
-  return c.html(<AvatarLightbox character={char} currentIndex={validIndex} />)
+  return c.html(
+    <AvatarLightbox character={char} currentIndex={validIndex} isReadOnly={isReadOnly} />
+  )
 })
 
 // POST /characters/:id/avatars - Create new avatar with optional crop

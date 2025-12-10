@@ -4,9 +4,14 @@ import type { ComputedCharacter } from "@src/services/computeCharacter"
 export interface AvatarLightboxProps {
   character: ComputedCharacter
   currentIndex: number
+  isReadOnly?: boolean
 }
 
-export const AvatarLightbox = ({ character, currentIndex }: AvatarLightboxProps) => {
+export const AvatarLightbox = ({
+  character,
+  currentIndex,
+  isReadOnly = false,
+}: AvatarLightboxProps) => {
   const totalAvatars = character.avatars.length
   const prevIndex = currentIndex > 0 ? currentIndex - 1 : totalAvatars - 1
   const nextIndex = currentIndex < totalAvatars - 1 ? currentIndex + 1 : 0
@@ -66,15 +71,17 @@ export const AvatarLightbox = ({ character, currentIndex }: AvatarLightboxProps)
       </div>
 
       <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          hx-get={`/characters/${character.id}/avatars`}
-          hx-target="#detailModalContent"
-          hx-swap="innerHTML"
-        >
-          <i class="bi bi-grid-3x3"></i> Back to Gallery
-        </button>
+        {!isReadOnly && (
+          <button
+            type="button"
+            class="btn btn-secondary"
+            hx-get={`/characters/${character.id}/avatars`}
+            hx-target="#detailModalContent"
+            hx-swap="innerHTML"
+          >
+            <i class="bi bi-grid-3x3"></i> Back to Gallery
+          </button>
+        )}
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           Close
         </button>

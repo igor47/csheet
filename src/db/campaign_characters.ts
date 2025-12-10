@@ -160,29 +160,43 @@ export async function countByAddedBy(
 }
 
 /**
- * Check if a user is a DM of any campaign containing a specific character.
- * Returns true if:
- * - User is an accepted DM member of a campaign containing the character, OR
- * - User is the creator of a campaign containing the character (implicit DM)
+ * Role a user has in relation to a character through campaign membership
  */
-export async function isUserDMOfCharacterCampaign(
+export type CharacterCampaignRole = "dm" | "party"
+
+/**
+ * Get the user's role in relation to a character through campaign membership.
+ * Returns the highest role if user is in multiple campaigns with this character.
+ *
+ * Returns:
+ * - "dm" if user is DM (creator or explicit DM role) of any campaign with this character
+ * - "party" if user is a non-DM member of any campaign with this character
+ * - null if user is not a member of any campaign with this character
+ */
+export async function getUserCharacterCampaignRole(
   db: SQL,
   characterId: string,
   userId: string
-): Promise<boolean> {
+): Promise<CharacterCampaignRole | null> {
   const result = await db`
-    SELECT 1
+    SELECT
+      CASE
+        WHEN c.created_by = ${userId} THEN 'dm'
+        WHEN cm.role = 'dm' THEN 'dm'
+        ELSE 'party'
+      END as role_type
     FROM campaign_characters cc
     JOIN campaigns c ON c.id = cc.campaign_id
-    LEFT JOIN campaign_members cm ON cm.campaign_id = cc.campaign_id
+    JOIN campaign_members cm ON cm.campaign_id = cc.campaign_id
       AND cm.user_id = ${userId}
-      AND cm.role = 'dm'
       AND cm.accepted_at IS NOT NULL
       AND cm.deleted_at IS NULL
     WHERE cc.character_id = ${characterId}
-      AND (c.created_by = ${userId} OR cm.id IS NOT NULL)
+    ORDER BY
+      CASE WHEN c.created_by = ${userId} OR cm.role = 'dm' THEN 0 ELSE 1 END
     LIMIT 1
   `
 
-  return result.length > 0
+  if (result.length === 0) return null
+  return result[0].role_type as CharacterCampaignRole
 }

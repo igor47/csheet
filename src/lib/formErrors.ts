@@ -16,12 +16,15 @@ export function humanizeEnumError(error: string): string {
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Zod error structure is complex and varies by error type
-function flattenZodIssues(issue: any, errors: FormErrors) {
+function flattenZodIssues(issue: any, errors: FormErrors, parentPath: string[] = []) {
+  // Combine parent path with issue path
+  const fullPath = [...parentPath, ...(issue.path || [])]
+
   // If this is a union error with nested errors, recursively process them
   if (issue.code === "invalid_union" && issue.unionErrors) {
     for (const unionError of issue.unionErrors) {
       for (const nestedIssue of unionError.issues) {
-        flattenZodIssues(nestedIssue, errors)
+        flattenZodIssues(nestedIssue, errors, fullPath)
       }
     }
     return
@@ -29,18 +32,16 @@ function flattenZodIssues(issue: any, errors: FormErrors) {
 
   // Also handle the "errors" property (array of arrays of issues)
   if (issue.code === "invalid_union" && issue.errors && Array.isArray(issue.errors)) {
-    for (const errorGroup of issue.errors) {
-      if (Array.isArray(errorGroup)) {
-        for (const nestedIssue of errorGroup) {
-          flattenZodIssues(nestedIssue, errors)
-        }
-      }
+    // For union errors, use the union-level error message with the path
+    const fieldName = fullPath.join(".")
+    if (fieldName && !errors[fieldName]) {
+      errors[fieldName] = humanizeEnumError(issue.message)
     }
     return
   }
 
   // Convert path array like ["dice", 0, "roll"] to "dice.0.roll"
-  const fieldName = issue.path.join(".")
+  const fieldName = fullPath.join(".")
   const message = humanizeEnumError(issue.message)
 
   // Skip empty field names (root-level union errors)

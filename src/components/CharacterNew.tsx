@@ -4,6 +4,7 @@ import { SkillProficiencySelector } from "@src/components/SkillProficiencySelect
 import { Select } from "@src/components/ui/Select"
 import { ClassNames, type ClassNameType, getTraits, type Trait } from "@src/lib/dnd"
 import { getRuleset, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
+import { ignoreCheckEmptyErrors } from "@src/lib/formErrors"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"
 
@@ -43,6 +44,9 @@ const TraitList = ({ traits, title }: TraitListProps) => {
 }
 
 export const CharacterNew = ({ values = {}, errors = {} }: CharacterNewProps) => {
+  // Filter out errors for empty fields during is_check (live validation)
+  errors = ignoreCheckEmptyErrors(values, errors)
+
   // Get ruleset based on selection, default to first ruleset
   const rulesetId = (values?.ruleset as RulesetId) || RULESETS[0]!.id
   const ruleset = getRuleset(rulesetId)

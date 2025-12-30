@@ -10,14 +10,14 @@ import {
   Abilities,
   type AbilityType,
   ClassNamesSchema,
-  type ClassNameType,
   getRuleset,
   POINT_BUY_COSTS,
   type Ruleset,
   type SkillType,
 } from "@src/lib/dnd"
 import { RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets"
-import { Checkbox, NumberField, NumericEnumField, OptionalString } from "@src/lib/formSchemas"
+import { zodToFormErrors } from "@src/lib/formErrors"
+import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { SQL } from "bun"
 import { z } from "zod"
 import { addLevel } from "./addLevel"
@@ -27,11 +27,11 @@ import { addLevel } from "./addLevel"
  */
 const BaseCharacterSchema = z.object({
   name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
-  species: z.string(),
+  species: z.string().min(1, "Species is required"),
   lineage: OptionalString(),
   class: ClassNamesSchema,
   subclass: OptionalString(),
-  background: z.string(),
+  background: z.string().min(1, "Background is required"),
   alignment: OptionalString(),
   ruleset: RulesetIdSchema,
   is_check: Checkbox().optional().default(false),
@@ -73,7 +73,9 @@ const AbilityScoreMethodSchemas = z.discriminatedUnion("ability_method", [
  * 2024 Background Ability Score Bonuses
  * Player chooses how to distribute 3 points across 3 abilities
  */
-const AbilityBonusField = NumericEnumField(z.union([z.literal(0), z.literal(1), z.literal(2)]))
+const AbilityBonusField = NumberField(
+  z.number().int().min(0, "Bonus cannot be negative").max(2, "Bonus cannot exceed +2")
+)
   .optional()
   .default(0)
 
@@ -238,110 +240,98 @@ export async function createCharacter(
   user: User,
   data: Record<string, string>
 ): Promise<CreateCharacterResult> {
-  const errors: Record<string, string> = {}
-  const values = data
   const isCheck = data.is_check === "true"
 
   // Get the ruleset for validation and data lookup
   const rulesetId = (data.ruleset as RulesetId) || RULESETS[0]!.id
   const ruleset = getRuleset(rulesetId)
 
-  // Soft validation for is_check
-  if (!data.name) {
-    if (!isCheck) {
-      errors.name = "Character name is required"
-    }
-  } else if (data.name.trim().length === 0) {
-    errors.name = "Character name is required"
-  } else if (data.name.length < 3) {
-    errors.name = "Character name must be at least 3 characters"
-  } else if (data.name.length > 50) {
-    errors.name = "Character name must be less than 50 characters"
-  } else {
-    const exists = await nameExistsForUser(db, user.id, data.name)
-    if (exists) {
-      errors.name = "You already have a character with this name"
-    }
+  // Parse with Zod first - handles required fields and format validation
+  const parseResult = CreateCharacterApiSchema.safeParse(data)
+  if (!parseResult.success) {
+    return { complete: false, values: data, errors: zodToFormErrors(parseResult.error) }
+  }
+
+  const validated = parseResult.data
+  const errors: Record<string, string> = {}
+
+  // Business logic validation with typed data
+
+  // Name uniqueness check
+  const exists = await nameExistsForUser(db, user.id, validated.name)
+  if (exists) {
+    errors.name = "You already have a character with this name"
   }
 
   // Validate species exists in ruleset
-  if (data.species && !ruleset.species.find((s) => s.name === data.species)) {
+  if (!ruleset.species.find((s) => s.name === validated.species)) {
     errors.species = "Invalid species for this ruleset"
   }
 
   // Validate lineage for selected species
-  if (data.species) {
-    const species = ruleset.species.find((s) => s.name === data.species)
-    if (species) {
-      // If species has lineages, one must be selected
-      if (species.lineages && species.lineages.length > 0 && !data.lineage) {
-        errors.lineage = "Lineage is required for this species"
-      }
-      // Validate lineage if provided
-      if (data.lineage && !species.lineages?.find((l) => l.name === data.lineage)) {
-        errors.lineage = "Invalid lineage for this species"
-      }
+  const species = ruleset.species.find((s) => s.name === validated.species)
+  if (species) {
+    // If species has lineages, one must be selected
+    if (species.lineages && species.lineages.length > 0 && !validated.lineage) {
+      errors.lineage = "Lineage is required for this species"
+    }
+    // Validate lineage if provided
+    if (validated.lineage && !species.lineages?.find((l) => l.name === validated.lineage)) {
+      errors.lineage = "Invalid lineage for this species"
     }
   }
 
   // Validate background exists in ruleset
-  if (data.background && !ruleset.backgrounds[data.background]) {
+  if (!ruleset.backgrounds[validated.background]) {
     errors.background = "Invalid background for this ruleset"
   }
 
   // Validate subclass
-  if (data.class) {
-    const classDef = ruleset.classes[data.class as ClassNameType]
-    if (classDef) {
-      // Check if subclass is required at level 1
-      if (classDef.subclassLevel === 1 && !data.subclass) {
-        errors.subclass = "Subclass is required for this class at level 1"
-      }
-      // Check if subclass is provided but not available until later
-      if (data.subclass && classDef.subclassLevel !== 1) {
-        errors.subclass = `Subclass not available until level ${classDef.subclassLevel}`
-      }
-      // Validate subclass name if provided and allowed
-      if (
-        data.subclass &&
-        classDef.subclassLevel === 1 &&
-        !classDef.subclasses.find((sc) => sc.name === data.subclass)
-      ) {
-        errors.subclass = "Invalid subclass for this class"
-      }
+  const classDef = ruleset.classes[validated.class]
+  if (classDef) {
+    // Check if subclass is required at level 1
+    if (classDef.subclassLevel === 1 && !validated.subclass) {
+      errors.subclass = "Subclass is required for this class at level 1"
+    }
+    // Check if subclass is provided but not available until later
+    if (validated.subclass && classDef.subclassLevel !== 1) {
+      errors.subclass = `Subclass not available until level ${classDef.subclassLevel}`
+    }
+    // Validate subclass name if provided and allowed
+    if (
+      validated.subclass &&
+      classDef.subclassLevel === 1 &&
+      !classDef.subclasses.find((sc) => sc.name === validated.subclass)
+    ) {
+      errors.subclass = "Invalid subclass for this class"
     }
   }
 
   // Validate ability scores (only on final submit, not on isCheck)
   if (!isCheck) {
-    // Validate ability method is provided
-    if (!data.ability_method) {
-      errors.ability_method = "Ability score method is required"
-    }
-
-    // Parse base ability scores
+    // Ability scores are already validated by Zod, use typed values
     const baseScores = {
-      strength: Number.parseInt(data.ability_str || "0", 10),
-      dexterity: Number.parseInt(data.ability_dex || "0", 10),
-      constitution: Number.parseInt(data.ability_con || "0", 10),
-      intelligence: Number.parseInt(data.ability_int || "0", 10),
-      wisdom: Number.parseInt(data.ability_wis || "0", 10),
-      charisma: Number.parseInt(data.ability_cha || "0", 10),
+      strength: validated.ability_str,
+      dexterity: validated.ability_dex,
+      constitution: validated.ability_con,
+      intelligence: validated.ability_int,
+      wisdom: validated.ability_wis,
+      charisma: validated.ability_cha,
     }
 
     // Method-specific validation
-    if (data.ability_method === "standard-array") {
+    if (validated.ability_method === "standard-array") {
       const scores = Object.values(baseScores)
       if (!validateStandardArray(scores)) {
         errors.ability_method = "Standard array must use exactly the values [15, 14, 13, 12, 10, 8]"
       }
-    } else if (data.ability_method === "point-buy") {
+    } else if (validated.ability_method === "point-buy") {
       const scores = Object.values(baseScores)
       const result = validatePointBuy(scores)
       if (!result.valid) {
         errors.ability_method = result.error || "Invalid point buy"
       }
-    } else if (data.ability_method === "random") {
+    } else if (validated.ability_method === "random") {
       // Validate scores are in realistic range for dice rolls (3-18)
       const scores = Object.values(baseScores)
       if (scores.some((s) => s < 3 || s > 18)) {
@@ -350,16 +340,17 @@ export async function createCharacter(
     }
 
     // Validate 2024 background ability selections
-    if (rulesetId === "srd52" && data.background) {
-      const background = ruleset.backgrounds[data.background]
+    if (rulesetId === "srd52") {
+      const background = ruleset.backgrounds[validated.background]
       if (background?.abilityScoresModified) {
         const allowedAbilities = background.abilityScoresModified
         let totalBonus = 0
         const bonusesApplied: AbilityType[] = []
 
         for (const ability of Abilities) {
-          const fieldName = `background_ability_${ability.substring(0, 3)}_bonus`
-          const bonus = Number.parseInt(data[fieldName] || "0", 10)
+          const fieldName =
+            `background_ability_${ability.substring(0, 3)}_bonus` as keyof typeof validated
+          const bonus = (validated[fieldName] as number) || 0
 
           if (bonus > 0) {
             // Check if this ability is allowed for this background
@@ -387,56 +378,52 @@ export async function createCharacter(
 
     // Validate final scores (base + modifiers) are ≤ 20
     if (Object.keys(errors).length === 0) {
-      const modifiers = calculateModifiers(ruleset, rulesetId, data)
+      const modifiers = calculateModifiers(ruleset, rulesetId, validated)
       const finalScoreErrors = validateFinalScores(baseScores, modifiers)
       Object.assign(errors, finalScoreErrors)
     }
 
     // Validate class skill proficiency selections
-    if (data.class) {
-      const classDef = ruleset.classes[data.class as ClassNameType]
-      if (classDef) {
-        const skillChoices = classDef.skillChoices
-        const selectedSkills: SkillType[] = []
+    const skillClassDef = ruleset.classes[validated.class]
+    if (skillClassDef) {
+      const skillChoices = skillClassDef.skillChoices
+      const selectedSkills: SkillType[] = []
 
-        // Parse selected skills from form data
-        for (const skill of skillChoices.from) {
+      // Parse selected skills from validated data
+      for (const skill of skillChoices.from) {
+        const fieldName =
+          `class_proficiency_${skill.replace(/\s+/g, "_")}` as keyof typeof validated
+        if (validated[fieldName]) {
+          selectedSkills.push(skill)
+        }
+      }
+
+      // Check if exactly the required number of skills are selected
+      if (selectedSkills.length !== skillChoices.choose) {
+        errors.class_skills = `Must select exactly ${skillChoices.choose} skill${
+          skillChoices.choose > 1 ? "s" : ""
+        } (currently selected ${selectedSkills.length})`
+      }
+
+      // Check for conflicts with background skills
+      const skillBackground = ruleset.backgrounds[validated.background]
+      const backgroundSkills = skillBackground?.skillProficiencies || []
+      for (const skill of selectedSkills) {
+        if (backgroundSkills.includes(skill)) {
           const fieldName = `class_proficiency_${skill.replace(/\s+/g, "_")}`
-          const value = data[fieldName]
-          if (value === "true" || value === "on") {
-            selectedSkills.push(skill)
-          }
+          errors[fieldName] = `Already granted by ${skillBackground?.name} background`
         }
+      }
 
-        // Check if exactly the required number of skills are selected
-        if (selectedSkills.length !== skillChoices.choose) {
-          errors.class_skills = `Must select exactly ${skillChoices.choose} skill${
-            skillChoices.choose > 1 ? "s" : ""
-          } (currently selected ${selectedSkills.length})`
-        }
-
-        // Check for conflicts with background skills
-        if (data.background) {
-          const background = ruleset.backgrounds[data.background]
-          const backgroundSkills = background?.skillProficiencies || []
-          for (const skill of selectedSkills) {
-            if (backgroundSkills.includes(skill)) {
-              const fieldName = `class_proficiency_${skill.replace(/\s+/g, "_")}`
-              errors[fieldName] = `Already granted by ${background?.name} background`
-            }
-          }
-        }
-
-        // Check for any class_proficiency_* fields that aren't in the allowed list
-        for (const key of Object.keys(data)) {
-          const value = data[key]
-          if (key.startsWith("class_proficiency_") && (value === "true" || value === "on")) {
-            // Convert field name back to skill name
-            const skillName = key.replace("class_proficiency_", "").replace(/_/g, " ")
-            // Check if this skill is in the allowed list for this class
-            if (!skillChoices.from.includes(skillName as SkillType)) {
-              errors[key] = `${skillName} is not available for ${classDef.name}`
-            }
+      // Check for any class_proficiency_* fields that aren't in the allowed list
+      for (const key of Object.keys(data)) {
+        const value = data[key]
+        if (key.startsWith("class_proficiency_") && (value === "true" || value === "on")) {
+          // Convert field name back to skill name
+          const skillName = key.replace("class_proficiency_", "").replace(/_/g, " ")
+          // Check if this skill is in the allowed list for this class
+          if (!skillChoices.from.includes(skillName as SkillType)) {
+            errors[key] = `${skillName} is not available for ${skillClassDef.name}`
           }
         }
       }
@@ -444,22 +431,8 @@ export async function createCharacter(
   }
 
   if (isCheck || Object.keys(errors).length > 0) {
-    return { complete: false, values, errors }
+    return { complete: false, values: data, errors }
   }
-
-  // Full validation with Zod
-  const result = CreateCharacterApiSchema.safeParse(data)
-
-  if (!result.success) {
-    const zodErrors: Record<string, string> = {}
-    for (const issue of result.error.issues) {
-      const field = issue.path[0] as string
-      zodErrors[field] = issue.message
-    }
-    return { complete: false, values, errors: zodErrors }
-  }
-
-  const validated = result.data
 
   const character = await beginOrSavepoint(db, async (tx) => {
     // Create the character in the database

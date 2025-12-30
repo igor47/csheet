@@ -1176,7 +1176,7 @@ describe("createCharacter", () => {
         expect(strengthRecords[0]?.score).toBe(10) // Base
       })
 
-      it("rejects bonuses to only one ability", async () => {
+      it("rejects bonuses exceeding max per ability", async () => {
         const user = await userFactory.create({}, testCtx.db)
         const data = buildCharacterData({
           ruleset: SRD52_ID,
@@ -1185,14 +1185,14 @@ describe("createCharacter", () => {
           background_ability_dex_bonus: "0",
           background_ability_con_bonus: "0",
           background_ability_int_bonus: "0",
-          background_ability_wis_bonus: "3", // All 3 to one ability!
+          background_ability_wis_bonus: "3", // Exceeds max of 2!
           background_ability_cha_bonus: "0",
         })
 
         const result = await createCharacter(testCtx.db, user, data)
         expect(result.complete).toBe(false)
         if (result.complete) return
-        expect(result.errors.background).toContain("at least 2 different abilities")
+        expect(result.errors.background_ability_wis_bonus).toContain("exceed")
       })
 
       it("rejects bonuses to abilities not allowed by background", async () => {

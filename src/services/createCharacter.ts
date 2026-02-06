@@ -9,7 +9,7 @@ import type { User } from "@src/db/users"
 import {
   Abilities,
   type AbilityType,
-  ClassNamesSchema,
+  ClassNames,
   getRuleset,
   POINT_BUY_COSTS,
   type Ruleset,
@@ -26,10 +26,10 @@ import { addLevel } from "./addLevel"
  * Base Character Schema - common fields for all characters
  */
 const BaseCharacterSchema = z.object({
-  name: z.string().min(3, "Pick a better character name!").max(50, "That name is too long!"),
+  name: z.string().trim().min(3, "Pick a better character name!").max(50, "That name is too long!"),
   species: z.string().min(1, "Species is required"),
   lineage: OptionalString(),
-  class: ClassNamesSchema,
+  class: z.enum(ClassNames, { message: "Class is required" }),
   subclass: OptionalString(),
   background: z.string().min(1, "Background is required"),
   alignment: OptionalString(),

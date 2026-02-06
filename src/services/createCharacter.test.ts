@@ -170,6 +170,18 @@ describe("createCharacter", () => {
     })
   })
 
+  describe("with no class specified", () => {
+    it("shows a friendly error message", async () => {
+      const user = await userFactory.create({}, testCtx.db)
+      const data = buildCharacterData({ class: undefined })
+
+      const result = await createCharacter(testCtx.db, user, data)
+      expect(result.complete).toBe(false)
+      if (result.complete) return
+      expect(result.errors.class).toBe("Class is required")
+    })
+  })
+
   describe("with no linage specified", () => {
     it("should error out", async () => {
       const user = await userFactory.create({}, testCtx.db)

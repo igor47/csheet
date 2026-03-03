@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import {
+  findByCharacterId,
+  getBeastPrepHistory,
+  getCurrentSeenBeasts,
+} from "@src/db/char_beasts_seen"
 import { create as createTrait } from "@src/db/char_traits"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
@@ -307,6 +312,125 @@ describe("prepBeast", () => {
         const updatedChar = await computeCharacter(testCtx.db, character.id)
         expect(updatedChar?.wildShape?.beasts).toContain(newBeast.id)
         expect(updatedChar?.wildShape?.beasts).not.toContain(beastToReplace)
+      })
+
+      test("sets replaced_at on replaced beast instead of deleting", async () => {
+        const beasts = getBeasts("srd52")
+        const currentBeasts = computedChar.wildShape!.beasts
+        const beastToReplace = currentBeasts[0]!
+
+        // Find a new beast not already known
+        const newBeast = beasts.find(
+          (b) => b.cr <= 0.25 && !b.speed.fly && !b.speed.swim && !currentBeasts.includes(b.id)
+        )!
+
+        const result = await executePrepBeast(testCtx.db, computedChar, {
+          beast_id: newBeast.id,
+          replace_beast_id: beastToReplace,
+        })
+
+        expect(result.complete).toBe(true)
+
+        // Verify the old beast still exists in database with replaced_at set
+        const allBeasts = await findByCharacterId(testCtx.db, character.id)
+        const replacedBeast = allBeasts.find((b) => b.beast_id === beastToReplace)
+
+        expect(replacedBeast).toBeDefined()
+        expect(replacedBeast!.replaced_at).not.toBeNull()
+        expect(replacedBeast!.replaced_by).toBe(newBeast.id)
+      })
+
+      test("replaced beast does not appear in getCurrentSeenBeasts", async () => {
+        const beasts = getBeasts("srd52")
+        const currentBeasts = computedChar.wildShape!.beasts
+        const beastToReplace = currentBeasts[0]!
+
+        // Find a new beast not already known
+        const newBeast = beasts.find(
+          (b) => b.cr <= 0.25 && !b.speed.fly && !b.speed.swim && !currentBeasts.includes(b.id)
+        )!
+
+        await executePrepBeast(testCtx.db, computedChar, {
+          beast_id: newBeast.id,
+          replace_beast_id: beastToReplace,
+        })
+
+        // getCurrentSeenBeasts should not include the replaced beast
+        const currentSeenBeasts = await getCurrentSeenBeasts(testCtx.db, character.id)
+        expect(currentSeenBeasts).not.toContain(beastToReplace)
+        expect(currentSeenBeasts).toContain(newBeast.id)
+      })
+
+      test("getBeastPrepHistory returns learn and replace events", async () => {
+        const beasts = getBeasts("srd52")
+        const currentBeasts = computedChar.wildShape!.beasts
+        const beastToReplace = currentBeasts[0]!
+
+        // Find a new beast not already known
+        const newBeast = beasts.find(
+          (b) => b.cr <= 0.25 && !b.speed.fly && !b.speed.swim && !currentBeasts.includes(b.id)
+        )!
+
+        await executePrepBeast(testCtx.db, computedChar, {
+          beast_id: newBeast.id,
+          replace_beast_id: beastToReplace,
+        })
+
+        const history = await getBeastPrepHistory(testCtx.db, character.id)
+
+        // Should have 5 learn events (4 original + 1 new) and 1 replace event
+        const learnEvents = history.filter((e) => e.action === "learn")
+        const replaceEvents = history.filter((e) => e.action === "replace")
+
+        expect(learnEvents.length).toBe(5)
+        expect(replaceEvents.length).toBe(1)
+
+        // The replace event should have correct data
+        const replaceEvent = replaceEvents[0]!
+        expect(replaceEvent.beast_id).toBe(beastToReplace)
+        expect(replaceEvent.replaced_by).toBe(newBeast.id)
+      })
+
+      test("can re-learn a previously replaced beast", async () => {
+        const beasts = getBeasts("srd52")
+        const currentBeasts = computedChar.wildShape!.beasts
+        const firstBeastToReplace = currentBeasts[0]!
+        const secondBeastToReplace = currentBeasts[1]!
+
+        // Find a new beast not already known
+        const availableBeasts = beasts.filter(
+          (b) => b.cr <= 0.25 && !b.speed.fly && !b.speed.swim && !currentBeasts.includes(b.id)
+        )
+        const newBeast1 = availableBeasts[0]!
+
+        // Replace first beast with newBeast1
+        await executePrepBeast(testCtx.db, computedChar, {
+          beast_id: newBeast1.id,
+          replace_beast_id: firstBeastToReplace,
+        })
+
+        // Reload the character
+        const charAfterFirst = await computeCharacter(testCtx.db, character.id)
+        expect(charAfterFirst?.wildShape?.beasts).not.toContain(firstBeastToReplace)
+
+        // Replace second beast with the previously replaced beast (re-learn it)
+        await executePrepBeast(testCtx.db, charAfterFirst!, {
+          beast_id: firstBeastToReplace,
+          replace_beast_id: secondBeastToReplace,
+        })
+
+        // Verify we can now use the re-learned beast
+        const charAfterSecond = await computeCharacter(testCtx.db, character.id)
+        expect(charAfterSecond?.wildShape?.beasts).toContain(firstBeastToReplace)
+        expect(charAfterSecond?.wildShape?.beasts).not.toContain(secondBeastToReplace)
+
+        // History should show both learn/replace cycles
+        const history = await getBeastPrepHistory(testCtx.db, character.id)
+        const firstBeastLearnEvents = history.filter(
+          (e) => e.beast_id === firstBeastToReplace && e.action === "learn"
+        )
+        // Should have 2 learn events for the first beast (original + re-learned)
+        expect(firstBeastLearnEvents.length).toBe(2)
       })
 
       test("returns error when replacing a non-existent beast", async () => {

@@ -3,6 +3,7 @@ import { AbilityHistory } from "@src/components/AbilityHistory"
 import { AvatarCropper } from "@src/components/AvatarCropper"
 import { AvatarGallery } from "@src/components/AvatarGallery"
 import { AvatarLightbox } from "@src/components/AvatarLightbox"
+import { BeastPrepHistory } from "@src/components/BeastPrepHistory"
 import { CastSpellForm } from "@src/components/CastSpellForm"
 import { Character } from "@src/components/Character"
 import { CharacterImport } from "@src/components/CharacterImport"
@@ -50,6 +51,7 @@ import { UploadAvatarForm } from "@src/components/UploadAvatarForm"
 import { ModalContent } from "@src/components/ui/DetailModal"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
+import { getBeastPrepHistory } from "@src/db/char_beasts_seen"
 import { findByCharacterId as findCoinChanges } from "@src/db/char_coins"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
@@ -1461,6 +1463,14 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
   if (field === "notes") {
     const notes = await findNotes(getDb(c), characterId)
     return c.html(<NotesHistory characterId={characterId} notes={notes} />)
+  }
+
+  if (field === "beast-prep-history") {
+    const character = authResult.character
+    const events = await getBeastPrepHistory(getDb(c), characterId)
+    // Reverse to show most recent first
+    events.reverse()
+    return c.html(<BeastPrepHistory events={events} character={character} />)
   }
 
   return c.html(

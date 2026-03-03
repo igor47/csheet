@@ -243,6 +243,18 @@ export const PrepBeastForm = ({ character, values = {}, errors = {} }: PrepBeast
   const { knownForms, beasts } = character.wildShape
   const title = knownForms !== null ? `Known Forms (${beasts.length}/${knownForms})` : "Known Forms"
 
+  // Check if character can learn forms yet (SRD 5.2 requires level 2+)
+  if (knownForms === 0) {
+    return (
+      <ModalContent title={title}>
+        <div class="alert alert-warning">
+          {character.name} cannot learn beast forms yet. Gain the Wild Shape trait at Druid level 2
+          to begin learning forms.
+        </div>
+      </ModalContent>
+    )
+  }
+
   return (
     <ModalContent title={title}>
       <PrepBeastFormBody character={character} values={values} errors={errors} />

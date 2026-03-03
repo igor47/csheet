@@ -455,6 +455,8 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
             : "Seen Beasts"
           const editRoute = isSrd52 ? "prepbeast" : "seenbeasts"
           const addLabel = isSrd52 ? "Add known form" : "Add seen beast"
+          // For SRD 5.2, disable add button if character can't learn forms yet (level < 2)
+          const canLearnForms = true || !isSrd52 || knownForms > 0
           const emptyMessage = isSrd52
             ? "No beast forms known yet. Learn beast forms during a long rest."
             : "No beasts recorded yet. Add beasts you've seen to use with Wild Shape."
@@ -469,20 +471,43 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                   </span>
                 </h6>
                 {!isReadOnly && (
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary border p-1"
-                    style="width: 24px; height: 24px; line-height: 1;"
-                    aria-label={addLabel}
-                    title={addLabel}
-                    hx-get={`/characters/${character.id}/edit/${editRoute}`}
-                    hx-target="#detailModalContent"
-                    hx-swap="innerHTML"
-                    data-bs-toggle="modal"
-                    data-bs-target="#detailModal"
-                  >
-                    <i class="bi bi-plus"></i>
-                  </button>
+                  <div class="d-flex gap-1">
+                    <button
+                      type="button"
+                      class={clsx("btn btn-sm btn-outline-secondary border p-1", !canLearnForms && "disabled")}
+                      style="width: 24px; height: 24px; line-height: 1;"
+                      aria-label={addLabel}
+                      title={canLearnForms ? addLabel : "Gain Wild Shape at level 2 to learn beast forms"}
+                      disabled={!canLearnForms}
+                      {...(canLearnForms
+                        ? {
+                            "hx-get": `/characters/${character.id}/edit/${editRoute}`,
+                            "hx-target": "#detailModalContent",
+                            "hx-swap": "innerHTML",
+                            "data-bs-toggle": "modal",
+                            "data-bs-target": "#detailModal",
+                          }
+                        : {})}
+                    >
+                      <i class="bi bi-plus"></i>
+                    </button>
+                    {isSrd52 && (
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary border p-1"
+                        style="width: 24px; height: 24px; line-height: 1;"
+                        aria-label="View known forms history"
+                        title="View known forms history"
+                        hx-get={`/characters/${character.id}/history/beast-prep-history`}
+                        hx-target="#detailModalContent"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#detailModal"
+                      >
+                        <i class="bi bi-clock-history"></i>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
               {beastsData.length > 0 ? (

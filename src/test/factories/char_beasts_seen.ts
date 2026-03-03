@@ -24,6 +24,8 @@ const factory = Factory.define<CharBeastSeen, CharBeastSeenFactoryParams>(({ par
     character_id: params.character_id ?? "", // Required - will throw error if not provided
     beast_id: params.beast_id ?? randomBeast.id,
     note: params.note ?? null,
+    replaced_at: null,
+    replaced_by: null,
     created_at: new Date(),
     updated_at: new Date(),
   }

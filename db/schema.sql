@@ -1,4 +1,4 @@
-\restrict BUGrzRMy32GvLeRNlSD0aQY8ad8Zeg5OLUEuKnfy9HSq6VL9fpMLbCYzNob28Kg
+\restrict ZrABXfdClmOx6DnzPcVKocwqtFELV0nIp43ZtP2C8lScQkzKELDbdI2pYWU3j1W
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.3
@@ -129,7 +129,9 @@ CREATE TABLE public.char_beasts_seen (
     beast_id text NOT NULL,
     note text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    replaced_at timestamp with time zone,
+    replaced_by text
 );
 
 
@@ -572,14 +574,6 @@ ALTER TABLE ONLY public.char_abilities
 
 
 --
--- Name: char_beasts_seen char_beasts_seen_character_id_beast_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.char_beasts_seen
-    ADD CONSTRAINT char_beasts_seen_character_id_beast_id_key UNIQUE (character_id, beast_id);
-
-
---
 -- Name: char_beasts_seen char_beasts_seen_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -852,6 +846,13 @@ CREATE INDEX idx_char_beasts_seen_beast_id ON public.char_beasts_seen USING btre
 --
 
 CREATE INDEX idx_char_beasts_seen_char_id ON public.char_beasts_seen USING btree (character_id);
+
+
+--
+-- Name: idx_char_beasts_seen_current; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_beasts_seen_current ON public.char_beasts_seen USING btree (character_id) WHERE (replaced_at IS NULL);
 
 
 --
@@ -1442,7 +1443,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict BUGrzRMy32GvLeRNlSD0aQY8ad8Zeg5OLUEuKnfy9HSq6VL9fpMLbCYzNob28Kg
+\unrestrict ZrABXfdClmOx6DnzPcVKocwqtFELV0nIp43ZtP2C8lScQkzKELDbdI2pYWU3j1W
 
 
 --
@@ -1491,4 +1492,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251126134731'),
     ('20251205001836'),
     ('20251209195618'),
-    ('20260303104254');
+    ('20260303104254'),
+    ('20260303234303');

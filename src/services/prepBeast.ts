@@ -1,4 +1,4 @@
-import { create as createBeastSeen, deleteByBeastId, isBeastSeen } from "@src/db/char_beasts_seen"
+import { create as createBeastSeen, isBeastSeen, replaceBeast } from "@src/db/char_beasts_seen"
 import { getBeastById } from "@src/lib/dnd/beasts"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import { zodToFormErrors } from "@src/lib/formErrors"
@@ -130,9 +130,9 @@ export async function prepBeast(
     return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
-  // If replacing, delete the old beast first
+  // If replacing, soft-delete the old beast by setting replaced_at
   if (result.data.replace_beast_id) {
-    await deleteByBeastId(db, char.id, result.data.replace_beast_id)
+    await replaceBeast(db, char.id, result.data.replace_beast_id, result.data.beast_id)
   }
 
   // Add the new beast

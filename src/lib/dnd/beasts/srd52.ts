@@ -3230,8 +3230,7 @@ export const srd52Beasts: Beast[] = [
         attackBonus: 4,
         reach: 5,
         damage: { type: "piercing", dice: [6], flatBonus: 2 },
-        description:
-          "If the target is a Medium or smaller creature, it has the Prone condition.",
+        description: "If the target is a Medium or smaller creature, it has the Prone condition.",
       },
     ],
     source: "srd52",

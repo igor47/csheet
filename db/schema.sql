@@ -1,7 +1,7 @@
-\restrict EIvSglJHygsNcIKc7gr1LRqCWzak1b2BYTPO17s7oUnsrweJPJORd0ywNzjCr4G
+\restrict BUGrzRMy32GvLeRNlSD0aQY8ad8Zeg5OLUEuKnfy9HSq6VL9fpMLbCYzNob28Kg
 
 -- Dumped from database version 16.10
--- Dumped by pg_dump version 18.1
+-- Dumped by pg_dump version 18.3
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -116,6 +116,20 @@ CREATE TABLE public.char_abilities (
     proficiency boolean DEFAULT false NOT NULL,
     CONSTRAINT char_abilities_ability_check CHECK ((ability = ANY (ARRAY['strength'::text, 'dexterity'::text, 'constitution'::text, 'intelligence'::text, 'wisdom'::text, 'charisma'::text]))),
     CONSTRAINT char_abilities_score_check CHECK (((score >= 1) AND (score <= 30)))
+);
+
+
+--
+-- Name: char_beasts_seen; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_beasts_seen (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    beast_id text NOT NULL,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -558,6 +572,22 @@ ALTER TABLE ONLY public.char_abilities
 
 
 --
+-- Name: char_beasts_seen char_beasts_seen_character_id_beast_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_beasts_seen
+    ADD CONSTRAINT char_beasts_seen_character_id_beast_id_key UNIQUE (character_id, beast_id);
+
+
+--
+-- Name: char_beasts_seen char_beasts_seen_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_beasts_seen
+    ADD CONSTRAINT char_beasts_seen_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_coins char_coins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -811,6 +841,20 @@ CREATE INDEX idx_char_abilities_char_id_ability_created_at ON public.char_abilit
 
 
 --
+-- Name: idx_char_beasts_seen_beast_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_beasts_seen_beast_id ON public.char_beasts_seen USING btree (beast_id);
+
+
+--
+-- Name: idx_char_beasts_seen_char_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_beasts_seen_char_id ON public.char_beasts_seen USING btree (character_id);
+
+
+--
 -- Name: idx_char_coins_char_id_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1035,6 +1079,13 @@ CREATE TRIGGER char_abilities_updated_at BEFORE UPDATE ON public.char_abilities 
 
 
 --
+-- Name: char_beasts_seen char_beasts_seen_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_beasts_seen_updated_at BEFORE UPDATE ON public.char_beasts_seen FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: char_coins char_coins_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1201,6 +1252,14 @@ ALTER TABLE ONLY public.campaigns
 
 ALTER TABLE ONLY public.char_abilities
     ADD CONSTRAINT char_abilities_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: char_beasts_seen char_beasts_seen_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_beasts_seen
+    ADD CONSTRAINT char_beasts_seen_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
 
 
 --
@@ -1383,7 +1442,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict EIvSglJHygsNcIKc7gr1LRqCWzak1b2BYTPO17s7oUnsrweJPJORd0ywNzjCr4G
+\unrestrict BUGrzRMy32GvLeRNlSD0aQY8ad8Zeg5OLUEuKnfy9HSq6VL9fpMLbCYzNob28Kg
 
 
 --
@@ -1431,4 +1490,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251125200357'),
     ('20251126134731'),
     ('20251205001836'),
-    ('20251209195618');
+    ('20251209195618'),
+    ('20260303104254');

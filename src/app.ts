@@ -7,6 +7,7 @@ import { applyMiddleware } from "./middleware"
 import { requireAuth } from "./middleware/auth"
 import { cachingServeStatic } from "./middleware/cachingServeStatic"
 import { authRoutes } from "./routes/auth"
+import { beastsRoutes } from "./routes/beasts"
 import { campaignsRoutes } from "./routes/campaigns"
 import { characterRoutes } from "./routes/character"
 import { chatRoutes } from "./routes/chat"
@@ -67,6 +68,7 @@ export function createApp(db?: SQL) {
   app.route("/", indexRoutes)
   app.route("/", authRoutes)
   app.route("/", spellsRoutes)
+  app.route("/", beastsRoutes)
 
   // Protected routes (auth required)
   const protectedRoutes = new Hono()

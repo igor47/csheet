@@ -34,6 +34,7 @@ import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
+import { SeeBeastForm } from "@src/components/SeeBeastForm"
 import { SessionNotes } from "@src/components/SessionNotes"
 import { ShortRestForm } from "@src/components/ShortRestForm"
 import { SkillsEditForm } from "@src/components/SkillsEditForm"
@@ -94,6 +95,7 @@ import { longRest } from "@src/services/longRest"
 import { manageCharge } from "@src/services/manageCharge"
 import { prepareSpell } from "@src/services/prepareSpell"
 import { saveNotes } from "@src/services/saveNotes"
+import { seeBeast } from "@src/services/seeBeast"
 import { shortRest } from "@src/services/shortRest"
 import { unarchiveCharacter } from "@src/services/unarchiveCharacter"
 import { updateAbilities } from "@src/services/updateAbilities"
@@ -365,6 +367,25 @@ characterRoutes.post("/characters/:id/edit/spellbook", async (c) => {
 
   if (!result.complete) {
     return c.html(<LearnSpellForm character={char} values={result.values} errors={result.errors} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeDetailModal")
+  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
+})
+
+characterRoutes.post("/characters/:id/edit/seenbeasts", async (c) => {
+  const characterId = c.req.param("id") as string
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const result = await seeBeast(getDb(c), char, body)
+
+  if (!result.complete) {
+    return c.html(<SeeBeastForm character={char} values={result.values} errors={result.errors} />)
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
@@ -1031,6 +1052,10 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
 
   if (field === "spellbook") {
     return c.html(<LearnSpellForm character={char} />)
+  }
+
+  if (field === "seenbeasts") {
+    return c.html(<SeeBeastForm character={char} />)
   }
 
   if (field === "avatar") {

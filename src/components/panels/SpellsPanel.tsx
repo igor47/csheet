@@ -1,7 +1,9 @@
 import { LabeledValue } from "@src/components/ui/LabeledValue"
 import { SpellSlotsDisplay } from "@src/components/ui/SpellSlotsDisplay"
+import { getBeastById } from "@src/lib/dnd/beasts"
 import { spells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import { getWildShapeCRLimit } from "@src/services/wildShapeLimits"
 import { clsx } from "clsx"
 
 export interface SpellsPanelProps {
@@ -405,6 +407,136 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                   </tbody>
                 </table>
               </div>
+            </div>
+          )
+        })()}
+
+      {/* Seen Beasts (Wild Shape) */}
+      {character.seenBeasts !== null &&
+        (() => {
+          // Get druid level
+          const druidClass = character.classes.find((c) => c.class === "druid")
+          const druidLevel = druidClass?.level || 2
+          const limits = getWildShapeCRLimit(druidLevel)
+
+          // Get beast data for each seen beast
+          const seenBeastsData = character.seenBeasts
+            .map((beastId) => {
+              const beast = getBeastById(character.ruleset, beastId)
+              if (!beast) return null
+
+              // Check if beast can be transformed into
+              const hasFly = !!beast.speed.fly
+              const hasSwim = !!beast.speed.swim
+              const canTransform =
+                beast.cr <= limits.maxCR &&
+                (!hasFly || limits.canFly) &&
+                (!hasSwim || limits.canSwim)
+
+              return { beast, canTransform }
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+              // Sort by CR, then name
+              if (a!.beast.cr !== b!.beast.cr) return a!.beast.cr - b!.beast.cr
+              return a!.beast.name.localeCompare(b!.beast.name)
+            })
+
+          const formatBeastCR = (cr: number) => {
+            if (cr === 0.125) return "1/8"
+            if (cr === 0.25) return "1/4"
+            if (cr === 0.5) return "1/2"
+            return cr.toString()
+          }
+
+          const formatBeastSpeed = (beast: NonNullable<(typeof seenBeastsData)[0]>["beast"]) => {
+            const parts: string[] = []
+            if (beast.speed.walk) parts.push(`${beast.speed.walk}`)
+            if (beast.speed.swim) parts.push(`swim ${beast.speed.swim}`)
+            if (beast.speed.fly) parts.push(`fly ${beast.speed.fly}`)
+            if (beast.speed.climb) parts.push(`climb ${beast.speed.climb}`)
+            return parts.join(", ")
+          }
+
+          return (
+            <div class="mt-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">
+                  Seen Beasts
+                  <span class="badge bg-secondary ms-2" title="Wild Shape">
+                    Max CR {formatBeastCR(limits.maxCR)}
+                  </span>
+                </h6>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary border p-1"
+                    style="width: 24px; height: 24px; line-height: 1;"
+                    aria-label="Add seen beast"
+                    title="Add seen beast"
+                    hx-get={`/characters/${character.id}/edit/seenbeasts`}
+                    hx-target="#detailModalContent"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#detailModal"
+                  >
+                    <i class="bi bi-plus"></i>
+                  </button>
+                )}
+              </div>
+              {seenBeastsData.length > 0 ? (
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover small">
+                    <thead>
+                      <tr>
+                        <th>Beast</th>
+                        <th>CR</th>
+                        <th>Size</th>
+                        <th>Speed</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seenBeastsData.map((data) => {
+                        if (!data) return null
+                        const { beast, canTransform } = data
+
+                        return (
+                          <tr class={clsx({ "text-muted": !canTransform })}>
+                            <td>
+                              <a
+                                href={`/beasts/${beast.id}`}
+                                hx-get={`/beasts/${beast.id}?ruleset=${character.ruleset}`}
+                                hx-target="#detailModalContent"
+                                hx-swap="innerHTML"
+                                data-bs-toggle="modal"
+                                data-bs-target="#detailModal"
+                                class={clsx("text-decoration-none", {
+                                  "text-muted": !canTransform,
+                                })}
+                              >
+                                {beast.name}
+                              </a>
+                              {!canTransform && (
+                                <i
+                                  class="bi bi-exclamation-triangle ms-1 text-warning"
+                                  title="Cannot transform: CR or movement type exceeds current limits"
+                                ></i>
+                              )}
+                            </td>
+                            <td>{formatBeastCR(beast.cr)}</td>
+                            <td class="text-capitalize">{beast.size}</td>
+                            <td>{formatBeastSpeed(beast)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p class="text-muted small">
+                  No beasts recorded yet. Add beasts you've seen to use with Wild Shape.
+                </p>
+              )}
             </div>
           )
         })()}

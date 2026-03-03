@@ -66,6 +66,7 @@ import {
   longRestTool,
   longRestToolName,
 } from "./services/longRest"
+import { executeLookupBeast, lookupBeastTool, lookupBeastToolName } from "./services/lookupBeast"
 import {
   executeLookupItemTemplate,
   lookupItemTemplateTool,
@@ -84,6 +85,12 @@ import {
   prepareSpellTool,
   prepareSpellToolName,
 } from "./services/prepareSpell"
+import {
+  executeSeeBeast,
+  formatSeeBeastApproval,
+  seeBeastTool,
+  seeBeastToolName,
+} from "./services/seeBeast"
 import {
   executeShortRest,
   formatShortRestApproval,
@@ -251,6 +258,19 @@ export const TOOLS: ToolRegistration[] = [
     tool: updateSpellSlotsTool,
     executor: executeUpdateSpellSlots,
     formatApprovalMessage: formatUpdateSpellSlotsApproval,
+  },
+
+  // Wild Shape (Druid)
+  {
+    name: lookupBeastToolName,
+    tool: lookupBeastTool,
+    executor: executeLookupBeast,
+  },
+  {
+    name: seeBeastToolName,
+    tool: seeBeastTool,
+    executor: executeSeeBeast,
+    formatApprovalMessage: formatSeeBeastApproval,
   },
 
   // Items

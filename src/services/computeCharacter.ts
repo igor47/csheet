@@ -1,4 +1,5 @@
 import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilities"
+import { getCurrentSeenBeasts } from "@src/db/char_beasts_seen"
 import { type CurrentCoins, currentByCharacterId as getCurrentCoins } from "@src/db/char_coins"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { getHpDelta } from "@src/db/char_hp"
@@ -83,6 +84,7 @@ export interface ComputedCharacter extends Character {
   equippedItems: EquippedComputedItem[]
   affectedAttributes: Record<string, ItemEffectInfo[]>
   avatars: CharacterAvatarWithUrl[]
+  seenBeasts: string[] | null // Only populated if character has Wild Shape trait
 }
 // Calculate modifier and saving throw for each ability
 const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
@@ -450,6 +452,12 @@ export async function computeCharacter(
     uploadUrl: `/uploads/${avatar.upload_id}`,
   }))
 
+  // Check if character has Wild Shape and load seen beasts if so
+  const hasWildShape = traits.some(
+    (t) => t.name.toLowerCase() === "wild shape" && t.source === "class"
+  )
+  const seenBeasts = hasWildShape ? await getCurrentSeenBeasts(db, characterId) : null
+
   const char = {
     ...character,
     classes,
@@ -475,6 +483,7 @@ export async function computeCharacter(
     equippedItems,
     affectedAttributes,
     avatars: avatarsWithUrls,
+    seenBeasts,
   }
 
   return char

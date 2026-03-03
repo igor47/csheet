@@ -13,7 +13,7 @@ export interface SeeBeastFormProps {
 
 function SeeBeastFormBody({ character, values = {}, errors = {} }: SeeBeastFormProps) {
   // Get current seen beasts
-  const currentList = character.seenBeasts || []
+  const currentList = character.wildShape?.beasts || []
 
   // Get all beasts for this ruleset, excluding already seen
   const availableBeasts = getBeasts(character.ruleset)
@@ -83,7 +83,7 @@ function SeeBeastFormBody({ character, values = {}, errors = {} }: SeeBeastFormP
 
 export const SeeBeastForm = ({ character, values = {}, errors = {} }: SeeBeastFormProps) => {
   // Check if character has Wild Shape
-  const hasWildShape = character.seenBeasts !== null
+  const hasWildShape = character.wildShape !== null
 
   if (!hasWildShape) {
     return (

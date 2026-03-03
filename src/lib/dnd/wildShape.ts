@@ -1,10 +1,10 @@
+import type { RulesetId } from "./rulesets"
+import { SRD52_ID } from "./srd52"
+
 /**
- * Wild Shape CR Limits based on SRD 5.2
+ * Wild Shape CR Limits (same in SRD5.1 and 5.2)
  *
- * Note: CR limits apply to *transforming*, not to *recording* seen beasts.
- * A low-level druid can record a Giant Eagle but can't transform into one
- * until they reach the appropriate level.
- */
+**/
 
 export interface WildShapeLimits {
   maxCR: number
@@ -43,25 +43,22 @@ export function formatCR(cr: number): string {
 }
 
 /**
- * Check if a beast can be transformed into given current limits
+ * Get Wild Shape uses based on ruleset and druid level
+ *
+ * SRD 5.1: 2 uses at all levels (level 20 is unlimited, represented as -1)
+ * SRD 5.2:
+ *   - Level 1-3: 2 uses
+ *   - Level 4-9: 3 uses
+ *   - Level 10+: 4 uses
  */
-export function canTransformIntoBeast(
-  beastCR: number,
-  beastHasFly: boolean,
-  beastHasSwim: boolean,
-  limits: WildShapeLimits
-): { allowed: boolean; reason?: string } {
-  if (beastCR > limits.maxCR) {
-    return {
-      allowed: false,
-      reason: `CR ${formatCR(beastCR)} exceeds your max CR of ${formatCR(limits.maxCR)}`,
-    }
+export function getWildShapeUses(ruleset: RulesetId, druidLevel: number): number {
+  if (ruleset === SRD52_ID) {
+    if (druidLevel >= 17) return 4
+    if (druidLevel >= 6) return 3
+    return 2
   }
-  if (beastHasFly && !limits.canFly) {
-    return { allowed: false, reason: "Cannot transform into flying beasts yet" }
-  }
-  if (beastHasSwim && !limits.canSwim) {
-    return { allowed: false, reason: "Cannot transform into swimming beasts yet" }
-  }
-  return { allowed: true }
+
+  // SRD 5.1
+  if (druidLevel >= 20) return 99 // unlimited
+  return 2
 }

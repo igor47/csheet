@@ -78,7 +78,7 @@ describe("seeBeast", () => {
 
         // Verify beast appears in computed character
         const updatedChar = await computeCharacter(testCtx.db, character.id)
-        expect(updatedChar?.seenBeasts).toContain(wolf.id)
+        expect(updatedChar?.wildShape?.beasts).toContain(wolf.id)
       })
 
       test("can record a beast with a note", async () => {

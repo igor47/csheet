@@ -2,8 +2,8 @@ import { LabeledValue } from "@src/components/ui/LabeledValue"
 import { SpellSlotsDisplay } from "@src/components/ui/SpellSlotsDisplay"
 import { getBeastById } from "@src/lib/dnd/beasts"
 import { spells } from "@src/lib/dnd/spells"
+import { formatCR } from "@src/lib/dnd/wildShape"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import { getWildShapeCRLimit } from "@src/services/wildShapeLimits"
 import { clsx } from "clsx"
 
 export interface SpellsPanelProps {
@@ -412,15 +412,12 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
         })()}
 
       {/* Seen Beasts (Wild Shape) */}
-      {character.seenBeasts !== null &&
+      {character.wildShape !== null &&
         (() => {
-          // Get druid level
-          const druidClass = character.classes.find((c) => c.class === "druid")
-          const druidLevel = druidClass?.level || 2
-          const limits = getWildShapeCRLimit(druidLevel)
+          const { limits, beasts } = character.wildShape
 
           // Get beast data for each seen beast
-          const seenBeastsData = character.seenBeasts
+          const seenBeastsData = beasts
             .map((beastId) => {
               const beast = getBeastById(character.ruleset, beastId)
               if (!beast) return null
@@ -442,13 +439,6 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
               return a!.beast.name.localeCompare(b!.beast.name)
             })
 
-          const formatBeastCR = (cr: number) => {
-            if (cr === 0.125) return "1/8"
-            if (cr === 0.25) return "1/4"
-            if (cr === 0.5) return "1/2"
-            return cr.toString()
-          }
-
           const formatBeastSpeed = (beast: NonNullable<(typeof seenBeastsData)[0]>["beast"]) => {
             const parts: string[] = []
             if (beast.speed.walk) parts.push(`${beast.speed.walk}`)
@@ -464,7 +454,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                 <h6 class="mb-0">
                   Seen Beasts
                   <span class="badge bg-secondary ms-2" title="Wild Shape">
-                    Max CR {formatBeastCR(limits.maxCR)}
+                    Max CR {formatCR(limits.maxCR)}
                   </span>
                 </h6>
                 {!isReadOnly && (
@@ -523,7 +513,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                                 ></i>
                               )}
                             </td>
-                            <td>{formatBeastCR(beast.cr)}</td>
+                            <td>{formatCR(beast.cr)}</td>
                             <td class="text-capitalize">{beast.size}</td>
                             <td>{formatBeastSpeed(beast)}</td>
                           </tr>

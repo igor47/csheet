@@ -28,13 +28,6 @@ type SeeBeastData = Partial<z.infer<typeof SeeBeastApiSchema>>
 export type SeeBeastResult = ServiceResult<object>
 
 /**
- * Check if a character has the Wild Shape trait
- */
-function hasWildShape(char: ComputedCharacter): boolean {
-  return char.traits.some((t) => t.name.toLowerCase() === "wild shape" && t.source === "class")
-}
-
-/**
  * Add a beast to a druid's seen beasts list
  * Druids with Wild Shape can record beasts they've encountered
  * Note: CR limits apply to transforming, not to recording beasts
@@ -49,7 +42,7 @@ export async function seeBeast(
   const isCheck = data.is_check === "true"
 
   // Check if character has Wild Shape
-  if (!hasWildShape(char)) {
+  if (!char.wildShape) {
     errors._form = `${char.name} does not have the Wild Shape trait`
     return { complete: false, errors, values: data }
   }

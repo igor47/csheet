@@ -25,6 +25,11 @@ import {
   type SpellSlotsType,
 } from "@src/lib/dnd"
 import {
+  type WildShapeLimits,
+  getWildShapeCRLimit,
+  getWildShapeUses,
+} from "@src/lib/dnd/wildShape"
+import {
   computeCharacterItems,
   type EquippedComputedItem,
   type ItemEffect,
@@ -60,6 +65,12 @@ export interface CharacterAvatarWithUrl extends CharacterAvatar {
   uploadUrl: string
 }
 
+export interface WildShapeInfo {
+  limits: WildShapeLimits
+  usesAvailable: number
+  beasts: string[]
+}
+
 export interface ComputedCharacter extends Character {
   classes: CharacterClass[]
   totalLevel: number
@@ -84,7 +95,7 @@ export interface ComputedCharacter extends Character {
   equippedItems: EquippedComputedItem[]
   affectedAttributes: Record<string, ItemEffectInfo[]>
   avatars: CharacterAvatarWithUrl[]
-  seenBeasts: string[] | null // Only populated if character has Wild Shape trait
+  wildShape: WildShapeInfo | null // Populated if character can use Wild Shape
 }
 // Calculate modifier and saving throw for each ability
 const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
@@ -452,11 +463,21 @@ export async function computeCharacter(
     uploadUrl: `/uploads/${avatar.upload_id}`,
   }))
 
-  // Check if character has Wild Shape and load seen beasts if so
+  // Check if character has Wild Shape and compute wildShape info if so
   const hasWildShape = traits.some(
     (t) => t.name.toLowerCase() === "wild shape" && t.source === "class"
   )
-  const seenBeasts = hasWildShape ? await getCurrentSeenBeasts(db, characterId) : null
+  let wildShape: WildShapeInfo | null = null
+  if (hasWildShape) {
+    const druidClass = classes.find((c) => c.class === "druid")
+    const druidLevel = druidClass?.level || 2
+    const seenBeasts = await getCurrentSeenBeasts(db, characterId)
+    wildShape = {
+      limits: getWildShapeCRLimit(druidLevel),
+      usesAvailable: getWildShapeUses(character.ruleset, druidLevel),
+      beasts: seenBeasts,
+    }
+  }
 
   const char = {
     ...character,
@@ -483,7 +504,7 @@ export async function computeCharacter(
     equippedItems,
     affectedAttributes,
     avatars: avatarsWithUrls,
-    seenBeasts,
+    wildShape,
   }
 
   return char

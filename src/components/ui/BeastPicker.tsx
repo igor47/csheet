@@ -1,5 +1,5 @@
 import type { Beast } from "@src/lib/dnd/beasts"
-import { formatCR } from "@src/services/wildShapeLimits"
+import { formatCR } from "@src/lib/dnd/wildShape"
 
 export interface BeastPickerProps {
   beasts: Beast[]

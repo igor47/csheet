@@ -68,10 +68,3 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     })
   )
 }
-
-export async function deleteById(db: SQL, id: string): Promise<void> {
-  await db`
-    DELETE FROM char_spell_slots
-    WHERE id = ${id}
-  `
-}

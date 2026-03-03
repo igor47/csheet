@@ -27,24 +27,41 @@ describe("seeBeast", () => {
       )
     })
 
-    describe("when character does not have Wild Shape trait", () => {
+    describe("when character is SRD 5.2", () => {
+      let srd52Character: typeof character
+      let srd52ComputedChar: ComputedCharacter
+
       beforeEach(async () => {
-        const char = await computeCharacter(testCtx.db, character.id)
+        srd52Character = await characterFactory.create(
+          { user_id: user.id, ruleset: "srd52", species: "human", class: "druid", level: 2 },
+          testCtx.db
+        )
+        // Add Wild Shape trait
+        await createTrait(testCtx.db, {
+          character_id: srd52Character.id,
+          name: "Wild Shape",
+          description: "You can transform into a beast you have seen.",
+          source: "class",
+          source_detail: "druid",
+          level: 2,
+          note: null,
+        })
+        const char = await computeCharacter(testCtx.db, srd52Character.id)
         if (!char) throw new Error("Character not found")
-        computedChar = char
+        srd52ComputedChar = char
       })
 
-      test("returns error", async () => {
-        const beasts = getBeasts(character.ruleset)
+      test("returns error for wrong ruleset", async () => {
+        const beasts = getBeasts("srd52")
         const wolf = beasts.find((b) => b.name.toLowerCase() === "wolf")!
 
-        const result = await executeSeeBeast(testCtx.db, computedChar, {
+        const result = await executeSeeBeast(testCtx.db, srd52ComputedChar, {
           beast_id: wolf.id,
         })
 
         expect(result.complete).toBe(false)
         if (result.complete !== false) return
-        expect(result.errors._form).toContain("Wild Shape")
+        expect(result.errors._form).toContain("SRD 5.1")
       })
     })
 

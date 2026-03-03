@@ -4,7 +4,7 @@ import { SRD52_ID } from "./srd52"
 /**
  * Wild Shape CR Limits (same in SRD5.1 and 5.2)
  *
-**/
+ **/
 
 export interface WildShapeLimits {
   maxCR: number
@@ -28,8 +28,12 @@ export function getWildShapeCRLimit(druidLevel: number): WildShapeLimits {
   if (druidLevel >= 4) {
     return { maxCR: 0.5, canFly: false, canSwim: true }
   }
-  // Levels 2-3 (Wild Shape gained at level 2)
-  return { maxCR: 0.25, canFly: false, canSwim: false }
+  if (druidLevel >= 2) {
+    return { maxCR: 0.25, canFly: false, canSwim: false }
+  }
+
+  // Level 1 or below - no Wild Shape
+  return { maxCR: 0, canFly: false, canSwim: false }
 }
 
 /**
@@ -51,14 +55,32 @@ export function formatCR(cr: number): string {
  *   - Level 4-9: 3 uses
  *   - Level 10+: 4 uses
  */
+/**
+ * Get Known Forms limit for SRD 5.2 Wild Shape
+ *
+ * | Druid Level | Known Forms |
+ * |-------------|-------------|
+ * | 2-3         | 4           |
+ * | 4-7         | 6           |
+ * | 8+          | 8           |
+ */
+export function getKnownFormsLimit(druidLevel: number): number {
+  if (druidLevel >= 8) return 8
+  if (druidLevel >= 4) return 6
+  if (druidLevel >= 2) return 4
+  return 0
+}
+
 export function getWildShapeUses(ruleset: RulesetId, druidLevel: number): number {
   if (ruleset === SRD52_ID) {
     if (druidLevel >= 17) return 4
     if (druidLevel >= 6) return 3
-    return 2
+    if (druidLevel >= 2) return 2
+    return 0
   }
 
   // SRD 5.1
   if (druidLevel >= 20) return 99 // unlimited
-  return 2
+  if (druidLevel >= 2) return 2
+  return 0
 }

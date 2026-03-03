@@ -1,5 +1,6 @@
 import { create as createBeastSeen, isBeastSeen } from "@src/db/char_beasts_seen"
 import { getBeastById } from "@src/lib/dnd/beasts"
+import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
@@ -44,6 +45,12 @@ export async function seeBeast(
   // Check if character has Wild Shape
   if (!char.wildShape) {
     errors._form = `${char.name} does not have the Wild Shape trait`
+    return { complete: false, errors, values: data }
+  }
+
+  // SRD 5.1 only - SRD 5.2 uses prepBeast for known forms
+  if (char.ruleset !== SRD51_ID) {
+    errors._form = `Recording seen beasts is only available for SRD 5.1 characters. SRD 5.2 characters should use Known Forms.`
     return { complete: false, errors, values: data }
   }
 

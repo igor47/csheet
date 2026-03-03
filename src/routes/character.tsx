@@ -29,6 +29,7 @@ import { NotesHistory } from "@src/components/NotesHistory"
 import { NotesSaveIndicator } from "@src/components/NotesSaveIndicator"
 import { PreparedSpellsHistory } from "@src/components/PreparedSpellsHistory"
 import { PrepareSpellForm } from "@src/components/PrepareSpellForm"
+import { PrepBeastForm } from "@src/components/PrepBeastForm"
 import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
@@ -94,6 +95,7 @@ import { listCharacters } from "@src/services/listCharacters"
 import { longRest } from "@src/services/longRest"
 import { manageCharge } from "@src/services/manageCharge"
 import { prepareSpell } from "@src/services/prepareSpell"
+import { prepBeast } from "@src/services/prepBeast"
 import { saveNotes } from "@src/services/saveNotes"
 import { seeBeast } from "@src/services/seeBeast"
 import { shortRest } from "@src/services/shortRest"
@@ -386,6 +388,25 @@ characterRoutes.post("/characters/:id/edit/seenbeasts", async (c) => {
 
   if (!result.complete) {
     return c.html(<SeeBeastForm character={char} values={result.values} errors={result.errors} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeDetailModal")
+  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
+})
+
+characterRoutes.post("/characters/:id/edit/prepbeast", async (c) => {
+  const characterId = c.req.param("id") as string
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const result = await prepBeast(getDb(c), char, body)
+
+  if (!result.complete) {
+    return c.html(<PrepBeastForm character={char} values={result.values} errors={result.errors} />)
   }
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
@@ -1056,6 +1077,10 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
 
   if (field === "seenbeasts") {
     return c.html(<SeeBeastForm character={char} />)
+  }
+
+  if (field === "prepbeast") {
+    return c.html(<PrepBeastForm character={char} />)
   }
 
   if (field === "avatar") {

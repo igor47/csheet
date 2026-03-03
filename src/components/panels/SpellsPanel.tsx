@@ -411,13 +411,14 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
           )
         })()}
 
-      {/* Seen Beasts (Wild Shape) */}
+      {/* Wild Shape Beasts - SRD 5.1: "Seen Beasts", SRD 5.2: "Known Forms" */}
       {character.wildShape !== null &&
         (() => {
-          const { limits, beasts } = character.wildShape
+          const { limits, knownForms, beasts } = character.wildShape
+          const isSrd52 = knownForms !== null
 
-          // Get beast data for each seen beast
-          const seenBeastsData = beasts
+          // Get beast data for each seen/known beast
+          const beastsData = beasts
             .map((beastId) => {
               const beast = getBeastById(character.ruleset, beastId)
               if (!beast) return null
@@ -439,7 +440,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
               return a!.beast.name.localeCompare(b!.beast.name)
             })
 
-          const formatBeastSpeed = (beast: NonNullable<(typeof seenBeastsData)[0]>["beast"]) => {
+          const formatBeastSpeed = (beast: NonNullable<(typeof beastsData)[0]>["beast"]) => {
             const parts: string[] = []
             if (beast.speed.walk) parts.push(`${beast.speed.walk}`)
             if (beast.speed.swim) parts.push(`swim ${beast.speed.swim}`)
@@ -448,11 +449,21 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
             return parts.join(", ")
           }
 
+          // Determine header and route based on ruleset
+          const headerText = isSrd52
+            ? `Known Forms (${beasts.length}/${knownForms})`
+            : "Seen Beasts"
+          const editRoute = isSrd52 ? "prepbeast" : "seenbeasts"
+          const addLabel = isSrd52 ? "Add known form" : "Add seen beast"
+          const emptyMessage = isSrd52
+            ? "No beast forms known yet. Learn beast forms during a long rest."
+            : "No beasts recorded yet. Add beasts you've seen to use with Wild Shape."
+
           return (
             <div class="mt-3">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0">
-                  Seen Beasts
+                  {headerText}
                   <span class="badge bg-secondary ms-2" title="Wild Shape">
                     Max CR {formatCR(limits.maxCR)}
                   </span>
@@ -462,9 +473,9 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                     type="button"
                     class="btn btn-sm btn-outline-secondary border p-1"
                     style="width: 24px; height: 24px; line-height: 1;"
-                    aria-label="Add seen beast"
-                    title="Add seen beast"
-                    hx-get={`/characters/${character.id}/edit/seenbeasts`}
+                    aria-label={addLabel}
+                    title={addLabel}
+                    hx-get={`/characters/${character.id}/edit/${editRoute}`}
                     hx-target="#detailModalContent"
                     hx-swap="innerHTML"
                     data-bs-toggle="modal"
@@ -474,7 +485,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                   </button>
                 )}
               </div>
-              {seenBeastsData.length > 0 ? (
+              {beastsData.length > 0 ? (
                 <div class="table-responsive">
                   <table class="table table-sm table-hover small">
                     <thead>
@@ -486,7 +497,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                       </tr>
                     </thead>
                     <tbody>
-                      {seenBeastsData.map((data) => {
+                      {beastsData.map((data) => {
                         if (!data) return null
                         const { beast, canTransform } = data
 
@@ -523,9 +534,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                   </table>
                 </div>
               ) : (
-                <p class="text-muted small">
-                  No beasts recorded yet. Add beasts you've seen to use with Wild Shape.
-                </p>
+                <p class="text-muted small">{emptyMessage}</p>
               )}
             </div>
           )

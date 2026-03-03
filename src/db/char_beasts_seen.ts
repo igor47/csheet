@@ -75,3 +75,15 @@ export async function getCurrentSeenBeasts(db: SQL, characterId: string): Promis
   const beasts = await findByCharacterId(db, characterId)
   return beasts.map((b) => b.beast_id)
 }
+
+export async function deleteByBeastId(
+  db: SQL,
+  characterId: string,
+  beastId: string
+): Promise<boolean> {
+  const result = await db`
+    DELETE FROM char_beasts_seen
+    WHERE character_id = ${characterId} AND beast_id = ${beastId}
+  `
+  return result.count > 0
+}

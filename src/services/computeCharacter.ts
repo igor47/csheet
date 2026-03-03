@@ -24,10 +24,12 @@ import {
   type SpellLevelType,
   type SpellSlotsType,
 } from "@src/lib/dnd"
+import { SRD52_ID } from "@src/lib/dnd/srd52"
 import {
-  type WildShapeLimits,
+  getKnownFormsLimit,
   getWildShapeCRLimit,
   getWildShapeUses,
+  type WildShapeLimits,
 } from "@src/lib/dnd/wildShape"
 import {
   computeCharacterItems,
@@ -68,6 +70,7 @@ export interface CharacterAvatarWithUrl extends CharacterAvatar {
 export interface WildShapeInfo {
   limits: WildShapeLimits
   usesAvailable: number
+  knownForms: number | null // null for SRD 5.1 (unlimited), 4/6/8 for SRD 5.2
   beasts: string[]
 }
 
@@ -423,6 +426,23 @@ export async function computeCharacter(
   // Fetch all traits for this character
   const traits = await findTraits(db, characterId)
 
+  // Check if character has Wild Shape and compute wildShape info if so
+  let wildShape: WildShapeInfo | null = null
+  const druidClass = classes.find((c) => c.class === "druid")
+  if (druidClass) {
+    const seenBeasts = await getCurrentSeenBeasts(db, characterId)
+
+    // SRD 5.2: limited known forms (knownForms = 4/6/8)
+    // SRD 5.1: unlimited seen beasts (knownForms = null)
+    const knownForms = character.ruleset === SRD52_ID ? getKnownFormsLimit(druidClass.level) : null
+    wildShape = {
+      limits: getWildShapeCRLimit(druidClass.level),
+      usesAvailable: getWildShapeUses(character.ruleset, druidClass.level),
+      knownForms,
+      beasts: seenBeasts,
+    }
+  }
+
   /// IGOR: FIX
   for (const { effect } of activeEffects) {
     if (effect.target === "ac" && effect.value !== null) {
@@ -462,22 +482,6 @@ export async function computeCharacter(
     ...avatar,
     uploadUrl: `/uploads/${avatar.upload_id}`,
   }))
-
-  // Check if character has Wild Shape and compute wildShape info if so
-  const hasWildShape = traits.some(
-    (t) => t.name.toLowerCase() === "wild shape" && t.source === "class"
-  )
-  let wildShape: WildShapeInfo | null = null
-  if (hasWildShape) {
-    const druidClass = classes.find((c) => c.class === "druid")
-    const druidLevel = druidClass?.level || 2
-    const seenBeasts = await getCurrentSeenBeasts(db, characterId)
-    wildShape = {
-      limits: getWildShapeCRLimit(druidLevel),
-      usesAvailable: getWildShapeUses(character.ruleset, druidLevel),
-      beasts: seenBeasts,
-    }
-  }
 
   const char = {
     ...character,

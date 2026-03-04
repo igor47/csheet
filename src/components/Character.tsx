@@ -8,6 +8,7 @@ import { InventoryPanel } from "./panels/InventoryPanel"
 import { SkillsPanel } from "./panels/SkillsPanel"
 import { SpellsPanel } from "./panels/SpellsPanel"
 import { TraitsPanel } from "./panels/TraitsPanel"
+import { WildShapePanel } from "./panels/WildShapePanel"
 import { SessionNotes } from "./SessionNotes"
 import { DetailModal } from "./ui/DetailModal"
 
@@ -105,6 +106,28 @@ const CharacterPanels = ({
         <SpellsPanel character={character} isReadOnly={isReadOnly} />
       </div>
     </div>
+
+    {/* Wild Shape (druids only) */}
+    {character.wildShape && (
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="hdr-wildshape">
+          <button
+            class={clsx("accordion-button", { collapsed: !isReadOnly })}
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#col-wildshape"
+            aria-expanded={isReadOnly ? "true" : "false"}
+            aria-controls="col-wildshape"
+          >
+            <i class="bi bi-feather me-2"></i>
+            Wild Shape
+          </button>
+        </h2>
+        <div id="col-wildshape" class={clsx("accordion-collapse collapse", { show: isReadOnly })}>
+          <WildShapePanel character={character} isReadOnly={isReadOnly} />
+        </div>
+      </div>
+    )}
 
     {/* Inventory */}
     <div class="accordion-item">

@@ -36,6 +36,7 @@ import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
+import { RestHistory } from "@src/components/RestHistory"
 import { SeeBeastForm } from "@src/components/SeeBeastForm"
 import { SessionNotes } from "@src/components/SessionNotes"
 import { ShortRestForm } from "@src/components/ShortRestForm"
@@ -63,6 +64,7 @@ import {
   findByCharacterId as findNotes,
   getCurrent as getCurrentNote,
 } from "@src/db/char_notes"
+import { findByCharacterId as findRestHistory } from "@src/db/char_rests"
 import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
@@ -1471,6 +1473,11 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     // Reverse to show most recent first
     events.reverse()
     return c.html(<BeastPrepHistory events={events} character={character} />)
+  }
+
+  if (field === "rests") {
+    const restEvents = await findRestHistory(getDb(c), characterId)
+    return c.html(<RestHistory events={restEvents} />)
   }
 
   return c.html(

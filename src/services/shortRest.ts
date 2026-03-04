@@ -1,4 +1,5 @@
 import { beginOrSavepoint } from "@src/db"
+import { create as createRestRecord } from "@src/db/char_rests"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
@@ -225,6 +226,21 @@ export async function shortRest(
         summary.spellSlotsRestored++
       }
     }
+
+    // Record the rest in history
+    await createRestRecord(tx, {
+      character_id: currentChar.id,
+      rest_type: "short",
+      hp_restored: summary.hpRestored,
+      hit_dice_spent: summary.hitDiceSpent,
+      hit_dice_restored: 0,
+      spell_slots_restored: summary.spellSlotsRestored,
+      details: {
+        diceRolls: summary.diceRolls,
+        arcaneRecoveryUsed: summary.arcaneRecoveryUsed,
+      },
+      note,
+    })
 
     return summary
   })

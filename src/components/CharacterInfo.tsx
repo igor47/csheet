@@ -375,6 +375,18 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
                     <i class="bi bi-moon-stars me-1"></i>
                     Long Rest
                   </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    hx-get={`/characters/${character.id}/history/rests`}
+                    hx-target="#detailModalContent"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#detailModal"
+                    title="Rest History"
+                  >
+                    <i class="bi bi-clock-history"></i>
+                  </button>
                 </div>
               </div>
             )}

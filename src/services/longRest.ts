@@ -1,5 +1,6 @@
 import { create as createHitDiceDb } from "@src/db/char_hit_dice"
 import { create as createHPDb } from "@src/db/char_hp"
+import { create as createRestRecord } from "@src/db/char_rests"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
@@ -128,6 +129,18 @@ export async function longRest(
       }
     }
   }
+
+  // Record the rest in history
+  await createRestRecord(db, {
+    character_id: char.id,
+    rest_type: "long",
+    hp_restored: summary.hpRestored,
+    hit_dice_spent: 0,
+    hit_dice_restored: summary.hitDiceRestored,
+    spell_slots_restored: summary.spellSlotsRestored,
+    details: null,
+    note,
+  })
 
   return { complete: true, result: summary }
 }

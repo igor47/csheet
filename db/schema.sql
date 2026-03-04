@@ -1,4 +1,4 @@
-\restrict ZrABXfdClmOx6DnzPcVKocwqtFELV0nIp43ZtP2C8lScQkzKELDbdI2pYWU3j1W
+\restrict 2tadCjgsTxn9e9xHjpJefOTPJGDadzsIwkbLqBaCUlS7vwGrgDETyWLssTZRBNT
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.3
@@ -237,6 +237,26 @@ CREATE TABLE public.char_notes (
     restored_from_id character varying(26),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: char_rests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_rests (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    rest_type text NOT NULL,
+    hp_restored integer DEFAULT 0 NOT NULL,
+    hit_dice_spent integer DEFAULT 0 NOT NULL,
+    hit_dice_restored integer DEFAULT 0 NOT NULL,
+    spell_slots_restored integer DEFAULT 0 NOT NULL,
+    details jsonb,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT char_rests_rest_type_check CHECK ((rest_type = ANY (ARRAY['short'::text, 'long'::text])))
 );
 
 
@@ -630,6 +650,14 @@ ALTER TABLE ONLY public.char_notes
 
 
 --
+-- Name: char_rests char_rests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_rests
+    ADD CONSTRAINT char_rests_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_skills char_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -905,6 +933,13 @@ CREATE INDEX idx_char_notes_character_id_created_at ON public.char_notes USING b
 
 
 --
+-- Name: idx_char_rests_character_id_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_rests_character_id_created_at ON public.char_rests USING btree (character_id, created_at DESC);
+
+
+--
 -- Name: idx_char_skills_char_id_skill_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1122,6 +1157,13 @@ CREATE TRIGGER char_levels_updated_at BEFORE UPDATE ON public.char_levels FOR EA
 
 
 --
+-- Name: char_rests char_rests_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_rests_updated_at BEFORE UPDATE ON public.char_rests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: char_skills char_skills_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1328,6 +1370,14 @@ ALTER TABLE ONLY public.char_notes
 
 
 --
+-- Name: char_rests char_rests_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_rests
+    ADD CONSTRAINT char_rests_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
 -- Name: char_skills char_skills_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1443,7 +1493,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ZrABXfdClmOx6DnzPcVKocwqtFELV0nIp43ZtP2C8lScQkzKELDbdI2pYWU3j1W
+\unrestrict 2tadCjgsTxn9e9xHjpJefOTPJGDadzsIwkbLqBaCUlS7vwGrgDETyWLssTZRBNT
 
 
 --
@@ -1493,4 +1543,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251205001836'),
     ('20251209195618'),
     ('20260303104254'),
-    ('20260303234303');
+    ('20260303234303'),
+    ('20260303300000');

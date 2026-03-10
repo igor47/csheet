@@ -129,3 +129,31 @@ export async function endOngoingTransformation(db: SQL, characterId: string): Pr
   `
   return result.count > 0
 }
+
+/**
+ * Find all wild shape uses for a character (for history display).
+ * Returns most recent first, limited to reasonable history.
+ */
+export async function findByCharacterId(
+  db: SQL,
+  characterId: string,
+  limit = 50
+): Promise<CharWildShapeUse[]> {
+  const result = await db`
+    SELECT * FROM char_wild_shape_uses
+    WHERE character_id = ${characterId}
+    ORDER BY created_at DESC
+    LIMIT ${limit}
+  `
+
+  // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
+  return result.map((row: any) =>
+    CharWildShapeUseSchema.parse({
+      ...row,
+      ended_at: row.ended_at ? new Date(row.ended_at) : null,
+      recovered_at: row.recovered_at ? new Date(row.recovered_at) : null,
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    })
+  )
+}

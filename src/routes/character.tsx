@@ -1,5 +1,7 @@
 import { AbilitiesEditForm } from "@src/components/AbilitiesEditForm"
 import { AbilityHistory } from "@src/components/AbilityHistory"
+import { ActivateWildShapeForm } from "@src/components/ActivateWildShapeForm"
+import { ActivateWildShapeResult } from "@src/components/ActivateWildShapeResult"
 import { AvatarCropper } from "@src/components/AvatarCropper"
 import { AvatarGallery } from "@src/components/AvatarGallery"
 import { AvatarLightbox } from "@src/components/AvatarLightbox"
@@ -36,6 +38,7 @@ import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
+import { WildShapePanel } from "@src/components/panels/WildShapePanel"
 import { RestHistory } from "@src/components/RestHistory"
 import { SeeBeastForm } from "@src/components/SeeBeastForm"
 import { SessionNotes } from "@src/components/SessionNotes"
@@ -50,6 +53,7 @@ import { TraitEditForm } from "@src/components/TraitEditForm"
 import { TraitHistory } from "@src/components/TraitHistory"
 import { UploadAvatarForm } from "@src/components/UploadAvatarForm"
 import { ModalContent } from "@src/components/ui/DetailModal"
+import { WildShapeHistory } from "@src/components/WildShapeHistory"
 import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { getBeastPrepHistory } from "@src/db/char_beasts_seen"
@@ -70,12 +74,14 @@ import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_sl
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
+import { findByCharacterId as findWildShapeHistory } from "@src/db/char_wild_shape_uses"
 import * as CharacterAvatars from "@src/db/character_avatars"
 import { countArchivedByUserId } from "@src/db/characters"
 import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
 import { findById as findItemById } from "@src/db/items"
 import { setFlashMsg } from "@src/middleware/flash"
+import { activateWildShape } from "@src/services/activateWildShape"
 import { addLevel } from "@src/services/addLevel"
 import { addTrait } from "@src/services/addTrait"
 import { archiveCharacter } from "@src/services/archiveCharacter"
@@ -92,6 +98,7 @@ import { createCharacter } from "@src/services/createCharacter"
 import { type CreateItemResult, createItem } from "@src/services/createItem"
 import { createItemEffect } from "@src/services/createItemEffect"
 import { deleteItemEffect } from "@src/services/deleteItemEffect"
+import { endWildShape } from "@src/services/endWildShape"
 import { importCharacter } from "@src/services/importCharacter"
 import { changeItemState } from "@src/services/itemState"
 import { learnSpell } from "@src/services/learnSpell"
@@ -903,6 +910,71 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
   )
 })
 
+// GET /characters/:id/wildshape/activate - Show wild shape activation form
+characterRoutes.get("/characters/:id/wildshape/activate", async (c) => {
+  const characterId = c.req.param("id") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const values: Record<string, string> = {}
+  const beastId = c.req.query("beast_id")
+  if (beastId) {
+    values.beast_id = beastId
+  }
+
+  return c.html(<ActivateWildShapeForm character={char} values={values} />)
+})
+
+// POST /characters/:id/wildshape/activate - Activate wild shape
+characterRoutes.post("/characters/:id/wildshape/activate", async (c) => {
+  const characterId = c.req.param("id") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await activateWildShape(getDb(c), char, body)
+
+  if (!result.complete) {
+    return c.html(
+      <ActivateWildShapeForm character={char} values={result.values} errors={result.errors} />
+    )
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(
+    <>
+      <ActivateWildShapeResult summary={result.result} ruleset={char.ruleset} />
+      <WildShapePanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/wildshape/end - End wild shape transformation
+characterRoutes.post("/characters/:id/wildshape/end", async (c) => {
+  const characterId = c.req.param("id") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await endWildShape(getDb(c), char, body)
+
+  if (!result.complete) {
+    // If there's an error ending (e.g., no ongoing transformation), just return the panel
+    const updatedChar = (await computeCharacter(getDb(c), characterId))!
+    return c.html(<WildShapePanel character={updatedChar} />)
+  }
+
+  // Return updated WildShapePanel (direct swap, no modal)
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(<WildShapePanel character={updatedChar} />)
+})
+
 // GET /characters/:id/rest/short - Show short rest modal
 characterRoutes.get("/characters/:id/rest/short", async (c) => {
   const characterId = c.req.param("id") as string
@@ -971,6 +1043,7 @@ characterRoutes.post("/characters/:id/rest/short", async (c) => {
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
       <SpellsPanel character={updatedChar} swapOob={true} />
+      {updatedChar.wildShape && <WildShapePanel character={updatedChar} swapOob={true} />}
     </>
   )
 })
@@ -1012,6 +1085,7 @@ characterRoutes.post("/characters/:id/rest/long", async (c) => {
     <>
       <CharacterInfo character={updatedChar} swapOob={true} />
       <SpellsPanel character={updatedChar} swapOob={true} />
+      {updatedChar.wildShape && <WildShapePanel character={updatedChar} swapOob={true} />}
     </>
   )
 })
@@ -1478,6 +1552,12 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
   if (field === "rests") {
     const restEvents = await findRestHistory(getDb(c), characterId)
     return c.html(<RestHistory events={restEvents} />)
+  }
+
+  if (field === "wildshape") {
+    const character = authResult.character
+    const wildShapeEvents = await findWildShapeHistory(getDb(c), characterId)
+    return c.html(<WildShapeHistory events={wildShapeEvents} ruleset={character.ruleset} />)
   }
 
   return c.html(

@@ -1,3 +1,4 @@
+import { LabeledValue } from "@src/components/ui/LabeledValue"
 import { getBeastById } from "@src/lib/dnd/beasts"
 import { formatCR } from "@src/lib/dnd/wildShape"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
@@ -9,6 +10,16 @@ export interface WildShapePanelProps {
   isReadOnly?: boolean
 }
 
+/**
+ * Get restrictions text for display
+ */
+function getRestrictionsText(canFly: boolean, canSwim: boolean): string {
+  if (canFly && canSwim) return "None"
+  if (!canFly && !canSwim) return "No fly or swim"
+  if (!canFly) return "No fly"
+  return "No swim"
+}
+
 export const WildShapePanel = ({ character, swapOob, isReadOnly = false }: WildShapePanelProps) => {
   // This panel should only be rendered when character.wildShape is not null
   // but we check here for safety
@@ -16,7 +27,8 @@ export const WildShapePanel = ({ character, swapOob, isReadOnly = false }: WildS
     return null
   }
 
-  const { limits, knownForms, beasts } = character.wildShape
+  const { limits, knownForms, beasts, maxUses, usesAvailable, ongoingTransformation } =
+    character.wildShape
   const isSrd52 = knownForms !== null
 
   // Get beast data for each seen/known beast
@@ -59,19 +71,103 @@ export const WildShapePanel = ({ character, swapOob, isReadOnly = false }: WildS
     ? "No beast forms known yet. Learn beast forms during a long rest."
     : "No beasts recorded yet. Add beasts you've seen to use with Wild Shape."
 
+  // Get ongoing transformation beast name
+  const ongoingBeastName = ongoingTransformation
+    ? getBeastById(character.ruleset, ongoingTransformation.beastId)?.name || "Unknown Beast"
+    : null
+
+  // Check if transform buttons should be shown (uses available and no ongoing transformation)
+  const canShowTransformButtons = usesAvailable > 0 && !ongoingTransformation
+
   return (
     <div
       class="accordion-body"
       id="wildshape-panel"
       {...(swapOob ? { "hx-swap-oob": "true" } : {})}
     >
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="mb-0">
-          {headerText}
-          <span class="badge bg-secondary ms-2" title="Wild Shape">
-            Max CR {formatCR(limits.maxCR)}
+      {/* Wild Shape Status Row - 4 columns on md+, wraps on smaller */}
+      <div class="row g-2 mb-3">
+        <div class="col-3">
+          <LabeledValue label="Max CR" value={formatCR(limits.maxCR)} />
+        </div>
+        <div class="col-3">
+          <LabeledValue label="Uses / Total" value={`${usesAvailable}/${maxUses}`} />
+        </div>
+        <div class="col-6">
+          <LabeledValue
+            label="Restrictions"
+            value={getRestrictionsText(limits.canFly, limits.canSwim)}
+          />
+        </div>
+      </div>
+
+      <div class="row g-2 mb-3 p-2 align-items-center">
+        <div class="col-3 text-center">Current Form</div>
+        <div class="col-5 text-center">
+          <span class={ongoingTransformation ? "fw-bold" : "text-muted"}>
+            {ongoingBeastName || "None"}
           </span>
-        </h6>
+        </div>
+        <div class="col-4 text-center">
+          {!isReadOnly && (
+            <div class="d-flex gap-1 justify-content-center">
+              {ongoingTransformation ? (
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger border"
+                  aria-label="End transformation"
+                  title="End transformation"
+                  hx-post={`/characters/${character.id}/wildshape/end`}
+                  hx-target="#wildshape-panel"
+                  hx-swap="innerHTML"
+                >
+                  <i class="bi bi-x-lg me-1"></i>
+                  End
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  class={clsx(
+                    "btn btn-sm btn-outline-success border",
+                    !canShowTransformButtons && "disabled"
+                  )}
+                  aria-label="Transform"
+                  title={canShowTransformButtons ? "Transform" : "No uses available"}
+                  disabled={!canShowTransformButtons}
+                  {...(canShowTransformButtons
+                    ? {
+                        "hx-get": `/characters/${character.id}/wildshape/activate`,
+                        "hx-target": "#detailModalContent",
+                        "hx-swap": "innerHTML",
+                        "data-bs-toggle": "modal",
+                        "data-bs-target": "#detailModal",
+                      }
+                    : {})}
+                >
+                  <i class="bi bi-arrow-repeat me-1"></i>
+                  Transform
+                </button>
+              )}
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary border"
+                aria-label="Wild shape history"
+                title="Wild shape history"
+                hx-get={`/characters/${character.id}/history/wildshape`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+              >
+                <i class="bi bi-clock-history"></i>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">{headerText}</h6>
         {!isReadOnly && (
           <div class="d-flex gap-1">
             <button
@@ -124,6 +220,7 @@ export const WildShapePanel = ({ character, swapOob, isReadOnly = false }: WildS
                 <th>CR</th>
                 <th>Size</th>
                 <th>Speed</th>
+                {!isReadOnly && <th style="width: 40px;">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -157,6 +254,26 @@ export const WildShapePanel = ({ character, swapOob, isReadOnly = false }: WildS
                     <td>{formatCR(beast.cr)}</td>
                     <td class="text-capitalize">{beast.size}</td>
                     <td>{formatBeastSpeed(beast)}</td>
+                    {!isReadOnly && (
+                      <td>
+                        {canTransform && canShowTransformButtons && (
+                          <button
+                            type="button"
+                            class="btn btn-sm btn-outline-success border p-0"
+                            style="width: 24px; height: 24px; line-height: 1;"
+                            aria-label="Transform into beast"
+                            title="Transform"
+                            hx-get={`/characters/${character.id}/wildshape/activate?beast_id=${beast.id}`}
+                            hx-target="#detailModalContent"
+                            hx-swap="innerHTML"
+                            data-bs-toggle="modal"
+                            data-bs-target="#detailModal"
+                          >
+                            <i class="bi bi-arrow-repeat"></i>
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 )
               })}

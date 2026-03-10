@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import { create as createTrait } from "@src/db/char_traits"
+import { endTransformation } from "@src/db/char_wild_shape_uses"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import { useTestApp } from "@src/test/app"
+import { charWildShapeUseFactory } from "@src/test/factories/char_wild_shape_use"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { makeRequest, parseHtml } from "@src/test/http"
@@ -240,6 +243,128 @@ describe("POST /characters/:id/rest/short", () => {
         expect(details.diceRolls[0].roll).toBe(5)
       })
     })
+
+    describe("when druid has used wild shape (SRD 5.1)", () => {
+      let druidCharacter: Character
+
+      beforeEach(async () => {
+        // Create a SRD 5.1 druid
+        druidCharacter = await characterFactory.create(
+          { user_id: user.id, ruleset: "srd51", species: "human", class: "druid", level: 2 },
+          testCtx.db
+        )
+        await createTrait(testCtx.db, {
+          character_id: druidCharacter.id,
+          name: "Wild Shape",
+          description: "You can transform into a beast you have seen.",
+          source: "class",
+          source_detail: "druid",
+          level: 2,
+          note: null,
+        })
+
+        // Use both wild shape uses
+        const use1 = await charWildShapeUseFactory.create(
+          { character_id: druidCharacter.id, beast_id: "srd51_wolf" },
+          testCtx.db
+        )
+        await endTransformation(testCtx.db, use1.id)
+
+        const use2 = await charWildShapeUseFactory.create(
+          { character_id: druidCharacter.id, beast_id: "srd51_cat" },
+          testCtx.db
+        )
+        await endTransformation(testCtx.db, use2.id)
+      })
+
+      test("records all wild shape uses restored", async () => {
+        const formData = new FormData()
+        formData.append("note", "Quick rest after transforming")
+
+        const response = await makeRequest(
+          testCtx.app,
+          `/characters/${druidCharacter.id}/rest/short`,
+          { user, method: "POST", body: formData }
+        )
+
+        expect(response.status).toBe(200)
+
+        // Verify wild shape uses restored is recorded
+        const result = await testCtx.db`
+          SELECT * FROM char_rests WHERE character_id = ${druidCharacter.id}
+        `
+        expect(result.length).toBe(1)
+        expect(result[0].wild_shape_uses_restored).toBe(2)
+
+        // Verify the uses are actually recovered
+        const unrecovered = await testCtx.db`
+          SELECT * FROM char_wild_shape_uses
+          WHERE character_id = ${druidCharacter.id} AND recovered_at IS NULL
+        `
+        expect(unrecovered.length).toBe(0)
+      })
+    })
+
+    describe("when druid has used wild shape (SRD 5.2)", () => {
+      let druidCharacter: Character
+
+      beforeEach(async () => {
+        // Create a SRD 5.2 druid
+        druidCharacter = await characterFactory.create(
+          { user_id: user.id, ruleset: "srd52", species: "human", class: "druid", level: 2 },
+          testCtx.db
+        )
+        await createTrait(testCtx.db, {
+          character_id: druidCharacter.id,
+          name: "Wild Shape",
+          description: "You can transform into a beast you have seen.",
+          source: "class",
+          source_detail: "druid",
+          level: 2,
+          note: null,
+        })
+
+        // Use both wild shape uses
+        const use1 = await charWildShapeUseFactory.create(
+          { character_id: druidCharacter.id, beast_id: "srd52_wolf" },
+          testCtx.db
+        )
+        await endTransformation(testCtx.db, use1.id)
+
+        const use2 = await charWildShapeUseFactory.create(
+          { character_id: druidCharacter.id, beast_id: "srd52_cat" },
+          testCtx.db
+        )
+        await endTransformation(testCtx.db, use2.id)
+      })
+
+      test("records only one wild shape use restored", async () => {
+        const formData = new FormData()
+        formData.append("note", "Quick rest after transforming")
+
+        const response = await makeRequest(
+          testCtx.app,
+          `/characters/${druidCharacter.id}/rest/short`,
+          { user, method: "POST", body: formData }
+        )
+
+        expect(response.status).toBe(200)
+
+        // Verify only one wild shape use is restored (SRD 5.2 rule)
+        const result = await testCtx.db`
+          SELECT * FROM char_rests WHERE character_id = ${druidCharacter.id}
+        `
+        expect(result.length).toBe(1)
+        expect(result[0].wild_shape_uses_restored).toBe(1)
+
+        // Verify only one use is recovered, one still unrecovered
+        const unrecovered = await testCtx.db`
+          SELECT * FROM char_wild_shape_uses
+          WHERE character_id = ${druidCharacter.id} AND recovered_at IS NULL
+        `
+        expect(unrecovered.length).toBe(1)
+      })
+    })
   })
 })
 
@@ -339,6 +464,67 @@ describe("POST /characters/:id/rest/long", () => {
         `
         expect(result.length).toBe(1)
         expect(result[0].spell_slots_restored).toBe(2)
+      })
+    })
+
+    describe("when druid has used wild shape", () => {
+      let druidCharacter: Character
+
+      beforeEach(async () => {
+        // Create a SRD 5.2 druid (long rest recovers all for both rulesets)
+        druidCharacter = await characterFactory.create(
+          { user_id: user.id, ruleset: "srd52", species: "human", class: "druid", level: 2 },
+          testCtx.db
+        )
+        await createTrait(testCtx.db, {
+          character_id: druidCharacter.id,
+          name: "Wild Shape",
+          description: "You can transform into a beast you have seen.",
+          source: "class",
+          source_detail: "druid",
+          level: 2,
+          note: null,
+        })
+
+        // Use both wild shape uses
+        const use1 = await charWildShapeUseFactory.create(
+          { character_id: druidCharacter.id, beast_id: "srd52_wolf" },
+          testCtx.db
+        )
+        await endTransformation(testCtx.db, use1.id)
+
+        const use2 = await charWildShapeUseFactory.create(
+          { character_id: druidCharacter.id, beast_id: "srd52_cat" },
+          testCtx.db
+        )
+        await endTransformation(testCtx.db, use2.id)
+      })
+
+      test("records all wild shape uses restored", async () => {
+        const formData = new FormData()
+        formData.append("note", "Full night rest")
+
+        const response = await makeRequest(
+          testCtx.app,
+          `/characters/${druidCharacter.id}/rest/long`,
+          { user, method: "POST", body: formData }
+        )
+
+        expect(response.status).toBe(200)
+
+        // Verify all wild shape uses are restored
+        const result = await testCtx.db`
+          SELECT * FROM char_rests WHERE character_id = ${druidCharacter.id}
+        `
+        expect(result.length).toBe(1)
+        expect(result[0].wild_shape_uses_restored).toBe(2)
+
+        // Verify all uses are actually recovered
+        const unrecovered = await testCtx.db`
+          SELECT * FROM char_wild_shape_uses
+          WHERE character_id = ${druidCharacter.id} AND recovered_at IS NULL
+        `
+        expect(unrecovered.length).toBe(0)
       })
     })
   })

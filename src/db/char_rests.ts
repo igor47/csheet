@@ -25,6 +25,7 @@ export const CharRestSchema = z.object({
   hit_dice_spent: z.number(),
   hit_dice_restored: z.number(),
   spell_slots_restored: z.number(),
+  wild_shape_uses_restored: z.number().default(0),
   details: RestDetailsSchema.nullable().default(null),
   note: z.string().nullable().default(null),
   created_at: z.date(),
@@ -64,6 +65,7 @@ export async function create(db: SQL, rest: CreateCharRest): Promise<CharRest> {
       hit_dice_spent,
       hit_dice_restored,
       spell_slots_restored,
+      wild_shape_uses_restored,
       details,
       note
     )
@@ -75,6 +77,7 @@ export async function create(db: SQL, rest: CreateCharRest): Promise<CharRest> {
       ${rest.hit_dice_spent},
       ${rest.hit_dice_restored},
       ${rest.spell_slots_restored},
+      ${rest.wild_shape_uses_restored ?? 0},
       ${rest.details},
       ${rest.note}
     )

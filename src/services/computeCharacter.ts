@@ -7,6 +7,7 @@ import { findByCharacterId as getAllLevels, getCurrentLevels } from "@src/db/cha
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { type CharTrait, findByCharacterId as findTraits } from "@src/db/char_traits"
+import { findUnrecovered as findUnrecoveredWildShapeUses } from "@src/db/char_wild_shape_uses"
 import { type CharacterAvatar, findByCharacterId as findAvatars } from "@src/db/character_avatars"
 import { type Character, findById } from "@src/db/characters"
 import {
@@ -67,11 +68,20 @@ export interface CharacterAvatarWithUrl extends CharacterAvatar {
   uploadUrl: string
 }
 
+export interface OngoingTransformation {
+  id: string
+  beastId: string
+  startedAt: Date
+}
+
 export interface WildShapeInfo {
   limits: WildShapeLimits
+  maxUses: number
   usesAvailable: number
+  unrecoveredCount: number
   knownForms: number | null // null for SRD 5.1 (unlimited), 4/6/8 for SRD 5.2
   beasts: string[]
+  ongoingTransformation: OngoingTransformation | null
 }
 
 export interface ComputedCharacter extends Character {
@@ -431,15 +441,24 @@ export async function computeCharacter(
   const druidClass = classes.find((c) => c.class === "druid")
   if (druidClass) {
     const seenBeasts = await getCurrentSeenBeasts(db, characterId)
+    const unrecoveredUses = await findUnrecoveredWildShapeUses(db, characterId)
+    const unrecoveredCount = unrecoveredUses.length
+    const ongoing = unrecoveredUses.find((u) => u.ended_at === null)
+    const maxUses = getWildShapeUses(character.ruleset, druidClass.level)
 
     // SRD 5.2: limited known forms (knownForms = 4/6/8)
     // SRD 5.1: unlimited seen beasts (knownForms = null)
     const knownForms = character.ruleset === SRD52_ID ? getKnownFormsLimit(druidClass.level) : null
     wildShape = {
       limits: getWildShapeCRLimit(druidClass.level),
-      usesAvailable: getWildShapeUses(character.ruleset, druidClass.level),
+      maxUses,
+      usesAvailable: Math.max(0, maxUses - unrecoveredCount),
+      unrecoveredCount,
       knownForms,
       beasts: seenBeasts,
+      ongoingTransformation: ongoing
+        ? { id: ongoing.id, beastId: ongoing.beast_id, startedAt: ongoing.created_at }
+        : null,
     }
   }
 

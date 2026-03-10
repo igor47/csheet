@@ -2,6 +2,7 @@ import { create as createHitDiceDb } from "@src/db/char_hit_dice"
 import { create as createHPDb } from "@src/db/char_hp"
 import { create as createRestRecord } from "@src/db/char_rests"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
+import { recoverAll as recoverAllWildShapeUses } from "@src/db/char_wild_shape_uses"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
@@ -23,6 +24,7 @@ export interface LongRestSummary {
   hpRestored: number
   hitDiceRestored: number
   spellSlotsRestored: number
+  wildShapeUsesRestored: number
 }
 
 export type LongRestResult = ServiceResult<LongRestSummary>
@@ -63,6 +65,7 @@ export async function longRest(
     hpRestored: 0,
     hitDiceRestored: 0,
     spellSlotsRestored: 0,
+    wildShapeUsesRestored: 0,
   }
 
   const note = result.data.note || "Took a long rest"
@@ -130,6 +133,11 @@ export async function longRest(
     }
   }
 
+  // Restore all wild shape uses (both SRD 5.1 and 5.2 recover all on long rest)
+  if (char.wildShape) {
+    summary.wildShapeUsesRestored = await recoverAllWildShapeUses(db, char.id)
+  }
+
   // Record the rest in history
   await createRestRecord(db, {
     character_id: char.id,
@@ -138,6 +146,7 @@ export async function longRest(
     hit_dice_spent: 0,
     hit_dice_restored: summary.hitDiceRestored,
     spell_slots_restored: summary.spellSlotsRestored,
+    wild_shape_uses_restored: summary.wildShapeUsesRestored,
     details: null,
     note,
   })

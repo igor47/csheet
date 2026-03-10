@@ -1,7 +1,12 @@
 import { beginOrSavepoint } from "@src/db"
 import { create as createRestRecord } from "@src/db/char_rests"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
+import {
+  recoverAll as recoverAllWildShapeUses,
+  recoverOne as recoverOneWildShapeUse,
+} from "@src/db/char_wild_shape_uses"
 import type { HitDieType } from "@src/lib/dnd"
+import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import {
   ArrayField,
@@ -61,6 +66,7 @@ export interface ShortRestSummary {
   diceRolls: Array<{ die: number; roll: number; modifier: number }>
   spellSlotsRestored: number
   arcaneRecoveryUsed: boolean
+  wildShapeUsesRestored: number
 }
 
 export type ShortRestResult = ServiceResult<ShortRestSummary>
@@ -186,6 +192,7 @@ export async function shortRest(
       diceRolls: [],
       spellSlotsRestored: 0,
       arcaneRecoveryUsed: false,
+      wildShapeUsesRestored: 0,
     }
 
     const note = result.data.note || "Took a short rest"
@@ -227,6 +234,18 @@ export async function shortRest(
       }
     }
 
+    // Wild Shape recovery (ruleset-dependent)
+    // SRD 5.1: All uses recover on any rest
+    // SRD 5.2: One use recovers per short rest
+    if (currentChar.wildShape) {
+      if (currentChar.ruleset === SRD51_ID) {
+        summary.wildShapeUsesRestored = await recoverAllWildShapeUses(tx, currentChar.id)
+      } else {
+        const recovered = await recoverOneWildShapeUse(tx, currentChar.id)
+        summary.wildShapeUsesRestored = recovered ? 1 : 0
+      }
+    }
+
     // Record the rest in history
     await createRestRecord(tx, {
       character_id: currentChar.id,
@@ -235,6 +254,7 @@ export async function shortRest(
       hit_dice_spent: summary.hitDiceSpent,
       hit_dice_restored: 0,
       spell_slots_restored: summary.spellSlotsRestored,
+      wild_shape_uses_restored: summary.wildShapeUsesRestored,
       details: {
         diceRolls: summary.diceRolls,
         arcaneRecoveryUsed: summary.arcaneRecoveryUsed,

@@ -1,4 +1,4 @@
-\restrict 2tadCjgsTxn9e9xHjpJefOTPJGDadzsIwkbLqBaCUlS7vwGrgDETyWLssTZRBNT
+\restrict zlg2bzTlR46edocyM3s8iObn1KzQEgmDZJA6vprt6EgEOS77tkwAcUZ4vG70wWj
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.3
@@ -256,6 +256,7 @@ CREATE TABLE public.char_rests (
     note text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    wild_shape_uses_restored integer DEFAULT 0 NOT NULL,
     CONSTRAINT char_rests_rest_type_check CHECK ((rest_type = ANY (ARRAY['short'::text, 'long'::text])))
 );
 
@@ -342,6 +343,22 @@ CREATE TABLE public.char_traits (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT char_traits_source_check CHECK ((source = ANY (ARRAY['species'::text, 'lineage'::text, 'background'::text, 'class'::text, 'subclass'::text, 'custom'::text])))
+);
+
+
+--
+-- Name: char_wild_shape_uses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_wild_shape_uses (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    beast_id text NOT NULL,
+    ended_at timestamp with time zone,
+    recovered_at timestamp with time zone,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -698,6 +715,14 @@ ALTER TABLE ONLY public.char_traits
 
 
 --
+-- Name: char_wild_shape_uses char_wild_shape_uses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_wild_shape_uses
+    ADD CONSTRAINT char_wild_shape_uses_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: character_avatars character_avatars_character_id_upload_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -989,6 +1014,27 @@ CREATE INDEX idx_char_traits_char_id ON public.char_traits USING btree (characte
 
 
 --
+-- Name: idx_char_wild_shape_uses_character; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_wild_shape_uses_character ON public.char_wild_shape_uses USING btree (character_id, created_at DESC);
+
+
+--
+-- Name: idx_char_wild_shape_uses_ongoing; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_wild_shape_uses_ongoing ON public.char_wild_shape_uses USING btree (character_id) WHERE (ended_at IS NULL);
+
+
+--
+-- Name: idx_char_wild_shape_uses_unrecovered; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_wild_shape_uses_unrecovered ON public.char_wild_shape_uses USING btree (character_id) WHERE (recovered_at IS NULL);
+
+
+--
 -- Name: idx_character_avatars_character_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1196,6 +1242,13 @@ CREATE TRIGGER char_spells_prepared_updated_at BEFORE UPDATE ON public.char_spel
 --
 
 CREATE TRIGGER char_traits_updated_at BEFORE UPDATE ON public.char_traits FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: char_wild_shape_uses char_wild_shape_uses_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_wild_shape_uses_updated_at BEFORE UPDATE ON public.char_wild_shape_uses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
@@ -1418,6 +1471,14 @@ ALTER TABLE ONLY public.char_traits
 
 
 --
+-- Name: char_wild_shape_uses char_wild_shape_uses_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_wild_shape_uses
+    ADD CONSTRAINT char_wild_shape_uses_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
 -- Name: character_avatars character_avatars_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1493,7 +1554,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 2tadCjgsTxn9e9xHjpJefOTPJGDadzsIwkbLqBaCUlS7vwGrgDETyWLssTZRBNT
+\unrestrict zlg2bzTlR46edocyM3s8iObn1KzQEgmDZJA6vprt6EgEOS77tkwAcUZ4vG70wWj
 
 
 --
@@ -1544,4 +1605,6 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20251209195618'),
     ('20260303104254'),
     ('20260303234303'),
-    ('20260303300000');
+    ('20260303300000'),
+    ('20260310120000'),
+    ('20260310130000');

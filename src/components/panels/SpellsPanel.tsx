@@ -13,6 +13,26 @@ export interface SpellsPanelProps {
 export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPanelProps) => {
   const formatBonus = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
 
+  // Check if spellcasting is disabled due to Wild Shape
+  const beast = character.wildShape?.currentBeast
+  const druidClass = character.classes.find((c) => c.class === "druid")
+  const hasBeastSpells = druidClass && druidClass.level >= 18
+  const spellcastingDisabled = beast && !hasBeastSpells
+
+  if (spellcastingDisabled) {
+    return (
+      <div class="accordion-body" id="spells-panel" {...(swapOob ? { "hx-swap-oob": "true" } : {})}>
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>Spellcasting Disabled:</strong> You cannot cast spells while in {beast.name} form.
+          <span class="d-block mt-1 text-muted small">
+            Concentration on existing spells is maintained.
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div class="accordion-body" id="spells-panel" {...(swapOob ? { "hx-swap-oob": "true" } : {})}>
       {/* Spellcasting stats per class */}

@@ -25,6 +25,7 @@ import {
   type SpellLevelType,
   type SpellSlotsType,
 } from "@src/lib/dnd"
+import { type Beast, getBeastById } from "@src/lib/dnd/beasts"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import {
   getKnownFormsLimit,
@@ -72,6 +73,7 @@ export interface OngoingTransformation {
   id: string
   beastId: string
   startedAt: Date
+  currentBeastHp: number
 }
 
 export interface WildShapeInfo {
@@ -82,6 +84,7 @@ export interface WildShapeInfo {
   knownForms: number | null // null for SRD 5.1 (unlimited), 4/6/8 for SRD 5.2
   beasts: string[]
   ongoingTransformation: OngoingTransformation | null
+  currentBeast: Beast | null // Full beast data when transformed
 }
 
 export interface ComputedCharacter extends Character {
@@ -449,6 +452,13 @@ export async function computeCharacter(
     // SRD 5.2: limited known forms (knownForms = 4/6/8)
     // SRD 5.1: unlimited seen beasts (knownForms = null)
     const knownForms = character.ruleset === SRD52_ID ? getKnownFormsLimit(druidClass.level) : null
+
+    // Fetch beast data if there's an ongoing transformation
+    let currentBeast: Beast | null = null
+    if (ongoing) {
+      currentBeast = getBeastById(character.ruleset, ongoing.beast_id) ?? null
+    }
+
     wildShape = {
       limits: getWildShapeCRLimit(druidClass.level),
       maxUses,
@@ -457,8 +467,14 @@ export async function computeCharacter(
       knownForms,
       beasts: seenBeasts,
       ongoingTransformation: ongoing
-        ? { id: ongoing.id, beastId: ongoing.beast_id, startedAt: ongoing.created_at }
+        ? {
+            id: ongoing.id,
+            beastId: ongoing.beast_id,
+            startedAt: ongoing.created_at,
+            currentBeastHp: ongoing.beast_hp ?? currentBeast?.hitPoints ?? 0,
+          }
         : null,
+      currentBeast,
     }
   }
 

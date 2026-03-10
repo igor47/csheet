@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 import { create as createTrait } from "@src/db/char_traits"
-import { create as createWildShapeUse } from "@src/db/char_wild_shape_uses"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
-import { getBeasts } from "@src/lib/dnd/beasts"
+import { type Beast, getBeasts } from "@src/lib/dnd/beasts"
 import { useTestApp } from "@src/test/app"
 import { charBeastSeenFactory } from "@src/test/factories/char_beasts_seen"
+import { charWildShapeUseFactory } from "@src/test/factories/char_wild_shape_use"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { elementExists, makeRequest, parseHtml } from "@src/test/http"
@@ -102,11 +102,10 @@ describe("Wild Shape UI", () => {
         const cat = beasts.find((b) => b.name.toLowerCase() === "cat")!
 
         for (let i = 0; i < 2; i++) {
-          await createWildShapeUse(testCtx.db, {
-            character_id: character.id,
-            beast_id: cat.id,
-            note: null,
-          })
+          await charWildShapeUseFactory.create(
+            { character_id: character.id, beast_id: cat.id },
+            testCtx.db
+          )
         }
 
         const response = await makeRequest(testCtx.app, `/characters/${character.id}`, { user })
@@ -119,9 +118,11 @@ describe("Wild Shape UI", () => {
     })
 
     describe("ongoing transformation display", () => {
+      let cat: Beast
+
       beforeEach(async () => {
         const beasts = getBeasts("srd52")
-        const cat = beasts.find((b) => b.name.toLowerCase() === "cat")!
+        cat = beasts.find((b) => b.name.toLowerCase() === "cat")!
 
         await charBeastSeenFactory.create(
           { character_id: character.id, beast_id: cat.id },
@@ -129,11 +130,10 @@ describe("Wild Shape UI", () => {
         )
 
         // Start an ongoing transformation
-        await createWildShapeUse(testCtx.db, {
-          character_id: character.id,
-          beast_id: cat.id,
-          note: null,
-        })
+        await charWildShapeUseFactory.create(
+          { character_id: character.id, beast_id: cat.id },
+          testCtx.db
+        )
       })
 
       test("shows current form with beast name when active", async () => {
@@ -357,11 +357,10 @@ describe("Wild Shape UI", () => {
       )
 
       // Start an ongoing transformation
-      await createWildShapeUse(testCtx.db, {
-        character_id: character.id,
-        beast_id: cat.id,
-        note: null,
-      })
+      await charWildShapeUseFactory.create(
+        { character_id: character.id, beast_id: cat.id },
+        testCtx.db
+      )
     })
 
     test("ends transformation and updates panel", async () => {

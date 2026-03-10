@@ -7,6 +7,11 @@ export interface HitPointsEditFormProps {
   characterId: string
   currentHP: number
   maxHitPoints: number
+  // Beast HP props for Wild Shape
+  isTransformed?: boolean
+  beastName?: string
+  currentBeastHp?: number
+  maxBeastHp?: number
   values?: Record<string, string>
   errors?: Record<string, string>
 }
@@ -15,19 +20,33 @@ export const HitPointsEditForm = ({
   characterId,
   currentHP,
   maxHitPoints,
+  isTransformed = false,
+  beastName,
+  currentBeastHp = 0,
+  maxBeastHp = 0,
   values = {},
   errors = {},
 }: HitPointsEditFormProps) => {
-  const action = values?.action || (currentHP >= maxHitPoints ? "lose" : "restore")
+  // When transformed, default action based on beast HP
+  const defaultAction = isTransformed
+    ? currentBeastHp >= maxBeastHp
+      ? "lose"
+      : "restore"
+    : currentHP >= maxHitPoints
+      ? "lose"
+      : "restore"
+
+  const action = values?.action || defaultAction
   const amount = values?.amount ? parseInt(values.amount, 10) : 0
 
-  // Calculate preview HP
-  let previewHP = currentHP
+  // Calculate preview HP (for beast when transformed, character otherwise)
+  let previewHP = isTransformed ? currentBeastHp : currentHP
+  const maxHP = isTransformed ? maxBeastHp : maxHitPoints
   if (amount > 0) {
     if (action === "restore") {
-      previewHP = Math.min(currentHP + amount, maxHitPoints)
+      previewHP = Math.min(previewHP + amount, maxHP)
     } else {
-      previewHP = Math.max(currentHP - amount, 0)
+      previewHP = Math.max(previewHP - amount, 0)
     }
   }
 
@@ -37,16 +56,38 @@ export const HitPointsEditForm = ({
   return (
     <>
       <div class="modal-header">
-        <h5 class="modal-title">Edit Hit Points</h5>
+        <h5 class="modal-title">
+          {isTransformed ? `Edit ${beastName} Hit Points` : "Edit Hit Points"}
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <ModalForm id="hp-edit-form" endpoint={`/characters/${characterId}/edit/hitpoints`}>
-          {/* Current HP */}
+          {/* Beast HP indicator when transformed */}
+          {isTransformed && (
+            <div class="alert alert-info mb-3">
+              <i class="bi bi-info-circle me-2"></i>
+              You are transformed into <strong>{beastName}</strong>. Damage will be applied to beast
+              HP first.
+            </div>
+          )}
+
+          {/* Current HP - show beast HP when transformed */}
           <div class="mb-3">
-            <p class="mb-2">Current Hit Points</p>
-            <HitPointsBar currentHP={currentHP} maxHitPoints={maxHitPoints} />
+            <p class="mb-2">{isTransformed ? `${beastName} Hit Points` : "Current Hit Points"}</p>
+            <HitPointsBar
+              currentHP={isTransformed ? currentBeastHp : currentHP}
+              maxHitPoints={isTransformed ? maxBeastHp : maxHitPoints}
+            />
           </div>
+
+          {/* Show character HP reference when transformed */}
+          {isTransformed && (
+            <div class="mb-3">
+              <p class="mb-2 text-muted small">Character Hit Points (receives overflow damage)</p>
+              <HitPointsBar currentHP={currentHP} maxHitPoints={maxHitPoints} />
+            </div>
+          )}
 
           {/* Action: Restore or Lose */}
           <div class="mb-3">
@@ -61,7 +102,7 @@ export const HitPointsEditForm = ({
                 id="hitpoints-action-restore"
                 value="restore"
                 checked={action === "restore"}
-                disabled={currentHP >= maxHitPoints}
+                disabled={isTransformed ? currentBeastHp >= maxBeastHp : currentHP >= maxHitPoints}
                 autocomplete="off"
               />
               <label class="btn btn-outline-success" for="hitpoints-action-restore">
@@ -75,7 +116,7 @@ export const HitPointsEditForm = ({
                 id="hitpoints-action-lose"
                 value="lose"
                 checked={action === "lose"}
-                disabled={currentHP <= 0}
+                disabled={isTransformed ? currentBeastHp <= 0 : currentHP <= 0}
                 autocomplete="off"
               />
               <label class="btn btn-outline-danger" for="hitpoints-action-lose">
@@ -106,10 +147,14 @@ export const HitPointsEditForm = ({
           {showPreview && (
             <div class="mb-3">
               <p class="mb-2">Preview</p>
-              <HitPointsBar currentHP={previewHP} maxHitPoints={maxHitPoints} />
+              <HitPointsBar currentHP={previewHP} maxHitPoints={maxHP} />
               <small class="form-text text-muted">
-                {action === "restore" ? "Restoring" : "Losing"} {amount} HP: {currentHP} →{" "}
-                {previewHP}
+                {action === "restore" ? "Restoring" : "Losing"} {amount} HP:{" "}
+                {isTransformed ? currentBeastHp : currentHP} → {previewHP}
+                {isTransformed &&
+                  action === "lose" &&
+                  amount > currentBeastHp &&
+                  ` (${amount - currentBeastHp} overflow to character)`}
               </small>
             </div>
           )}

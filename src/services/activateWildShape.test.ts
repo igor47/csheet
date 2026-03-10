@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 import { create as createTrait } from "@src/db/char_traits"
-import { create as createWildShapeUse } from "@src/db/char_wild_shape_uses"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import { getBeasts } from "@src/lib/dnd/beasts"
 import { useTestApp } from "@src/test/app"
 import { charBeastSeenFactory } from "@src/test/factories/char_beasts_seen"
+import { charWildShapeUseFactory } from "@src/test/factories/char_wild_shape_use"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { activateWildShape } from "./activateWildShape"
@@ -233,11 +233,10 @@ describe("activateWildShape", () => {
 
         // Use all 2 wild shape uses (level 4 druid has 2)
         for (let i = 0; i < 2; i++) {
-          await createWildShapeUse(testCtx.db, {
-            character_id: character.id,
-            beast_id: cat.id,
-            note: null,
-          })
+          await charWildShapeUseFactory.create(
+            { character_id: character.id, beast_id: cat.id },
+            testCtx.db
+          )
         }
 
         const char = await computeCharacter(testCtx.db, character.id)
@@ -275,11 +274,10 @@ describe("activateWildShape", () => {
         )
 
         // Start an ongoing transformation (not ended)
-        await createWildShapeUse(testCtx.db, {
-          character_id: character.id,
-          beast_id: cat.id,
-          note: null,
-        })
+        await charWildShapeUseFactory.create(
+          { character_id: character.id, beast_id: cat.id },
+          testCtx.db
+        )
 
         const char = await computeCharacter(testCtx.db, character.id)
         if (!char) throw new Error("Character not found")

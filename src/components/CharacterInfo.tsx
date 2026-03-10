@@ -1,7 +1,9 @@
+import type { BeastSpeed } from "@src/lib/dnd/beasts"
 import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 import { AvatarDisplay } from "./AvatarDisplay"
+import { BeastActionsDisplay } from "./ui/BeastActionsDisplay"
 import { HitDiceDisplay } from "./ui/HitDiceDisplay"
 import { HitPointsBar } from "./ui/HitPointsBar"
 import { LabeledValue } from "./ui/LabeledValue"
@@ -77,7 +79,27 @@ function numToOrdinal(n: number): string {
   return n + suffix
 }
 
+function formatBeastSpeed(speed: BeastSpeed): string {
+  const parts: string[] = []
+  if (speed.walk) parts.push(`${speed.walk} ft.`)
+  if (speed.fly) parts.push(`fly ${speed.fly} ft.`)
+  if (speed.swim) parts.push(`swim ${speed.swim} ft.`)
+  if (speed.climb) parts.push(`climb ${speed.climb} ft.`)
+  if (speed.burrow) parts.push(`burrow ${speed.burrow} ft.`)
+  return parts.join(", ") || "0 ft."
+}
+
 export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: CharacterInfoProps) => {
+  // Wild Shape beast info
+  const beast = character.wildShape?.currentBeast
+  const ongoing = character.wildShape?.ongoingTransformation
+  const isTransformed = !!beast && !!ongoing
+
+  // Values that change when transformed
+  const displaySize = beast?.size ?? character.size
+  const displaySpeed = beast ? formatBeastSpeed(beast.speed) : `${character.speed} ft.`
+  const displayAC = beast?.ac ?? character.armorClass
+
   const classStrings: string[] = []
   for (const c of character.classes) {
     const parts: string[] = []
@@ -105,7 +127,10 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
             />
           </div>
           <div class="col-9 col-lg-10">
-            <h2>{character.name}</h2>
+            <h2>
+              {character.name}
+              {beast && <span class="text-muted ms-2">({beast.name})</span>}
+            </h2>
 
             {/* Class - full width under name */}
             <div class="row g-0 mt-2">
@@ -173,7 +198,7 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
               </div>
 
               <div class="col-sm-4">
-                <LabeledValue label="Size" value={character.size} className="text-capitalize" />
+                <LabeledValue label="Size" value={displaySize} className="text-capitalize" />
               </div>
             </div>
 
@@ -182,10 +207,12 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
               <div class="col-sm-4">
                 <LabeledValue
                   label="Speed"
-                  value={`${character.speed} ft.`}
-                  hasEffect={hasEffect("speed", character.affectedAttributes)}
+                  value={displaySpeed}
+                  hasEffect={!isTransformed && hasEffect("speed", character.affectedAttributes)}
                   effectTooltip={
-                    getEffectTooltip("speed", character.affectedAttributes) || undefined
+                    !isTransformed
+                      ? getEffectTooltip("speed", character.affectedAttributes) || undefined
+                      : undefined
                   }
                 />
               </div>
@@ -212,9 +239,13 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
               <div class="col-sm-3 offset-sm-3">
                 <LabeledValue
                   label="Armor Class"
-                  value={character.armorClass}
-                  hasEffect={hasEffect("ac", character.affectedAttributes)}
-                  effectTooltip={getEffectTooltip("ac", character.affectedAttributes) || undefined}
+                  value={displayAC}
+                  hasEffect={!isTransformed && hasEffect("ac", character.affectedAttributes)}
+                  effectTooltip={
+                    !isTransformed
+                      ? getEffectTooltip("ac", character.affectedAttributes) || undefined
+                      : undefined
+                  }
                 />
               </div>
 
@@ -234,73 +265,126 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
               </div>
             </div>
 
-            {/* Weapons in Hand */}
-            {(() => {
-              const wieldedWeapons = character.equippedItems.filter((item) => item.wielded)
-              if (wieldedWeapons.length === 0) return null
+            {/* Beast Actions or Weapons in Hand */}
+            {beast ? (
+              <BeastActionsDisplay actions={beast.actions} beastName={beast.name} />
+            ) : (
+              (() => {
+                const wieldedWeapons = character.equippedItems.filter((item) => item.wielded)
+                if (wieldedWeapons.length === 0) return null
 
-              return (
-                <div class="row g-2 h-auto mt-2">
-                  <div class="col-12">
-                    <div class="text-muted small mb-1">Weapons in Hand</div>
-                    <div class="d-flex flex-column gap-1">
-                      {wieldedWeapons.map((weapon) => (
-                        <WieldedWeaponRow
-                          item={weapon}
-                          characterId={character.id}
-                          isReadOnly={isReadOnly}
-                        />
-                      ))}
+                return (
+                  <div class="row g-2 h-auto mt-2">
+                    <div class="col-12">
+                      <div class="text-muted small mb-1">Weapons in Hand</div>
+                      <div class="d-flex flex-column gap-1">
+                        {wieldedWeapons.map((weapon) => (
+                          <WieldedWeaponRow
+                            item={weapon}
+                            characterId={character.id}
+                            isReadOnly={isReadOnly}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })()}
+                )
+              })()
+            )}
 
-            {/* Hit Points Progress Bar */}
-            <div class="row g-2 h-auto mt-2">
-              <div class={isReadOnly ? "col-12 col-md-2" : "col-10 col-md-2"}>
-                <div class="text-muted small text-center">Hit Points</div>
-              </div>
-              <div class={isReadOnly ? "col-12 col-md-10" : "col-10 col-md-8"}>
-                <HitPointsBar
-                  currentHP={character.currentHP}
-                  maxHitPoints={character.maxHitPoints}
-                />
-              </div>
-              {!isReadOnly && (
-                <div class="col-2 d-flex gap-1 align-items-center">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary border p-1"
-                    style="width: 24px; height: 24px; line-height: 1;"
-                    aria-label="edit hit points"
-                    title="edit hit points"
-                    hx-get={`/characters/${character.id}/edit/hitpoints`}
-                    hx-target="#detailModalContent"
-                    hx-swap="innerHTML"
-                    data-bs-toggle="modal"
-                    data-bs-target="#detailModal"
-                  >
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary border p-1"
-                    style="width: 24px; height: 24px; line-height: 1;"
-                    aria-label="hit points history"
-                    title="hit points history"
-                    hx-get={`/characters/${character.id}/history/hitpoints`}
-                    hx-target="#detailModalContent"
-                    hx-swap="innerHTML"
-                    data-bs-toggle="modal"
-                    data-bs-target="#detailModal"
-                  >
-                    <i class="bi bi-clock-history"></i>
-                  </button>
+            {/* Hit Points Progress Bar - shows beast HP when transformed */}
+            {isTransformed ? (
+              <>
+                {/* Beast HP bar */}
+                <div class="row g-2 h-auto mt-2">
+                  <div class={isReadOnly ? "col-12 col-md-2" : "col-10 col-md-2"}>
+                    <div class="text-muted small text-center">Beast HP</div>
+                  </div>
+                  <div class={isReadOnly ? "col-12 col-md-10" : "col-10 col-md-8"}>
+                    <HitPointsBar
+                      currentHP={ongoing.currentBeastHp}
+                      maxHitPoints={beast.hitPoints}
+                    />
+                  </div>
+                  {!isReadOnly && (
+                    <div class="col-2 d-flex gap-1 align-items-center">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary border p-1"
+                        style="width: 24px; height: 24px; line-height: 1;"
+                        aria-label="edit hit points"
+                        title="edit hit points"
+                        hx-get={`/characters/${character.id}/edit/hitpoints`}
+                        hx-target="#detailModalContent"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#detailModal"
+                      >
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+                {/* Character HP as secondary/reference */}
+                <div class="row g-2 h-auto mt-1">
+                  <div class="col-10 col-md-2">
+                    <div class="text-muted small text-center" style="font-size: 0.7rem;">
+                      Your HP
+                    </div>
+                  </div>
+                  <div class="col-10 col-md-8">
+                    <HitPointsBar
+                      currentHP={character.currentHP}
+                      maxHitPoints={character.maxHitPoints}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div class="row g-2 h-auto mt-2">
+                <div class={isReadOnly ? "col-12 col-md-2" : "col-10 col-md-2"}>
+                  <div class="text-muted small text-center">Hit Points</div>
+                </div>
+                <div class={isReadOnly ? "col-12 col-md-10" : "col-10 col-md-8"}>
+                  <HitPointsBar
+                    currentHP={character.currentHP}
+                    maxHitPoints={character.maxHitPoints}
+                  />
+                </div>
+                {!isReadOnly && (
+                  <div class="col-2 d-flex gap-1 align-items-center">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary border p-1"
+                      style="width: 24px; height: 24px; line-height: 1;"
+                      aria-label="edit hit points"
+                      title="edit hit points"
+                      hx-get={`/characters/${character.id}/edit/hitpoints`}
+                      hx-target="#detailModalContent"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#detailModal"
+                    >
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary border p-1"
+                      style="width: 24px; height: 24px; line-height: 1;"
+                      aria-label="hit points history"
+                      title="hit points history"
+                      hx-get={`/characters/${character.id}/history/hitpoints`}
+                      hx-target="#detailModalContent"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#detailModal"
+                    >
+                      <i class="bi bi-clock-history"></i>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Hit Dice */}
             <div class="row g-2 h-auto mt-2">

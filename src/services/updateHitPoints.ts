@@ -1,4 +1,5 @@
 import { create as createCharHPDb } from "@src/db/char_hp"
+import { endTransformation, updateBeastHp } from "@src/db/char_wild_shape_uses"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
@@ -39,7 +40,15 @@ The system will prevent healing above max HP or reducing below 0 HP.`,
   inputSchema: UpdateHitPointsApiSchema.omit({ is_check: true }),
 })
 
-export type UpdateHitPointsResult = ServiceResult<{ newHP: number }>
+export interface UpdateHitPointsSuccess {
+  newHP: number
+  newBeastHp?: number
+  transformationEnded?: boolean
+  overflowDamage?: number
+  beastName?: string
+}
+
+export type UpdateHitPointsResult = ServiceResult<UpdateHitPointsSuccess>
 
 /**
  * Update hit points by creating a new HP change record
@@ -59,18 +68,36 @@ export async function updateHitPoints(
   const currentHP = char.currentHP
   const maxHitPoints = char.maxHitPoints
 
+  // Check if character is transformed
+  const isTransformed = !!char.wildShape?.currentBeast && !!char.wildShape?.ongoingTransformation
+  const beast = char.wildShape?.currentBeast
+  const ongoing = char.wildShape?.ongoingTransformation
+  const currentBeastHp = ongoing?.currentBeastHp ?? 0
+  const maxBeastHp = beast?.hitPoints ?? 0
+
   // Validate amount
   if (values.amount) {
-    // Check bounds
-    if (checkD.data.action === "restore") {
-      const newHP = currentHP + values.amount
-      if (newHP > maxHitPoints) {
-        errors.amount = `Cannot restore more than ${maxHitPoints - currentHP} HP (would exceed max)`
+    // Check bounds - different logic when transformed
+    if (isTransformed) {
+      if (checkD.data.action === "restore") {
+        // Healing goes to beast HP, capped at beast's max
+        if (currentBeastHp >= maxBeastHp) {
+          errors.amount = `${beast!.name} is already at full HP (${maxBeastHp})`
+        }
       }
+      // For damage (lose), we allow any amount - overflow goes to character
     } else {
-      const newHP = currentHP - values.amount
-      if (newHP < 0) {
-        errors.amount = `Cannot lose more than ${currentHP} HP (would go below 0)`
+      // Normal validation when not transformed
+      if (checkD.data.action === "restore") {
+        const newHP = currentHP + values.amount
+        if (newHP > maxHitPoints) {
+          errors.amount = `Cannot restore more than ${maxHitPoints - currentHP} HP (would exceed max)`
+        }
+      } else {
+        const newHP = currentHP - values.amount
+        if (newHP < 0) {
+          errors.amount = `Cannot lose more than ${currentHP} HP (would go below 0)`
+        }
       }
     }
   } else if (!values.is_check) {
@@ -90,7 +117,74 @@ export async function updateHitPoints(
   //////////////////////////
   // actually update hit points
 
-  // Convert action to delta
+  // Handle wild shape transformation
+  if (isTransformed && result.data.action === "lose") {
+    // Apply damage to beast HP first
+    const damage = result.data.amount
+
+    if (damage >= currentBeastHp) {
+      // Beast HP reaches 0, end transformation
+      await endTransformation(db, ongoing!.id)
+
+      // Calculate overflow damage
+      const overflowDamage = damage - currentBeastHp
+
+      // Apply overflow to character HP if any
+      if (overflowDamage > 0) {
+        await createCharHPDb(db, {
+          character_id: char.id,
+          delta: -overflowDamage,
+          note: `Wild Shape overflow: ${result.data.note || "damage"}`,
+        })
+        return {
+          complete: true,
+          result: {
+            newHP: currentHP - overflowDamage,
+            transformationEnded: true,
+            overflowDamage,
+            beastName: beast!.name,
+          },
+        }
+      }
+
+      return {
+        complete: true,
+        result: {
+          newHP: currentHP,
+          transformationEnded: true,
+          beastName: beast!.name,
+        },
+      }
+    }
+
+    // Beast HP reduced but not to 0
+    const newBeastHp = currentBeastHp - damage
+    await updateBeastHp(db, ongoing!.id, newBeastHp)
+
+    return {
+      complete: true,
+      result: {
+        newHP: currentHP, // Character HP unchanged
+        newBeastHp,
+      },
+    }
+  }
+
+  if (isTransformed && result.data.action === "restore") {
+    // Healing while transformed goes to beast HP
+    const newBeastHp = Math.min(currentBeastHp + result.data.amount, maxBeastHp)
+    await updateBeastHp(db, ongoing!.id, newBeastHp)
+
+    return {
+      complete: true,
+      result: {
+        newHP: currentHP, // Character HP unchanged
+        newBeastHp,
+      },
+    }
+  }
+
+  // Not transformed - normal HP update
   const delta = result.data.action === "restore" ? result.data.amount : -result.data.amount
 
   // Create HP change record

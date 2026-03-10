@@ -7,6 +7,7 @@ export const CharWildShapeUseSchema = z.object({
   id: z.string(),
   character_id: z.string(),
   beast_id: z.string(),
+  beast_hp: z.number().nullable().default(null),
   ended_at: z.date().nullable().default(null),
   recovered_at: z.date().nullable().default(null),
   note: z.string().nullable().default(null),
@@ -16,6 +17,7 @@ export const CharWildShapeUseSchema = z.object({
 
 export const CreateCharWildShapeUseSchema = CharWildShapeUseSchema.omit({
   id: true,
+  beast_hp: true,
   ended_at: true,
   recovered_at: true,
   created_at: true,
@@ -25,15 +27,20 @@ export const CreateCharWildShapeUseSchema = CharWildShapeUseSchema.omit({
 export type CharWildShapeUse = z.infer<typeof CharWildShapeUseSchema>
 export type CreateCharWildShapeUse = z.infer<typeof CreateCharWildShapeUseSchema>
 
-export async function create(db: SQL, use: CreateCharWildShapeUse): Promise<CharWildShapeUse> {
+export async function create(
+  db: SQL,
+  use: CreateCharWildShapeUse,
+  beastMaxHp: number
+): Promise<CharWildShapeUse> {
   const id = ulid()
 
   const result = await db`
-    INSERT INTO char_wild_shape_uses (id, character_id, beast_id, note, created_at)
+    INSERT INTO char_wild_shape_uses (id, character_id, beast_id, beast_hp, note, created_at)
     VALUES (
       ${id},
       ${use.character_id},
       ${use.beast_id},
+      ${beastMaxHp},
       ${use.note},
       CURRENT_TIMESTAMP
     )
@@ -43,6 +50,7 @@ export async function create(db: SQL, use: CreateCharWildShapeUse): Promise<Char
   const row = result[0]
   return CharWildShapeUseSchema.parse({
     ...row,
+    beast_hp: row.beast_hp,
     ended_at: row.ended_at ? new Date(row.ended_at) : null,
     recovered_at: row.recovered_at ? new Date(row.recovered_at) : null,
     created_at: new Date(row.created_at),
@@ -156,4 +164,16 @@ export async function findByCharacterId(
       updated_at: new Date(row.updated_at),
     })
   )
+}
+
+/**
+ * Update beast HP for an ongoing transformation.
+ */
+export async function updateBeastHp(db: SQL, useId: string, newBeastHp: number): Promise<boolean> {
+  const result = await db`
+    UPDATE char_wild_shape_uses
+    SET beast_hp = ${newBeastHp}
+    WHERE id = ${useId} AND ended_at IS NULL
+  `
+  return result.count > 0
 }

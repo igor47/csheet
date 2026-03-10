@@ -1,4 +1,4 @@
-\restrict zlg2bzTlR46edocyM3s8iObn1KzQEgmDZJA6vprt6EgEOS77tkwAcUZ4vG70wWj
+\restrict edTK63MHXSIiPOgg0exgLI7etY3ge1rVt2OxXSlzHxeJgLbBELLdeWMYEnpLt4P
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.3
@@ -358,7 +358,8 @@ CREATE TABLE public.char_wild_shape_uses (
     recovered_at timestamp with time zone,
     note text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    beast_hp integer
 );
 
 
@@ -1554,7 +1555,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict zlg2bzTlR46edocyM3s8iObn1KzQEgmDZJA6vprt6EgEOS77tkwAcUZ4vG70wWj
+\unrestrict edTK63MHXSIiPOgg0exgLI7etY3ge1rVt2OxXSlzHxeJgLbBELLdeWMYEnpLt4P
 
 
 --
@@ -1607,4 +1608,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260303234303'),
     ('20260303300000'),
     ('20260310120000'),
-    ('20260310130000');
+    ('20260310130000'),
+    ('20260311120000');

@@ -282,11 +282,19 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
   const result = await updateHitPoints(getDb(c), char, body)
 
   if (!result.complete) {
+    const isTransformed = !!char.wildShape?.currentBeast
+    const beast = char.wildShape?.currentBeast
+    const ongoing = char.wildShape?.ongoingTransformation
+
     return c.html(
       <HitPointsEditForm
         characterId={characterId}
         currentHP={char.currentHP}
         maxHitPoints={char.maxHitPoints}
+        isTransformed={isTransformed}
+        beastName={beast?.name}
+        currentBeastHp={ongoing?.currentBeastHp}
+        maxBeastHp={beast?.hitPoints}
         values={result.values}
         errors={result.errors}
       />
@@ -1103,13 +1111,29 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
   }
 
   if (field === "hitpoints") {
-    const defaultAction = char.currentHP >= char.maxHitPoints ? "lose" : "restore"
+    const isTransformed = !!char.wildShape?.currentBeast
+    const beast = char.wildShape?.currentBeast
+    const ongoing = char.wildShape?.ongoingTransformation
+
+    // Default action depends on whether transformed and current HP levels
+    const defaultAction = isTransformed
+      ? (ongoing?.currentBeastHp ?? 0) >= (beast?.hitPoints ?? 0)
+        ? "lose"
+        : "restore"
+      : char.currentHP >= char.maxHitPoints
+        ? "lose"
+        : "restore"
+
     const values = { action: defaultAction, amount: "" }
     return c.html(
       <HitPointsEditForm
         characterId={characterId}
         currentHP={char.currentHP}
         maxHitPoints={char.maxHitPoints}
+        isTransformed={isTransformed}
+        beastName={beast?.name}
+        currentBeastHp={ongoing?.currentBeastHp}
+        maxBeastHp={beast?.hitPoints}
         values={values}
       />
     )

@@ -1,4 +1,5 @@
 import type { CharTrait } from "@src/db/char_traits"
+import type { BeastTrait } from "@src/lib/dnd/beasts"
 import { toTitleCase } from "@src/lib/strings"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 
@@ -62,8 +63,45 @@ const TraitGroup = ({ source, traits }: TraitGroupProps) => {
   )
 }
 
+interface BeastTraitItemProps {
+  trait: BeastTrait
+}
+
+const BeastTraitItem = ({ trait }: BeastTraitItemProps) => {
+  return (
+    <li class="list-group-item list-group-item-warning">
+      <div class="fw-semibold text-capitalize">{trait.name}</div>
+      <p class="mb-0 text-muted small">{trait.description}</p>
+    </li>
+  )
+}
+
+interface BeastTraitGroupProps {
+  beastName: string
+  traits: BeastTrait[]
+}
+
+const BeastTraitGroup = ({ beastName, traits }: BeastTraitGroupProps) => {
+  if (traits.length === 0) {
+    return null
+  }
+
+  return (
+    <div class="mb-3">
+      <h6 class="text-muted small mb-2">Beast Traits ({beastName})</h6>
+      <ul class="list-group list-group-flush">
+        {traits.map((trait) => (
+          <BeastTraitItem trait={trait} />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export const TraitsPanel = ({ character, swapOob, isReadOnly = false }: TraitsPanelProps) => {
   const traits = character.traits
+  const beast = character.wildShape?.currentBeast
+  const beastTraits = beast?.traits ?? []
 
   // Group traits by source for organized display
   const traitsBySource: Record<string, CharTrait[]> = {
@@ -111,7 +149,12 @@ export const TraitsPanel = ({ character, swapOob, isReadOnly = false }: TraitsPa
         </div>
       )}
 
-      {traits.length === 0 ? (
+      {/* Beast traits at top when transformed */}
+      {beast && beastTraits.length > 0 && (
+        <BeastTraitGroup beastName={beast.name} traits={beastTraits} />
+      )}
+
+      {traits.length === 0 && !beast ? (
         <p class="text-muted">No traits yet.</p>
       ) : (
         <>

@@ -121,12 +121,16 @@ export async function activateWildShape(
   // Auto-end any ongoing transformation
   await endOngoingTransformation(db, char.id)
 
-  // Create new wild shape use
-  const use = await createWildShapeUse(db, {
-    character_id: char.id,
-    beast_id: result.data.beast_id,
-    note: result.data.note,
-  })
+  // Create new wild shape use with beast's max HP
+  const use = await createWildShapeUse(
+    db,
+    {
+      character_id: char.id,
+      beast_id: result.data.beast_id,
+      note: result.data.note,
+    },
+    beast.hitPoints
+  )
 
   // Calculate remaining uses after this transformation
   const usesRemaining = Math.max(0, maxUses - (unrecoveredCount + 1))

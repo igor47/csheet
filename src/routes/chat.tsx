@@ -5,6 +5,7 @@ import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
+import { WildShapePanel } from "@src/components/panels/WildShapePanel"
 import { isAiEnabled } from "@src/config"
 import { getDb } from "@src/db"
 import { clearChat, getChatsByCharacterId, setMessageRetry } from "@src/db/chat_messages"
@@ -155,6 +156,7 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
+      {updatedChar.wildShape && <WildShapePanel character={updatedChar} swapOob={true} />}
       <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />
     </>
   )

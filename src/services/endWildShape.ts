@@ -3,6 +3,7 @@ import { getBeastById } from "@src/lib/dnd/beasts"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -110,4 +111,48 @@ export async function endWildShape(
       duration,
     },
   }
+}
+
+// Vercel AI SDK tool definition
+export const endWildShapeToolName = "end_wild_shape" as const
+
+export const endWildShapeTool = tool({
+  name: endWildShapeToolName,
+  description: `End the current Wild Shape transformation and return to normal form.
+
+A druid can end Wild Shape at any time. Common reasons:
+- Beast HP dropped to 0 (transformation ends automatically)
+- Need to cast a spell (most spells can't be cast in beast form)
+- Need to speak or manipulate objects
+- Combat has ended
+
+Returns the duration of the transformation.`,
+  inputSchema: EndWildShapeApiSchema.omit({ is_check: true }),
+})
+
+/**
+ * Execute the end_wild_shape tool from AI assistant
+ * Converts AI parameters to service format and calls endWildShape
+ */
+export async function executeEndWildShape(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>,
+  isCheck?: boolean
+): Promise<ServiceResult<EndWildShapeSummary>> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
+  }
+
+  return endWildShape(db, char, data)
+}
+
+/**
+ * Format approval message for end_wild_shape tool calls
+ */
+export function formatEndWildShapeApproval(_parameters: Record<string, unknown>): string {
+  return "End Wild Shape transformation"
 }

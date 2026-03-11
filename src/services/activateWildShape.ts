@@ -6,6 +6,7 @@ import { getBeastById } from "@src/lib/dnd/beasts"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -144,4 +145,67 @@ export async function activateWildShape(
       usesRemaining,
     },
   }
+}
+
+// Vercel AI SDK tool definition
+export const activateWildShapeToolName = "activate_wild_shape" as const
+
+export const activateWildShapeTool = tool({
+  name: activateWildShapeToolName,
+  description: `Transform into a beast form using Wild Shape.
+
+Requirements:
+- Druid with Wild Shape ability
+- Beast must be in known/seen forms (use add_beast first)
+- Beast CR must be within limits (check character_status wildShape.limits)
+- Flight/swim restrictions apply based on druid level
+- Must have uses available
+
+If already transformed, current transformation ends automatically.
+Returns the beast's full stat block including HP, AC, abilities, and attacks.`,
+  inputSchema: ActivateWildShapeApiSchema.omit({ is_check: true }),
+})
+
+/**
+ * Execute the activate_wild_shape tool from AI assistant
+ * Converts AI parameters to service format and calls activateWildShape
+ */
+export async function executeActivateWildShape(
+  db: SQL,
+  char: ComputedCharacter,
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>,
+  isCheck?: boolean
+): Promise<ServiceResult<ActivateWildShapeSummary>> {
+  // Convert parameters to string format for service
+  const data: Record<string, string> = {
+    beast_id: parameters.beast_id?.toString() || "",
+    note: parameters.note?.toString() || "",
+    is_check: isCheck ? "true" : "false",
+  }
+
+  return activateWildShape(db, char, data)
+}
+
+/**
+ * Extract a readable name from a beast ID
+ * e.g., "srd52_brown_bear" -> "Brown Bear"
+ */
+function beastNameFromId(beastId: string): string {
+  const withoutPrefix = beastId.replace(/^srd5[12]_/, "")
+  return withoutPrefix
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+}
+
+/**
+ * Format approval message for activate_wild_shape tool calls
+ */
+export function formatActivateWildShapeApproval(
+  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
+  parameters: Record<string, any>
+): string {
+  const { beast_id } = parameters
+  return `Transform into ${beastNameFromId(beast_id)}`
 }

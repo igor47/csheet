@@ -2,6 +2,18 @@ import type { Tool } from "ai"
 import type { SQL } from "bun"
 import type { ServiceResult } from "./lib/serviceResult"
 import {
+  activateWildShapeTool,
+  activateWildShapeToolName,
+  executeActivateWildShape,
+  formatActivateWildShapeApproval,
+} from "./services/activateWildShape"
+import {
+  addBeastTool,
+  addBeastToolName,
+  executeAddBeast,
+  formatAddBeastApproval,
+} from "./services/addBeast"
+import {
   addLevelTool,
   addLevelToolName,
   executeAddLevel,
@@ -19,6 +31,11 @@ import {
   executeCastSpell,
   formatCastSpellApproval,
 } from "./services/castSpell"
+import {
+  characterBeastsTool,
+  characterBeastsToolName,
+  executeCharacterBeasts,
+} from "./services/characterBeasts"
 import {
   characterStatusTool,
   characterStatusToolName,
@@ -48,6 +65,12 @@ import {
   executeDeleteItemEffect,
   formatDeleteItemEffectApproval,
 } from "./services/deleteItemEffect"
+import {
+  endWildShapeTool,
+  endWildShapeToolName,
+  executeEndWildShape,
+  formatEndWildShapeApproval,
+} from "./services/endWildShape"
 import {
   equipItemTool,
   equipItemToolName,
@@ -85,12 +108,6 @@ import {
   prepareSpellTool,
   prepareSpellToolName,
 } from "./services/prepareSpell"
-import {
-  executeSeeBeast,
-  formatSeeBeastApproval,
-  seeBeastTool,
-  seeBeastToolName,
-} from "./services/seeBeast"
 import {
   executeShortRest,
   formatShortRestApproval,
@@ -267,10 +284,27 @@ export const TOOLS: ToolRegistration[] = [
     executor: executeLookupBeast,
   },
   {
-    name: seeBeastToolName,
-    tool: seeBeastTool,
-    executor: executeSeeBeast,
-    formatApprovalMessage: formatSeeBeastApproval,
+    name: characterBeastsToolName,
+    tool: characterBeastsTool,
+    executor: executeCharacterBeasts,
+  },
+  {
+    name: addBeastToolName,
+    tool: addBeastTool,
+    executor: executeAddBeast,
+    formatApprovalMessage: formatAddBeastApproval,
+  },
+  {
+    name: activateWildShapeToolName,
+    tool: activateWildShapeTool,
+    executor: executeActivateWildShape,
+    formatApprovalMessage: formatActivateWildShapeApproval,
+  },
+  {
+    name: endWildShapeToolName,
+    tool: endWildShapeTool,
+    executor: executeEndWildShape,
+    formatApprovalMessage: formatEndWildShapeApproval,
   },
 
   // Items

@@ -24,6 +24,7 @@ export const WildShapeHistory = ({ events, ruleset }: WildShapeHistoryProps) => 
                 <tr>
                   <th>Date</th>
                   <th>Beast</th>
+                  <th>Final HP</th>
                   <th>Note</th>
                 </tr>
               </thead>
@@ -31,6 +32,8 @@ export const WildShapeHistory = ({ events, ruleset }: WildShapeHistoryProps) => 
                 {events.map((event) => {
                   const beast = getBeastById(ruleset, event.beast_id)
                   const beastName = beast?.name || "Unknown Beast"
+                  const maxHp = beast?.hitPoints ?? 0
+                  const isOngoing = !event.ended_at
 
                   return (
                     <tr key={event.id}>
@@ -40,6 +43,15 @@ export const WildShapeHistory = ({ events, ruleset }: WildShapeHistoryProps) => 
                         </small>
                       </td>
                       <td>{beastName}</td>
+                      <td>
+                        {isOngoing ? (
+                          <span class="badge text-bg-success">Active</span>
+                        ) : (
+                          <span class={event.beast_hp === 0 ? "text-danger" : ""}>
+                            {event.beast_hp ?? "—"}/{maxHp}
+                          </span>
+                        )}
+                      </td>
                       <td>{event.note || <span class="text-muted">—</span>}</td>
                     </tr>
                   )

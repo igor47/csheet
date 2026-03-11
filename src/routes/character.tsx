@@ -80,6 +80,7 @@ import { countArchivedByUserId } from "@src/db/characters"
 import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
 import { findById as findItemById } from "@src/db/items"
+import { getBeastById } from "@src/lib/dnd/beasts"
 import { setFlashMsg } from "@src/middleware/flash"
 import { activateWildShape } from "@src/services/activateWildShape"
 import { addLevel } from "@src/services/addLevel"
@@ -304,6 +305,21 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
 
   c.header("HX-Trigger", "closeDetailModal")
+
+  // If transformation ended (beast HP hit 0), refresh all affected components
+  if (result.result.transformationEnded) {
+    return c.html(
+      <>
+        <CharacterInfo character={updatedChar} swapOob={true} />
+        <WildShapePanel character={updatedChar} swapOob={true} />
+        <AbilitiesPanel character={updatedChar} swapOob={true} />
+        <SkillsPanel character={updatedChar} swapOob={true} />
+        <SpellsPanel character={updatedChar} swapOob={true} />
+        <TraitsPanel character={updatedChar} swapOob={true} />
+      </>
+    )
+  }
+
   return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
 })
 
@@ -957,6 +973,12 @@ characterRoutes.post("/characters/:id/wildshape/activate", async (c) => {
     <>
       <ActivateWildShapeResult summary={result.result} ruleset={char.ruleset} />
       <WildShapePanel character={updatedChar} swapOob={true} />
+      {/* OOB refresh affected components */}
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
+      <TraitsPanel character={updatedChar} swapOob={true} />
     </>
   )
 })
@@ -980,7 +1002,17 @@ characterRoutes.post("/characters/:id/wildshape/end", async (c) => {
 
   // Return updated WildShapePanel (direct swap, no modal)
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
-  return c.html(<WildShapePanel character={updatedChar} />)
+  return c.html(
+    <>
+      <WildShapePanel character={updatedChar} swapOob={true} />
+      {/* OOB refresh affected components */}
+      <CharacterInfo character={updatedChar} swapOob={true} />
+      <AbilitiesPanel character={updatedChar} swapOob={true} />
+      <SkillsPanel character={updatedChar} swapOob={true} />
+      <SpellsPanel character={updatedChar} swapOob={true} />
+      <TraitsPanel character={updatedChar} swapOob={true} />
+    </>
+  )
 })
 
 // GET /characters/:id/rest/short - Show short rest modal
@@ -1462,9 +1494,10 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
   }
 
   if (field === "hitpoints") {
-    // Fetch both HP changes and level-ups
+    // Fetch HP changes, level-ups, and wild shape uses
     const hpChanges = await findHPChanges(getDb(c), characterId)
     const levels = await findByCharacterId(getDb(c), characterId)
+    const wildShapeUses = await findWildShapeHistory(getDb(c), characterId)
 
     // Merge into unified events
     const events: HPHistoryEvent[] = []
@@ -1489,6 +1522,50 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
         hitDieRoll: level.hit_die_roll,
         note: level.note || undefined,
       })
+    }
+
+    // Add wild shape events
+    for (const use of wildShapeUses) {
+      const beast = getBeastById(authResult.character.ruleset, use.beast_id)
+      const beastName = beast?.name || "Unknown Beast"
+      const beastMaxHp = beast?.hitPoints || 0
+
+      // Add start event
+      events.push({
+        date: use.created_at,
+        type: "wildshape_start",
+        beastName,
+        beastMaxHp,
+        note: use.note || undefined,
+      })
+
+      // Add end event if transformation has ended
+      if (use.ended_at) {
+        const beastFinalHp = use.beast_hp ?? 0
+
+        events.push({
+          date: use.ended_at,
+          type: "wildshape_end",
+          beastName,
+          beastMaxHp,
+          beastFinalHp,
+          note: undefined,
+        })
+
+        // Add damage absorbed event if beast took damage
+        const damageAbsorbed = beastMaxHp - beastFinalHp
+        if (damageAbsorbed > 0) {
+          // Use a date slightly before the end for sorting
+          const damageDate = new Date(use.ended_at.getTime() - 1)
+          events.push({
+            date: damageDate,
+            type: "wildshape_damage",
+            beastName,
+            damageAbsorbed,
+            note: undefined,
+          })
+        }
+      }
     }
 
     // Sort by date descending (most recent first)

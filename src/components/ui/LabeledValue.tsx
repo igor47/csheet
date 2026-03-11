@@ -6,6 +6,8 @@ export interface LabeledValueProps {
   className?: string
   hasEffect?: boolean
   effectTooltip?: string
+  fromBeast?: boolean
+  beastTooltip?: string
 }
 
 export const LabeledValue = ({
@@ -14,16 +16,21 @@ export const LabeledValue = ({
   className = "",
   hasEffect = false,
   effectTooltip,
+  fromBeast = false,
+  beastTooltip,
 }: LabeledValueProps) => {
   const tooltipAttrs =
     hasEffect && effectTooltip
       ? { "data-bs-toggle": "tooltip", "data-bs-placement": "top", title: effectTooltip }
-      : {}
+      : fromBeast && beastTooltip
+        ? { "data-bs-toggle": "tooltip", "data-bs-placement": "top", title: beastTooltip }
+        : {}
 
   return (
     <div
       class={clsx("position-relative border rounded p-2 pt-4 h-100", className, {
         "border-primary border-2": hasEffect,
+        "bg-warning-subtle border-warning": fromBeast,
       })}
       {...tooltipAttrs}
     >

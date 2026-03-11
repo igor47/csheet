@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 import { create as createTrait } from "@src/db/char_traits"
+import { findByCharacterId as findWildShapeUses } from "@src/db/char_wild_shape_uses"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import { type Beast, getBeasts } from "@src/lib/dnd/beasts"
@@ -384,6 +385,107 @@ describe("Wild Shape UI", () => {
 
       // Should show the panel (contains Wild Shape content)
       expect(body).toContain("Max CR")
+    })
+  })
+
+  describe("beast HP damage ending transformation", () => {
+    let user: User
+    let character: Character
+    let cat: Beast
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      character = await characterFactory.create(
+        { user_id: user.id, ruleset: "srd52", species: "human", class: "druid", level: 4 },
+        testCtx.db
+      )
+      await createTrait(testCtx.db, {
+        character_id: character.id,
+        name: "Wild Shape",
+        description: "You can transform into a beast you have seen.",
+        source: "class",
+        source_detail: "druid",
+        level: 2,
+        note: null,
+      })
+
+      const beasts = getBeasts("srd52")
+      cat = beasts.find((b) => b.name.toLowerCase() === "cat")!
+
+      await charBeastSeenFactory.create(
+        { character_id: character.id, beast_id: cat.id },
+        testCtx.db
+      )
+
+      // Start an ongoing transformation
+      await charWildShapeUseFactory.create(
+        { character_id: character.id, beast_id: cat.id },
+        testCtx.db
+      )
+    })
+
+    test("sets beast_hp to 0 when damage exceeds beast HP", async () => {
+      // Cat has 2 HP, apply 5 damage to ensure it exceeds
+      const formData = new URLSearchParams()
+      formData.set("action", "lose")
+      formData.set("amount", "5")
+      formData.set("note", "test damage")
+
+      const response = await makeRequest(
+        testCtx.app,
+        `/characters/${character.id}/edit/hitpoints`,
+        {
+          user,
+          method: "POST",
+          headers: {
+            "HX-Request": "true",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      )
+
+      expect(response.status).toBe(200)
+
+      // Check the wild shape use record in the database
+      const uses = await findWildShapeUses(testCtx.db, character.id)
+      expect(uses.length).toBe(1)
+
+      const use = uses[0]!
+      expect(use.ended_at).not.toBeNull()
+      expect(use.beast_hp).toBe(0)
+    })
+
+    test("sets beast_hp to 0 when damage equals beast HP exactly", async () => {
+      // Cat has 2 HP, apply exactly 2 damage
+      const formData = new URLSearchParams()
+      formData.set("action", "lose")
+      formData.set("amount", String(cat.hitPoints))
+      formData.set("note", "exact damage")
+
+      const response = await makeRequest(
+        testCtx.app,
+        `/characters/${character.id}/edit/hitpoints`,
+        {
+          user,
+          method: "POST",
+          headers: {
+            "HX-Request": "true",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      )
+
+      expect(response.status).toBe(200)
+
+      // Check the wild shape use record in the database
+      const uses = await findWildShapeUses(testCtx.db, character.id)
+      expect(uses.length).toBe(1)
+
+      const use = uses[0]!
+      expect(use.ended_at).not.toBeNull()
+      expect(use.beast_hp).toBe(0)
     })
   })
 })

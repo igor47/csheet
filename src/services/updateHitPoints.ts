@@ -124,10 +124,12 @@ export async function updateHitPoints(
 
     if (damage >= currentBeastHp) {
       // Beast HP reaches 0, end transformation
+      await updateBeastHp(db, ongoing!.id, 0)
       await endTransformation(db, ongoing!.id)
 
-      // Calculate overflow damage
-      const overflowDamage = damage - currentBeastHp
+      // Calculate overflow damage, clamped to prevent HP going below 0
+      const rawOverflow = damage - currentBeastHp
+      const overflowDamage = Math.min(rawOverflow, currentHP)
 
       // Apply overflow to character HP if any
       if (overflowDamage > 0) {

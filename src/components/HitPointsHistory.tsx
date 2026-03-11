@@ -2,7 +2,7 @@ import { toTitleCase } from "@src/lib/strings"
 
 export type HPHistoryEvent = {
   date: Date
-  type: "delta" | "level"
+  type: "delta" | "level" | "wildshape_start" | "wildshape_end" | "wildshape_damage"
   // For delta events:
   delta?: number
   note?: string
@@ -10,6 +10,11 @@ export type HPHistoryEvent = {
   class?: string
   level?: number
   hitDieRoll?: number
+  // For wild shape events:
+  beastName?: string
+  beastMaxHp?: number
+  beastFinalHp?: number
+  damageAbsorbed?: number
 }
 
 export interface HitPointsHistoryProps {
@@ -38,16 +43,39 @@ export const HitPointsHistory = ({ events }: HitPointsHistoryProps) => {
               </thead>
               <tbody>
                 {events.map((event) => {
-                  let eventDescription = ""
-                  if (event.type === "delta") {
-                    const delta = event.delta || 0
-                    if (delta > 0) {
-                      eventDescription = `Restored ${delta} HP`
-                    } else {
-                      eventDescription = `Lost ${Math.abs(delta)} HP`
+                  const renderEvent = () => {
+                    switch (event.type) {
+                      case "delta": {
+                        const delta = event.delta || 0
+                        if (delta > 0) {
+                          return `Restored ${delta} HP`
+                        }
+                        return `Lost ${Math.abs(delta)} HP`
+                      }
+                      case "level":
+                        return `Gained ${event.hitDieRoll} max HP (${toTitleCase(event.class || "")} ${event.level})`
+                      case "wildshape_start":
+                        return (
+                          <>
+                            <i class="bi bi-arrow-repeat me-1"></i>
+                            {event.beastName} ({event.beastMaxHp} HP)
+                          </>
+                        )
+                      case "wildshape_end":
+                        return (
+                          <>
+                            <i class="bi bi-x-circle me-1"></i>
+                            Ended {event.beastName} ({event.beastFinalHp}/{event.beastMaxHp} HP)
+                          </>
+                        )
+                      case "wildshape_damage":
+                        return (
+                          <>
+                            <i class="bi bi-shield me-1"></i>
+                            Beast absorbed {event.damageAbsorbed} damage
+                          </>
+                        )
                     }
-                  } else {
-                    eventDescription = `Gained ${event.hitDieRoll} max HP (${toTitleCase(event.class || "")} ${event.level})`
                   }
 
                   return (
@@ -57,7 +85,7 @@ export const HitPointsHistory = ({ events }: HitPointsHistoryProps) => {
                           {new Date(event.date).toLocaleDateString()}
                         </small>
                       </td>
-                      <td>{eventDescription}</td>
+                      <td>{renderEvent()}</td>
                       <td>{event.note || <span class="text-muted">—</span>}</td>
                     </tr>
                   )

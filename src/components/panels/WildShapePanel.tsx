@@ -104,9 +104,21 @@ export const WildShapePanel = ({ character, swapOob, isReadOnly = false }: WildS
       <div class="row g-2 mb-3 p-2 align-items-center">
         <div class="col-3 text-center">Current Form</div>
         <div class="col-5 text-center">
-          <span class={ongoingTransformation ? "fw-bold" : "text-muted"}>
-            {ongoingBeastName || "None"}
-          </span>
+          {ongoingTransformation ? (
+            <a
+              href={`/beasts/${ongoingTransformation.beastId}`}
+              hx-get={`/beasts/${ongoingTransformation.beastId}?ruleset=${character.ruleset}`}
+              hx-target="#detailModalContent"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#detailModal"
+              class="fw-bold text-decoration-none"
+            >
+              {ongoingBeastName}
+            </a>
+          ) : (
+            <span class="text-muted">None</span>
+          )}
         </div>
         <div class="col-4 text-center">
           {!isReadOnly && (
@@ -120,6 +132,7 @@ export const WildShapePanel = ({ character, swapOob, isReadOnly = false }: WildS
                   hx-post={`/characters/${character.id}/wildshape/end`}
                   hx-target="#wildshape-panel"
                   hx-swap="innerHTML"
+                  hx-confirm={`End ${ongoingBeastName} transformation?`}
                 >
                   <i class="bi bi-x-lg me-1"></i>
                   End

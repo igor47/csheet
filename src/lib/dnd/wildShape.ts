@@ -1,8 +1,9 @@
 import type { RulesetId } from "./rulesets"
+import { SRD51_ID } from "./srd51"
 import { SRD52_ID } from "./srd52"
 
 /**
- * Wild Shape CR Limits (same in SRD5.1 and 5.2)
+ * Wild Shape CR Limits
  *
  **/
 
@@ -12,16 +13,45 @@ export interface WildShapeLimits {
   canSwim: boolean
 }
 
+export interface WildShapeCRLimitOptions {
+  druidLevel: number
+  subclass?: string | null
+  ruleset?: RulesetId
+}
+
 /**
- * Get Wild Shape limitations based on druid level
+ * Get Wild Shape limitations based on druid level and subclass
  *
+ * Base (non-Moon) limits:
  * | Druid Level | Max CR | Limitations |
  * |-------------|--------|-------------|
  * | 2-3         | 1/4    | No flying/swimming |
  * | 4-7         | 1/2    | No flying |
  * | 8+          | 1      | No limitations |
+ *
+ * Circle of the Moon:
+ * - SRD 5.1: CR 1 at level 2, CR = level/3 at level 6+
+ * - SRD 5.2: CR = level/3 (minimum 1) starting at level 3
  */
-export function getWildShapeCRLimit(druidLevel: number): WildShapeLimits {
+export function getWildShapeCRLimit(options: WildShapeCRLimitOptions | number): WildShapeLimits {
+  // Support legacy call signature: getWildShapeCRLimit(druidLevel)
+  const opts: WildShapeCRLimitOptions =
+    typeof options === "number" ? { druidLevel: options } : options
+
+  const { druidLevel, subclass, ruleset } = opts
+  const isCircleOfTheMoon = subclass?.toLowerCase() === "circle of the moon"
+
+  if (isCircleOfTheMoon) {
+    return getCircleOfTheMoonCRLimit(druidLevel, ruleset ?? SRD51_ID)
+  }
+
+  return getBaseCRLimit(druidLevel)
+}
+
+/**
+ * Base Wild Shape CR limits (non-Moon druids)
+ */
+function getBaseCRLimit(druidLevel: number): WildShapeLimits {
   if (druidLevel >= 8) {
     return { maxCR: 1, canFly: true, canSwim: true }
   }
@@ -37,6 +67,36 @@ export function getWildShapeCRLimit(druidLevel: number): WildShapeLimits {
 }
 
 /**
+ * Circle of the Moon CR limits
+ *
+ * SRD 5.1:
+ * - Level 2: CR 1
+ * - Level 6+: CR = druid level / 3 (rounded down)
+ *
+ * SRD 5.2:
+ * - Level 3+: CR = druid level / 3 (rounded down, minimum 1)
+ */
+function getCircleOfTheMoonCRLimit(druidLevel: number, ruleset: RulesetId): WildShapeLimits {
+  const limits = getBaseCRLimit(druidLevel)
+
+  if (ruleset === SRD52_ID) {
+    // SRD 5.2: Circle Forms at level 3, CR = level/3
+    if (druidLevel >= 3) {
+      limits.maxCR = Math.floor(druidLevel / 3)
+    }
+  } else if (ruleset === SRD51_ID) {
+    // SRD 5.1: CR 1 at level 2, CR = level/3 at level 6+
+    if (druidLevel >= 6) {
+      limits.maxCR = Math.floor(druidLevel / 3)
+    } else if (druidLevel >= 2) {
+      limits.maxCR = 1
+    }
+  }
+
+  return limits
+}
+
+/**
  * Format CR for display (e.g., 0.25 -> "1/4")
  */
 export function formatCR(cr: number): string {
@@ -49,11 +109,11 @@ export function formatCR(cr: number): string {
 /**
  * Get Wild Shape uses based on ruleset and druid level
  *
- * SRD 5.1: 2 uses at all levels (level 20 is unlimited, represented as -1)
+ * SRD 5.1: 2 uses at all levels (level 20 is unlimited, represented as 99)
  * SRD 5.2:
- *   - Level 1-3: 2 uses
- *   - Level 4-9: 3 uses
- *   - Level 10+: 4 uses
+ *   - Level 2-5: 2 uses
+ *   - Level 6-16: 3 uses
+ *   - Level 17+: 4 uses
  */
 /**
  * Get Known Forms limit for SRD 5.2 Wild Shape

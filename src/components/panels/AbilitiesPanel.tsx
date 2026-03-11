@@ -89,14 +89,15 @@ export const AbilitiesPanel = ({ character, swapOob, isReadOnly = false }: Abili
   const physicalAbilities: AbilityType[] = ["strength", "dexterity", "constitution"]
 
   // Compute beast ability score if applicable
-  const computeBeastAbility = (beastScore: number): AbilityScore => {
-    const modifier = Math.floor((beastScore - 10) / 2)
+  // Per SRD 5.2: You retain your saving throw proficiencies and use your Proficiency Bonus
+  const computeBeastAbility = (ability: AbilityType, beastScore: number): AbilityScore => {
+    const beastMod = Math.floor((beastScore - 10) / 2)
+    const charProficient = character.abilityScores[ability].proficient
     return {
       score: beastScore,
-      modifier,
-      // Beast saves use beast's modifier + character's proficiency if proficient
-      savingThrow: modifier + character.proficiencyBonus,
-      proficient: true,
+      modifier: beastMod,
+      savingThrow: beastMod + (charProficient ? character.proficiencyBonus : 0),
+      proficient: charProficient,
     }
   }
 
@@ -110,7 +111,7 @@ export const AbilitiesPanel = ({ character, swapOob, isReadOnly = false }: Abili
     const isPhysical = physicalAbilities.includes(ability)
     if (beast && isPhysical) {
       displayAbilities[ability] = {
-        ...computeBeastAbility(beast.abilities[ability]),
+        ...computeBeastAbility(ability, beast.abilities[ability]),
         fromBeast: true,
       }
     } else {

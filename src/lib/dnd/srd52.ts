@@ -1599,6 +1599,67 @@ const Classes: Record<ClassNameType, ClassDef> = {
           },
         ],
       },
+      {
+        name: "circle of the moon",
+        description:
+          "Druids of the Circle of the Moon draw on lunar magic to transform themselves. Their order gathers under the moon to share news and perform rituals.",
+        traits: [
+          {
+            name: "circle forms",
+            description:
+              "You can transform into a beast with a CR as high as your Druid level divided by 3 (rounded down, minimum 1). While in beast form, your AC equals 13 plus your Wisdom modifier (unless your beast form's AC is higher), and you gain Temporary Hit Points equal to three times your Druid level.",
+            level: 3,
+          },
+          {
+            name: "circle spells",
+            description:
+              "You always have the following spells prepared: Cure Wounds, Moonbeam, Starry Wisp. You can cast these spells while in your Wild Shape form.",
+            level: 3,
+          },
+          {
+            name: "more circle spells",
+            description:
+              "You always have Conjure Animals prepared and can cast it while in Wild Shape form.",
+            level: 5,
+          },
+          {
+            name: "improved circle forms",
+            description:
+              "While in a Wild Shape form, your attacks can deal their normal damage or Radiant damage; choose each time you hit with one of those attacks. Additionally, you can add your Wisdom modifier to your Constitution saving throws while in Wild Shape form.",
+            level: 6,
+          },
+          {
+            name: "even more circle spells",
+            description:
+              "You always have Fount of Moonlight prepared and can cast it while in Wild Shape form.",
+            level: 7,
+          },
+          {
+            name: "final circle spells",
+            description:
+              "You always have Mass Cure Wounds prepared and can cast it while in Wild Shape form.",
+            level: 9,
+          },
+          {
+            name: "moonlight step",
+            description:
+              "As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see and have Advantage on the next attack roll you make before the end of your turn. You may use this feature a number of times equal to your Wisdom modifier (minimum 1), regaining uses on a Long Rest. You may also expend a level 2+ spell slot to regain one use of this feature, no action required.",
+            level: 10,
+          },
+          {
+            name: "lunar form",
+            description:
+              "Once per turn when you hit a creature with an attack while in a Wild Shape form, you can deal an extra 2d10 Radiant damage to the target.",
+            level: 14,
+          },
+          {
+            name: "shared moonlight",
+            description:
+              "When you use Moonlight Step, you can also teleport one willing creature. They must be within 10 feet of you, and they can be teleported to an unoccupied space you can see within 10 feet of your destination.",
+            level: 14,
+          },
+        ],
+      },
     ],
     subclassLevel: 2,
     spellcasting: { enabled: true, kind: "full", ability: "wisdom", changePrepared: "longrest" },

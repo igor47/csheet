@@ -2,7 +2,6 @@ import { HitPointsBar } from "./HitPointsBar"
 
 interface HitPointsRowProps {
   label: string
-  labelSize?: "normal" | "small"
   currentHP: number
   maxHP: number
   characterId: string
@@ -13,7 +12,6 @@ interface HitPointsRowProps {
 
 const HitPointsRow = ({
   label,
-  labelSize = "normal",
   currentHP,
   maxHP,
   characterId,
@@ -22,16 +20,15 @@ const HitPointsRow = ({
   isReadOnly = false,
 }: HitPointsRowProps) => {
   const showButtons = !isReadOnly && (showEditButton || showHistoryButton)
-  const labelStyle = labelSize === "small" ? { fontSize: "0.7rem" } : {}
 
   return (
     <div class="row g-2 h-auto mt-2">
       <div class={showButtons ? "col-10 col-md-2" : "col-12 col-md-2"}>
-        <div class="text-muted small text-center" style={labelStyle}>
+        <div class="text-muted small text-center">
           {label}
         </div>
       </div>
-      <div class={showButtons ? "col-10 col-md-8" : "col-12 col-md-10"}>
+      <div class={isReadOnly ? "col-12 col-md-10" : "col-10 col-md-8"}>
         <HitPointsBar currentHP={currentHP} maxHitPoints={maxHP} />
       </div>
       {showButtons && (
@@ -100,7 +97,7 @@ export const HitPointsSection = ({
     return (
       <>
         <HitPointsRow
-          label="Beast HP"
+          label={beastName ? `${beastName} HP` : "Beast HP"}
           currentHP={currentBeastHP}
           maxHP={maxBeastHP}
           characterId={characterId}
@@ -110,7 +107,6 @@ export const HitPointsSection = ({
         />
         <HitPointsRow
           label="Your HP"
-          labelSize="small"
           currentHP={currentHP}
           maxHP={maxHP}
           characterId={characterId}

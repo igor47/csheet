@@ -460,7 +460,11 @@ export async function computeCharacter(
     }
 
     wildShape = {
-      limits: getWildShapeCRLimit(druidClass.level),
+      limits: getWildShapeCRLimit({
+        druidLevel: druidClass.level,
+        subclass: druidClass.subclass,
+        ruleset: character.ruleset,
+      }),
       maxUses,
       usesAvailable: Math.max(0, maxUses - unrecoveredCount),
       unrecoveredCount,

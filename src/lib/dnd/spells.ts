@@ -7405,6 +7405,35 @@ export const spells: Spell[] = [
     source: "SRD",
   },
   {
+    id: "srd_whip_of_thorns",
+    name: "Whip of Thorns",
+    level: 0,
+    school: "transmutation",
+    classes: ["druid"],
+    briefDescription:
+      "Strike a creature with a thorny vine whip, dealing piercing damage and pulling it toward you",
+    description:
+      "You conjure a long, flexible vine bristling with sharp thorns and lash it at a creature within range. Make a melee spell attack. On a hit, the target takes 1d6 Piercing damage, and if the creature is Large or smaller, you pull it up to 10 feet closer to you.",
+    atHigherLevelsText:
+      "The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6).",
+    castingTime: { type: "action" },
+    range: { type: "distance", feet: 30 },
+    components: {
+      verbal: true,
+      somatic: true,
+      material: { description: "stem of a thorny plant" },
+    },
+    duration: { type: "instantaneous" },
+    target: { type: "creature", count: 1 },
+    resolution: { kind: "attack", attackType: "meleeSpell" },
+    damage: [{ type: "piercing", dice: [6] }],
+    damageScaling: {
+      mode: "characterLevel",
+      progression: { "1": [6], "5": [6, 6], "11": [6, 6, 6], "17": [6, 6, 6, 6] },
+    },
+    source: "SRD",
+  },
+  {
     id: "srd_wish",
     name: "Wish",
     level: 9,

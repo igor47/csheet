@@ -319,6 +319,23 @@ describe("prepareSpell", () => {
       }
     })
 
+    test("fails if spell does not belong to the class spell list", async () => {
+      const char = await computeCharacter(testCtx.db, character.id)
+      if (!char) throw new Error("Character not found")
+
+      // Cure Wounds is a cleric spell, not a wizard spell
+      const result = await prepareSpell(testCtx.db, char, {
+        class: "wizard",
+        spell_type: "spell",
+        spell_id: "srd_cure_wounds",
+      })
+
+      expect(result.complete).toBe(false)
+      if (!result.complete) {
+        expect(result.errors.spell_id).toContain("Cannot prepare")
+      }
+    })
+
     test("fails if spell is already prepared", async () => {
       const char = await computeCharacter(testCtx.db, character.id)
       if (!char) throw new Error("Character not found")
@@ -351,6 +368,61 @@ describe("prepareSpell", () => {
       expect(result.complete).toBe(false)
       if (!result.complete) {
         expect(result.errors.spell_id).toContain("already prepared")
+      }
+    })
+  })
+
+  describe("arcane trickster", () => {
+    let user: User
+    let character: Character
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      character = await characterFactory.create(
+        { user_id: user.id, class: "rogue", level: 3, subclass: "arcane trickster" },
+        testCtx.db
+      )
+    })
+
+    test("can prepare a wizard cantrip", async () => {
+      const char = await computeCharacter(testCtx.db, character.id)
+      if (!char) throw new Error("Character not found")
+
+      const result = await prepareSpell(testCtx.db, char, {
+        class: "rogue",
+        spell_type: "cantrip",
+        spell_id: "srd_fire_bolt",
+      })
+
+      expect(result.complete).toBe(true)
+    })
+
+    test("can prepare a wizard leveled spell", async () => {
+      const char = await computeCharacter(testCtx.db, character.id)
+      if (!char) throw new Error("Character not found")
+
+      const result = await prepareSpell(testCtx.db, char, {
+        class: "rogue",
+        spell_type: "spell",
+        spell_id: "srd_magic_missile",
+      })
+
+      expect(result.complete).toBe(true)
+    })
+
+    test("cannot prepare a non-wizard spell", async () => {
+      const char = await computeCharacter(testCtx.db, character.id)
+      if (!char) throw new Error("Character not found")
+
+      const result = await prepareSpell(testCtx.db, char, {
+        class: "rogue",
+        spell_type: "spell",
+        spell_id: "srd_cure_wounds",
+      })
+
+      expect(result.complete).toBe(false)
+      if (!result.complete) {
+        expect(result.errors.spell_id).toContain("Cannot prepare")
       }
     })
   })

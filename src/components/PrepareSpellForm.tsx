@@ -74,7 +74,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
     if (isCantrip) {
       // Wizards can prepare ANY wizard cantrip (not limited to spellbook)
       availableSpells = spells
-        .filter((s) => s.classes.includes("wizard"))
+        .filter((s) => s.classes.includes(selectedSI.spellList))
         .filter((s) => s.level === 0)
         .filter((s) => !alreadyPreppedIds.includes(s.id))
         .sort((a, b) => {
@@ -96,7 +96,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
   } else {
     // Other classes: can prepare any spell from class list
     availableSpells = spells
-      .filter((s) => s.classes.includes(selectedClassName))
+      .filter((s) => s.classes.includes(selectedSI.spellList))
       .filter((s) =>
         isCantrip ? s.level === 0 : s.level > 0 && s.level <= selectedSI.maxSpellLevel
       )

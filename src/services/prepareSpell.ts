@@ -83,7 +83,7 @@ export async function prepareSpell(
       errors.spell_id = `Spell with ID ${values.spell_id} not found`
     } else if (si) {
       // Check if spell belongs to class
-      if (!spell.classes.includes(si.class)) {
+      if (!spell.classes.includes(si.spellList)) {
         errors.spell_id = `Cannot prepare ${spell.name} as a ${si.class}`
       }
       // Check spell level matches type

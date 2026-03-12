@@ -1856,6 +1856,7 @@ const Classes: Record<ClassNameType, ClassDef> = {
       subclasses: ["eldritch knight"],
       ability: "intelligence",
       changePrepared: "levelup",
+      spellList: "wizard",
     },
   },
   monk: {
@@ -2481,6 +2482,7 @@ const Classes: Record<ClassNameType, ClassDef> = {
       subclasses: ["arcane trickster"],
       ability: "intelligence",
       changePrepared: "levelup",
+      spellList: "wizard",
     },
   },
   sorcerer: {
@@ -3153,13 +3155,8 @@ const srd52: Ruleset = {
     }
 
     const progression = SpellProgressionTables[className]
-    if (!progression || !progression[level]) {
-      return 0
-    }
-
-    const entry = progression[level]
-    if (entry.prepared) {
-      return entry.prepared
+    if (progression?.[level]?.prepared) {
+      return progression[level].prepared
     }
 
     if (["fighter", "rogue"].includes(className)) {

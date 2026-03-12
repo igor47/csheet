@@ -21,6 +21,7 @@ export interface PreparedSpellSlot {
 
 export interface SpellInfoForClass {
   class: ClassNameType
+  spellList: ClassNameType // Which class's spell list to use (e.g., "wizard" for arcane trickster)
   level: number
 
   // Spellcasting stats
@@ -69,6 +70,7 @@ async function computeSpellsForClass(
   const ability = classDef.spellcasting.ability
   const abilityModifier = abilityScores[ability].modifier
   const changePrepared = classDef.spellcasting.changePrepared
+  const spellList = classDef.spellcasting.spellList || charClass.class
 
   // Calculate spell attack bonus and save DC
   const spellAttackBonus = proficiencyBonus + abilityModifier
@@ -111,6 +113,7 @@ async function computeSpellsForClass(
 
   return {
     class: charClass.class,
+    spellList,
     level: charClass.level,
     ability,
     spellAttackBonus,

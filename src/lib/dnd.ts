@@ -380,6 +380,7 @@ export type SpellcastingInfo = { notes?: string } & (
       kind: CasterKindType
       ability: AbilityType
       changePrepared: SpellChangeEventType
+      spellList?: ClassNameType // Override which class's spell list to use (e.g., "wizard" for arcane trickster)
       subclasses?: string[] // Subclasses that grant/modify spellcasting
     }
 )

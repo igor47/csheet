@@ -19,6 +19,7 @@ interface CharacterFactoryParams {
   ruleset?: RulesetId
   class?: ClassNameType
   level?: number
+  subclass?: string
   // Ability scores (default 10)
   strength?: number
   dexterity?: number
@@ -133,7 +134,7 @@ export const characterFactory = {
           character_id: character.id,
           class: params.class,
           level: i,
-          subclass: null,
+          subclass: params.subclass ?? null,
           hit_die_roll: 6, // Default to 6 for testing
           note: null,
         })

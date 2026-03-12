@@ -264,7 +264,8 @@ export async function executeAddLevel(
  */
 export function formatAddLevelApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { class: className, subclass, hit_die_roll, note } = parameters
 

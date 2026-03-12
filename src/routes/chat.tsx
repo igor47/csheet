@@ -99,10 +99,13 @@ chatRoutes.get("/characters/:id/chat/:chatId/stream", async (c) => {
     })
 
     // After streaming completes, reload chat and return complete ChatBox
+    const updatedChar = (await computeCharacter(db, characterId))!
     const updatedChat = await computeChat(db, chatId)
 
     await stream.writeSSE({
-      data: (<ChatBox character={char} computedChat={updatedChat} swapOob={true} />).toString(),
+      data: (
+        <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />
+      ).toString(),
     })
   })
 })

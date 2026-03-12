@@ -241,7 +241,8 @@ export async function executeRestoreHitDie(
  */
 export function formatUseHitDieApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { die_value, hp_rolled, note } = parameters
 
@@ -259,7 +260,8 @@ export function formatUseHitDieApproval(
  */
 export function formatRestoreHitDieApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { die_value, note } = parameters
 

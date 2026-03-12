@@ -40,7 +40,7 @@ export interface ChatBoxProps {
 }
 
 export interface ToolCallApprovalProps {
-  characterId: string
+  character: ComputedCharacter
   chatId: string
   toolCall: UnresolvedToolCall
 }
@@ -118,7 +118,7 @@ export const ChatBox = ({ character, computedChat, swapOob = false }: ChatBoxPro
                     .filter((tc) => tc.messageId === msg.id)
                     .map((tc) => (
                       <ToolCallApproval
-                        characterId={character.id}
+                        character={character}
                         chatId={computedChat.chatId}
                         toolCall={tc}
                       />
@@ -307,16 +307,14 @@ export const StreamErrorRetry = ({
  * Inline tool call approval component
  * Shows a pending tool call with approve/reject buttons
  */
-export const ToolCallApproval = ({ characterId, chatId, toolCall }: ToolCallApprovalProps) => {
+export const ToolCallApproval = ({ character, chatId, toolCall }: ToolCallApprovalProps) => {
   // Get formatter for this tool and generate user-friendly message
   const formatter = TOOL_FORMATTERS[toolCall.toolName]
-
-  // If no formatter exists, this tool doesn't require approval (shouldn't show UI)
   if (!formatter) {
     return null
   }
 
-  const approvalMessage = formatter(toolCall.parameters)
+  const approvalMessage = formatter(toolCall.parameters, character)
 
   return (
     <div class="row g-0 mb-2 chat-message" id={`tool-${toolCall.messageId}-${toolCall.toolCallId}`}>
@@ -333,7 +331,7 @@ export const ToolCallApproval = ({ characterId, chatId, toolCall }: ToolCallAppr
             <button
               type="button"
               class="btn btn-success btn-sm"
-              hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/approve`}
+              hx-post={`/characters/${character.id}/chat/${chatId}/tool/${toolCall.toolCallId}/approve`}
               hx-target="#chat-box-card"
               hx-swap="outerHTML"
             >
@@ -343,7 +341,7 @@ export const ToolCallApproval = ({ characterId, chatId, toolCall }: ToolCallAppr
             <button
               type="button"
               class="btn btn-danger btn-sm"
-              hx-post={`/characters/${characterId}/chat/${chatId}/tool/${toolCall.toolCallId}/reject`}
+              hx-post={`/characters/${character.id}/chat/${chatId}/tool/${toolCall.toolCallId}/reject`}
               hx-target="#chat-box-card"
               hx-swap="outerHTML"
             >

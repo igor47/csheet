@@ -185,7 +185,8 @@ export async function executeUpdateCoins(
  */
 export function formatUpdateCoinsApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { pp = 0, gp = 0, ep = 0, sp = 0, cp = 0, note } = parameters
 

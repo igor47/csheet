@@ -130,18 +130,13 @@ export async function executeSeeBeast(
 export function formatSeeBeastApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
-  char?: ComputedCharacter
+  char: ComputedCharacter
 ): string {
   const { beast_id, note } = parameters
 
-  // Try to get beast name from ID
-  let beastName = beast_id
-  if (char) {
-    const beast = getBeastById(char.ruleset, beast_id)
-    if (beast) {
-      beastName = beast.name
-    }
-  }
+  // Get beast name from ID
+  const beast = getBeastById(char.ruleset, beast_id)
+  const beastName = beast?.name ?? beast_id
 
   let message = `Record ${beastName} as a seen beast`
 

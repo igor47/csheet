@@ -467,7 +467,8 @@ export async function executeCreateItem(
  */
 export function formatCreateItemApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { name, category, description } = parameters
   let message = `Create ${category}: ${name}`

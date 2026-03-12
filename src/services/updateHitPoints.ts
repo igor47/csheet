@@ -229,7 +229,8 @@ export async function executeUpdateHitPoints(
  */
 export function formatUpdateHitPointsApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { action, amount, note } = parameters
 

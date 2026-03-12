@@ -127,8 +127,26 @@ export async function executeDeleteItemEffect(
  */
 export function formatDeleteItemEffectApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  char: ComputedCharacter
 ): string {
-  const { effect_id } = parameters
+  const { item_id, effect_id } = parameters
+
+  // Look up item and effect from character's inventory
+  const item = char.equippedItems.find((i) => i.id === item_id)
+  const effect = item?.effects.find((e) => e.id === effect_id)
+
+  if (item && effect) {
+    // Format effect description (e.g., "+2 to AC" or "advantage on Stealth")
+    const effectDesc = `${effect.op === "add" ? "+" : ""}${effect.value} to ${effect.target}`
+    return `Delete effect (${effectDesc}) from ${item.name}`
+  }
+
+  // Fallback to item name only if we found the item
+  if (item) {
+    return `Delete effect from ${item.name}`
+  }
+
+  // Last resort fallback
   return `Delete item effect ${effect_id}`
 }

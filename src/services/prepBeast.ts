@@ -181,24 +181,18 @@ export async function executePrepBeast(
 export function formatPrepBeastApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
   parameters: Record<string, any>,
-  char?: ComputedCharacter
+  char: ComputedCharacter
 ): string {
   const { beast_id, replace_beast_id, note } = parameters
 
-  // Try to get beast names from IDs
-  let beastName = beast_id
+  // Get beast names from IDs
+  const beast = getBeastById(char.ruleset, beast_id)
+  const beastName = beast?.name ?? beast_id
+
   let replaceName = replace_beast_id
-  if (char) {
-    const beast = getBeastById(char.ruleset, beast_id)
-    if (beast) {
-      beastName = beast.name
-    }
-    if (replace_beast_id) {
-      const replaceBeast = getBeastById(char.ruleset, replace_beast_id)
-      if (replaceBeast) {
-        replaceName = replaceBeast.name
-      }
-    }
+  if (replace_beast_id) {
+    const replaceBeast = getBeastById(char.ruleset, replace_beast_id)
+    replaceName = replaceBeast?.name ?? replace_beast_id
   }
 
   let message = `Learn ${beastName} as a known form`

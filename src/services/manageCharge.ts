@@ -148,12 +148,17 @@ export async function executeManageCharge(
  */
 export function formatManageChargeApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  char: ComputedCharacter
 ): string {
   const { item_id, action, amount = 1, note } = parameters
 
+  // Look up item name from character's inventory
+  const item = char.equippedItems.find((i) => i.id === item_id)
+  const itemName = item?.name ?? item_id
+
   const verb = action === "use" ? "Use" : "Restore"
-  let message = `${verb} ${amount} charge${amount > 1 ? "s" : ""} ${action === "use" ? "from" : "to"} ${item_id}`
+  let message = `${verb} ${amount} charge${amount > 1 ? "s" : ""} ${action === "use" ? "from" : "to"} ${itemName}`
 
   if (note) {
     message += ` with note '${note}'`

@@ -352,7 +352,8 @@ export async function executeCastSpell(
  */
 export function formatCastSpellApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { spell_id, as_ritual, slot_level, note } = parameters
 

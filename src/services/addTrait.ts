@@ -130,7 +130,8 @@ export async function executeAddTrait(
  */
 export function formatAddTraitApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { name, source, source_detail, note } = parameters
 

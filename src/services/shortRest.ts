@@ -313,7 +313,8 @@ export async function executeShortRest(
  */
 export function formatShortRestApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { note, arcane_recovery } = parameters
 

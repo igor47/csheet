@@ -225,7 +225,8 @@ export async function executePrepareSpell(
  */
 export function formatPrepareSpellApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { class: className, spell_id, spell_type, current_spell_id, note } = parameters
 

@@ -1,3 +1,4 @@
+import { getBeastById } from "@src/lib/dnd/beasts"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import { tool } from "ai"
@@ -64,37 +65,28 @@ export async function executeAddBeast(
 }
 
 /**
- * Extract a readable name from a beast ID
- * e.g., "srd52_brown_bear" -> "Brown Bear"
- */
-function beastNameFromId(beastId: string): string {
-  // Remove srd51_ or srd52_ prefix
-  const withoutPrefix = beastId.replace(/^srd5[12]_/, "")
-  // Convert underscores to spaces and capitalize each word
-  return withoutPrefix
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
-
-/**
  * Format approval message for add_beast tool calls
  */
 export function formatAddBeastApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  char: ComputedCharacter
 ): string {
   const { beast_id, replace_beast_id } = parameters
-  const beastName = beastNameFromId(beast_id)
+
+  // Look up beast name from ruleset
+  const beast = getBeastById(char.ruleset, beast_id)
+  const beastName = beast?.name ?? beast_id
 
   // SRD 5.1: "seen beasts" (unlimited), SRD 5.2: "known forms" (limited slots)
-  const isSrd51 = beast_id.startsWith("srd51_")
+  const isSrd51 = char.ruleset === "srd51"
   let message = isSrd51
     ? `Record ${beastName} as a seen beast`
     : `Learn ${beastName} as a known form`
 
   if (replace_beast_id) {
-    const replaceName = beastNameFromId(replace_beast_id)
+    const replaceBeast = getBeastById(char.ruleset, replace_beast_id)
+    const replaceName = replaceBeast?.name ?? replace_beast_id
     message += `, replacing ${replaceName}`
   }
 

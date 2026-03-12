@@ -186,7 +186,8 @@ export async function executeUpdateSpellSlots(
  */
 export function formatUpdateSpellSlotsApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { action, slot_level, note } = parameters
 

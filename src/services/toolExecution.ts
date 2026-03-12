@@ -44,24 +44,24 @@ async function updateToolResult(
 export async function executeTool(
   db: SQL,
   char: ComputedCharacter,
-  unresolvedTool: UnresolvedToolCall,
+  toolCall: UnresolvedToolCall,
   isCheck?: boolean
 ): Promise<ToolExecutorResult> {
-  const executor = TOOL_EXECUTORS[unresolvedTool.toolName]
+  const executor = TOOL_EXECUTORS[toolCall.toolName]
 
   if (!executor) {
     const toolResult: ToolExecutorResult = {
       status: "failed",
-      error: `No executor defined for tool: ${unresolvedTool.toolName}`,
+      error: `No executor defined for tool: ${toolCall.toolName}`,
     }
 
-    await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+    await updateToolResult(db, toolCall.messageId, toolCall.toolCallId, toolResult)
     return toolResult
   }
 
   try {
     // Execute the tool (with optional validation mode)
-    const result = await executor(db, char, unresolvedTool.parameters, isCheck)
+    const result = await executor(db, char, toolCall.parameters, isCheck)
 
     const errorFields = result.complete
       ? []
@@ -80,7 +80,7 @@ export async function executeTool(
           status: "failed",
           error: `Tool validation failed with ${errorFields.length} errors: ${errorFields.join(", ")}`,
         }
-        await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+        await updateToolResult(db, toolCall.messageId, toolCall.toolCallId, toolResult)
         return toolResult
 
         // Validation check passed, do not store result yet
@@ -103,7 +103,7 @@ export async function executeTool(
         }
       }
 
-      await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+      await updateToolResult(db, toolCall.messageId, toolCall.toolCallId, toolResult)
       return toolResult
     }
 
@@ -116,7 +116,7 @@ export async function executeTool(
     }
 
     // Store the error result
-    await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, toolResult)
+    await updateToolResult(db, toolCall.messageId, toolCall.toolCallId, toolResult)
     return toolResult
   }
 }
@@ -127,12 +127,12 @@ export async function executeTool(
  */
 export async function rejectTool(
   db: SQL,
-  unresolvedTool: UnresolvedToolCall
+  toolCall: UnresolvedToolCall
 ): Promise<ToolExecutorResult> {
   // Mark as rejected
   const result: ToolExecutorResult = { status: "rejected" }
 
-  await updateToolResult(db, unresolvedTool.messageId, unresolvedTool.toolCallId, result)
+  await updateToolResult(db, toolCall.messageId, toolCall.toolCallId, result)
 
   return result
 }

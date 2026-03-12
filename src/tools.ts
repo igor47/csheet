@@ -170,7 +170,8 @@ export type ToolExecutor = (
  */
 export type ToolFormatter = (
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  character: ComputedCharacter
 ) => string
 
 /**

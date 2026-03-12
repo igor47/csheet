@@ -186,7 +186,8 @@ export async function executeLongRest(
  */
 export function formatLongRestApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  _char: ComputedCharacter
 ): string {
   const { note } = parameters
 

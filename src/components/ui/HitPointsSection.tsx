@@ -24,9 +24,7 @@ const HitPointsRow = ({
   return (
     <div class="row g-2 h-auto mt-2">
       <div class={showButtons ? "col-10 col-md-2" : "col-12 col-md-2"}>
-        <div class="text-muted small text-center">
-          {label}
-        </div>
+        <div class="text-muted small text-center">{label}</div>
       </div>
       <div class={isReadOnly ? "col-12 col-md-10" : "col-10 col-md-8"}>
         <HitPointsBar currentHP={currentHP} maxHitPoints={maxHP} />

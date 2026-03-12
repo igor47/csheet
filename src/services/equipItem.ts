@@ -123,16 +123,21 @@ export async function executeEquipItem(
  */
 export function formatEquipItemApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  char: ComputedCharacter
 ): string {
   const { item_id, worn, wielded, note } = parameters
+
+  // Look up item name from character's inventory
+  const item = char.equippedItems.find((i) => i.id === item_id)
+  const itemName = item?.name ?? item_id
 
   const states: string[] = []
   if (worn) states.push("worn")
   if (wielded) states.push("wielded")
 
   const action =
-    states.length > 0 ? `Equip ${item_id} (${states.join(", ")})` : `Unequip ${item_id}`
+    states.length > 0 ? `Equip ${itemName} (${states.join(", ")})` : `Unequip ${itemName}`
 
   let message = action
 

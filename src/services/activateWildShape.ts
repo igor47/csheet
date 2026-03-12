@@ -188,24 +188,15 @@ export async function executeActivateWildShape(
 }
 
 /**
- * Extract a readable name from a beast ID
- * e.g., "srd52_brown_bear" -> "Brown Bear"
- */
-function beastNameFromId(beastId: string): string {
-  const withoutPrefix = beastId.replace(/^srd5[12]_/, "")
-  return withoutPrefix
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
-
-/**
  * Format approval message for activate_wild_shape tool calls
  */
 export function formatActivateWildShapeApproval(
   // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>
+  parameters: Record<string, any>,
+  char: ComputedCharacter
 ): string {
   const { beast_id } = parameters
-  return `Transform into ${beastNameFromId(beast_id)}`
+  const beast = getBeastById(char.ruleset, beast_id)
+  const beastName = beast?.name ?? beast_id
+  return `Transform into ${beastName}`
 }

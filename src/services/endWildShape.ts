@@ -153,6 +153,9 @@ export async function executeEndWildShape(
 /**
  * Format approval message for end_wild_shape tool calls
  */
-export function formatEndWildShapeApproval(_parameters: Record<string, unknown>): string {
+export function formatEndWildShapeApproval(
+  _parameters: Record<string, unknown>,
+  _char: ComputedCharacter
+): string {
   return "End Wild Shape transformation"
 }

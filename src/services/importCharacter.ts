@@ -296,6 +296,20 @@ export async function importCharacter(
     }
   }
 
+  // Validate max_hp is achievable given CON modifier and total levels
+  // Each level contributes at least 1 from dice, so min HP = totalLevels + conModifier * totalLevels
+  if (totalLevels > 0 && data.max_hp && data.ability_constitution) {
+    const conScore = Number.parseInt(data.ability_constitution, 10)
+    const maxHpVal = Number.parseInt(data.max_hp, 10)
+    if (!Number.isNaN(conScore) && !Number.isNaN(maxHpVal)) {
+      const conMod = Math.floor((conScore - 10) / 2)
+      const minPossibleHp = totalLevels + conMod * totalLevels // 1 per level from dice + CON
+      if (maxHpVal < minPossibleHp) {
+        errors.max_hp = `Max HP must be at least ${minPossibleHp} (1 per level from hit dice + CON modifier)`
+      }
+    }
+  }
+
   // If there are validation errors, return them
   if (Object.keys(errors).length > 0) {
     return { complete: false, values, errors }
@@ -413,10 +427,14 @@ export async function importCharacter(
     const sortedClasses = [...selectedClasses].sort((a, b) => b.level - a.level)
 
     // Calculate HP distribution across levels
+    // maxHitPoints = sum(hit_die_rolls) + (conModifier * totalLevel)
+    // So: sum(hit_die_rolls) = maxHp - (conModifier * totalLevel)
     const totalCharacterLevel = selectedClasses.reduce((sum, cls) => sum + cls.level, 0)
+    const conModifier = Math.floor((validated.ability_constitution - 10) / 2)
     const maxHp = validated.max_hp
-    const hpPerLevel = Math.floor(maxHp / totalCharacterLevel)
-    const hpRemainder = maxHp % totalCharacterLevel
+    const hpFromDice = maxHp - conModifier * totalCharacterLevel
+    const hpPerLevel = Math.floor(hpFromDice / totalCharacterLevel)
+    const hpRemainder = hpFromDice % totalCharacterLevel
 
     // Build a flat list of levels to add in order with subclass info
     const levelsToAdd: Array<{ class: ClassNameType; classLevel: number; subclass?: string }> = []

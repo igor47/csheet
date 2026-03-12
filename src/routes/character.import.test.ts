@@ -4,6 +4,7 @@ import { findByCharacterId as findLevels } from "@src/db/char_levels"
 import { findByCharacterId as findSkills } from "@src/db/char_skills"
 import { findByCharacterId as findTraits } from "@src/db/char_traits"
 import type { User } from "@src/db/users"
+import { computeCharacter } from "@src/services/computeCharacter"
 import { useTestApp } from "@src/test/app"
 import { userFactory } from "@src/test/factories/user"
 import { expectElement, makeRequest, parseHtml } from "@src/test/http"
@@ -222,9 +223,10 @@ describe("POST /characters/import", () => {
         expect(levels.length).toBe(5)
         expect(levels.every((l) => l.class === "fighter")).toBe(true)
 
-        // Verify total HP from levels equals max HP
-        const totalHp = levels.reduce((sum, l) => sum + l.hit_die_roll, 0)
-        expect(totalHp).toBe(42)
+        // Verify computed maxHitPoints equals input max_hp
+        // (sum of hit_die_rolls = max_hp - CON_modifier * level = 42 - 2*5 = 32)
+        const computed = await computeCharacter(testCtx.db, characterId)
+        expect(computed!.maxHitPoints).toBe(42)
 
         // Verify traits exist (species, background, class)
         const traits = await findTraits(testCtx.db, characterId)
@@ -284,9 +286,10 @@ describe("POST /characters/import", () => {
         const rogueLevels = levels.filter((l) => l.class === "rogue")
         expect(rogueLevels.length).toBe(2)
 
-        // Verify HP totals correctly
-        const totalHp = levels.reduce((sum, l) => sum + l.hit_die_roll, 0)
-        expect(totalHp).toBe(35)
+        // Verify computed maxHitPoints equals input max_hp
+        // (CON 14 = +2 modifier, at level 5 that's 10 HP from CON)
+        const computed = await computeCharacter(testCtx.db, characterId)
+        expect(computed!.maxHitPoints).toBe(35)
 
         // Verify traits from both classes exist
         const traits = await findTraits(testCtx.db, characterId)
@@ -348,6 +351,10 @@ describe("POST /characters/import", () => {
 
     describe("HP distribution", () => {
       test("distributes HP with remainder to last levels", async () => {
+        // CON 15 = +2 modifier, at level 7 adds 14 HP
+        // max_hp = 52, so hpFromDice = 52 - 14 = 38
+        // 38 / 7 = 5 with remainder 3
+        // Distribution: 4 levels get 5, 3 levels get 6
         const formData = new FormData()
         formData.append("name", "HP Test Character")
         formData.append("species", "human")
@@ -362,7 +369,7 @@ describe("POST /characters/import", () => {
         formData.append("ability_intelligence", "10")
         formData.append("ability_wisdom", "12")
         formData.append("ability_charisma", "8")
-        formData.append("max_hp", "52") // 52 / 7 = 7 remainder 3
+        formData.append("max_hp", "52")
         formData.append("athletics_proficiency", "proficient")
         formData.append("is_check", "false")
 
@@ -379,17 +386,161 @@ describe("POST /characters/import", () => {
         const levels = await findLevels(testCtx.db, characterId)
         expect(levels.length).toBe(7)
 
-        // Total should equal max HP
-        const totalHp = levels.reduce((sum, l) => sum + l.hit_die_roll, 0)
-        expect(totalHp).toBe(52)
+        // Verify computed maxHitPoints equals input max_hp
+        const computed = await computeCharacter(testCtx.db, characterId)
+        expect(computed!.maxHitPoints).toBe(52)
 
-        // First 4 levels should have 7 HP, last 3 should have 8 HP (7 + 1 from remainder)
+        // Distribution: hpFromDice=38, 38/7=5 r3, so 4 levels get 5, 3 levels get 6
         const hpValues = levels.map((l) => l.hit_die_roll)
-        const base7Count = hpValues.filter((hp) => hp === 7).length
-        const plus1Count = hpValues.filter((hp) => hp === 8).length
+        const base5Count = hpValues.filter((hp) => hp === 5).length
+        const plus1Count = hpValues.filter((hp) => hp === 6).length
 
-        expect(base7Count).toBe(4)
+        expect(base5Count).toBe(4)
         expect(plus1Count).toBe(3)
+      })
+
+      test("computed maxHitPoints equals input max_hp (accounts for CON modifier)", async () => {
+        // Bug reproduction: max_hp should be the FINAL computed HP, not just sum of hit die rolls
+        // CON 15 = +2 modifier, at level 5 that adds 10 HP to the computed max
+        // So if user enters max_hp = 42 with CON 15 at level 5,
+        // the sum of hit_die_rolls should be 42 - 10 = 32
+        const formData = new FormData()
+        formData.append("name", "HP Calculation Test")
+        formData.append("species", "human")
+        formData.append("background", "soldier")
+        formData.append("ruleset", "srd51")
+        formData.append("classes_fighter", "on")
+        formData.append("levels_fighter", "5")
+        formData.append("subclass_fighter", "champion")
+        formData.append("ability_strength", "16")
+        formData.append("ability_dexterity", "14")
+        formData.append("ability_constitution", "15") // +2 modifier
+        formData.append("ability_intelligence", "10")
+        formData.append("ability_wisdom", "12")
+        formData.append("ability_charisma", "8")
+        formData.append("max_hp", "42") // User expects this as their final HP
+        formData.append("athletics_proficiency", "proficient")
+        formData.append("is_check", "false")
+
+        const response = await makeRequest(testCtx.app, "/characters/import", {
+          method: "POST",
+          body: formData,
+          user,
+        })
+
+        expect(response.status).toBe(204)
+        const redirectUrl = response.headers.get("HX-Redirect")
+        const characterId = redirectUrl!.split("/").pop()!
+
+        // The computed character's maxHitPoints should equal the input max_hp
+        const computed = await computeCharacter(testCtx.db, characterId)
+        expect(computed).not.toBeNull()
+        expect(computed!.maxHitPoints).toBe(42)
+      })
+
+      test("computed maxHitPoints equals input max_hp with CON 10 (no modifier)", async () => {
+        // With CON 10 (modifier 0), the sum of hit_die_rolls should equal max_hp
+        const formData = new FormData()
+        formData.append("name", "HP No Modifier Test")
+        formData.append("species", "human")
+        formData.append("background", "soldier")
+        formData.append("ruleset", "srd51")
+        formData.append("classes_fighter", "on")
+        formData.append("levels_fighter", "5")
+        formData.append("subclass_fighter", "champion")
+        formData.append("ability_strength", "16")
+        formData.append("ability_dexterity", "14")
+        formData.append("ability_constitution", "10") // 0 modifier
+        formData.append("ability_intelligence", "10")
+        formData.append("ability_wisdom", "12")
+        formData.append("ability_charisma", "8")
+        formData.append("max_hp", "35")
+        formData.append("athletics_proficiency", "proficient")
+        formData.append("is_check", "false")
+
+        const response = await makeRequest(testCtx.app, "/characters/import", {
+          method: "POST",
+          body: formData,
+          user,
+        })
+
+        expect(response.status).toBe(204)
+        const redirectUrl = response.headers.get("HX-Redirect")
+        const characterId = redirectUrl!.split("/").pop()!
+
+        const computed = await computeCharacter(testCtx.db, characterId)
+        expect(computed).not.toBeNull()
+        expect(computed!.maxHitPoints).toBe(35)
+      })
+
+      test("computed maxHitPoints equals input max_hp with negative CON modifier", async () => {
+        // CON 8 = -1 modifier, at level 3 that subtracts 3 HP
+        // So max_hp of 15 means hit_die_rolls should sum to 15 + 3 = 18
+        const formData = new FormData()
+        formData.append("name", "HP Negative Modifier Test")
+        formData.append("species", "human")
+        formData.append("background", "sage")
+        formData.append("ruleset", "srd51")
+        formData.append("classes_wizard", "on")
+        formData.append("levels_wizard", "3")
+        formData.append("subclass_wizard", "school of evocation")
+        formData.append("ability_strength", "8")
+        formData.append("ability_dexterity", "14")
+        formData.append("ability_constitution", "8") // -1 modifier
+        formData.append("ability_intelligence", "16")
+        formData.append("ability_wisdom", "12")
+        formData.append("ability_charisma", "10")
+        formData.append("max_hp", "15")
+        formData.append("arcana_proficiency", "proficient")
+        formData.append("is_check", "false")
+
+        const response = await makeRequest(testCtx.app, "/characters/import", {
+          method: "POST",
+          body: formData,
+          user,
+        })
+
+        expect(response.status).toBe(204)
+        const redirectUrl = response.headers.get("HX-Redirect")
+        const characterId = redirectUrl!.split("/").pop()!
+
+        const computed = await computeCharacter(testCtx.db, characterId)
+        expect(computed).not.toBeNull()
+        expect(computed!.maxHitPoints).toBe(15)
+      })
+
+      test("returns error when max_hp is too low to represent with hit dice", async () => {
+        // CON 20 = +5 modifier, at level 5 that's 25 HP from CON alone
+        // Minimum 1 per level from dice = 5, so minimum max_hp = 30
+        // Setting max_hp to 20 is impossible
+        const formData = new FormData()
+        formData.append("name", "Impossible HP Character")
+        formData.append("species", "human")
+        formData.append("background", "soldier")
+        formData.append("ruleset", "srd51")
+        formData.append("classes_fighter", "on")
+        formData.append("levels_fighter", "5")
+        formData.append("subclass_fighter", "champion")
+        formData.append("ability_strength", "16")
+        formData.append("ability_dexterity", "14")
+        formData.append("ability_constitution", "20") // +5 modifier
+        formData.append("ability_intelligence", "10")
+        formData.append("ability_wisdom", "12")
+        formData.append("ability_charisma", "8")
+        formData.append("max_hp", "20") // Impossible: minimum is 5 + 25 = 30
+        formData.append("athletics_proficiency", "proficient")
+        formData.append("is_check", "false")
+
+        const response = await makeRequest(testCtx.app, "/characters/import", {
+          method: "POST",
+          body: formData,
+          user,
+        })
+
+        expect(response.status).toBe(200)
+        const document = await parseHtml(response)
+        const body = document.body.textContent || ""
+        expect(body).toContain("Max HP must be at least 30")
       })
     })
 

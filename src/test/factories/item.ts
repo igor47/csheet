@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker"
 import { create as createCharItem } from "@src/db/char_items"
 import type { Item } from "@src/db/items"
 import { create as createItem } from "@src/db/items"
-import type { ItemCategoryType } from "@src/lib/dnd"
+import type { ArmorTypeType, ItemCategoryType } from "@src/lib/dnd"
 import type { SQL } from "bun"
 import { Factory } from "fishery"
 
@@ -15,6 +15,13 @@ interface ItemFactoryParams {
   weapon_type: "melee" | "ranged" | "thrown" | null
   worn: boolean
   wielded: boolean
+  // Armor properties
+  armor_type: ArmorTypeType | null
+  armor_class: number | null
+  armor_class_dex: boolean
+  armor_class_dex_max: number | null
+  // Shield properties
+  armor_modifier: number | null
 }
 
 const factory = Factory.define<ItemFactoryParams>(({ params }) => ({
@@ -26,6 +33,13 @@ const factory = Factory.define<ItemFactoryParams>(({ params }) => ({
   weapon_type: params.weapon_type ?? null,
   worn: params.worn ?? false,
   wielded: params.wielded ?? false,
+  // Armor properties
+  armor_type: params.armor_type ?? null,
+  armor_class: params.armor_class ?? null,
+  armor_class_dex: params.armor_class_dex ?? false,
+  armor_class_dex_max: params.armor_class_dex_max ?? null,
+  // Shield properties
+  armor_modifier: params.armor_modifier ?? null,
 }))
 
 interface ItemWithCharId extends Item {
@@ -57,12 +71,14 @@ export const itemFactory = {
       description: built.description,
       category: built.category,
       created_by: built.user_id,
-      // Set default values for optional fields
-      armor_type: null,
-      armor_class: null,
-      armor_class_dex: false,
-      armor_class_dex_max: null,
-      armor_modifier: null,
+      // Armor properties
+      armor_type: built.armor_type,
+      armor_class: built.armor_class,
+      armor_class_dex: built.armor_class_dex,
+      armor_class_dex_max: built.armor_class_dex_max,
+      // Shield properties
+      armor_modifier: built.armor_modifier,
+      // Weapon properties (defaults)
       normal_range: null,
       long_range: null,
       thrown: false,

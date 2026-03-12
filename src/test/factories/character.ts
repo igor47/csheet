@@ -19,6 +19,13 @@ interface CharacterFactoryParams {
   ruleset?: RulesetId
   class?: ClassNameType
   level?: number
+  // Ability scores (default 10)
+  strength?: number
+  dexterity?: number
+  constitution?: number
+  intelligence?: number
+  wisdom?: number
+  charisma?: number
 }
 
 const species = [
@@ -100,12 +107,20 @@ export const characterFactory = {
 
     const character = await createCharacter(db, characterData)
 
-    // Create initial ability scores (default 10 for all)
+    // Create initial ability scores (default 10 for all, or use provided values)
+    const abilityScores: Record<string, number> = {
+      strength: params.strength ?? 10,
+      dexterity: params.dexterity ?? 10,
+      constitution: params.constitution ?? 10,
+      intelligence: params.intelligence ?? 10,
+      wisdom: params.wisdom ?? 10,
+      charisma: params.charisma ?? 10,
+    }
     for (const ability of Abilities) {
       await createAbilityDb(db, {
         character_id: character.id,
         ability,
-        score: 10,
+        score: abilityScores[ability] ?? 10,
         proficiency: false,
         note: "Initial",
       })

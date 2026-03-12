@@ -7,6 +7,7 @@ import { getBeasts } from "@src/lib/dnd/beasts"
 import { useTestApp } from "@src/test/app"
 import { charWildShapeUseFactory } from "@src/test/factories/char_wild_shape_use"
 import { characterFactory } from "@src/test/factories/character"
+import { itemFactory } from "@src/test/factories/item"
 import { userFactory } from "@src/test/factories/user"
 import { computeCharacter } from "./computeCharacter"
 
@@ -171,6 +172,259 @@ describe("computeCharacter", () => {
         expect(computed?.wildShape?.usesAvailable).toBe(0)
         expect(computed?.wildShape?.unrecoveredCount).toBe(2)
         expect(computed?.wildShape?.ongoingTransformation).toBeNull()
+      })
+    })
+  })
+
+  describe("armor class calculation", () => {
+    let user: User
+    let character: Character
+
+    beforeEach(async () => {
+      user = await userFactory.create({}, testCtx.db)
+      // Create a character with 14 DEX (+2 modifier)
+      character = await characterFactory.create(
+        {
+          user_id: user.id,
+          ruleset: "srd52",
+          species: "human",
+          class: "fighter",
+          level: 1,
+          dexterity: 14,
+        },
+        testCtx.db
+      )
+    })
+
+    describe("with no armor or shield", () => {
+      test("uses unarmored AC (10 + DEX modifier)", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 10 + 2 (DEX modifier for 14 DEX) = 12
+        expect(computed?.armorClass).toBe(12)
+      })
+    })
+
+    describe("with a wielded shield", () => {
+      beforeEach(async () => {
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Shield",
+            category: "shield",
+            armor_modifier: 2,
+            wielded: true,
+          },
+          testCtx.db
+        )
+      })
+
+      test("adds shield armor_modifier to AC", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 10 + 2 (DEX) + 2 (shield) = 14
+        expect(computed?.armorClass).toBe(14)
+      })
+    })
+
+    describe("with an unwielded shield", () => {
+      beforeEach(async () => {
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Shield",
+            category: "shield",
+            armor_modifier: 2,
+            wielded: false,
+          },
+          testCtx.db
+        )
+      })
+
+      test("does not add shield bonus to AC", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 10 + 2 (DEX) = 12, no shield bonus
+        expect(computed?.armorClass).toBe(12)
+      })
+    })
+
+    describe("with worn heavy armor (no DEX bonus)", () => {
+      beforeEach(async () => {
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Chain Mail",
+            category: "armor",
+            armor_type: "heavy",
+            armor_class: 16,
+            armor_class_dex: false,
+            worn: true,
+          },
+          testCtx.db
+        )
+      })
+
+      test("uses armor AC without DEX modifier", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        expect(computed?.armorClass).toBe(16)
+      })
+    })
+
+    describe("with worn medium armor (capped DEX bonus)", () => {
+      beforeEach(async () => {
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Breastplate",
+            category: "armor",
+            armor_type: "medium",
+            armor_class: 14,
+            armor_class_dex: true,
+            armor_class_dex_max: 2,
+            worn: true,
+          },
+          testCtx.db
+        )
+      })
+
+      test("uses armor AC with capped DEX modifier", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 14 + 2 (DEX, capped at max 2) = 16
+        expect(computed?.armorClass).toBe(16)
+      })
+    })
+
+    describe("with worn medium armor and high DEX", () => {
+      beforeEach(async () => {
+        // Update character to have 18 DEX (+4 modifier)
+        character = await characterFactory.create(
+          {
+            user_id: user.id,
+            ruleset: "srd52",
+            species: "human",
+            class: "fighter",
+            level: 1,
+            dexterity: 18,
+          },
+          testCtx.db
+        )
+
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Breastplate",
+            category: "armor",
+            armor_type: "medium",
+            armor_class: 14,
+            armor_class_dex: true,
+            armor_class_dex_max: 2,
+            worn: true,
+          },
+          testCtx.db
+        )
+      })
+
+      test("caps DEX bonus at armor_class_dex_max", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 14 + 2 (DEX capped at 2, even though modifier is +4) = 16
+        expect(computed?.armorClass).toBe(16)
+      })
+    })
+
+    describe("with worn light armor (full DEX bonus)", () => {
+      beforeEach(async () => {
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Leather Armor",
+            category: "armor",
+            armor_type: "light",
+            armor_class: 11,
+            armor_class_dex: true,
+            armor_class_dex_max: null,
+            worn: true,
+          },
+          testCtx.db
+        )
+      })
+
+      test("uses armor AC with full DEX modifier", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 11 + 2 (full DEX) = 13
+        expect(computed?.armorClass).toBe(13)
+      })
+    })
+
+    describe("with armor and shield together", () => {
+      beforeEach(async () => {
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Chain Mail",
+            category: "armor",
+            armor_type: "heavy",
+            armor_class: 16,
+            armor_class_dex: false,
+            worn: true,
+          },
+          testCtx.db
+        )
+
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Shield",
+            category: "shield",
+            armor_modifier: 2,
+            wielded: true,
+          },
+          testCtx.db
+        )
+      })
+
+      test("combines armor AC and shield bonus", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 16 (armor) + 2 (shield) = 18
+        expect(computed?.armorClass).toBe(18)
+      })
+    })
+
+    describe("with unworn armor", () => {
+      beforeEach(async () => {
+        await itemFactory.create(
+          {
+            character_id: character.id,
+            user_id: user.id,
+            name: "Chain Mail",
+            category: "armor",
+            armor_type: "heavy",
+            armor_class: 16,
+            armor_class_dex: false,
+            worn: false,
+          },
+          testCtx.db
+        )
+      })
+
+      test("does not use armor AC", async () => {
+        const computed = await computeCharacter(testCtx.db, character.id)
+
+        // 10 + 2 (DEX) = 12, armor not worn
+        expect(computed?.armorClass).toBe(12)
       })
     })
   })

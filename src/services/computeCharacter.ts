@@ -326,8 +326,33 @@ export async function computeCharacter(
   // Initiative is DEX modifier
   let initiative = abilityScores.dexterity.modifier
 
-  // Armor Class (unarmored: 10 + DEX modifier)
-  let armorClass = 10 + abilityScores.dexterity.modifier
+  // Armor Class calculation
+  let armorClass = 10 + abilityScores.dexterity.modifier // Base unarmored AC
+
+  // Check for worn armor
+  const wornArmor = equippedItems.find((item) => item.category === "armor" && item.worn)
+  if (wornArmor && wornArmor.armor_class !== null) {
+    // Start with armor's base AC
+    armorClass = wornArmor.armor_class
+
+    // Add DEX modifier if armor allows it
+    if (wornArmor.armor_class_dex) {
+      const dexMod = abilityScores.dexterity.modifier
+      if (wornArmor.armor_class_dex_max !== null) {
+        // Cap DEX bonus at max
+        armorClass += Math.min(dexMod, wornArmor.armor_class_dex_max)
+      } else {
+        // Full DEX bonus
+        armorClass += dexMod
+      }
+    }
+  }
+
+  // Check for wielded shield
+  const wieldedShield = equippedItems.find((item) => item.category === "shield" && item.wielded)
+  if (wieldedShield && wieldedShield.armor_modifier !== null) {
+    armorClass += wieldedShield.armor_modifier
+  }
 
   // Passive Perception is 10 + Perception skill modifier
   let passivePerception = 10 + skills.perception.modifier

@@ -1,4 +1,4 @@
-\restrict hpfaaBpxCk48ol0Ewwn91XTR7bNrZaAaAGYGzLXuaUOweJsp6W1C2UuTcE0XM5v
+\restrict yROFF9unbUcmePYyrEFdXx2vtJPBhHqug45v8rjmoNfUdZEwfWZBM4UuZEfaxuQ
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.3
@@ -456,6 +456,7 @@ CREATE TABLE public.item_damage (
     type text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     versatile boolean DEFAULT false,
+    flat_bonus integer,
     CONSTRAINT item_damage_type_check CHECK ((type = ANY (ARRAY['slashing'::text, 'piercing'::text, 'bludgeoning'::text, 'fire'::text, 'cold'::text, 'lightning'::text, 'thunder'::text, 'acid'::text, 'radiant'::text, 'necrotic'::text, 'force'::text, 'poison'::text, 'psychic'::text])))
 );
 
@@ -1556,7 +1557,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict hpfaaBpxCk48ol0Ewwn91XTR7bNrZaAaAGYGzLXuaUOweJsp6W1C2UuTcE0XM5v
+\unrestrict yROFF9unbUcmePYyrEFdXx2vtJPBhHqug45v8rjmoNfUdZEwfWZBM4UuZEfaxuQ
 
 
 --
@@ -1611,4 +1612,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260310120000'),
     ('20260310130000'),
     ('20260311120000'),
-    ('20260312190134');
+    ('20260312190134'),
+    ('20260312200000');

@@ -106,6 +106,7 @@ export async function computeCharacterItems(
             'dice', dmgs.dice,
             'type', dmgs.type,
             'versatile', dmgs.versatile,
+            'flat_bonus', dmgs.flat_bonus,
             'created_at', dmgs.created_at
           )
         ) FILTER (WHERE dmgs.id IS NOT NULL),
@@ -180,7 +181,12 @@ export async function computeCharacterItems(
       // Convert dice array to string (e.g., [8] -> "1d8", [6, 6] -> "2d6")
       const diceCount = d.dice.length
       const diceSize = d.dice[0] // Assume all dice in array are same size
-      const diceString = `${diceCount}d${diceSize}`
+      let diceString = `${diceCount}d${diceSize}`
+
+      // Add flat bonus if present
+      if (d.flat_bonus) {
+        diceString += d.flat_bonus > 0 ? ` +${d.flat_bonus}` : ` ${d.flat_bonus}`
+      }
 
       // Add damage type
       let result = `${diceString} ${d.type}`

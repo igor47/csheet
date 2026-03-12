@@ -79,6 +79,7 @@ const DamageEntrySchema = z.object({
   ),
   type: DamageTypeSchema,
   versatile: Checkbox().optional().default(false),
+  flat_bonus: NumberField(z.number().int().nullable().default(null)),
 })
 
 // Weapon-specific fields
@@ -221,7 +222,12 @@ export async function createItem(
     }
   }
 
-  const damages: { dice: number[]; type: DamageType; versatile: boolean }[] = []
+  const damages: {
+    dice: number[]
+    type: DamageType
+    versatile: boolean
+    flat_bonus: number | null
+  }[] = []
 
   if (values.category === "weapon") {
     const weaponType = values.weapon_type
@@ -253,6 +259,7 @@ export async function createItem(
           dice: Array(entry.num_dice).fill(entry.die_value),
           type: entry.type,
           versatile: entry.versatile,
+          flat_bonus: entry.flat_bonus || null,
         })
       }
     }
@@ -319,6 +326,7 @@ export async function createItem(
       dice: dmg.dice,
       type: dmg.type,
       versatile: dmg.versatile,
+      flat_bonus: dmg.flat_bonus,
     })
   }
 

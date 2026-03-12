@@ -67,6 +67,7 @@ function buildFormValues(item: Item, damages: ItemDamage[]): Record<string, stri
           die_value: String(dieValue),
           type: damage.type,
           versatile: damage.versatile ? "true" : "false",
+          flat_bonus: damage.flat_bonus !== null ? String(damage.flat_bonus) : "",
         }
       }
       // Store as a nested object (will be read by our parsing logic)
@@ -99,6 +100,7 @@ export const EditItemForm = ({
     die_value: string
     type: string
     versatile: boolean
+    flat_bonus: string
   }> = []
   if (values.damage && typeof values.damage === "object") {
     for (const d of Object.values(values.damage) as Record<string, string>[]) {
@@ -107,6 +109,7 @@ export const EditItemForm = ({
         die_value: String(d.die_value || ""),
         type: String(d.type || ""),
         versatile: d.versatile === "true",
+        flat_bonus: String(d.flat_bonus || ""),
       })
     }
   }
@@ -123,6 +126,7 @@ export const EditItemForm = ({
         die_value: "",
         type: "",
         versatile: false,
+        flat_bonus: "",
       })
     }
   }
@@ -412,7 +416,7 @@ export const EditItemForm = ({
                 return (
                   <div class="mb-3">
                     <div class="row mb-1">
-                      <div class="col-3">
+                      <div class="col-2">
                         <input
                           type="number"
                           id={`edititem-damage-num-dice-${i}`}
@@ -420,7 +424,7 @@ export const EditItemForm = ({
                             "is-invalid": numDiceError,
                           })}
                           name={`damage.${i}.num_dice`}
-                          placeholder="# dice"
+                          placeholder="#"
                           min="1"
                           value={entry.num_dice}
                         />
@@ -428,10 +432,10 @@ export const EditItemForm = ({
                           <div class="invalid-feedback d-block small">{numDiceError}</div>
                         )}
                       </div>
-                      <div class="col-1 d-flex align-items-top justify-content-center">
+                      <div class="col-1 d-flex align-items-top justify-content-center px-0">
                         <span class="text-muted">d</span>
                       </div>
-                      <div class="col-3">
+                      <div class="col-2">
                         <Select
                           class="form-select-sm"
                           name={`damage.${i}.die_value`}
@@ -441,6 +445,16 @@ export const EditItemForm = ({
                           value={entry.die_value}
                           error={dieValueError}
                           hideErrorMsg={true}
+                        />
+                      </div>
+                      <div class="col-2">
+                        <input
+                          type="number"
+                          id={`edititem-damage-flat-bonus-${i}`}
+                          class="form-control form-control-sm"
+                          name={`damage.${i}.flat_bonus`}
+                          placeholder="+/-"
+                          value={entry.flat_bonus}
                         />
                       </div>
                       <div class="col-5">

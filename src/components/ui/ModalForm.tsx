@@ -14,7 +14,7 @@ export const ModalForm = ({
   id,
   endpoint,
   trigger = "change",
-  swap = "morph:innerHTML",
+  swap = "morph:innerHTML focus-scroll:false",
   children,
 }: ModalFormProps) => {
   return (
@@ -47,7 +47,7 @@ export const ModalFormSubmit = ({
   children,
   disabled,
   id,
-  swap = "morph:innerHTML",
+  swap = "morph:innerHTML focus-scroll:false",
 }: ModalFormSubmitProps) => {
   return (
     <button

@@ -30,15 +30,12 @@ export const ItemDetail = ({ item }: ItemDetailProps) => {
             <h6 class="text-muted">Weapon Properties</h6>
 
             {/* Damage */}
-            {item.damage && item.damage.length > 0 && (
+            {item.humanReadableDamage.length > 0 && (
               <div class="mb-2">
                 <strong>Damage:</strong>
                 <ul class="list-unstyled ms-3 mb-0">
-                  {item.damage.map((dmg) => (
-                    <li>
-                      {dmg.dice.length}d{dmg.dice[0]} {dmg.type}
-                      {dmg.versatile && <span class="badge bg-secondary ms-2">Versatile</span>}
-                    </li>
+                  {item.humanReadableDamage.map((dmgStr) => (
+                    <li>{dmgStr}</li>
                   ))}
                 </ul>
               </div>

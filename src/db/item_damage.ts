@@ -9,6 +9,7 @@ export const ItemDamageSchema = z.object({
   dice: z.array(z.number().int().positive()),
   type: DamageTypeSchema,
   versatile: z.boolean().default(false),
+  flat_bonus: z.number().int().nullable().optional(),
   created_at: z.date(),
 })
 
@@ -27,6 +28,7 @@ function parseItemDamage(row: any): ItemDamage {
     ...row,
     // Convert Int32Array to regular array
     dice: Array.isArray(row.dice) ? row.dice : Array.from(row.dice),
+    flat_bonus: row.flat_bonus ?? null,
     created_at: new Date(row.created_at),
   })
 }
@@ -38,13 +40,14 @@ export async function create(db: SQL, itemDamage: CreateItemDamage): Promise<Ite
   const diceArray = `{${itemDamage.dice.join(",")}}`
 
   const result = await db`
-    INSERT INTO item_damage (id, item_id, dice, type, versatile, created_at)
+    INSERT INTO item_damage (id, item_id, dice, type, versatile, flat_bonus, created_at)
     VALUES (
       ${id},
       ${itemDamage.item_id},
       ${diceArray}::integer[],
       ${itemDamage.type},
       ${itemDamage.versatile},
+      ${itemDamage.flat_bonus ?? null},
       CURRENT_TIMESTAMP
     )
     RETURNING *

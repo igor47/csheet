@@ -19,6 +19,8 @@ export interface AvatarDisplayProps {
   avatarIndex?: number
   mode: "clickable-gallery" | "clickable-lightbox" | "display-only"
   className?: string
+  /** When true, skips data-bs-toggle/target attributes (for use when modal is already open) */
+  modalAlreadyOpen?: boolean
 }
 
 /**
@@ -75,6 +77,7 @@ export const AvatarDisplay = ({
   avatarIndex,
   mode,
   className = "",
+  modalAlreadyOpen = false,
 }: AvatarDisplayProps) => {
   // For clickable-gallery mode, use primary avatar
   // For other modes, use specified index or primary
@@ -153,8 +156,12 @@ export const AvatarDisplay = ({
         hx-get={`/characters/${character.id}/avatars/lightbox?index=${avatarIndex ?? 0}`}
         hx-target="#detailModalContent"
         hx-swap="innerHTML"
-        data-bs-toggle="modal"
-        data-bs-target="#detailModal"
+        {...(modalAlreadyOpen
+          ? {}
+          : {
+              "data-bs-toggle": "modal",
+              "data-bs-target": "#detailModal",
+            })}
       >
         <div
           class="ratio ratio-1x1 position-relative overflow-hidden"

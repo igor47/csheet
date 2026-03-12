@@ -30,6 +30,7 @@ export const AvatarGallery = ({ character }: AvatarGalleryProps) => {
                       avatarIndex={index}
                       mode="clickable-lightbox"
                       className="rounded"
+                      modalAlreadyOpen
                     />
 
                     {/* Action buttons */}

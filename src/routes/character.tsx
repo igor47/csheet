@@ -427,7 +427,7 @@ characterRoutes.post("/characters/:id/edit/seenbeasts", async (c) => {
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeDetailModal")
-  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
+  return c.html(<WildShapePanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.post("/characters/:id/edit/prepbeast", async (c) => {
@@ -446,7 +446,7 @@ characterRoutes.post("/characters/:id/edit/prepbeast", async (c) => {
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeDetailModal")
-  return c.html(<SpellsPanel character={updatedChar} swapOob={true} />)
+  return c.html(<WildShapePanel character={updatedChar} swapOob={true} />)
 })
 
 characterRoutes.get("/characters/:id/edit/trait", async (c) => {

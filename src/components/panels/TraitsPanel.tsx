@@ -9,31 +9,55 @@ export interface TraitsPanelProps {
   isReadOnly?: boolean
 }
 
-interface TraitBadgesProps {
-  trait: CharTrait
-}
-
-const TraitBadges = ({ trait }: TraitBadgesProps) => {
-  return (
-    <div class="d-flex gap-1">
-      {trait.source_detail && (
-        <span class="badge bg-secondary">{toTitleCase(trait.source_detail)}</span>
-      )}
-      {trait.level && <span class="badge bg-primary">Level {trait.level}</span>}
-    </div>
-  )
-}
-
 interface TraitItemProps {
   trait: CharTrait
+  characterId: string
+  isReadOnly: boolean
 }
 
-const TraitItem = ({ trait }: TraitItemProps) => {
+const TraitItem = ({ trait, characterId, isReadOnly }: TraitItemProps) => {
+  const isCustom = trait.source === "custom"
+  const showActions = isCustom && !isReadOnly
+
   return (
     <li class="list-group-item">
       <div class="d-flex justify-content-between align-items-start mb-1">
         <div class="fw-semibold text-capitalize">{trait.name}</div>
-        <TraitBadges trait={trait} />
+        <div class="d-flex gap-1 align-items-center">
+          {trait.source_detail && (
+            <span class="badge bg-secondary">{toTitleCase(trait.source_detail)}</span>
+          )}
+          {trait.level && <span class="badge bg-primary">Level {trait.level}</span>}
+          {showActions && (
+            <>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                hx-get={`/characters/${characterId}/traits/${trait.id}/edit`}
+                hx-target="#detailModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#detailModal"
+                title="Edit trait"
+                aria-label={`Edit ${trait.name}`}
+              >
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                hx-delete={`/characters/${characterId}/traits/${trait.id}`}
+                hx-target="#traits-panel"
+                hx-swap="outerHTML"
+                hx-confirm="Are you sure you want to delete this trait?"
+                title="Delete trait"
+                aria-label={`Delete ${trait.name}`}
+              >
+                <i class="bi bi-trash"></i>
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <p class="mb-0 text-muted small">{trait.description}</p>
       {trait.note && <p class="mb-0 text-muted fst-italic small mt-1">{trait.note}</p>}
@@ -44,9 +68,11 @@ const TraitItem = ({ trait }: TraitItemProps) => {
 interface TraitGroupProps {
   source: string
   traits: CharTrait[] | undefined
+  characterId: string
+  isReadOnly: boolean
 }
 
-const TraitGroup = ({ source, traits }: TraitGroupProps) => {
+const TraitGroup = ({ source, traits, characterId, isReadOnly }: TraitGroupProps) => {
   if (!traits || traits.length === 0) {
     return null
   }
@@ -56,7 +82,7 @@ const TraitGroup = ({ source, traits }: TraitGroupProps) => {
       <h6 class="text-muted small mb-2">{toTitleCase(source)} Traits</h6>
       <ul class="list-group list-group-flush">
         {traits.map((trait) => (
-          <TraitItem trait={trait} />
+          <TraitItem trait={trait} characterId={characterId} isReadOnly={isReadOnly} />
         ))}
       </ul>
     </div>
@@ -158,12 +184,42 @@ export const TraitsPanel = ({ character, swapOob, isReadOnly = false }: TraitsPa
         <p class="text-muted">No traits yet.</p>
       ) : (
         <>
-          <TraitGroup source="species" traits={traitsBySource.species} />
-          <TraitGroup source="lineage" traits={traitsBySource.lineage} />
-          <TraitGroup source="background" traits={traitsBySource.background} />
-          <TraitGroup source="class" traits={traitsBySource.class} />
-          <TraitGroup source="subclass" traits={traitsBySource.subclass} />
-          <TraitGroup source="custom" traits={traitsBySource.custom} />
+          <TraitGroup
+            source="species"
+            traits={traitsBySource.species}
+            characterId={character.id}
+            isReadOnly={isReadOnly}
+          />
+          <TraitGroup
+            source="lineage"
+            traits={traitsBySource.lineage}
+            characterId={character.id}
+            isReadOnly={isReadOnly}
+          />
+          <TraitGroup
+            source="background"
+            traits={traitsBySource.background}
+            characterId={character.id}
+            isReadOnly={isReadOnly}
+          />
+          <TraitGroup
+            source="class"
+            traits={traitsBySource.class}
+            characterId={character.id}
+            isReadOnly={isReadOnly}
+          />
+          <TraitGroup
+            source="subclass"
+            traits={traitsBySource.subclass}
+            characterId={character.id}
+            isReadOnly={isReadOnly}
+          />
+          <TraitGroup
+            source="custom"
+            traits={traitsBySource.custom}
+            characterId={character.id}
+            isReadOnly={isReadOnly}
+          />
         </>
       )}
     </div>

@@ -80,3 +80,58 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
     })
   )
 }
+
+export async function findById(db: SQL, id: string): Promise<CharTrait | null> {
+  const result = await db`
+    SELECT * FROM char_traits
+    WHERE id = ${id}
+  `
+
+  if (result.length === 0) {
+    return null
+  }
+
+  const row = result[0]
+  return CharTraitSchema.parse({
+    ...row,
+    level: row.level !== null ? Number(row.level) : null,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  })
+}
+
+export const UpdateCharTraitSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  note: z.string().nullable().optional(),
+})
+
+export type UpdateCharTrait = z.infer<typeof UpdateCharTraitSchema>
+
+export async function update(db: SQL, id: string, updates: UpdateCharTrait): Promise<CharTrait> {
+  const result = await db`
+    UPDATE char_traits
+    SET
+      name = COALESCE(${updates.name ?? null}, name),
+      description = COALESCE(${updates.description ?? null}, description),
+      note = ${updates.note !== undefined ? updates.note : null},
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+    RETURNING *
+  `
+
+  const row = result[0]
+  return CharTraitSchema.parse({
+    ...row,
+    level: row.level !== null ? Number(row.level) : null,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  })
+}
+
+export async function deleteById(db: SQL, id: string): Promise<void> {
+  await db`
+    DELETE FROM char_traits
+    WHERE id = ${id}
+  `
+}

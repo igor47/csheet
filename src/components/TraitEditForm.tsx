@@ -1,19 +1,30 @@
 import { ModalContent } from "@src/components/ui/DetailModal"
+import type { CharTrait } from "@src/db/char_traits"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
 export interface TraitEditFormProps {
   character: ComputedCharacter
+  trait?: CharTrait
   values?: Record<string, string>
   errors?: Record<string, string>
 }
 
-export const TraitEditForm = ({ character, values, errors }: TraitEditFormProps) => {
+export const TraitEditForm = ({ character, trait, values, errors }: TraitEditFormProps) => {
+  const isEditMode = !!trait
+  const title = isEditMode ? "Edit Custom Trait" : "Add Custom Trait"
+  const submitLabel = isEditMode ? "Save Changes" : "Add Trait"
+  const endpoint = isEditMode
+    ? `/characters/${character.id}/traits/${trait.id}/edit`
+    : `/characters/${character.id}/edit/trait`
+
   return (
-    <ModalContent title="Add Custom Trait">
-      <ModalForm id="trait-edit-form" endpoint={`/characters/${character.id}/edit/trait`}>
+    <ModalContent title={title}>
+      <ModalForm id="trait-edit-form" endpoint={endpoint}>
         <div class="modal-body">
+          {errors?._form && <div class="alert alert-danger">{errors._form}</div>}
+
           <div class="mb-3">
             <label for="name" class="form-label">
               Trait Name
@@ -70,9 +81,7 @@ export const TraitEditForm = ({ character, values, errors }: TraitEditFormProps)
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <ModalFormSubmit endpoint={`/characters/${character.id}/edit/trait`}>
-            Add Trait
-          </ModalFormSubmit>
+          <ModalFormSubmit endpoint={endpoint}>{submitLabel}</ModalFormSubmit>
         </div>
       </ModalForm>
     </ModalContent>

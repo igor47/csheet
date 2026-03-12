@@ -73,7 +73,11 @@ import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { findByCharacterId as findLearnedSpellChanges } from "@src/db/char_spells_learned"
 import { findByCharacterId as findPreparedSpellChanges } from "@src/db/char_spells_prepared"
-import { findByCharacterId as findTraits } from "@src/db/char_traits"
+import {
+  deleteById as deleteTraitById,
+  findById as findTraitById,
+  findByCharacterId as findTraits,
+} from "@src/db/char_traits"
 import { findByCharacterId as findWildShapeHistory } from "@src/db/char_wild_shape_uses"
 import * as CharacterAvatars from "@src/db/character_avatars"
 import { countArchivedByUserId } from "@src/db/characters"
@@ -120,6 +124,7 @@ import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateItem } from "@src/services/updateItem"
 import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
+import { updateTraitService } from "@src/services/updateTrait"
 import { Hono } from "hono"
 
 export const characterRoutes = new Hono()
@@ -480,6 +485,99 @@ characterRoutes.post("/characters/:id/edit/trait", async (c) => {
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeDetailModal")
   return c.html(<TraitsPanel character={updatedChar} swapOob={true} />)
+})
+
+// GET /characters/:id/traits/:traitId/edit - Show edit form for a custom trait
+characterRoutes.get("/characters/:id/traits/:traitId/edit", async (c) => {
+  const characterId = c.req.param("id") as string
+  const traitId = c.req.param("traitId") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  // Find the trait
+  const trait = await findTraitById(getDb(c), traitId)
+
+  if (!trait || trait.character_id !== characterId) {
+    return c.html(<TraitEditForm character={char} errors={{ _form: "Trait not found" }} />)
+  }
+
+  if (trait.source !== "custom") {
+    return c.html(
+      <TraitEditForm character={char} errors={{ _form: "Only custom traits can be edited" }} />
+    )
+  }
+
+  return c.html(
+    <TraitEditForm
+      character={char}
+      trait={trait}
+      values={{
+        name: trait.name,
+        description: trait.description,
+        note: trait.note || "",
+      }}
+    />
+  )
+})
+
+// POST /characters/:id/traits/:traitId/edit - Update a custom trait
+characterRoutes.post("/characters/:id/traits/:traitId/edit", async (c) => {
+  const characterId = c.req.param("id") as string
+  const traitId = c.req.param("traitId") as string
+  const body = (await c.req.parseBody()) as Record<string, string>
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  // Find the trait for validation error display
+  const trait = await findTraitById(getDb(c), traitId)
+
+  if (!trait || trait.character_id !== characterId) {
+    return c.html(<TraitEditForm character={char} errors={{ _form: "Trait not found" }} />)
+  }
+
+  if (trait.source !== "custom") {
+    return c.html(
+      <TraitEditForm character={char} errors={{ _form: "Only custom traits can be edited" }} />
+    )
+  }
+
+  const result = await updateTraitService(getDb(c), char, traitId, body)
+
+  if (!result.complete) {
+    return c.html(
+      <TraitEditForm character={char} trait={trait} values={result.values} errors={result.errors} />
+    )
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeDetailModal")
+  return c.html(<TraitsPanel character={updatedChar} swapOob={true} />)
+})
+
+// DELETE /characters/:id/traits/:traitId - Delete a custom trait
+characterRoutes.delete("/characters/:id/traits/:traitId", async (c) => {
+  const characterId = c.req.param("id") as string
+  const traitId = c.req.param("traitId") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const trait = await findTraitById(getDb(c), traitId)
+
+  if (!trait || trait.character_id !== characterId || trait.source !== "custom") {
+    // Re-render the panel unchanged — the trait either doesn't exist or can't be deleted
+    return c.html(<TraitsPanel character={char} />)
+  }
+
+  await deleteTraitById(getDb(c), traitId)
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(<TraitsPanel character={updatedChar} />)
 })
 
 characterRoutes.post("/characters/:id/edit/newitem", async (c) => {

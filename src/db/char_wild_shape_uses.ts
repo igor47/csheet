@@ -85,12 +85,13 @@ export async function findUnrecovered(db: SQL, characterId: string): Promise<Cha
 /**
  * Recover all unrecovered wild shape uses for a character.
  * Used by long rest (both rulesets) and short rest (SRD 5.1 only).
+ * Only recovers ended transformations - ongoing ones (ended_at IS NULL) are skipped.
  */
 export async function recoverAll(db: SQL, characterId: string): Promise<number> {
   const result = await db`
     UPDATE char_wild_shape_uses
     SET recovered_at = CURRENT_TIMESTAMP
-    WHERE character_id = ${characterId} AND recovered_at IS NULL
+    WHERE character_id = ${characterId} AND recovered_at IS NULL AND ended_at IS NOT NULL
   `
   return result.count
 }
@@ -98,6 +99,7 @@ export async function recoverAll(db: SQL, characterId: string): Promise<number> 
 /**
  * Recover the oldest unrecovered wild shape use for a character.
  * Used by short rest (SRD 5.2 only - one use recovers per short rest).
+ * Only recovers ended transformations - ongoing ones (ended_at IS NULL) are skipped.
  */
 export async function recoverOne(db: SQL, characterId: string): Promise<boolean> {
   const result = await db`
@@ -105,7 +107,7 @@ export async function recoverOne(db: SQL, characterId: string): Promise<boolean>
     SET recovered_at = CURRENT_TIMESTAMP
     WHERE id = (
       SELECT id FROM char_wild_shape_uses
-      WHERE character_id = ${characterId} AND recovered_at IS NULL
+      WHERE character_id = ${characterId} AND recovered_at IS NULL AND ended_at IS NOT NULL
       ORDER BY created_at ASC
       LIMIT 1
     )

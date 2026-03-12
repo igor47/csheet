@@ -268,6 +268,7 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
       <SkillsPanel character={updatedChar} swapOob={true} />
       <SpellsPanel character={updatedChar} swapOob={true} />
       <TraitsPanel character={updatedChar} swapOob={true} />
+      <WildShapePanel character={updatedChar} swapOob={true} />
     </>
   )
 })

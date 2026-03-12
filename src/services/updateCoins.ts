@@ -8,23 +8,22 @@ import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
+// Schema for coin delta - empty/null values default to 0
+const CoinDelta = NumberField(
+  z
+    .number()
+    .int({ message: "Must be a whole number" })
+    .nullable()
+    .transform((v) => v ?? 0)
+)
+
 // Schema for the coin update API
 export const UpdateCoinsApiSchema = z.object({
-  pp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
-    "Change in platinum pieces (positive for gain, negative for loss)"
-  ),
-  gp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
-    "Change in gold pieces (positive for gain, negative for loss)"
-  ),
-  ep: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
-    "Change in electrum pieces (positive for gain, negative for loss)"
-  ),
-  sp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
-    "Change in silver pieces (positive for gain, negative for loss)"
-  ),
-  cp: NumberField(z.number().int({ message: "Must be a whole number" }).default(0)).describe(
-    "Change in copper pieces (positive for gain, negative for loss)"
-  ),
+  pp: CoinDelta.describe("Change in platinum pieces (positive for gain, negative for loss)"),
+  gp: CoinDelta.describe("Change in gold pieces (positive for gain, negative for loss)"),
+  ep: CoinDelta.describe("Change in electrum pieces (positive for gain, negative for loss)"),
+  sp: CoinDelta.describe("Change in silver pieces (positive for gain, negative for loss)"),
+  cp: CoinDelta.describe("Change in copper pieces (positive for gain, negative for loss)"),
   note: OptionalString().describe("Note describing the transaction"),
   make_change: Checkbox()
     .optional()

@@ -582,7 +582,12 @@ characterRoutes.post("/characters/:id/items/:itemId/edit", async (c) => {
 
   const updatedChar = (await computeCharacter(getDb(c), characterId))!
   c.header("HX-Trigger", "closeDetailModal")
-  return c.html(<InventoryPanel character={updatedChar} swapOob={true} />)
+  return c.html(
+    <>
+      <InventoryPanel character={updatedChar} swapOob={true} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
+    </>
+  )
 })
 
 // GET /characters/:id/items/:itemId/effects - Show effects editor

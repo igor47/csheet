@@ -106,6 +106,10 @@ run = """
 """
 description = "Start Cloud SQL Proxy tunnel to production database (localhost:5433)"
 
+[tasks."utils:activity"]
+run = "bun utils/activity-summary.ts \"$@\""
+description = "Show app activity summary (--period <days> --prod)"
+
 [tasks.install]
 run = "bun install"
 description = "Install dependencies"

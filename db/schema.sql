@@ -1,4 +1,4 @@
-\restrict yROFF9unbUcmePYyrEFdXx2vtJPBhHqug45v8rjmoNfUdZEwfWZBM4UuZEfaxuQ
+\restrict 88IEOEbxatzf5wvbsh9gg9HiCM1X9QL1Fauf3BusKemoGPQl5SYExPX8I91PRjm
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.3
@@ -553,7 +553,8 @@ CREATE TABLE public.users (
     email text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    name text
+    name text,
+    marketing_opt_in boolean DEFAULT true NOT NULL
 );
 
 
@@ -1557,7 +1558,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict yROFF9unbUcmePYyrEFdXx2vtJPBhHqug45v8rjmoNfUdZEwfWZBM4UuZEfaxuQ
+\unrestrict 88IEOEbxatzf5wvbsh9gg9HiCM1X9QL1Fauf3BusKemoGPQl5SYExPX8I91PRjm
 
 
 --
@@ -1613,4 +1614,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260310130000'),
     ('20260311120000'),
     ('20260312190134'),
-    ('20260312200000');
+    ('20260312200000'),
+    ('20260313211721');

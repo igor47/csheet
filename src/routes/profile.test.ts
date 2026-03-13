@@ -91,7 +91,7 @@ describe("POST /profile", () => {
       user = await userFactory.create({}, testCtx.db)
     })
 
-    test("updates user name", async () => {
+    test("updates user name and redirects with flash", async () => {
       const response = await makeRequest(testCtx.app, "/profile", {
         user,
         method: "POST",
@@ -99,24 +99,12 @@ describe("POST /profile", () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       })
 
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(204)
+      expect(response.headers.get("HX-Redirect")).toBe("/profile")
 
       // Verify database was updated
       const result = await testCtx.db`SELECT name FROM users WHERE id = ${user.id}`
       expect(result[0].name).toBe("New Display Name")
-    })
-
-    test("shows success message after update", async () => {
-      const response = await makeRequest(testCtx.app, "/profile", {
-        user,
-        method: "POST",
-        body: new URLSearchParams({ name: "New Display Name" }).toString(),
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      })
-
-      const document = await parseHtml(response)
-      const alert = expectElement(document, ".alert-success")
-      expect(alert.textContent).toContain("Profile updated successfully")
     })
 
     test("allows clearing name to empty", async () => {
@@ -130,7 +118,7 @@ describe("POST /profile", () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       })
 
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(204)
 
       // Verify database was updated to null
       const result = await testCtx.db`SELECT name FROM users WHERE id = ${user.id}`
@@ -145,10 +133,41 @@ describe("POST /profile", () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       })
 
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(204)
 
       const result = await testCtx.db`SELECT name FROM users WHERE id = ${user.id}`
       expect(result[0].name).toBe("Trimmed Name")
+    })
+
+    test("opts into marketing emails when checkbox is checked", async () => {
+      // Default is true, so first opt out
+      await testCtx.db`UPDATE users SET marketing_opt_in = false WHERE id = ${user.id}`
+
+      const response = await makeRequest(testCtx.app, "/profile", {
+        user,
+        method: "POST",
+        body: new URLSearchParams({ name: "", marketing_opt_in: "on" }).toString(),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      })
+
+      expect(response.status).toBe(204)
+
+      const result = await testCtx.db`SELECT marketing_opt_in FROM users WHERE id = ${user.id}`
+      expect(result[0].marketing_opt_in).toBe(true)
+    })
+
+    test("opts out of marketing emails when checkbox is unchecked", async () => {
+      const response = await makeRequest(testCtx.app, "/profile", {
+        user,
+        method: "POST",
+        body: new URLSearchParams({ name: "" }).toString(),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      })
+
+      expect(response.status).toBe(204)
+
+      const result = await testCtx.db`SELECT marketing_opt_in FROM users WHERE id = ${user.id}`
+      expect(result[0].marketing_opt_in).toBe(false)
     })
 
     test("rejects name longer than 100 characters", async () => {

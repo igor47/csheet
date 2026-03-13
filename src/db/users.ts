@@ -5,6 +5,7 @@ export interface User {
   id: string
   email: string
   name: string | null
+  marketing_opt_in: boolean
   created_at: string
   updated_at: string
 }
@@ -42,13 +43,16 @@ export async function findByEmail(db: SQL, email: string): Promise<User | null> 
 }
 
 export interface UpdateUserData {
-  name?: string | null
+  name: string | null
+  marketing_opt_in: boolean
 }
 
 export async function update(db: SQL, id: string, data: UpdateUserData): Promise<User | null> {
   const result = await db`
     UPDATE users
-    SET name = ${data.name ?? null}, updated_at = CURRENT_TIMESTAMP
+    SET name = ${data.name},
+        marketing_opt_in = ${data.marketing_opt_in},
+        updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
     RETURNING *
   `

@@ -5,10 +5,9 @@ export interface ProfileProps {
   user: User
   values?: Record<string, string>
   errors?: Record<string, string>
-  success?: boolean
 }
 
-export const Profile = ({ user, values = {}, errors = {}, success }: ProfileProps) => {
+export const Profile = ({ user, values = {}, errors = {} }: ProfileProps) => {
   const nameValue = values.name ?? user.name ?? ""
 
   return (
@@ -25,13 +24,6 @@ export const Profile = ({ user, values = {}, errors = {}, success }: ProfileProp
                 hx-target="#profile-page"
                 hx-swap="outerHTML"
               >
-                {success && (
-                  <div class="alert alert-success" role="alert">
-                    <i class="bi bi-check-circle me-2"></i>
-                    Profile updated successfully!
-                  </div>
-                )}
-
                 {errors.general && (
                   <div class="alert alert-danger" role="alert">
                     <i class="bi bi-exclamation-triangle me-2"></i>
@@ -75,7 +67,7 @@ export const Profile = ({ user, values = {}, errors = {}, success }: ProfileProp
                 </div>
 
                 {/* Email field (readonly) */}
-                <div class="mb-4">
+                <div class="mb-3">
                   <label for="email" class="form-label">
                     Email
                   </label>
@@ -88,6 +80,31 @@ export const Profile = ({ user, values = {}, errors = {}, success }: ProfileProp
                     disabled
                   />
                   <div class="form-text">Email cannot be changed.</div>
+                </div>
+
+                {/* Marketing emails opt-in */}
+                <div class="mb-4">
+                  <div class="form-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="marketing_opt_in"
+                      name="marketing_opt_in"
+                      value="on"
+                      checked={
+                        values.marketing_opt_in
+                          ? values.marketing_opt_in === "on"
+                          : user.marketing_opt_in
+                      }
+                    />
+                    <label class="form-check-label" for="marketing_opt_in">
+                      Send me product updates and feedback requests
+                    </label>
+                  </div>
+                  <div class="form-text">
+                    I'll occasionally email you about new features and ask for your feedback. You
+                    can unsubscribe at any time, and I'll never share your email with anyone.
+                  </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100">

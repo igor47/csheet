@@ -16,6 +16,7 @@ import { indexRoutes } from "./routes/index"
 import { profileRoutes } from "./routes/profile"
 import { spellsRoutes } from "./routes/spells"
 import { uploadsRoutes } from "./routes/uploads"
+import { webhookRoutes } from "./routes/webhooks"
 
 // update typescript to indicate the title prop on the layout
 // see: https://hono.dev/docs/api/context#render-setrenderer
@@ -44,6 +45,9 @@ export function createApp(db?: SQL) {
 
   // Health checks (no middleware, no auth, no logging)
   app.route("/", healthRoutes)
+
+  // Webhooks (no auth, no JSX rendering)
+  app.route("/", webhookRoutes)
 
   // jsx renderer
   // use the layout for all routes

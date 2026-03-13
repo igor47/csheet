@@ -32,6 +32,7 @@ export const config = {
   otpRateLimitPerHour: parseInt(process.env.OTP_RATE_LIMIT_PER_HOUR || "3", 10),
 
   resendApiKey: process.env.RESEND_API_KEY || "",
+  resendWebhookSecret: process.env.RESEND_WEBHOOK_SECRET || "",
 
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
   aiModelName: process.env.AI_MODEL_NAME || "claude-haiku-4-5-20251001",

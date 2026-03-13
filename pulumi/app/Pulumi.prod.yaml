@@ -28,3 +28,5 @@ config:
     secure: v1:OjFxYdlxOio27ICe:U68UPcX3YW7PA61LSbbAoboaXjPhWUb4k5pWdoKw+4EBz8/oplO76IH6YUo1JXN1fFB4lhn/GtL0arYHvEgt66jFrv5G0pjCeUiGmq4AAmGJ0HOmzOjHvgFolAiySUC8xqbF68UejOmKDknwdTXNm25xOw5jbcG1U3EvbQ==
   csheet-app:RESEND_API_KEY:
     secure: v1:zYHmp3kfw9zqbbO6:Ne2kSzxsY/L5heS9954YSVtjodxNTFTHYxwVlQx8oIbkWVXVD0btnLq1XD0OIRW2aCykQA==
+  csheet-app:RESEND_WEBHOOK_SECRET:
+    secure: v1:8tvgQGKHlYf3YVdQ:4VNZ1xqApnAiF6CcebJxb0PSO/ykoDXk8IYufzC4dzVdGoQaz9FCfXu4SguWxDMGc3asaSrK

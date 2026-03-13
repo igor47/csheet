@@ -253,6 +253,7 @@ run = """
   export S3_BUCKET_NAME="$S3_BUCKET_TEST"
   export NODE_ENV="test"
   export SMTP_HOST="localhost"
+  unset RESEND_API_KEY RESEND_WEBHOOK_SECRET RESEND_SEGMENT_ID ANTHROPIC_API_KEY
   bun test --randomize --only-failures "$@"
 """
 description = "Run tests (pass through arguments to bun test)"

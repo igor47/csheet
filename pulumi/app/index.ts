@@ -85,6 +85,10 @@ const secrets = {
   smtpPassword: createSecret("smtp-password", config.getSecret("SMTP_PASSWORD") || ""),
   anthropicApiKey: createSecret("anthropic-api-key", config.getSecret("ANTHROPIC_API_KEY") || ""),
   resendApiKey: createSecret("resend-api-key", config.getSecret("RESEND_API_KEY") || ""),
+  resendWebhookSecret: createSecret(
+    "resend-webhook-secret",
+    config.getSecret("RESEND_WEBHOOK_SECRET") || ""
+  ),
 }
 
 // Helper to reference a secret in environment variables
@@ -124,6 +128,7 @@ const env: pulumi.Input<gcp.types.input.cloudrunv2.JobTemplateTemplateContainerE
   { name: "SMTP_FROM", value: smtpFrom },
   secretEnv("ANTHROPIC_API_KEY", secrets.anthropicApiKey),
   secretEnv("RESEND_API_KEY", secrets.resendApiKey),
+  secretEnv("RESEND_WEBHOOK_SECRET", secrets.resendWebhookSecret),
 ]
 
 // Migration job - runs dbmate migrate

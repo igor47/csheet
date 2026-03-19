@@ -5,12 +5,12 @@ import { isSmtpConfigured } from "@src/config"
 import { getDb } from "@src/db"
 import * as authTokens from "@src/db/auth_tokens"
 import * as campaignMembers from "@src/db/campaign_members"
-import { create, findByEmail } from "@src/db/users"
 import { sendOtpEmail } from "@src/lib/email"
 import { logger } from "@src/lib/logger"
 import { getBaseUrl } from "@src/lib/url"
 import { clearAuthCookie, setAuthCookie } from "@src/middleware/auth"
 import { setFlashMsg } from "@src/middleware/flash"
+import { findOrCreateUser } from "@src/services/findOrCreateUser"
 import { Hono } from "hono"
 
 export const authRoutes = new Hono()
@@ -35,14 +35,12 @@ authRoutes.post("/login", async (c) => {
 
   // If SMTP is not configured, fall back to instant login
   if (!isSmtpConfigured()) {
-    let user = await findByEmail(getDb(c), email)
-
-    if (!user) {
-      user = await create(getDb(c), email)
-      await setFlashMsg(c, "Account created. You are now logged in.", "info")
-    } else {
-      await setFlashMsg(c, "Logged in successfully.", "success")
-    }
+    const { user, created } = await findOrCreateUser(getDb(c), email)
+    await setFlashMsg(
+      c,
+      created ? "Account created. You are now logged in." : "Logged in successfully.",
+      created ? "info" : "success"
+    )
 
     await setAuthCookie(c, user.id)
     return c.redirect(redirect || "/characters")
@@ -128,13 +126,12 @@ authRoutes.post("/login/otp", async (c) => {
   }
 
   // Find or create user
-  let user = await findByEmail(db, validEmail)
-  if (!user) {
-    user = await create(db, validEmail)
-    await setFlashMsg(c, "Account created. You are now logged in.", "info")
-  } else {
-    await setFlashMsg(c, "Logged in successfully.", "success")
-  }
+  const { user, created } = await findOrCreateUser(db, validEmail)
+  await setFlashMsg(
+    c,
+    created ? "Account created. You are now logged in." : "Logged in successfully.",
+    created ? "info" : "success"
+  )
 
   await setAuthCookie(c, user.id)
   return c.redirect(redirect || "/characters")
@@ -160,13 +157,12 @@ authRoutes.get("/login/token", async (c) => {
   }
 
   // Find or create user
-  let user = await findByEmail(db, validEmail)
-  if (!user) {
-    user = await create(db, validEmail)
-    await setFlashMsg(c, "Account created. You are now logged in.", "info")
-  } else {
-    await setFlashMsg(c, "Logged in successfully.", "success")
-  }
+  const { user, created } = await findOrCreateUser(db, validEmail)
+  await setFlashMsg(
+    c,
+    created ? "Account created. You are now logged in." : "Logged in successfully.",
+    created ? "info" : "success"
+  )
 
   await setAuthCookie(c, user.id)
   return c.redirect(redirect || "/characters")
@@ -217,9 +213,8 @@ authRoutes.get("/invite/view", async (c) => {
 
   // Flow 1: Not logged in, or logged in as correct user
   // Log in as the invited email and redirect to campaigns
-  let user = await findByEmail(db, tokenResult.email)
-  if (!user) {
-    user = await create(db, tokenResult.email)
+  const { user, created } = await findOrCreateUser(db, tokenResult.email)
+  if (created) {
     logger.info("Created user from invite", { email: tokenResult.email })
   }
 

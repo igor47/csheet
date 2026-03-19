@@ -4,12 +4,12 @@ import * as campaignMembers from "@src/db/campaign_members"
 import { CampaignMemberRoleSchema } from "@src/db/campaign_members"
 import type { Campaign } from "@src/db/campaigns"
 import type { User } from "@src/db/users"
-import * as users from "@src/db/users"
 import { sendCampaignInviteEmail } from "@src/lib/email"
 import { Checkbox } from "@src/lib/formSchemas"
 import { ulid } from "@src/lib/ids"
 import { logger } from "@src/lib/logger"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { findOrCreateUser } from "@src/services/findOrCreateUser"
 import type { SQL } from "bun"
 import { z } from "zod"
 
@@ -60,10 +60,7 @@ export async function createInvite(
   // Use transaction so we rollback if email fails
   const result = await beginOrSavepoint(db, async (tx) => {
     // Find or create user
-    let user = await users.findByEmail(tx, email)
-    if (!user) {
-      user = await users.create(tx, email)
-    }
+    const { user } = await findOrCreateUser(tx, email)
 
     // Check if user has any membership record (including deleted)
     const existingMember = await campaignMembers.findAnyByCampaignAndUser(tx, campaign.id, user.id)

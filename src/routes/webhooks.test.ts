@@ -40,6 +40,14 @@ describe("POST /webhooks/resend", () => {
   const testCtx = useTestApp()
 
   describe("without webhook secret configured", () => {
+    beforeEach(() => {
+      const original = config.resendWebhookSecret
+      ;(config as { resendWebhookSecret: string }).resendWebhookSecret = ""
+      return () => {
+        ;(config as { resendWebhookSecret: string }).resendWebhookSecret = original
+      }
+    })
+
     test("returns 500", async () => {
       const response = await makeRequest(testCtx.app, "/webhooks/resend", {
         method: "POST",

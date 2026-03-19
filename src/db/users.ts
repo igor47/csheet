@@ -42,6 +42,11 @@ export async function findByEmail(db: SQL, email: string): Promise<User | null> 
   return (result[0] as User) || null
 }
 
+export async function findAll(db: SQL): Promise<User[]> {
+  const result = await db`SELECT * FROM users ORDER BY created_at ASC`
+  return result as User[]
+}
+
 export interface UpdateUserData {
   name: string | null
   marketing_opt_in: boolean

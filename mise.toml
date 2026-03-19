@@ -110,6 +110,10 @@ description = "Start Cloud SQL Proxy tunnel to production database (localhost:54
 run = "bun utils/activity-summary.ts \"$@\""
 description = "Show app activity summary (--period <days> --prod)"
 
+[tasks."utils:backfill-resend"]
+run = "bun utils/backfill-resend-contacts.ts \"$@\""
+description = "Backfill all users to Resend contacts (--prod --dry-run)"
+
 [tasks.install]
 run = "bun install"
 description = "Install dependencies"

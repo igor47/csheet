@@ -1,6 +1,7 @@
 import { type UpdateUserData, type User, update } from "@src/db/users"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
+import { syncContactToResend } from "@src/lib/resend"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -41,5 +42,6 @@ export async function updateProfile(
     }
   }
 
+  await syncContactToResend(updatedUser)
   return { complete: true, result: { user: updatedUser } }
 }

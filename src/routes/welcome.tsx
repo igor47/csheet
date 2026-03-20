@@ -1,5 +1,6 @@
 import { FirstLoginWelcome } from "@src/components/FirstLoginWelcome"
 import { getDb } from "@src/db"
+import { safeRedirect } from "@src/lib/url"
 import { completeWelcome } from "@src/services/completeWelcome"
 import { Hono } from "hono"
 
@@ -18,5 +19,5 @@ welcomeRoutes.post("/welcome", async (c) => {
 
   await completeWelcome(getDb(c), user, marketingOptIn)
 
-  return c.redirect(redirect || "/characters")
+  return c.redirect(safeRedirect(redirect, "/characters"))
 })

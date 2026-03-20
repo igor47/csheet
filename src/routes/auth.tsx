@@ -7,7 +7,7 @@ import * as authTokens from "@src/db/auth_tokens"
 import * as campaignMembers from "@src/db/campaign_members"
 import { sendOtpEmail } from "@src/lib/email"
 import { logger } from "@src/lib/logger"
-import { getBaseUrl } from "@src/lib/url"
+import { getBaseUrl, safeRedirect } from "@src/lib/url"
 import { clearAuthCookie, setAuthCookie } from "@src/middleware/auth"
 import { setFlashMsg } from "@src/middleware/flash"
 import { findOrCreateUser } from "@src/services/findOrCreateUser"
@@ -51,7 +51,7 @@ authRoutes.post("/login", async (c) => {
     )
 
     await setAuthCookie(c, user.id)
-    return c.redirect(postLoginRedirect(user, redirect || "/characters"))
+    return c.redirect(postLoginRedirect(user, safeRedirect(redirect, "/characters")))
   }
 
   // SMTP is configured - use OTP flow
@@ -142,7 +142,7 @@ authRoutes.post("/login/otp", async (c) => {
   )
 
   await setAuthCookie(c, user.id)
-  return c.redirect(postLoginRedirect(user, redirect || "/characters"))
+  return c.redirect(postLoginRedirect(user, safeRedirect(redirect, "/characters")))
 })
 
 authRoutes.get("/login/token", async (c) => {
@@ -173,7 +173,7 @@ authRoutes.get("/login/token", async (c) => {
   )
 
   await setAuthCookie(c, user.id)
-  return c.redirect(postLoginRedirect(user, redirect || "/characters"))
+  return c.redirect(postLoginRedirect(user, safeRedirect(redirect, "/characters")))
 })
 
 authRoutes.get("/logout", async (c) => {
@@ -182,7 +182,7 @@ authRoutes.get("/logout", async (c) => {
 
   // Support redirect param for flows like invite account switching
   const redirect = c.req.query("redirect")
-  return c.redirect(redirect || "/")
+  return c.redirect(safeRedirect(redirect, "/"))
 })
 
 // View campaign invite via magic link

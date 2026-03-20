@@ -1,6 +1,6 @@
 import { FirstLoginWelcome } from "@src/components/FirstLoginWelcome"
 import { getDb } from "@src/db"
-import { markWelcomed, update } from "@src/db/users"
+import { completeWelcome } from "@src/services/completeWelcome"
 import { Hono } from "hono"
 
 export const welcomeRoutes = new Hono()
@@ -16,9 +16,7 @@ welcomeRoutes.post("/welcome", async (c) => {
   const marketingOptIn = formData.get("marketing_opt_in") === "on"
   const redirect = formData.get("redirect") as string | null
 
-  const db = getDb(c)
-  await update(db, user.id, { name: user.name, marketing_opt_in: marketingOptIn })
-  await markWelcomed(db, user.id)
+  await completeWelcome(getDb(c), user, marketingOptIn)
 
   return c.redirect(redirect || "/characters")
 })

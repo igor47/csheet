@@ -18,6 +18,7 @@ import {
 import { RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import { syncContact } from "@src/services/syncContact"
 import type { SQL } from "bun"
 import { z } from "zod"
 import { addLevel } from "./addLevel"
@@ -591,5 +592,6 @@ export async function createCharacter(
     return character
   })
 
+  await syncContact(db, user)
   return { complete: true, character }
 }

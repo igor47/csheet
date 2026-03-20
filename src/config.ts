@@ -33,6 +33,7 @@ export const config = {
 
   resendApiKey: process.env.RESEND_API_KEY || "",
   resendWebhookSecret: process.env.RESEND_WEBHOOK_SECRET || "",
+  resendSegmentId: process.env.RESEND_SEGMENT_ID || "",
 
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
   aiModelName: process.env.AI_MODEL_NAME || "claude-haiku-4-5-20251001",

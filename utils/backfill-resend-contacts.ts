@@ -1,5 +1,7 @@
+import { config } from "@src/config"
 import { findAll } from "@src/db/users"
-import { syncContactToResend } from "@src/lib/resend"
+import { findSegmentIdByName } from "@src/lib/resend"
+import { syncContact } from "@src/services/syncContact"
 import { SQL } from "bun"
 import { parseArgs } from "node:util"
 
@@ -59,6 +61,15 @@ async function createDb(): Promise<SQL> {
 // -- Main --
 
 async function main() {
+  // Look up the segment by name so we don't need to know the UUID
+  const segmentName = useProd ? "production" : "development"
+  const segmentId = await findSegmentIdByName(segmentName)
+  if (!segmentId) {
+    console.error(`Resend segment "${segmentName}" not found. Create it in the Resend dashboard.`)
+    process.exit(1)
+  }
+  ;(config as { resendSegmentId: string }).resendSegmentId = segmentId
+
   const db = await createDb()
   const users = await findAll(db)
 
@@ -68,13 +79,22 @@ async function main() {
   )
 
   let synced = 0
-  for (const user of users) {
+  for (const [i, user] of users.entries()) {
+    // Respect Resend's 5 req/sec rate limit (up to 2 calls per sync: create + update)
+    if (!dryRun && i > 0) {
+      await Bun.sleep(500)
+    }
+
+    const contactData = await syncContact(db, user, { is_check: dryRun })
     if (dryRun) {
+      const props = contactData.properties || {}
       console.log(
-        `  [dry-run] ${user.email} (marketing_opt_in: ${user.marketing_opt_in}, name: ${user.name || "(none)"})`
+        `  ${contactData.email} → ${contactData.firstName || "?"}` +
+          ` ${contactData.lastName || ""}`.trimEnd() +
+          ` | unsub: ${contactData.unsubscribed}` +
+          ` | chars: ${props.character_count ?? 0}, camps: ${props.campaign_count ?? 0}` +
+          ` | segment: ${segmentName}`
       )
-    } else {
-      await syncContactToResend(user)
     }
     synced++
   }

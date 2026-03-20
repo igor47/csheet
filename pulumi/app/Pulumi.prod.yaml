@@ -30,3 +30,4 @@ config:
     secure: v1:zYHmp3kfw9zqbbO6:Ne2kSzxsY/L5heS9954YSVtjodxNTFTHYxwVlQx8oIbkWVXVD0btnLq1XD0OIRW2aCykQA==
   csheet-app:RESEND_WEBHOOK_SECRET:
     secure: v1:8tvgQGKHlYf3YVdQ:4VNZ1xqApnAiF6CcebJxb0PSO/ykoDXk8IYufzC4dzVdGoQaz9FCfXu4SguWxDMGc3asaSrK
+  csheet-app:RESEND_SEGMENT_ID: 8f8cb18d-ad71-4d07-8e6c-259920edfd96

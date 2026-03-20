@@ -1,6 +1,7 @@
 import * as campaignMembers from "@src/db/campaign_members"
 import type { User } from "@src/db/users"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { syncContact } from "@src/services/syncContact"
 import type { SQL } from "bun"
 
 type RespondAction = "accept" | "decline"
@@ -44,5 +45,6 @@ export async function respondToInvite(
     await campaignMembers.decline(db, member.id)
   }
 
+  await syncContact(db, user)
   return { complete: true, result: { action } }
 }

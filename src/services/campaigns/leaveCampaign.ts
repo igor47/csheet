@@ -1,6 +1,8 @@
 import * as campaignCharacters from "@src/db/campaign_characters"
 import * as campaignMembers from "@src/db/campaign_members"
+import { findById } from "@src/db/users"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { syncContact } from "@src/services/syncContact"
 import type { SQL } from "bun"
 
 export type LeaveCampaignResult = ServiceResult<object>
@@ -61,5 +63,11 @@ export async function leaveCampaign(
   }
 
   await campaignMembers.softDelete(db, member.id)
+
+  const user = await findById(db, userId)
+  if (user) {
+    await syncContact(db, user)
+  }
+
   return { complete: true, result: {} }
 }

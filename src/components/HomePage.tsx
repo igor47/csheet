@@ -1,6 +1,6 @@
 import type { User } from "@src/db/users"
 
-export interface WelcomeProps {
+export interface HomePageProps {
   user?: User
 }
 
@@ -23,7 +23,7 @@ const LoggedOutContent = () => (
   </div>
 )
 
-export const Welcome = ({ user }: WelcomeProps) => (
+export const HomePage = ({ user }: HomePageProps) => (
   <div class="container mt-5">
     <div class="row justify-content-center">
       <div class="col-lg-10 col-xl-8">

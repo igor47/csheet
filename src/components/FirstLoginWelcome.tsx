@@ -1,8 +1,9 @@
 export interface FirstLoginWelcomeProps {
   redirect?: string
+  name?: string | null
 }
 
-export const FirstLoginWelcome = ({ redirect }: FirstLoginWelcomeProps) => (
+export const FirstLoginWelcome = ({ redirect, name }: FirstLoginWelcomeProps) => (
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-md-8 col-lg-6">
@@ -40,6 +41,7 @@ export const FirstLoginWelcome = ({ redirect }: FirstLoginWelcomeProps) => (
                   name="name"
                   placeholder="How should we call you?"
                   maxlength={100}
+                  value={name ?? undefined}
                 />
                 <div class="form-text">
                   This name will be shown to other players instead of your email.

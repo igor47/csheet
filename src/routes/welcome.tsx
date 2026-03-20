@@ -8,7 +8,10 @@ export const welcomeRoutes = new Hono()
 
 welcomeRoutes.get("/welcome", (c) => {
   const redirect = c.req.query("redirect")
-  return c.render(<FirstLoginWelcome redirect={redirect} />, { title: "Welcome to CSheet" })
+  const user = c.var.user
+  return c.render(<FirstLoginWelcome redirect={redirect} name={user?.name} />, {
+    title: "Welcome to CSheet",
+  })
 })
 
 welcomeRoutes.post("/welcome", async (c) => {

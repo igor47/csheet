@@ -48,6 +48,25 @@ describe("GET /welcome", () => {
       expect(link).toBeTruthy()
     })
 
+    test("pre-fills display name when user already has one", async () => {
+      await testCtx.db`UPDATE users SET name = 'Gandalf' WHERE id = ${user.id}`
+      user.name = "Gandalf"
+
+      const response = await makeRequest(testCtx.app, "/welcome", { user })
+
+      const document = await parseHtml(response)
+      const nameInput = expectElement(document, 'input[name="name"]')
+      expect(nameInput.getAttribute("value")).toBe("Gandalf")
+    })
+
+    test("leaves name field empty when user has no name", async () => {
+      const response = await makeRequest(testCtx.app, "/welcome", { user })
+
+      const document = await parseHtml(response)
+      const nameInput = expectElement(document, 'input[name="name"]')
+      expect(nameInput.getAttribute("value")).toBeNull()
+    })
+
     test("preserves redirect parameter in hidden field", async () => {
       const response = await makeRequest(testCtx.app, "/welcome?redirect=/campaigns", { user })
 

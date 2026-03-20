@@ -126,6 +126,50 @@ describe("POST /welcome", () => {
       expect(result[0].marketing_opt_in).toBe(false)
     })
 
+    test("sets display name when provided", async () => {
+      const response = await makeRequest(testCtx.app, "/welcome", {
+        user,
+        method: "POST",
+        body: new URLSearchParams({ name: "Gandalf the Grey" }).toString(),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      })
+
+      expect(response.status).toBe(302)
+
+      const result = await testCtx.db`SELECT name FROM users WHERE id = ${user.id}`
+      expect(result[0].name).toBe("Gandalf the Grey")
+    })
+
+    test("leaves name unchanged when omitted", async () => {
+      await testCtx.db`UPDATE users SET name = 'Existing Name' WHERE id = ${user.id}`
+
+      const response = await makeRequest(testCtx.app, "/welcome", {
+        user,
+        method: "POST",
+        body: new URLSearchParams({}).toString(),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      })
+
+      expect(response.status).toBe(302)
+
+      const result = await testCtx.db`SELECT name FROM users WHERE id = ${user.id}`
+      expect(result[0].name).toBe("Existing Name")
+    })
+
+    test("leaves name null when submitted empty", async () => {
+      const response = await makeRequest(testCtx.app, "/welcome", {
+        user,
+        method: "POST",
+        body: new URLSearchParams({ name: "" }).toString(),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      })
+
+      expect(response.status).toBe(302)
+
+      const result = await testCtx.db`SELECT name FROM users WHERE id = ${user.id}`
+      expect(result[0].name).toBeNull()
+    })
+
     test("redirects to the specified redirect path", async () => {
       const response = await makeRequest(testCtx.app, "/welcome", {
         user,

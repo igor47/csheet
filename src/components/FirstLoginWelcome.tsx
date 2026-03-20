@@ -29,6 +29,23 @@ export const FirstLoginWelcome = ({ redirect }: FirstLoginWelcomeProps) => (
             <form method="post" action="/welcome">
               {redirect && <input type="hidden" name="redirect" value={redirect} />}
 
+              <div class="mb-3">
+                <label for="name" class="form-label">
+                  Display Name <span class="text-muted fw-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="name"
+                  name="name"
+                  placeholder="How should we call you?"
+                  maxlength={100}
+                />
+                <div class="form-text">
+                  This name will be shown to other players instead of your email.
+                </div>
+              </div>
+
               <div class="mb-4">
                 <div class="form-check">
                   <input

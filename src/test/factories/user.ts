@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker"
 import type { User } from "@src/db/users"
-import { create as createUser } from "@src/db/users"
+import { create as createUser, markWelcomed } from "@src/db/users"
 import type { SQL } from "bun"
 import { Factory } from "fishery"
 
@@ -17,6 +17,7 @@ const factory = Factory.define<User, UserFactoryParams>(({ params }) => ({
   email: params.email ?? faker.internet.email(),
   name: params.name ?? null,
   marketing_opt_in: true,
+  welcomed_at: new Date().toISOString(),
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }))
@@ -31,6 +32,9 @@ export const userFactory = {
   build: factory.build.bind(factory),
   create: async (params: Partial<UserFactoryParams>, db: SQL): Promise<User> => {
     const built = factory.build(params)
-    return await createUser(db, built.email)
+    const user = await createUser(db, built.email)
+    // Mark as welcomed so tests don't trigger the welcome page guard
+    await markWelcomed(db, user.id)
+    return { ...user, welcomed_at: new Date().toISOString() }
   },
 }

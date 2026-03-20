@@ -101,6 +101,7 @@ describe("POST /webhooks/resend", () => {
 
       beforeEach(async () => {
         user = await userFactory.create({}, testCtx.db)
+        await testCtx.db`UPDATE users SET marketing_opt_in = true WHERE id = ${user.id}`
       })
 
       test("sets marketing_opt_in to false", async () => {

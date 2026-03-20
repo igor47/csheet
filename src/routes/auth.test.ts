@@ -175,7 +175,10 @@ describe("POST /login/otp", () => {
       })
 
       expect(response.status).toBe(302)
-      expect(response.headers.get("Location")).toBe("/characters")
+      // New user is redirected to welcome page
+      const location = response.headers.get("Location") || ""
+      expect(location).toContain("/welcome")
+      expect(location).toContain("redirect=%2Fcharacters")
 
       // Check for auth cookie
       const setCookie = response.headers.get("Set-Cookie")
@@ -194,7 +197,10 @@ describe("POST /login/otp", () => {
       })
 
       expect(response.status).toBe(302)
-      expect(response.headers.get("Location")).toBe("/custom-page")
+      // New user is redirected to welcome page with original redirect preserved
+      const location = response.headers.get("Location") || ""
+      expect(location).toContain("/welcome")
+      expect(location).toContain("redirect=%2Fcustom-page")
     })
 
     test("marks token as used", async () => {
@@ -334,7 +340,10 @@ describe("GET /login/token", () => {
       const response = await makeRequest(testCtx.app, `/login/token?token=${token.sessionToken}`)
 
       expect(response.status).toBe(302)
-      expect(response.headers.get("Location")).toBe("/characters")
+      // New user is redirected to welcome page
+      const location = response.headers.get("Location") || ""
+      expect(location).toContain("/welcome")
+      expect(location).toContain("redirect=%2Fcharacters")
 
       // Check for auth cookie
       const setCookie = response.headers.get("Set-Cookie")

@@ -37,6 +37,8 @@ export const config = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
   aiModelName: process.env.AI_MODEL_NAME || "claude-haiku-4-5-20251001",
 
+  showWelcomePage: process.env.SHOW_WELCOME_PAGE !== "false",
+
   nodeEnv: process.env.NODE_ENV || "development",
 
   isProd: process.env.NODE_ENV === "production",

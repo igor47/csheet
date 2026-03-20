@@ -1,7 +1,7 @@
 import { InviteSwitchAccount } from "@src/components/InviteSwitchAccount"
 import { Login } from "@src/components/Login"
 import { LoginOtp } from "@src/components/LoginOtp"
-import { isSmtpConfigured } from "@src/config"
+import { config, isSmtpConfigured } from "@src/config"
 import { getDb } from "@src/db"
 import * as authTokens from "@src/db/auth_tokens"
 import * as campaignMembers from "@src/db/campaign_members"
@@ -12,6 +12,14 @@ import { clearAuthCookie, setAuthCookie } from "@src/middleware/auth"
 import { setFlashMsg } from "@src/middleware/flash"
 import { findOrCreateUser } from "@src/services/findOrCreateUser"
 import { Hono } from "hono"
+
+function postLoginRedirect(user: { welcomed_at: string | null }, intendedTarget: string): string {
+  if (config.showWelcomePage && !user.welcomed_at) {
+    const params = new URLSearchParams({ redirect: intendedTarget })
+    return `/welcome?${params.toString()}`
+  }
+  return intendedTarget
+}
 
 export const authRoutes = new Hono()
 
@@ -43,7 +51,7 @@ authRoutes.post("/login", async (c) => {
     )
 
     await setAuthCookie(c, user.id)
-    return c.redirect(redirect || "/characters")
+    return c.redirect(postLoginRedirect(user, redirect || "/characters"))
   }
 
   // SMTP is configured - use OTP flow
@@ -134,7 +142,7 @@ authRoutes.post("/login/otp", async (c) => {
   )
 
   await setAuthCookie(c, user.id)
-  return c.redirect(redirect || "/characters")
+  return c.redirect(postLoginRedirect(user, redirect || "/characters"))
 })
 
 authRoutes.get("/login/token", async (c) => {
@@ -165,7 +173,7 @@ authRoutes.get("/login/token", async (c) => {
   )
 
   await setAuthCookie(c, user.id)
-  return c.redirect(redirect || "/characters")
+  return c.redirect(postLoginRedirect(user, redirect || "/characters"))
 })
 
 authRoutes.get("/logout", async (c) => {
@@ -231,5 +239,5 @@ authRoutes.get("/invite/view", async (c) => {
     await setFlashMsg(c, "You have a pending campaign invite - accept or decline below", "info")
   }
 
-  return c.redirect("/campaigns")
+  return c.redirect(postLoginRedirect(user, "/campaigns"))
 })

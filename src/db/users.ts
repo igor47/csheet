@@ -6,6 +6,7 @@ export interface User {
   email: string
   name: string | null
   marketing_opt_in: boolean
+  welcomed_at: string | null
   created_at: string
   updated_at: string
 }
@@ -45,6 +46,10 @@ export async function findByEmail(db: SQL, email: string): Promise<User | null> 
 export async function findAll(db: SQL): Promise<User[]> {
   const result = await db`SELECT * FROM users ORDER BY created_at ASC`
   return result as User[]
+}
+
+export async function markWelcomed(db: SQL, id: string): Promise<void> {
+  await db`UPDATE users SET welcomed_at = CURRENT_TIMESTAMP WHERE id = ${id}`
 }
 
 export interface UpdateUserData {

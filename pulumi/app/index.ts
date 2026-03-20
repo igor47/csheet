@@ -129,6 +129,7 @@ const env: pulumi.Input<gcp.types.input.cloudrunv2.JobTemplateTemplateContainerE
   secretEnv("ANTHROPIC_API_KEY", secrets.anthropicApiKey),
   secretEnv("RESEND_API_KEY", secrets.resendApiKey),
   secretEnv("RESEND_WEBHOOK_SECRET", secrets.resendWebhookSecret),
+  { name: "SHOW_WELCOME_PAGE", value: "true" },
 ]
 
 // Migration job - runs dbmate migrate

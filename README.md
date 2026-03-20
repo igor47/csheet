@@ -254,6 +254,14 @@ Each character is associated with a ruleset, allowing players to use either the 
 - Ability score calculations
 - Proficiency bonuses
 
+## Self-Hosting Configuration
+
+When self-hosting CSheet, you can customize behavior with these environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SHOW_WELCOME_PAGE` | `true` | Show a welcome page to new users on first login. Set to `false` to skip. |
+
 ## Development
 
 ### Testing

@@ -17,6 +17,7 @@ import { profileRoutes } from "./routes/profile"
 import { spellsRoutes } from "./routes/spells"
 import { uploadsRoutes } from "./routes/uploads"
 import { webhookRoutes } from "./routes/webhooks"
+import { welcomeRoutes } from "./routes/welcome"
 
 // update typescript to indicate the title prop on the layout
 // see: https://hono.dev/docs/api/context#render-setrenderer
@@ -77,6 +78,8 @@ export function createApp(db?: SQL) {
   // Protected routes (auth required)
   const protectedRoutes = new Hono()
   protectedRoutes.use("*", requireAuth)
+  protectedRoutes.route("/", welcomeRoutes)
+
   protectedRoutes.route("/", characterRoutes)
   protectedRoutes.route("/", campaignsRoutes)
   protectedRoutes.route("/", chatRoutes)

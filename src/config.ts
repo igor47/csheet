@@ -47,7 +47,7 @@ export const config = {
 
 // Helper to check if SMTP is configured
 export function isSmtpConfigured(): boolean {
-  return config.isTest || !!config.smtpHost
+  return !!config.smtpHost
 }
 
 // Helper to check if AI features are enabled

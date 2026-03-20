@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { config } from "@src/config"
 import type { CreateAuthTokenResult } from "@src/db/auth_tokens"
 import type { Campaign } from "@src/db/campaigns"
 import type { User } from "@src/db/users"
@@ -8,10 +9,19 @@ import { campaignFactory, campaignMemberFactory } from "@src/test/factories/camp
 import { userFactory } from "@src/test/factories/user"
 import { expectElement, makeRequest, parseHtml } from "@src/test/http"
 
+const ORIGINAL_SMTP_HOST = config.smtpHost
+
 describe("POST /login", () => {
   const testCtx = useTestApp()
 
-  describe("when requesting login", () => {
+  describe("with SMTP configured", () => {
+    beforeEach(() => {
+      ;(config as { smtpHost: string }).smtpHost = "test-smtp.example.com"
+    })
+    afterEach(() => {
+      ;(config as { smtpHost: string }).smtpHost = ORIGINAL_SMTP_HOST
+    })
+
     test("redirects to OTP form for existing user", async () => {
       const user = await userFactory.create({ email: "test@example.com" }, testCtx.db)
 
@@ -55,6 +65,59 @@ describe("POST /login", () => {
       expect(response.status).toBe(302)
       expect(response.headers.get("Location")).toContain("/login/otp")
       expect(response.headers.get("Location")).toContain("redirect=%2Fcustom-page")
+    })
+  })
+
+  describe("without SMTP configured (instant login)", () => {
+    test("creates and logs in new user", async () => {
+      const formData = new FormData()
+      formData.append("email", "instant@example.com")
+
+      const response = await makeRequest(testCtx.app, "/login", {
+        method: "POST",
+        body: formData,
+      })
+
+      expect(response.status).toBe(302)
+      // New user redirected to welcome page
+      const location = response.headers.get("Location") || ""
+      expect(location).toContain("/welcome")
+      expect(location).toContain("redirect=%2Fcharacters")
+
+      const setCookie = response.headers.get("Set-Cookie")
+      expect(setCookie).toContain("user_id")
+    })
+
+    test("logs in existing user", async () => {
+      const user = await userFactory.create({ email: "existing@example.com" }, testCtx.db)
+
+      const formData = new FormData()
+      formData.append("email", user.email)
+
+      const response = await makeRequest(testCtx.app, "/login", {
+        method: "POST",
+        body: formData,
+      })
+
+      expect(response.status).toBe(302)
+      // Welcomed user goes straight to characters
+      expect(response.headers.get("Location")).toBe("/characters")
+    })
+
+    test("preserves redirect parameter", async () => {
+      const user = await userFactory.create({ email: "redirect@example.com" }, testCtx.db)
+
+      const formData = new FormData()
+      formData.append("email", user.email)
+      formData.append("redirect", "/campaigns")
+
+      const response = await makeRequest(testCtx.app, "/login", {
+        method: "POST",
+        body: formData,
+      })
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toBe("/campaigns")
     })
   })
 
@@ -410,6 +473,12 @@ describe("GET /login/token", () => {
 
 describe("OTP rate limiting", () => {
   const testCtx = useTestApp()
+  beforeEach(() => {
+    ;(config as { smtpHost: string }).smtpHost = "test-smtp.example.com"
+  })
+  afterEach(() => {
+    ;(config as { smtpHost: string }).smtpHost = ORIGINAL_SMTP_HOST
+  })
 
   test("allows up to 3 OTP requests per hour", async () => {
     const email = "ratelimit@example.com"

@@ -11,8 +11,8 @@ export const FirstLoginWelcome = ({ redirect }: FirstLoginWelcomeProps) => (
             <h1 class="card-title text-center mb-4">Welcome to CSheet!</h1>
 
             <p>
-              Hey there! I'm <a href="https://igor.moomers.org">Igor</a>, and I built CSheet to make managing D&D character sheets easier
-              and more fun. Thanks for giving it a try!
+              Hey there! I'm <a href="https://igor.moomers.org">Igor</a>, and I built CSheet to make
+              managing D&D character sheets easier and more fun. Thanks for giving it a try!
             </p>
 
             <p>

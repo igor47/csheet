@@ -9,13 +9,7 @@ import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 // Schema for coin delta - empty/null values default to 0
-const CoinDelta = NumberField(
-  z
-    .number()
-    .int({ message: "Must be a whole number" })
-    .nullable()
-    .transform((v) => v ?? 0)
-)
+const CoinDelta = NumberField(z.number().int({ message: "Must be a whole number" }).nullable())
 
 // Schema for the coin update API
 export const UpdateCoinsApiSchema = z.object({

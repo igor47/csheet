@@ -40,13 +40,14 @@ export const Spells = ({
             <form
               hx-get="/spells"
               hx-target="#spells-table"
+              hx-swap="outerHTML"
               hx-trigger="input from:#search-filter changed delay:300ms, change from:select"
               hx-push-url="true"
               class="row g-3 mb-4"
             >
-              {/* Hidden inputs to preserve sort state */}
-              <input type="hidden" name="sortBy" value={sortBy || "level"} />
-              <input type="hidden" name="sortOrder" value={sortOrder || "asc"} />
+              {/* Hidden inputs to preserve sort state (updated via OOB swaps from SpellsTable) */}
+              <input type="hidden" id="sortBy" name="sortBy" value={sortBy || "level"} />
+              <input type="hidden" id="sortOrder" name="sortOrder" value={sortOrder || "asc"} />
 
               <div class="col-12 col-lg-5">
                 <label for="search-filter" class="form-label">

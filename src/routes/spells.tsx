@@ -69,17 +69,20 @@ spellsRoutes.get("/spells", async (c) => {
   const isHtmxRequest = c.req.header("HX-Request") === "true"
 
   if (isHtmxRequest) {
-    // Return only the table for HTMX updates
     return c.html(
-      <SpellsTable
-        spells={filteredSpells}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        selectedClass={classFilter}
-        selectedMaxLevel={maxLevelStr}
-        selectedSchool={schoolFilter}
-        searchQuery={searchQuery}
-      />
+      <>
+        <input type="hidden" id="sortBy" name="sortBy" value={sortBy} hx-swap-oob="true" />
+        <input type="hidden" id="sortOrder" name="sortOrder" value={sortOrder} hx-swap-oob="true" />
+        <SpellsTable
+          spells={filteredSpells}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          selectedClass={classFilter}
+          selectedMaxLevel={maxLevelStr}
+          selectedSchool={schoolFilter}
+          searchQuery={searchQuery}
+        />
+      </>
     )
   }
 

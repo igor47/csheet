@@ -49,6 +49,7 @@ const SortableHeader = ({
         style="cursor: pointer;"
         hx-get={`/spells?${params.toString()}`}
         hx-target="#spells-table"
+        hx-swap="outerHTML"
         hx-push-url="true"
       >
         {label}

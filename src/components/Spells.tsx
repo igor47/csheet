@@ -146,9 +146,6 @@ export const Spells = ({
 
       {/* Spell Detail Modal */}
       <DetailModal size="lg">{openSpell ? <SpellDetail spell={openSpell} /> : null}</DetailModal>
-
-      {/* Character-specific scripts */}
-      <script src="/static/spells.js"></script>
     </>
   )
 }

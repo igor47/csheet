@@ -32,6 +32,11 @@ const NavLinks: NavLink[] = [
     label: "Spells",
     isActive: (currentPage) => (currentPage ? currentPage.startsWith("/spells") : false),
   },
+  {
+    href: "/beasts",
+    label: "Beasts",
+    isActive: (currentPage) => (currentPage ? currentPage.startsWith("/beasts") : false),
+  },
 ] as const
 
 const LoggedInContent = ({ user }: { user: User }) => {

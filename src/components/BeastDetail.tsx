@@ -128,8 +128,9 @@ function BeastDetailInner({ beast, className }: { beast: Beast; className: strin
             {action.attackBonus >= 0 ? "+" : ""}
             {action.attackBonus} to hit, {action.reach && `reach ${action.reach} ft.`}
             {action.range && `range ${action.range.normal}/${action.range.long} ft.`} <em>Hit:</em>{" "}
-            {action.damage.dice ? formatDice(action.damage.dice) : ""}
-            {action.damage.flatBonus ? ` + ${action.damage.flatBonus}` : ""}{" "}
+            {action.damage.dice
+              ? `${formatDice(action.damage.dice)}${action.damage.flatBonus ? ` + ${action.damage.flatBonus}` : ""}`
+              : (action.damage.flatBonus ?? "")}{" "}
             <span class="text-capitalize">{action.damage.type}</span> damage.
             {action.description && ` ${action.description}`}
           </p>

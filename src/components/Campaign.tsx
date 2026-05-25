@@ -198,19 +198,32 @@ export const Campaign = ({ campaign }: CampaignProps) => {
           <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h3>Characters & Members</h3>
-              {campaign.canInviteMembers && (
-                <button
-                  type="button"
-                  class="btn btn-primary btn-sm"
-                  data-bs-toggle="modal"
-                  data-bs-target="#detailModal"
-                  hx-get={`/campaigns/${campaign.id}/invite`}
-                  hx-target="#detailModalContent"
-                  hx-swap="innerHTML"
-                >
-                  <i class="bi bi-person-plus"></i> Invite Member
-                </button>
-              )}
+              <div class="d-flex gap-2">
+                {isDM && (
+                  <a
+                    href={`/campaigns/${campaign.id}/print`}
+                    target="_blank"
+                    class="btn btn-outline-secondary btn-sm"
+                    title="Print all character sheets"
+                  >
+                    <i class="bi bi-printer me-1"></i>
+                    Print All
+                  </a>
+                )}
+                {campaign.canInviteMembers && (
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#detailModal"
+                    hx-get={`/campaigns/${campaign.id}/invite`}
+                    hx-target="#detailModalContent"
+                    hx-swap="innerHTML"
+                  >
+                    <i class="bi bi-person-plus"></i> Invite Member
+                  </button>
+                )}
+              </div>
             </div>
 
             {partyMembers.length === 0 ? (

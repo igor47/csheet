@@ -2,11 +2,16 @@ import { SQL, type TransactionSQL } from "bun"
 import type { Context } from "hono"
 import { config } from "./config"
 
-// Construct PostgreSQL connection URL
-const connectionUrl = `postgres://${config.postgresUser}:${config.postgresPassword}@${config.postgresHost}:${config.postgresPort}/${config.postgresDb}`
-
 // not exported; we should only use getDb to access the database
-const db = new SQL(connectionUrl)
+// Note: Bun.sql ignores the database name when parsing a connection URL (Bun bug),
+// so we use the options object form to ensure the correct database is used.
+const db = new SQL({
+  hostname: config.postgresHost,
+  port: Number(config.postgresPort),
+  username: config.postgresUser,
+  password: config.postgresPassword,
+  database: config.postgresDb,
+})
 
 /**
  * Get the database instance from the context or use the global instance

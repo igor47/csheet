@@ -360,6 +360,21 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
               )}
             </div>
 
+            {/* Print button — available to everyone including DMs */}
+            <div class="row g-2 h-auto mt-2">
+              <div class="col-12 d-flex justify-content-center">
+                <a
+                  href={`/characters/${character.id}/print`}
+                  target="_blank"
+                  class="btn btn-sm btn-outline-secondary"
+                  title="Print / Save as PDF"
+                >
+                  <i class="bi bi-printer me-1"></i>
+                  Print
+                </a>
+              </div>
+            </div>
+
             {/* Rest Buttons */}
             {!isReadOnly && (
               <div class="row g-2 h-auto mt-2">

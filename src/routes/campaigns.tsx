@@ -2,6 +2,7 @@ import { AddCharacterToCampaign } from "@src/components/AddCharacterToCampaign"
 import { Campaign } from "@src/components/Campaign"
 import { CampaignInviteForm } from "@src/components/CampaignInviteForm"
 import { CampaignNew } from "@src/components/CampaignNew"
+import { CampaignPrint } from "@src/components/CampaignPrint"
 import { Campaigns } from "@src/components/Campaigns"
 import { ChangeRoleForm } from "@src/components/ChangeRoleForm"
 import { getDb } from "@src/db"
@@ -21,6 +22,7 @@ import { removeCharacterFromCampaign } from "@src/services/campaigns/removeChara
 import { respondToInvite } from "@src/services/campaigns/respond"
 import { hideCharacter, revealCharacter } from "@src/services/campaigns/revealCharacter"
 import { unarchiveCampaign } from "@src/services/campaigns/unarchive"
+import { computeCharacter } from "@src/services/computeCharacter"
 import { listCharacters } from "@src/services/listCharacters"
 import { Hono } from "hono"
 
@@ -72,6 +74,25 @@ campaignsRoutes.get("/campaigns/:id", async (c) => {
   return c.render(<Campaign campaign={authResult.campaign} />, {
     title: authResult.campaign.name,
   })
+})
+
+campaignsRoutes.get("/campaigns/:id/print", async (c) => {
+  const id = c.req.param("id") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) return handleCampaignUnallowed(c, authResult.reason)
+  if (authResult.role !== "dm") return handleCampaignUnallowed(c, "not_member")
+
+  const db = getDb(c)
+  const characters = (
+    await Promise.all(
+      authResult.campaign.characters
+        .filter((cc) => !cc.isNPC)
+        .map((cc) => computeCharacter(db, cc.character_id))
+    )
+  ).filter((c): c is NonNullable<typeof c> => c !== null)
+
+  return c.html(<CampaignPrint campaign={authResult.campaign} characters={characters} />)
 })
 
 campaignsRoutes.post("/campaigns/:id/archive", async (c) => {

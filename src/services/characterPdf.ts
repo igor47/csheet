@@ -1,8 +1,10 @@
 import { config } from "@src/config"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
 import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { spells as allSpells, type Spell } from "@src/lib/dnd/spells"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
+import type { SpellInfoForClass } from "@src/services/computeSpells"
 import { PDFBool, PDFDocument, type PDFForm, PDFName } from "pdf-lib"
 
 const TEMPLATE_PATHS: Record<RulesetId, string> = {
@@ -196,6 +198,98 @@ function spellSlotLimitedFeatures(character: ComputedCharacter): LimitedFeatureR
   return rows
 }
 
+// Resolve cantrip damage dice at the character's current level. Cantrips scale
+// at thresholds (1/5/11/17 typically); pick the highest threshold ≤ level.
+function cantripDiceAtLevel(spell: Spell, charLevel: number): number[] {
+  const baseDice = spell.damage?.[0]?.dice
+  if (!baseDice) return []
+  if (spell.damageScaling?.mode !== "characterLevel") return baseDice
+
+  const sortedDescending = Object.keys(spell.damageScaling.progression)
+    .map(Number)
+    .sort((a, b) => b - a)
+  for (const threshold of sortedDescending) {
+    if (threshold <= charLevel) {
+      return spell.damageScaling.progression[threshold] ?? baseDice
+    }
+  }
+  return baseDice
+}
+
+function formatDamageDice(dice: number[]): string {
+  if (dice.length === 0) return ""
+  const die = dice[0]
+  if (die === undefined) return ""
+  return `${dice.length}d${die}`
+}
+
+function formatRange(range: Spell["range"]): string {
+  if (range.type === "distance") return `${range.feet} ft.`
+  if (range.type === "self") return "Self"
+  if (range.type === "touch") return "Touch"
+  return ""
+}
+
+interface AttackEntry {
+  name: string
+  modAbility: string // MPMB attack-mod dropdown abbrev: Str/Dex/Con/Int/Wis/Cha
+  range: string
+  toHit: number
+  damageDice: string
+  damageType: string
+  description: string
+}
+
+function attackCantripsFor(character: ComputedCharacter): AttackEntry[] {
+  const charLevel = totalLevel(character)
+  const entries: AttackEntry[] = []
+
+  for (const spellInfo of character.spells as SpellInfoForClass[]) {
+    for (const cantrip of spellInfo.cantripSlots) {
+      if (!cantrip.spell_id) continue
+      const spell = allSpells.find((s) => s.id === cantrip.spell_id)
+      if (!spell) continue
+      if (spell.resolution.kind !== "attack") continue
+
+      const damage = spell.damage?.[0]
+      entries.push({
+        name: spell.name,
+        modAbility: ABILITY_TO_MPMB[spellInfo.ability],
+        range: formatRange(spell.range),
+        toHit: spellInfo.spellAttackBonus,
+        damageDice: formatDamageDice(cantripDiceAtLevel(spell, charLevel)),
+        damageType: damage ? titleCase(damage.type) : "",
+        description: spell.briefDescription,
+      })
+    }
+  }
+
+  return entries
+}
+
+function fillAttackCantrips(form: PDFForm, character: ComputedCharacter): void {
+  const cantrips = attackCantripsFor(character)
+  // MPMB page 1 has 5 attack rows. Cantrips go after weapons (we don't fill
+  // weapons yet, so they start at row 1).
+  //
+  // The visible "Attack Name" widget is the Weapon Selection dropdown, not the
+  // Weapon text field (they're stacked at the same coordinates). The dropdown
+  // has 93 predefined weapon/cantrip options; setDropdown adds the name as a
+  // new option if it isn't already present.
+  for (let i = 0; i < Math.min(cantrips.length, 5); i++) {
+    const c = cantrips[i]
+    if (!c) continue
+    const num = i + 1
+    setDropdown(form, `Attack.${num}.Weapon Selection`, c.name)
+    setDropdown(form, `Attack.${num}.Mod`, c.modAbility)
+    if (c.range) setText(form, `Attack.${num}.Range`, c.range)
+    setText(form, `Attack.${num}.To Hit`, unsignedFmt(c.toHit))
+    if (c.damageDice) setText(form, `Attack.${num}.Damage`, c.damageDice)
+    if (c.damageType) setDropdown(form, `Attack.${num}.Damage Type`, c.damageType)
+    setText(form, `Attack.${num}.Description`, c.description)
+  }
+}
+
 function fillCharacterFields(
   form: PDFForm,
   character: ComputedCharacter,
@@ -261,6 +355,7 @@ function fillCharacterFields(
   if (character.spells.length > 0) {
     fillSpellcasterFields(form, character)
     fillLimitedFeatures(form, spellSlotLimitedFeatures(character))
+    fillAttackCantrips(form, character)
   }
 }
 

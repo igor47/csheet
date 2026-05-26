@@ -98,6 +98,7 @@ import {
   handleUnallowed,
 } from "@src/services/authorize"
 import { castSpell } from "@src/services/castSpell"
+import { generateCharacterPdf } from "@src/services/characterPdf"
 import { computeCharacter } from "@src/services/computeCharacter"
 import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 import { createCharacter } from "@src/services/createCharacter"
@@ -217,6 +218,22 @@ characterRoutes.get("/characters/:id/print", async (c) => {
   if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
   const char = authResult.character
   return c.html(<CharacterPrint character={char} />)
+})
+
+characterRoutes.get("/characters/:id/pdf", async (c) => {
+  const id = c.req.param("id") as string
+  const authResult = await authorizeCharacterView(c, id)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const pdfBytes = await generateCharacterPdf(char)
+
+  return new Response(Buffer.from(pdfBytes), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${char.name.replace(/[^\w\s-]/g, "")}.pdf"`,
+    },
+  })
 })
 
 characterRoutes.post("/characters/:id/archive", async (c) => {

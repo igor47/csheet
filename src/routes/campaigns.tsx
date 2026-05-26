@@ -6,6 +6,7 @@ import { Campaigns } from "@src/components/Campaigns"
 import { ChangeRoleForm } from "@src/components/ChangeRoleForm"
 import { getDb } from "@src/db"
 import { countArchivedByUserId } from "@src/db/campaigns"
+import { findById as findUserById } from "@src/db/users"
 import { getBaseUrl } from "@src/lib/url"
 import { setFlashMsg } from "@src/middleware/flash"
 import { addCharacterToCampaign } from "@src/services/campaigns/addCharacter"
@@ -84,20 +85,25 @@ campaignsRoutes.get("/campaigns/:id/pdf", async (c) => {
   if (authResult.role !== "dm") return handleCampaignUnallowed(c, "not_member")
 
   const db = getDb(c)
-  const characters = (
+  const entries = (
     await Promise.all(
       authResult.campaign.characters
         .filter((cc) => !cc.isNPC)
-        .map((cc) => computeCharacter(db, cc.character_id))
+        .map(async (cc) => {
+          const character = await computeCharacter(db, cc.character_id)
+          if (!character) return null
+          const owner = await findUserById(db, character.user_id)
+          return { character, playerName: owner?.name ?? owner?.email }
+        })
     )
-  ).filter((c): c is NonNullable<typeof c> => c !== null)
+  ).filter((e): e is NonNullable<typeof e> => e !== null)
 
-  if (characters.length === 0) {
+  if (entries.length === 0) {
     await setFlashMsg(c, "No party characters in this campaign yet", "warning")
     return c.redirect(`/campaigns/${id}`)
   }
 
-  const pdfBytes = await generateCampaignPdf(characters)
+  const pdfBytes = await generateCampaignPdf(entries)
   const safeName = authResult.campaign.name.replace(/[^\w\s-]/g, "")
 
   return new Response(Buffer.from(pdfBytes), {

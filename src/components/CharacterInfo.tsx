@@ -130,11 +130,11 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
             <div class="d-flex justify-content-between align-items-start gap-2">
               <h2 class="mb-0">{character.name}</h2>
               <a
-                href={`/characters/${character.id}/print`}
+                href={`/characters/${character.id}/pdf`}
                 target="_blank"
                 class="btn btn-sm btn-outline-secondary"
-                title="Print / Save as PDF"
-                aria-label="Print / Save as PDF"
+                title="Download character sheet PDF"
+                aria-label="Download character sheet PDF"
               >
                 <i class="bi bi-printer"></i>
               </a>

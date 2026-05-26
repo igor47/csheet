@@ -29,17 +29,10 @@ interface CharacterFactoryParams {
   charisma?: number
 }
 
-const species = [
-  "human",
-  "elf",
-  "dwarf",
-  "halfling",
-  "dragonborn",
-  "gnome",
-  "half-elf",
-  "half-orc",
-  "tiefling",
-]
+// Limited to species present in BOTH srd51 and srd52 rulesets. half-elf and
+// half-orc exist only in srd51 — including them caused random test failures
+// when the factory rolled one for an srd52 character.
+const species = ["human", "elf", "dwarf", "halfling", "dragonborn", "gnome", "tiefling"]
 const backgrounds = [
   "acolyte",
   "criminal",

@@ -6,7 +6,7 @@ import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { PDFDocument } from "pdf-lib"
-import { generateCharacterPdf } from "./characterPdf"
+import { generateCampaignPdf, generateCharacterPdf } from "./characterPdf"
 
 async function loadPdf(bytes: Uint8Array): Promise<PDFDocument> {
   return PDFDocument.load(bytes)
@@ -146,7 +146,7 @@ describe("generateCharacterPdf", () => {
     // The character factory creates ability scores with proficiency: false
     // regardless of class, so all save prof boxes should remain unchecked.
     const dbChar = await characterFactory.create(
-      { user_id: user.id, ruleset: "srd52", class: "wizard", level: 1 },
+      { user_id: user.id, ruleset: "srd52", species: "human", class: "wizard", level: 1 },
       testCtx.db
     )
     const computed = await computeCharacter(testCtx.db, dbChar.id)
@@ -158,4 +158,56 @@ describe("generateCharacterPdf", () => {
     expect(isChecked(out, "Str ST Prof")).toBe(false)
     expect(isChecked(out, "Int ST Prof")).toBe(false)
   })
+})
+
+describe("generateCampaignPdf", () => {
+  const testCtx = useTestApp()
+  let user: User
+
+  beforeEach(async () => {
+    user = await userFactory.create({}, testCtx.db)
+  })
+
+  test("throws when given no characters", async () => {
+    expect(generateCampaignPdf([])).rejects.toThrow(/zero characters/)
+  })
+
+  // Each MPMB template parse takes ~1.5s; 3-character campaigns exceed the
+  // default 5s timeout. Bump these to 20s.
+  test("concatenates one page per character", async () => {
+    const chars = []
+    for (let i = 0; i < 3; i++) {
+      const dbChar = await characterFactory.create(
+        { user_id: user.id, ruleset: "srd52", species: "human", name: `Hero ${i}` },
+        testCtx.db
+      )
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+      chars.push(computed)
+    }
+
+    const bytes = await generateCampaignPdf(chars)
+    const out = await PDFDocument.load(bytes)
+
+    expect(out.getPageCount()).toBe(3)
+  }, 20_000)
+
+  test("works across mixed rulesets", async () => {
+    const a = await characterFactory.create(
+      { user_id: user.id, ruleset: "srd51", species: "human", name: "Old" },
+      testCtx.db
+    )
+    const b = await characterFactory.create(
+      { user_id: user.id, ruleset: "srd52", species: "human", name: "New" },
+      testCtx.db
+    )
+    const ca = await computeCharacter(testCtx.db, a.id)
+    const cb = await computeCharacter(testCtx.db, b.id)
+    if (!ca || !cb) throw new Error("computeCharacter returned null")
+
+    const bytes = await generateCampaignPdf([ca, cb])
+    const out = await PDFDocument.load(bytes)
+
+    expect(out.getPageCount()).toBe(2)
+  }, 20_000)
 })

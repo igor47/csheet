@@ -94,7 +94,10 @@ function removeD20Warning(form: PDFForm): void {
   }
 }
 
-export async function generateCharacterPdf(character: ComputedCharacter): Promise<Uint8Array> {
+// Build a single-page PDFDocument for one character. Returns the doc rather
+// than saved bytes so it can be either serialized (generateCharacterPdf) or
+// concatenated with others (generateCampaignPdf).
+async function buildCharacterPdfDoc(character: ComputedCharacter): Promise<PDFDocument> {
   const templatePath = TEMPLATE_PATHS[character.ruleset]
   const templateFile = Bun.file(templatePath)
   if (!(await templateFile.exists())) {
@@ -125,13 +128,37 @@ export async function generateCharacterPdf(character: ComputedCharacter): Promis
     pdfDoc.removePage(i)
   }
 
-  // We deliberately do NOT call form.flatten() — MPMB's template contains rich
-  // text fields and buttons with missing appearance streams that crash pdf-lib's
-  // flattener. Leaving the form intact still renders the filled values
-  // correctly in all major PDF viewers (Chrome, Firefox, Preview, Evince).
-  //
-  // updateFieldAppearances: false skips pdf-lib's auto-regeneration of every
-  // field's visual stream on save. Without it, MPMB's rich text fields trip
-  // RichTextFieldReadError, and regenerating 3600 fields takes seconds.
-  return pdfDoc.save({ updateFieldAppearances: false })
+  return pdfDoc
+}
+
+// We deliberately do NOT call form.flatten() — MPMB's template contains rich
+// text fields and buttons with missing appearance streams that crash pdf-lib's
+// flattener. Leaving the form intact still renders the filled values correctly
+// in all major PDF viewers (Chrome, Firefox, Preview, Evince).
+//
+// updateFieldAppearances: false skips pdf-lib's auto-regeneration of every
+// field's visual stream on save. Without it, MPMB's rich text fields trip
+// RichTextFieldReadError, and regenerating 3600 fields takes seconds.
+const SAVE_OPTIONS = { updateFieldAppearances: false } as const
+
+export async function generateCharacterPdf(character: ComputedCharacter): Promise<Uint8Array> {
+  const pdfDoc = await buildCharacterPdfDoc(character)
+  return pdfDoc.save(SAVE_OPTIONS)
+}
+
+// Concatenate per-character single-page PDFs into one party-wide document.
+// Pages are copied in the order characters are supplied.
+export async function generateCampaignPdf(characters: ComputedCharacter[]): Promise<Uint8Array> {
+  if (characters.length === 0) {
+    throw new Error("Cannot generate campaign PDF with zero characters")
+  }
+
+  const combined = await PDFDocument.create()
+  for (const character of characters) {
+    const charDoc = await buildCharacterPdfDoc(character)
+    const [page] = await combined.copyPages(charDoc, [0])
+    combined.addPage(page)
+  }
+
+  return combined.save(SAVE_OPTIONS)
 }

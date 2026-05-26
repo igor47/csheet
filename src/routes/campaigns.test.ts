@@ -2551,3 +2551,95 @@ describe("Campaign page buttons", () => {
     })
   })
 })
+
+describe("GET /campaigns/:id/pdf", () => {
+  const testCtx = useTestApp()
+
+  describe("when user is not authenticated", () => {
+    test("redirects to login", async () => {
+      const response = await makeRequest(testCtx.app, "/campaigns/some-id/pdf")
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get("Location")).toContain("/login")
+    })
+  })
+
+  describe("when user is the DM", () => {
+    let dmUser: User
+    let campaign: Campaign
+
+    beforeEach(async () => {
+      dmUser = await userFactory.create({}, testCtx.db)
+      campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+    })
+
+    describe("with no party characters", () => {
+      test("redirects with a flash message", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/pdf`, {
+          user: dmUser,
+        })
+
+        expect(response.status).toBe(302)
+        expect(response.headers.get("Location")).toBe(`/campaigns/${campaign.id}`)
+      })
+    })
+
+    describe("with party characters", () => {
+      let playerUser: User
+
+      beforeEach(async () => {
+        playerUser = await userFactory.create({}, testCtx.db)
+        await campaignMemberFactory.create(
+          {
+            campaign_id: campaign.id,
+            user_id: playerUser.id,
+            invited_by: dmUser.id,
+            role: "player",
+          },
+          testCtx.db
+        )
+        const character = await characterFactory.create(
+          { user_id: playerUser.id, species: "human" },
+          testCtx.db
+        )
+        await campaignCharacterFactory.create(
+          { campaign_id: campaign.id, character_id: character.id, added_by: playerUser.id },
+          testCtx.db
+        )
+      })
+
+      test("returns a PDF", async () => {
+        const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/pdf`, {
+          user: dmUser,
+        })
+
+        expect(response.status).toBe(200)
+        expect(response.headers.get("Content-Type")).toBe("application/pdf")
+        expect(response.headers.get("Content-Disposition")).toContain("-party.pdf")
+      })
+    })
+  })
+
+  describe("when user is a player, not DM", () => {
+    test("redirects non-DM members", async () => {
+      const dmUser = await userFactory.create({}, testCtx.db)
+      const playerUser = await userFactory.create({}, testCtx.db)
+      const campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
+      await campaignMemberFactory.create(
+        {
+          campaign_id: campaign.id,
+          user_id: playerUser.id,
+          invited_by: dmUser.id,
+          role: "player",
+        },
+        testCtx.db
+      )
+
+      const response = await makeRequest(testCtx.app, `/campaigns/${campaign.id}/pdf`, {
+        user: playerUser,
+      })
+
+      expect(response.status).toBe(302)
+    })
+  })
+})

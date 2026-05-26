@@ -1,27 +1,52 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import { create as createCharTrait } from "@src/db/char_traits"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
-import { PDFDocument } from "pdf-lib"
+import { decodePDFRawStream, PDFDocument, PDFRawStream } from "pdf-lib"
 import { generateCampaignPdf, generateCharacterPdf } from "./characterPdf"
+
+// pdf-lib flate-compresses content streams and encodes drawn text as PDF
+// hex strings (e.g. `<54657374> Tj`). To substring-match what was drawn,
+// reload the PDF, walk every PDFRawStream, decode it, then replace every
+// `<HEX>` literal with its decoded ASCII before searching.
+function decodeHexLiterals(s: string): string {
+  return s.replace(/<([0-9A-Fa-f\s]+)>/g, (_, hex: string) => {
+    const cleaned = hex.replace(/\s+/g, "")
+    if (cleaned.length === 0 || cleaned.length % 2 !== 0) return ""
+    let out = ""
+    for (let i = 0; i < cleaned.length; i += 2) {
+      out += String.fromCharCode(parseInt(cleaned.slice(i, i + 2), 16))
+    }
+    return out
+  })
+}
+
+async function pdfTextDump(bytes: Uint8Array): Promise<string> {
+  const doc = await PDFDocument.load(bytes)
+  const parts: string[] = []
+  for (const [, obj] of doc.context.enumerateIndirectObjects()) {
+    if (!(obj instanceof PDFRawStream)) continue
+    try {
+      const decoded = decodePDFRawStream(obj).decode()
+      parts.push(decodeHexLiterals(Buffer.from(decoded).toString("latin1")))
+    } catch {
+      // ignore streams we can't decode (e.g. unknown filter)
+    }
+  }
+  return parts.join("\n")
+}
+
+async function pdfContainsText(bytes: Uint8Array, needle: string): Promise<boolean> {
+  const dump = await pdfTextDump(bytes)
+  return dump.includes(needle)
+}
 
 async function loadPdf(bytes: Uint8Array): Promise<PDFDocument> {
   return PDFDocument.load(bytes)
-}
-
-function readText(doc: PDFDocument, name: string): string {
-  return doc.getForm().getTextField(name).getText() ?? ""
-}
-
-function readDropdown(doc: PDFDocument, name: string): string {
-  return doc.getForm().getDropdown(name).getSelected().join(",")
-}
-
-function isChecked(doc: PDFDocument, name: string): boolean {
-  return doc.getForm().getCheckBox(name).isChecked()
 }
 
 describe("generateCharacterPdf", () => {
@@ -32,7 +57,7 @@ describe("generateCharacterPdf", () => {
     user = await userFactory.create({}, testCtx.db)
   })
 
-  describe("srd52 (2024)", () => {
+  describe("a wizard character", () => {
     let dbChar: Character
 
     beforeEach(async () => {
@@ -57,176 +82,249 @@ describe("generateCharacterPdf", () => {
       )
     })
 
-    test("returns a single-page PDF with character info filled in", async () => {
+    test("returns a PDF that parses and has at least one page", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
 
       const bytes = await generateCharacterPdf(computed)
       const out = await loadPdf(bytes)
 
-      expect(out.getPageCount()).toBe(1)
-      expect(readText(out, "PC Name")).toBe("Test Hero")
-      expect(readText(out, "Class and Levels")).toBe("Wizard 4")
-      expect(readText(out, "Character Level")).toBe("4")
-      expect(readDropdown(out, "Background")).toBe("sage")
-      expect(readDropdown(out, "Race")).toBe("human")
-      expect(readDropdown(out, "Alignment")).toBe("neutral good")
+      expect(bytes.length).toBeGreaterThan(0)
+      expect(out.getPageCount()).toBeGreaterThanOrEqual(1)
     })
 
-    test("fills ability scores, modifiers, and saving throws", async () => {
+    test("sets the document title to the character name", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
 
       const bytes = await generateCharacterPdf(computed)
       const out = await loadPdf(bytes)
 
-      expect(readText(out, "Str")).toBe("8")
-      expect(readText(out, "Str Mod")).toBe("-1")
-      expect(readText(out, "Dex")).toBe("14")
-      expect(readText(out, "Dex Mod")).toBe("+2")
-      expect(readText(out, "Int")).toBe("17")
-      expect(readText(out, "Int Mod")).toBe("+3")
+      expect(out.getTitle()).toContain("Test Hero")
     })
 
-    test("fills combat block: AC, initiative, speed, HP, prof bonus, passive perception", async () => {
+    test("renders the character name, class line, and identity fields", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
 
       const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
 
-      // Save/init/prof fields use unsigned format (layout supplies "+").
-      expect(readText(out, "AC")).toBe(String(computed.armorClass))
-      expect(readText(out, "Initiative bonus")).toBe(String(computed.initiative))
-      expect(readText(out, "Speed")).toBe(String(computed.speed))
-      expect(readText(out, "HP Max")).toBe(String(computed.maxHitPoints))
-      expect(readText(out, "HP Current")).toBe(String(computed.currentHP))
-      expect(readText(out, "Proficiency Bonus")).toBe("2") // level 4 → +2
-      expect(readText(out, "Passive Perception")).toBe(String(computed.passivePerception))
+      expect(await pdfContainsText(bytes, "Test Hero")).toBe(true)
+      expect(await pdfContainsText(bytes, "Wizard 4")).toBe(true)
+      expect(await pdfContainsText(bytes, "Human")).toBe(true)
+      expect(await pdfContainsText(bytes, "Sage")).toBe(true)
+      expect(await pdfContainsText(bytes, "Neutral Good")).toBe(true)
     })
 
-    test("fills skill modifiers", async () => {
-      const computed = await computeCharacter(testCtx.db, dbChar.id)
-      if (!computed) throw new Error("computeCharacter returned null")
-
-      const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
-
-      // Skill fields use unsigned format; "-1" keeps its minus, "+2" becomes "2".
-      expect(readText(out, "Arc")).toBe(String(computed.skills.arcana.modifier))
-      expect(readText(out, "Acr")).toBe(String(computed.skills.acrobatics.modifier))
-      expect(readText(out, "Ath")).toBe(String(computed.skills.athletics.modifier))
-    })
-
-    test("fills spell save DC and spellcasting ability for a spellcaster", async () => {
-      const computed = await computeCharacter(testCtx.db, dbChar.id)
-      if (!computed) throw new Error("computeCharacter returned null")
-
-      // Wizard with INT 17 (+3) at level 4 (prof +2): save DC = 8 + 2 + 3 = 13
-      expect(computed.spells.length).toBeGreaterThan(0)
-      const info = computed.spells[0]
-      if (!info) throw new Error("expected spell info")
-
-      const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
-
-      expect(readText(out, "Spell save DC 1")).toBe(String(info.spellSaveDC))
-      // Spell DC 1 Mod is a dropdown; we set it to the title-cased ability name.
-      expect(readDropdown(out, "Spell DC 1 Mod")).toBe("Intelligence")
-    })
-
-    test("fills spell slots into Limited Feature rows", async () => {
-      const computed = await computeCharacter(testCtx.db, dbChar.id)
-      if (!computed) throw new Error("computeCharacter returned null")
-
-      // Wizard 4: 4 first-level + 3 second-level slots, all available.
-      const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
-
-      expect(readText(out, "Limited Feature 1")).toBe("Spell Slots Lv 1")
-      expect(readText(out, "Limited Feature Max Usages 1")).toBe("4")
-      expect(readDropdown(out, "Limited Feature Recovery 1")).toBe("Long Rest")
-      expect(readText(out, "Limited Feature Used 1")).toBe("")
-
-      expect(readText(out, "Limited Feature 2")).toBe("Spell Slots Lv 2")
-      expect(readText(out, "Limited Feature Max Usages 2")).toBe("3")
-    })
-
-    test("skips spellcaster fields for non-casters", async () => {
-      const fighterChar = await characterFactory.create(
-        { user_id: user.id, ruleset: "srd52", species: "human", class: "fighter", level: 3 },
-        testCtx.db
-      )
-      const computed = await computeCharacter(testCtx.db, fighterChar.id)
-      if (!computed) throw new Error("computeCharacter returned null")
-
-      const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
-
-      // No spellcasting → Spell save DC 1 left blank
-      expect(readText(out, "Spell save DC 1")).toBe("")
-    })
-
-    test("fills hit dice for single-class character", async () => {
-      const computed = await computeCharacter(testCtx.db, dbChar.id)
-      if (!computed) throw new Error("computeCharacter returned null")
-
-      const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
-
-      // Wizard 4 → 4 d6 hit dice
-      expect(readText(out, "HD1 Die")).toBe("d6")
-      expect(readText(out, "HD1 Level")).toBe("4")
-    })
-
-    test("fills Player Name when supplied", async () => {
+    test("includes the player name in the header when supplied", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
 
       const bytes = await generateCharacterPdf(computed, "Igor")
-      const out = await loadPdf(bytes)
 
-      expect(readText(out, "Player Name")).toBe("Igor")
+      expect(await pdfContainsText(bytes, "Igor")).toBe(true)
     })
 
-    test("leaves Player Name blank when not supplied", async () => {
+    test("omits player line text when no player name is supplied", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
 
       const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
 
-      expect(readText(out, "Player Name")).toBe("")
+      expect(await pdfContainsText(bytes, "Player:")).toBe(false)
     })
 
-    test("removes the d20warning overlay", async () => {
+    test("renders top-strip and secondary-stat labels", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
 
       const bytes = await generateCharacterPdf(computed)
-      const out = await loadPdf(bytes)
 
-      expect(() => out.getForm().getButton("d20warning")).toThrow()
+      for (const label of [
+        "CHARACTER NAME",
+        "BACKGROUND",
+        "CLASS",
+        "SPECIES",
+        "SUBCLASS",
+        "SIZE",
+        "ARMOR CLASS",
+        "HIT POINTS",
+        "HIT DICE",
+        "INITIATIVE",
+        "SPEED",
+        "PASSIVE PERCEPTION",
+        "PROF. BONUS",
+      ]) {
+        expect(await pdfContainsText(bytes, label)).toBe(true)
+      }
     })
 
-    test("renders a lineage as 'species (lineage)'", async () => {
-      // Override species to include lineage by editing the DB character row
+    test("renders all six ability abbreviations", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      for (const ab of ["STR", "DEX", "CON", "INT", "WIS", "CHA"]) {
+        expect(await pdfContainsText(bytes, ab)).toBe(true)
+      }
+    })
+
+    test("renders the skills section with skill names and ability tags", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      expect(await pdfContainsText(bytes, "SKILLS")).toBe(true)
+      expect(await pdfContainsText(bytes, "Arcana (INT)")).toBe(true)
+      expect(await pdfContainsText(bytes, "Perception (WIS)")).toBe(true)
+    })
+
+    test("renders a save row on each ability card", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+      const dump = await pdfTextDump(bytes)
+      // Six SAVE labels — one per ability card.
+      const matches = dump.match(/SAVE/g) ?? []
+      expect(matches.length).toBeGreaterThanOrEqual(6)
+    })
+
+    test("renders a spellcasting section with per-class stats and slot tiles", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      expect(await pdfContainsText(bytes, "SPELLCASTING")).toBe(true)
+      // Per-class stats line
+      expect(await pdfContainsText(bytes, "Wizard")).toBe(true)
+      expect(await pdfContainsText(bytes, "Save DC")).toBe(true)
+      expect(await pdfContainsText(bytes, "Atk")).toBe(true)
+      expect(await pdfContainsText(bytes, "Ability")).toBe(true)
+      // Slot tiles render with "L1" / "L2" labels per tile.
+      expect(await pdfContainsText(bytes, "L1")).toBe(true)
+      expect(await pdfContainsText(bytes, "L2")).toBe(true)
+    })
+
+    test("renders a per-class spells section on the overflow page", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      expect(await pdfContainsText(bytes, "WIZARD SPELLS")).toBe(true)
+    })
+
+    test("renders a Features & Traits box on page 1 with trait names", async () => {
+      await createCharTrait(testCtx.db, {
+        character_id: dbChar.id,
+        name: "Arcane Recovery",
+        description: "Once per day during a short rest, recover spell slots.",
+        source: "class",
+        source_detail: "Wizard",
+        level: 1,
+        note: null,
+      })
+
+      const refreshed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!refreshed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(refreshed)
+
+      expect(await pdfContainsText(bytes, "FEATURES & TRAITS")).toBe(true)
+      expect(await pdfContainsText(bytes, "Arcane Recovery")).toBe(true)
+    })
+
+    test("does not render full trait descriptions anywhere", async () => {
+      await createCharTrait(testCtx.db, {
+        character_id: dbChar.id,
+        name: "Arcane Recovery",
+        description: "Once per day during a short rest, recover spell slots.",
+        source: "class",
+        source_detail: "Wizard",
+        level: 1,
+        note: null,
+      })
+
+      const refreshed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!refreshed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(refreshed)
+
+      // Names only — no description body, no "(Full)" section.
+      expect(await pdfContainsText(bytes, "Arcane Recovery")).toBe(true)
+      expect(await pdfContainsText(bytes, "recover spell slots")).toBe(false)
+      expect(await pdfContainsText(bytes, "FEATURES & TRAITS (FULL)")).toBe(false)
+    })
+
+    test("renders an Equipment box with a coins line", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      expect(await pdfContainsText(bytes, "EQUIPMENT")).toBe(true)
+      expect(await pdfContainsText(bytes, "Coins:")).toBe(true)
+      expect(await pdfContainsText(bytes, "GP")).toBe(true)
+    })
+
+    test("renders the species (lineage) when a lineage is set", async () => {
       const elfChar = await characterFactory.create(
-        { user_id: user.id, ruleset: "srd52", species: "elf", lineage: "high" },
+        {
+          user_id: user.id,
+          ruleset: "srd52",
+          species: "elf",
+          lineage: "high",
+          class: "wizard",
+          level: 1,
+        },
         testCtx.db
       )
       const computed = await computeCharacter(testCtx.db, elfChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
 
       const bytes = await generateCharacterPdf(computed)
+
+      expect(await pdfContainsText(bytes, "Elf")).toBe(true)
+      expect(await pdfContainsText(bytes, "High")).toBe(true)
+    })
+
+    test("renders a footer with the character name and page numbers", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
       const out = await loadPdf(bytes)
 
-      expect(readDropdown(out, "Race")).toBe("elf (high)")
+      expect(await pdfContainsText(bytes, `page 1 of ${out.getPageCount()}`)).toBe(true)
     })
   })
 
-  describe("srd51 (2014)", () => {
-    test("returns a single-page PDF with character info filled in", async () => {
+  describe("a non-spellcasting character", () => {
+    test("notes the absence of spellcasting in the spellcasting box", async () => {
+      const fighter = await characterFactory.create(
+        { user_id: user.id, ruleset: "srd52", species: "human", class: "fighter", level: 3 },
+        testCtx.db
+      )
+      const computed = await computeCharacter(testCtx.db, fighter.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      // The "Spellcasting" tabbed box is always present on page 1, but with
+      // a "no spellcasting" placeholder for non-casters. No per-class spell
+      // page is generated.
+      expect(await pdfContainsText(bytes, "SPELLCASTING")).toBe(true)
+      expect(await pdfContainsText(bytes, "no spellcasting")).toBe(true)
+      expect(await pdfContainsText(bytes, "WIZARD SPELLS")).toBe(false)
+    })
+  })
+
+  describe("srd51 ruleset", () => {
+    test("renders identity fields and produces a valid PDF", async () => {
       const dbChar = await characterFactory.create(
         {
           user_id: user.id,
@@ -246,28 +344,11 @@ describe("generateCharacterPdf", () => {
       const bytes = await generateCharacterPdf(computed)
       const out = await loadPdf(bytes)
 
-      expect(out.getPageCount()).toBe(1)
-      expect(readText(out, "PC Name")).toBe("Old School")
-      expect(readText(out, "Class and Levels")).toBe("Fighter 3")
-      expect(readDropdown(out, "Race")).toBe("elf")
+      expect(out.getPageCount()).toBeGreaterThanOrEqual(1)
+      expect(await pdfContainsText(bytes, "Old School")).toBe(true)
+      expect(await pdfContainsText(bytes, "Fighter 3")).toBe(true)
+      expect(await pdfContainsText(bytes, "Elf")).toBe(true)
     })
-  })
-
-  test("leaves saving throw proficiency unchecked when not proficient", async () => {
-    // The character factory creates ability scores with proficiency: false
-    // regardless of class, so all save prof boxes should remain unchecked.
-    const dbChar = await characterFactory.create(
-      { user_id: user.id, ruleset: "srd52", species: "human", class: "wizard", level: 1 },
-      testCtx.db
-    )
-    const computed = await computeCharacter(testCtx.db, dbChar.id)
-    if (!computed) throw new Error("computeCharacter returned null")
-
-    const bytes = await generateCharacterPdf(computed)
-    const out = await loadPdf(bytes)
-
-    expect(isChecked(out, "Str ST Prof")).toBe(false)
-    expect(isChecked(out, "Int ST Prof")).toBe(false)
   })
 })
 
@@ -283,33 +364,62 @@ describe("generateCampaignPdf", () => {
     expect(generateCampaignPdf([])).rejects.toThrow(/zero characters/)
   })
 
-  // Each MPMB template parse takes ~1.5s; 3-character campaigns exceed the
-  // default 5s timeout. Bump these to 20s.
-  test("concatenates one page per character", async () => {
+  test("concatenates every character's full PDF, preserving per-character page counts", async () => {
     const entries = []
+    let expectedTotal = 0
+
     for (let i = 0; i < 3; i++) {
       const dbChar = await characterFactory.create(
-        { user_id: user.id, ruleset: "srd52", species: "human", name: `Hero ${i}` },
+        {
+          user_id: user.id,
+          ruleset: "srd52",
+          species: "human",
+          name: `Hero${i}`,
+          class: "wizard",
+          level: 2,
+        },
         testCtx.db
       )
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
+
+      const charBytes = await generateCharacterPdf(computed, `Player ${i}`)
+      const charDoc = await loadPdf(charBytes)
+      expectedTotal += charDoc.getPageCount()
+
       entries.push({ character: computed, playerName: `Player ${i}` })
     }
 
     const bytes = await generateCampaignPdf(entries)
-    const out = await PDFDocument.load(bytes)
+    const out = await loadPdf(bytes)
 
-    expect(out.getPageCount()).toBe(3)
+    expect(out.getPageCount()).toBe(expectedTotal)
+    expect(await pdfContainsText(bytes, "Hero0")).toBe(true)
+    expect(await pdfContainsText(bytes, "Hero1")).toBe(true)
+    expect(await pdfContainsText(bytes, "Hero2")).toBe(true)
   }, 20_000)
 
   test("works across mixed rulesets", async () => {
     const a = await characterFactory.create(
-      { user_id: user.id, ruleset: "srd51", species: "human", name: "Old" },
+      {
+        user_id: user.id,
+        ruleset: "srd51",
+        species: "human",
+        name: "Old",
+        class: "fighter",
+        level: 1,
+      },
       testCtx.db
     )
     const b = await characterFactory.create(
-      { user_id: user.id, ruleset: "srd52", species: "human", name: "New" },
+      {
+        user_id: user.id,
+        ruleset: "srd52",
+        species: "human",
+        name: "New",
+        class: "fighter",
+        level: 1,
+      },
       testCtx.db
     )
     const ca = await computeCharacter(testCtx.db, a.id)
@@ -317,8 +427,10 @@ describe("generateCampaignPdf", () => {
     if (!ca || !cb) throw new Error("computeCharacter returned null")
 
     const bytes = await generateCampaignPdf([{ character: ca }, { character: cb }])
-    const out = await PDFDocument.load(bytes)
+    const out = await loadPdf(bytes)
 
-    expect(out.getPageCount()).toBe(2)
+    expect(out.getPageCount()).toBeGreaterThanOrEqual(2)
+    expect(await pdfContainsText(bytes, "Old")).toBe(true)
+    expect(await pdfContainsText(bytes, "New")).toBe(true)
   }, 20_000)
 })

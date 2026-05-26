@@ -4,7 +4,6 @@ import type { Upload } from "@src/db/uploads"
 import { UploadStatus } from "@src/db/uploads"
 import type { User } from "@src/db/users"
 import { useTestApp } from "@src/test/app"
-import { campaignCharacterFactory, campaignFactory } from "@src/test/factories/campaign"
 import { characterFactory } from "@src/test/factories/character"
 import { uploadFactory } from "@src/test/factories/upload"
 import { userFactory } from "@src/test/factories/user"
@@ -746,74 +745,6 @@ describe("Character archiving - name reuse", () => {
       expect(body).toContain("You haven't created any characters yet")
       // Should show checkbox since archived characters exist
       expect(body).toContain("Show archived characters")
-    })
-  })
-})
-
-describe("GET /characters/:id/print", () => {
-  const testCtx = useTestApp()
-
-  describe("when user is not authenticated", () => {
-    test("redirects to login", async () => {
-      const response = await makeRequest(testCtx.app, "/characters/some-id/print")
-
-      expect(response.status).toBe(302)
-      expect(response.headers.get("Location")).toContain("/login")
-    })
-  })
-
-  describe("when user is authenticated", () => {
-    let user: User
-    let character: Character
-
-    beforeEach(async () => {
-      user = await userFactory.create({}, testCtx.db)
-      character = await characterFactory.create({ user_id: user.id }, testCtx.db)
-    })
-
-    test("returns 200 for character owner", async () => {
-      const response = await makeRequest(testCtx.app, `/characters/${character.id}/print`, { user })
-
-      expect(response.status).toBe(200)
-    })
-
-    test("renders character name in print page", async () => {
-      const response = await makeRequest(testCtx.app, `/characters/${character.id}/print`, { user })
-
-      const document = await parseHtml(response)
-      const body = document.body.textContent || ""
-
-      expect(body).toContain(character.name)
-    })
-
-    test("returns 302 for a character the user does not own and is not DM of", async () => {
-      const otherUser = await userFactory.create({}, testCtx.db)
-      const response = await makeRequest(testCtx.app, `/characters/${character.id}/print`, {
-        user: otherUser,
-      })
-
-      expect(response.status).toBe(302)
-    })
-
-    describe("when user is DM of a campaign containing the character", () => {
-      let dmUser: User
-
-      beforeEach(async () => {
-        dmUser = await userFactory.create({}, testCtx.db)
-        const campaign = await campaignFactory.create({ created_by: dmUser.id }, testCtx.db)
-        await campaignCharacterFactory.create(
-          { campaign_id: campaign.id, character_id: character.id, added_by: dmUser.id },
-          testCtx.db
-        )
-      })
-
-      test("returns 200 for the DM", async () => {
-        const response = await makeRequest(testCtx.app, `/characters/${character.id}/print`, {
-          user: dmUser,
-        })
-
-        expect(response.status).toBe(200)
-      })
     })
   })
 })

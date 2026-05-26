@@ -11,7 +11,6 @@ import { Character } from "@src/components/Character"
 import { CharacterImport } from "@src/components/CharacterImport"
 import { CharacterInfo } from "@src/components/CharacterInfo"
 import { CharacterNew } from "@src/components/CharacterNew"
-import { CharacterPrint } from "@src/components/CharacterPrint"
 import { Characters } from "@src/components/Characters"
 import { ChargeManagementForm } from "@src/components/ChargeManagementForm"
 import { ClassEditForm } from "@src/components/ClassEditForm"
@@ -210,14 +209,6 @@ characterRoutes.get("/characters/:id", async (c) => {
       title: "Character Sheet",
     }
   )
-})
-
-characterRoutes.get("/characters/:id/print", async (c) => {
-  const id = c.req.param("id") as string
-  const authResult = await authorizeCharacterView(c, id)
-  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
-  const char = authResult.character
-  return c.html(<CharacterPrint character={char} />)
 })
 
 characterRoutes.get("/characters/:id/pdf", async (c) => {

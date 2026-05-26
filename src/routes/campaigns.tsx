@@ -21,6 +21,8 @@ import { removeCharacterFromCampaign } from "@src/services/campaigns/removeChara
 import { respondToInvite } from "@src/services/campaigns/respond"
 import { hideCharacter, revealCharacter } from "@src/services/campaigns/revealCharacter"
 import { unarchiveCampaign } from "@src/services/campaigns/unarchive"
+import { generateCampaignPdf } from "@src/services/characterPdf"
+import { computeCharacter } from "@src/services/computeCharacter"
 import { listCharacters } from "@src/services/listCharacters"
 import { Hono } from "hono"
 
@@ -71,6 +73,38 @@ campaignsRoutes.get("/campaigns/:id", async (c) => {
 
   return c.render(<Campaign campaign={authResult.campaign} />, {
     title: authResult.campaign.name,
+  })
+})
+
+campaignsRoutes.get("/campaigns/:id/pdf", async (c) => {
+  const id = c.req.param("id") as string
+
+  const authResult = await authorizeCampaign(c, id)
+  if (!authResult.allowed) return handleCampaignUnallowed(c, authResult.reason)
+  if (authResult.role !== "dm") return handleCampaignUnallowed(c, "not_member")
+
+  const db = getDb(c)
+  const characters = (
+    await Promise.all(
+      authResult.campaign.characters
+        .filter((cc) => !cc.isNPC)
+        .map((cc) => computeCharacter(db, cc.character_id))
+    )
+  ).filter((c): c is NonNullable<typeof c> => c !== null)
+
+  if (characters.length === 0) {
+    await setFlashMsg(c, "No party characters in this campaign yet", "warning")
+    return c.redirect(`/campaigns/${id}`)
+  }
+
+  const pdfBytes = await generateCampaignPdf(characters)
+  const safeName = authResult.campaign.name.replace(/[^\w\s-]/g, "")
+
+  return new Response(Buffer.from(pdfBytes), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${safeName}-party.pdf"`,
+    },
   })
 })
 

@@ -201,10 +201,10 @@ export const Campaign = ({ campaign }: CampaignProps) => {
               <div class="d-flex gap-2">
                 {isDM && (
                   <a
-                    href={`/campaigns/${campaign.id}/print`}
+                    href={`/campaigns/${campaign.id}/pdf`}
                     target="_blank"
                     class="btn btn-outline-secondary btn-sm"
-                    title="Print all character sheets"
+                    title="Download party PDF"
                   >
                     <i class="bi bi-printer me-1"></i>
                     Print All

@@ -118,6 +118,55 @@ describe("generateCharacterPdf", () => {
       expect(readText(out, "Ath")).toBe(String(computed.skills.athletics.modifier))
     })
 
+    test("fills spell save DC and spellcasting ability for a spellcaster", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      // Wizard with INT 17 (+3) at level 4 (prof +2): save DC = 8 + 2 + 3 = 13
+      expect(computed.spells.length).toBeGreaterThan(0)
+      const info = computed.spells[0]
+      if (!info) throw new Error("expected spell info")
+
+      const bytes = await generateCharacterPdf(computed)
+      const out = await loadPdf(bytes)
+
+      expect(readText(out, "Spell save DC 1")).toBe(String(info.spellSaveDC))
+      // Spell DC 1 Mod is a dropdown; we set it to the title-cased ability name.
+      expect(readDropdown(out, "Spell DC 1 Mod")).toBe("Intelligence")
+    })
+
+    test("fills spell slots into Limited Feature rows", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      // Wizard 4: 4 first-level + 3 second-level slots, all available.
+      const bytes = await generateCharacterPdf(computed)
+      const out = await loadPdf(bytes)
+
+      expect(readText(out, "Limited Feature 1")).toBe("Spell Slots Lv 1")
+      expect(readText(out, "Limited Feature Max Usages 1")).toBe("4")
+      expect(readDropdown(out, "Limited Feature Recovery 1")).toBe("Long Rest")
+      expect(readText(out, "Limited Feature Used 1")).toBe("")
+
+      expect(readText(out, "Limited Feature 2")).toBe("Spell Slots Lv 2")
+      expect(readText(out, "Limited Feature Max Usages 2")).toBe("3")
+    })
+
+    test("skips spellcaster fields for non-casters", async () => {
+      const fighterChar = await characterFactory.create(
+        { user_id: user.id, ruleset: "srd52", species: "human", class: "fighter", level: 3 },
+        testCtx.db
+      )
+      const computed = await computeCharacter(testCtx.db, fighterChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+      const out = await loadPdf(bytes)
+
+      // No spellcasting → Spell save DC 1 left blank
+      expect(readText(out, "Spell save DC 1")).toBe("")
+    })
+
     test("fills hit dice for single-class character", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")

@@ -94,6 +94,23 @@ function setDropdown(form: PDFForm, name: string, value: string): void {
   }
 }
 
+// MPMB's main sheet has 16 "Limited Feature" rows (Name / Max / Recovery / Used),
+// intended for tracking class features with limited uses (Bardic Inspiration,
+// Channel Divinity, etc.). They're also a natural fit for spell slot tracking,
+// since MPMB's actual spell-slot checkbox grid is on the dedicated spell sheet
+// PDFs — not on the main sheet.
+//
+// Only the first 8 rows are visually on page 1; rows 9-16 live on a later page
+// of the main sheet PDF (we currently emit only page 1).
+const LIMITED_FEATURE_ROWS = 8
+
+// Count occurrences of each value in an array.
+function countBy(values: number[]): Map<number, number> {
+  const counts = new Map<number, number>()
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
+  return counts
+}
+
 // Group character hit dice by die size, returning per-die {total, available}.
 // Used to fill MPMB's HD1/HD2/HD3 rows — one row per distinct hit die size.
 function groupHitDice(character: ComputedCharacter): Array<{
@@ -101,10 +118,8 @@ function groupHitDice(character: ComputedCharacter): Array<{
   total: number
   used: number
 }> {
-  const totalCounts = new Map<number, number>()
-  for (const d of character.hitDice) totalCounts.set(d, (totalCounts.get(d) ?? 0) + 1)
-  const availCounts = new Map<number, number>()
-  for (const d of character.availableHitDice) availCounts.set(d, (availCounts.get(d) ?? 0) + 1)
+  const totalCounts = countBy(character.hitDice)
+  const availCounts = countBy(character.availableHitDice)
 
   return Array.from(totalCounts.entries())
     .sort(([a], [b]) => a - b)
@@ -113,6 +128,72 @@ function groupHitDice(character: ComputedCharacter): Array<{
       total,
       used: total - (availCounts.get(die) ?? 0),
     }))
+}
+
+interface LimitedFeatureRow {
+  name: string
+  max: number
+  recovery: string // "Short Rest" | "Long Rest" | "Dawn" | etc. — MPMB dropdown options
+  used: number
+}
+
+function fillLimitedFeatures(form: PDFForm, rows: LimitedFeatureRow[]): void {
+  for (let i = 0; i < Math.min(rows.length, LIMITED_FEATURE_ROWS); i++) {
+    const row = rows[i]
+    if (!row) continue
+    const num = i + 1
+    setText(form, `Limited Feature ${num}`, row.name)
+    setText(form, `Limited Feature Max Usages ${num}`, String(row.max))
+    setDropdown(form, `Limited Feature Recovery ${num}`, row.recovery)
+    if (row.used > 0) setText(form, `Limited Feature Used ${num}`, String(row.used))
+  }
+}
+
+function fillSpellcasterFields(form: PDFForm, character: ComputedCharacter): void {
+  // Per-class spellcasting stats (MPMB page 1 supports up to 2 classes).
+  for (let i = 0; i < Math.min(character.spells.length, 2); i++) {
+    const info = character.spells[i]
+    if (!info) continue
+    const num = i + 1
+    setText(form, `Spell save DC ${num}`, String(info.spellSaveDC))
+    setDropdown(form, `Spell DC ${num} Mod`, titleCase(info.ability))
+  }
+}
+
+// Build Limited Feature rows for spell slots — one per spell level the
+// character has slots for. Pact magic (warlock) gets its own row since it
+// recovers on short rest rather than long rest.
+function spellSlotLimitedFeatures(character: ComputedCharacter): LimitedFeatureRow[] {
+  const rows: LimitedFeatureRow[] = []
+
+  const totalSlots = countBy(character.spellSlots)
+  const availSlots = countBy(character.availableSpellSlots)
+  for (let level = 1; level <= 9; level++) {
+    const total = totalSlots.get(level) ?? 0
+    if (total === 0) continue
+    rows.push({
+      name: `Spell Slots Lv ${level}`,
+      max: total,
+      recovery: "Long Rest",
+      used: total - (availSlots.get(level) ?? 0),
+    })
+  }
+
+  if (character.pactMagicSlots && character.pactMagicSlots.length > 0) {
+    const pactByLevel = countBy(character.pactMagicSlots)
+    for (const [level, total] of pactByLevel) {
+      // ComputedCharacter doesn't track pact-slot usage separately yet;
+      // emit total max and assume unused.
+      rows.push({
+        name: `Pact Slots Lv ${level}`,
+        max: total,
+        recovery: "Short Rest",
+        used: 0,
+      })
+    }
+  }
+
+  return rows
 }
 
 function fillCharacterFields(
@@ -174,6 +255,12 @@ function fillCharacterFields(
     setText(form, `HD${idx} Die`, `d${row.die}`)
     setText(form, `HD${idx} Level`, String(row.total))
     if (row.used > 0) setText(form, `HD${idx} Used`, String(row.used))
+  }
+
+  // Spellcasting stats + slot tracking (only if character has any spellcasting)
+  if (character.spells.length > 0) {
+    fillSpellcasterFields(form, character)
+    fillLimitedFeatures(form, spellSlotLimitedFeatures(character))
   }
 }
 

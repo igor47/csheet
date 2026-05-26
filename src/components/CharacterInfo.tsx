@@ -127,7 +127,18 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
             />
           </div>
           <div class="col-9 col-lg-10">
-            <h2>{character.name}</h2>
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <h2 class="mb-0">{character.name}</h2>
+              <a
+                href={`/characters/${character.id}/print`}
+                target="_blank"
+                class="btn btn-sm btn-outline-secondary"
+                title="Print / Save as PDF"
+                aria-label="Print / Save as PDF"
+              >
+                <i class="bi bi-printer"></i>
+              </a>
+            </div>
 
             {/* Class - full width under name */}
             <div class="row g-0 mt-2">
@@ -358,21 +369,6 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
                   </button>
                 </div>
               )}
-            </div>
-
-            {/* Print button — available to everyone including DMs */}
-            <div class="row g-2 h-auto mt-2">
-              <div class="col-12 d-flex justify-content-center">
-                <a
-                  href={`/characters/${character.id}/print`}
-                  target="_blank"
-                  class="btn btn-sm btn-outline-secondary"
-                  title="Print / Save as PDF"
-                >
-                  <i class="bi bi-printer me-1"></i>
-                  Print
-                </a>
-              </div>
             </div>
 
             {/* Rest Buttons */}

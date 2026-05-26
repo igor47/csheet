@@ -84,6 +84,7 @@ import { countArchivedByUserId } from "@src/db/characters"
 import { getChargeHistoryByCharacter } from "@src/db/item_charges"
 import { findByItemId as findItemDamage } from "@src/db/item_damage"
 import { findById as findItemById } from "@src/db/items"
+import { findById as findUserById } from "@src/db/users"
 import { getBeastById } from "@src/lib/dnd/beasts"
 import { setFlashMsg } from "@src/middleware/flash"
 import { activateWildShape } from "@src/services/activateWildShape"
@@ -217,7 +218,10 @@ characterRoutes.get("/characters/:id/pdf", async (c) => {
   if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
   const char = authResult.character
 
-  const pdfBytes = await generateCharacterPdf(char)
+  const owner = await findUserById(getDb(c), char.user_id)
+  const playerName = owner?.name ?? owner?.email
+
+  const pdfBytes = await generateCharacterPdf(char, playerName)
 
   return new Response(Buffer.from(pdfBytes), {
     headers: {

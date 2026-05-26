@@ -1,373 +1,1257 @@
-import { config } from "@src/config"
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
-import type { RulesetId } from "@src/lib/dnd/rulesets"
-import { spells as allSpells, type Spell } from "@src/lib/dnd/spells"
-import { logger } from "@src/lib/logger"
+import { spells as allSpells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
-import type { SpellInfoForClass } from "@src/services/computeSpells"
-import { PDFBool, PDFDocument, type PDFForm, PDFName } from "pdf-lib"
+import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib"
 
-const TEMPLATE_PATHS: Record<RulesetId, string> = {
-  srd51: `${config.repoRoot}/assets/mpmb/srd51.pdf`,
-  srd52: `${config.repoRoot}/assets/mpmb/srd52.pdf`,
+// Letter portrait at 72 dpi
+const PAGE_W = 612
+const PAGE_H = 792
+const MARGIN = 24
+const INNER_W = PAGE_W - MARGIN * 2
+
+const INK = rgb(0.08, 0.08, 0.08)
+const MUTED = rgb(0.42, 0.42, 0.42)
+const STROKE = rgb(0.18, 0.18, 0.18)
+const TAB_FILL = rgb(0.96, 0.96, 0.96)
+const WHITE = rgb(1, 1, 1)
+
+const LINE_W = 0.9
+const THIN_W = 0.5
+
+interface Fonts {
+  regular: PDFFont
+  bold: PDFFont
 }
 
-const ABILITY_TO_MPMB: Record<AbilityType, string> = {
-  strength: "Str",
-  dexterity: "Dex",
-  constitution: "Con",
-  intelligence: "Int",
-  wisdom: "Wis",
-  charisma: "Cha",
+interface Cursor {
+  page: PDFPage
+  y: number
 }
 
-// MPMB encodes skills with 3-4 letter prefixes that gate three fields each:
-// {prefix} (modifier text), {prefix} Prof (proficient checkbox), {prefix} Exp
-// (expertise checkbox). E.g. "Acr", "Acr Prof", "Acr Exp" for Acrobatics.
-const SKILL_TO_MPMB: Record<SkillType, string> = {
-  acrobatics: "Acr",
-  "animal handling": "Ani",
-  arcana: "Arc",
-  athletics: "Ath",
-  deception: "Dec",
-  history: "His",
-  insight: "Ins",
-  intimidation: "Inti",
-  investigation: "Inv",
-  medicine: "Med",
-  nature: "Nat",
-  perception: "Perc",
-  performance: "Perf",
-  persuasion: "Pers",
-  religion: "Rel",
-  "sleight of hand": "Sle",
-  stealth: "Ste",
-  survival: "Sur",
+const fmtMod = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
+
+const titleCase = (s: string): string => s.replace(/\b\w/g, (c) => c.toUpperCase())
+
+const ab3 = (a: AbilityType): string => a.slice(0, 3).toUpperCase()
+
+const lookupSpellName = (id: string): string => allSpells.find((s) => s.id === id)?.name ?? id
+
+// ─── Primitives ────────────────────────────────────────────────────────────
+
+function drawText(
+  page: PDFPage,
+  s: string,
+  x: number,
+  y: number,
+  opts: { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb> } = {}
+): void {
+  page.drawText(s, {
+    x,
+    y,
+    size: opts.size ?? 9,
+    font: opts.font,
+    color: opts.color ?? INK,
+  })
 }
 
-// Big ability-modifier boxes (Str Mod, Dex Mod, …) render the raw value, so
-// we prefix "+" for non-negative numbers ourselves.
-const fmt = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
-
-// MPMB's smaller signed-bonus fields (save mods, skill mods, proficiency
-// bonus, initiative, etc.) have a "+" pre-rendered in the sheet's layout.
-// Passing "+2" here yields "++2"; pass "2" (or "-1") and the layout fills in
-// the sign on its own.
-const unsignedFmt = (n: number): string => String(n)
-
-const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
-
-function classString(character: ComputedCharacter): string {
-  return character.classes.map((c) => `${titleCase(c.class)} ${c.level}`).join(" / ")
+function drawTextCenter(
+  page: PDFPage,
+  s: string,
+  cx: number,
+  y: number,
+  font: PDFFont,
+  size: number,
+  color = INK
+): void {
+  const w = font.widthOfTextAtSize(s, size)
+  page.drawText(s, { x: cx - w / 2, y, size, font, color })
 }
 
-function totalLevel(character: ComputedCharacter): number {
-  return character.classes.reduce((sum, c) => sum + c.level, 0)
+function drawTextRight(
+  page: PDFPage,
+  s: string,
+  rightX: number,
+  y: number,
+  font: PDFFont,
+  size: number,
+  color = INK
+): void {
+  const w = font.widthOfTextAtSize(s, size)
+  page.drawText(s, { x: rightX - w, y, size, font, color })
 }
 
-// pdf-lib throws if a field doesn't exist or is the wrong type. We log and skip
-// rather than crashing the whole sheet — the field universe is large and
-// version-dependent across srd51 / srd52 templates.
-function setText(form: PDFForm, name: string, value: string): void {
-  try {
-    form.getTextField(name).setText(value)
-  } catch {
-    logger.warn("pdf: skipping missing text field", { name })
+function drawLine(
+  page: PDFPage,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  opts: { thickness?: number; color?: ReturnType<typeof rgb> } = {}
+): void {
+  page.drawLine({
+    start: { x: x1, y: y1 },
+    end: { x: x2, y: y2 },
+    thickness: opts.thickness ?? LINE_W,
+    color: opts.color ?? STROKE,
+  })
+}
+
+function drawRect(
+  page: PDFPage,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  opts: { fill?: ReturnType<typeof rgb>; stroke?: ReturnType<typeof rgb>; thickness?: number } = {}
+): void {
+  page.drawRectangle({
+    x,
+    y,
+    width: w,
+    height: h,
+    color: opts.fill,
+    borderColor: opts.stroke ?? STROKE,
+    borderWidth: opts.thickness ?? LINE_W,
+  })
+}
+
+// Filled disc (used for "save proficiency on" indicator).
+function drawDisc(page: PDFPage, cx: number, cy: number, r: number, fill = INK): void {
+  page.drawCircle({ x: cx, y: cy, size: r, color: fill, borderWidth: 0 })
+}
+
+// Hollow circle outline (used for "save proficiency off", and spell-slot bubbles).
+function drawCircleOutline(
+  page: PDFPage,
+  cx: number,
+  cy: number,
+  r: number,
+  thickness = THIN_W
+): void {
+  page.drawCircle({ x: cx, y: cy, size: r, borderColor: STROKE, borderWidth: thickness })
+}
+
+// Wrap a string into lines that fit within maxW at the given size.
+function wrapLines(font: PDFFont, size: number, s: string, maxW: number): string[] {
+  const words = (s ?? "").replace(/\s+/g, " ").trim().split(" ")
+  if (words.length === 1 && words[0] === "") return []
+  const lines: string[] = []
+  let line = ""
+  for (const w of words) {
+    const candidate = line ? `${line} ${w}` : w
+    if (font.widthOfTextAtSize(candidate, size) <= maxW) {
+      line = candidate
+      continue
+    }
+    if (line) lines.push(line)
+    if (font.widthOfTextAtSize(w, size) > maxW) {
+      let chunk = ""
+      for (const ch of w) {
+        if (font.widthOfTextAtSize(chunk + ch, size) > maxW) {
+          lines.push(chunk)
+          chunk = ch
+        } else {
+          chunk += ch
+        }
+      }
+      line = chunk
+    } else {
+      line = w
+    }
   }
+  if (line) lines.push(line)
+  return lines
 }
 
-function checkBox(form: PDFForm, name: string): void {
-  try {
-    form.getCheckBox(name).check()
-  } catch {
-    logger.warn("pdf: skipping missing checkbox", { name })
+// Crop a string with an ellipsis so it fits within maxW.
+function ellipsize(font: PDFFont, size: number, s: string, maxW: number): string {
+  if (font.widthOfTextAtSize(s, size) <= maxW) return s
+  let lo = 0
+  let hi = s.length
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2)
+    if (font.widthOfTextAtSize(`${s.slice(0, mid)}…`, size) <= maxW) {
+      lo = mid
+    } else {
+      hi = mid - 1
+    }
   }
+  return `${s.slice(0, lo)}…`
 }
 
-// MPMB uses PDFDropdown for Background / Race / Alignment, but allows free-text
-// entry. We pass our value as a new option so custom species/backgrounds work.
-function setDropdown(form: PDFForm, name: string, value: string): void {
-  try {
-    const dropdown = form.getDropdown(name)
-    dropdown.addOptions([value])
-    dropdown.select(value)
-  } catch {
-    logger.warn("pdf: skipping missing dropdown", { name })
-  }
+// ─── Section box with notched top tab ─────────────────────────────────────
+// Draws a box from (x, y) (bottom-left) to (x+w, y+h) with a small label tab
+// protruding upward from the top edge. Label rendered centered in the tab.
+const TAB_H = 13
+const TAB_PAD_X = 12
+
+function drawTabbedBox(
+  page: PDFPage,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  label: string,
+  fonts: Fonts
+): void {
+  const labelText = label.toUpperCase()
+  const labelW = fonts.bold.widthOfTextAtSize(labelText, 7.5)
+  const capW = Math.min(labelW + TAB_PAD_X, w - 8)
+  const capX = x + (w - capW) / 2
+  const boxTop = y + h
+
+  // Box outline (skip the top-center segment under the tab)
+  drawLine(page, x, y, x + w, y) // bottom
+  drawLine(page, x, y, x, boxTop) // left
+  drawLine(page, x + w, y, x + w, boxTop) // right
+  drawLine(page, x, boxTop, capX, boxTop) // top-left segment
+  drawLine(page, capX + capW, boxTop, x + w, boxTop) // top-right segment
+
+  // Tab — filled rectangle on top so the label sits on a light background
+  drawRect(page, capX, boxTop, capW, TAB_H, { fill: TAB_FILL })
+
+  // Label
+  drawTextCenter(page, labelText, x + w / 2, boxTop + 4, fonts.bold, 7.5)
 }
 
-// MPMB's main sheet has 16 "Limited Feature" rows (Name / Max / Recovery / Used),
-// intended for tracking class features with limited uses (Bardic Inspiration,
-// Channel Divinity, etc.). They're also a natural fit for spell slot tracking,
-// since MPMB's actual spell-slot checkbox grid is on the dedicated spell sheet
-// PDFs — not on the main sheet.
-//
-// Only the first 8 rows are visually on page 1; rows 9-16 live on a later page
-// of the main sheet PDF (we currently emit only page 1).
-const LIMITED_FEATURE_ROWS = 8
-
-// Count occurrences of each value in an array.
-function countBy(values: number[]): Map<number, number> {
-  const counts = new Map<number, number>()
-  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
-  return counts
+// Simpler full-rect with title centered in a tiny header strip on top.
+// Used for the top-strip stat tiles (LEVEL / AC / HIT POINTS / HIT DICE).
+function drawHeaderBox(
+  page: PDFPage,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  label: string,
+  fonts: Fonts
+): void {
+  drawRect(page, x, y, w, h)
+  const labelH = 11
+  drawRect(page, x, y + h - labelH, w, labelH, { fill: TAB_FILL })
+  drawLine(page, x, y + h - labelH, x + w, y + h - labelH)
+  drawTextCenter(page, label.toUpperCase(), x + w / 2, y + h - labelH + 3, fonts.bold, 6.5)
 }
 
-// Group character hit dice by die size, returning per-die {total, available}.
-// Used to fill MPMB's HD1/HD2/HD3 rows — one row per distinct hit die size.
-function groupHitDice(character: ComputedCharacter): Array<{
-  die: number
-  total: number
-  used: number
-}> {
-  const totalCounts = countBy(character.hitDice)
-  const availCounts = countBy(character.availableHitDice)
-
-  return Array.from(totalCounts.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([die, total]) => ({
-      die,
-      total,
-      used: total - (availCounts.get(die) ?? 0),
-    }))
+// Labeled write-in line: underline + small caps label above the line.
+// Used inside the identity block (CHARACTER NAME, BACKGROUND, etc).
+function drawLabeledLine(
+  page: PDFPage,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  w: number,
+  fonts: Fonts,
+  opts: { valueSize?: number; valueFont?: PDFFont } = {}
+): void {
+  drawText(page, label.toUpperCase(), x, y + 11, { size: 6.5, font: fonts.bold, color: MUTED })
+  const valueSize = opts.valueSize ?? 11
+  const valueFont = opts.valueFont ?? fonts.regular
+  drawText(page, ellipsize(valueFont, valueSize, value || "", w - 2), x + 2, y - 1, {
+    size: valueSize,
+    font: valueFont,
+  })
+  drawLine(page, x, y - 3, x + w, y - 3, { thickness: THIN_W })
 }
 
-interface LimitedFeatureRow {
-  name: string
-  max: number
-  recovery: string // "Short Rest" | "Long Rest" | "Dawn" | etc. — MPMB dropdown options
-  used: number
+// ─── Top strip: identity + Level/AC/HP/HitDice tiles ──────────────────────
+
+// A small bordered cell with a label cap on top and a centered value below.
+// Used for the 2x2 secondary-stats grid (Init / Speed / Pass / Prof) and
+// for AC / HP / HD tiles.
+function drawStatCell(
+  page: PDFPage,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  label: string,
+  value: string,
+  fonts: Fonts,
+  opts: { valueSize?: number } = {}
+): void {
+  drawHeaderBox(page, x, y, w, h, label, fonts)
+  drawTextCenter(page, value, x + w / 2, y + (h - 11) / 2 - 3, fonts.bold, opts.valueSize ?? 15)
 }
 
-function fillLimitedFeatures(form: PDFForm, rows: LimitedFeatureRow[]): void {
-  for (let i = 0; i < Math.min(rows.length, LIMITED_FEATURE_ROWS); i++) {
-    const row = rows[i]
-    if (!row) continue
-    const num = i + 1
-    setText(form, `Limited Feature ${num}`, row.name)
-    setText(form, `Limited Feature Max Usages ${num}`, String(row.max))
-    setDropdown(form, `Limited Feature Recovery ${num}`, row.recovery)
-    if (row.used > 0) setText(form, `Limited Feature Used ${num}`, String(row.used))
-  }
-}
+function drawTopStrip(
+  page: PDFPage,
+  char: ComputedCharacter,
+  playerName: string | undefined,
+  fonts: Fonts
+): number {
+  const stripH = 104
+  const stripBottom = PAGE_H - MARGIN - stripH
 
-function fillSpellcasterFields(form: PDFForm, character: ComputedCharacter): void {
-  // Per-class spellcasting stats (MPMB page 1 supports up to 2 classes).
-  for (let i = 0; i < Math.min(character.spells.length, 2); i++) {
-    const info = character.spells[i]
-    if (!info) continue
-    const num = i + 1
-    setText(form, `Spell save DC ${num}`, String(info.spellSaveDC))
-    setDropdown(form, `Spell DC ${num} Mod`, titleCase(info.ability))
-  }
-}
+  const gap = 4
 
-// Build Limited Feature rows for spell slots — one per spell level the
-// character has slots for. Pact magic (warlock) gets its own row since it
-// recovers on short rest rather than long rest.
-function spellSlotLimitedFeatures(character: ComputedCharacter): LimitedFeatureRow[] {
-  const rows: LimitedFeatureRow[] = []
+  // Widths (left → right): identity / stats-grid / AC / HP / HD
+  const hdTileW = 50
+  const hpTileW = 92
+  const acTileW = 50
+  const statsGridW = 110
+  const idW = INNER_W - hdTileW - hpTileW - acTileW - statsGridW - gap * 4
 
-  const totalSlots = countBy(character.spellSlots)
-  const availSlots = countBy(character.availableSpellSlots)
-  for (let level = 1; level <= 9; level++) {
-    const total = totalSlots.get(level) ?? 0
-    if (total === 0) continue
-    rows.push({
-      name: `Spell Slots Lv ${level}`,
-      max: total,
-      recovery: "Long Rest",
-      used: total - (availSlots.get(level) ?? 0),
+  const idX = MARGIN
+  const idY = stripBottom
+
+  // ── Identity block ─────────────────────────────────────────────────────
+  drawRect(page, idX, idY, idW, stripH)
+  const innerPad = 9
+  const innerW = idW - innerPad * 2
+
+  // CHARACTER NAME (full width)
+  drawLabeledLine(
+    page,
+    "Character Name",
+    char.name,
+    idX + innerPad,
+    idY + stripH - 28,
+    innerW,
+    fonts,
+    { valueSize: 16, valueFont: fonts.bold }
+  )
+
+  // Three paired rows below the name: BG/Class, Species/Subclass, Align/Size + Player
+  const colW = (innerW - 10) / 2
+  const colLeftX = idX + innerPad
+  const colRightX = colLeftX + colW + 10
+
+  const classLine = char.classes.map((c) => `${titleCase(c.class)} ${c.level}`).join(" / ")
+  const subclassLine =
+    char.classes
+      .map((c) => (c.subclass ? titleCase(c.subclass) : null))
+      .filter(Boolean)
+      .join(" / ") || ""
+  const speciesText = char.lineage
+    ? `${titleCase(char.species)} (${titleCase(char.lineage)})`
+    : titleCase(char.species ?? "")
+
+  const rowYBg = idY + stripH - 50
+  const rowYSp = idY + stripH - 71
+  const rowYAlign = idY + 9
+
+  drawLabeledLine(
+    page,
+    "Background",
+    titleCase(char.background ?? ""),
+    colLeftX,
+    rowYBg,
+    colW,
+    fonts,
+    { valueSize: 10 }
+  )
+  drawLabeledLine(page, "Class", classLine, colRightX, rowYBg, colW, fonts, { valueSize: 10 })
+
+  drawLabeledLine(page, "Species", speciesText, colLeftX, rowYSp, colW, fonts, { valueSize: 10 })
+  drawLabeledLine(page, "Subclass", subclassLine, colRightX, rowYSp, colW, fonts, { valueSize: 10 })
+
+  // Bottom row: Alignment | Size | Player (three cells in the right slot)
+  const sizeW = 48
+  const alignW = colW
+  const playerW = colW - sizeW - 6
+  drawLabeledLine(
+    page,
+    "Alignment",
+    titleCase(char.alignment ?? ""),
+    colLeftX,
+    rowYAlign,
+    alignW,
+    fonts,
+    { valueSize: 9 }
+  )
+  drawLabeledLine(page, "Size", titleCase(char.size), colRightX, rowYAlign, sizeW, fonts, {
+    valueSize: 9,
+  })
+  if (playerName) {
+    drawLabeledLine(page, "Player", playerName, colRightX + sizeW + 6, rowYAlign, playerW, fonts, {
+      valueSize: 9,
     })
   }
 
-  if (character.pactMagicSlots && character.pactMagicSlots.length > 0) {
-    const pactByLevel = countBy(character.pactMagicSlots)
-    for (const [level, total] of pactByLevel) {
-      // ComputedCharacter doesn't track pact-slot usage separately yet;
-      // emit total max and assume unused.
-      rows.push({
-        name: `Pact Slots Lv ${level}`,
-        max: total,
-        recovery: "Short Rest",
-        used: 0,
-      })
+  // ── Stats grid 2x2 ─────────────────────────────────────────────────────
+  let tileX = idX + idW + gap
+  const sgX = tileX
+  const sgCellGap = 3
+  const sgCellW = (statsGridW - sgCellGap) / 2
+  const sgCellH = (stripH - sgCellGap) / 2
+
+  drawStatCell(
+    page,
+    sgX,
+    idY + sgCellH + sgCellGap,
+    sgCellW,
+    sgCellH,
+    "Initiative",
+    fmtMod(char.initiative),
+    fonts
+  )
+  drawStatCell(
+    page,
+    sgX + sgCellW + sgCellGap,
+    idY + sgCellH + sgCellGap,
+    sgCellW,
+    sgCellH,
+    "Speed",
+    `${char.speed} ft`,
+    fonts
+  )
+  drawStatCell(
+    page,
+    sgX,
+    idY,
+    sgCellW,
+    sgCellH,
+    "Passive Perception",
+    String(char.passivePerception),
+    fonts
+  )
+  drawStatCell(
+    page,
+    sgX + sgCellW + sgCellGap,
+    idY,
+    sgCellW,
+    sgCellH,
+    "Prof. Bonus",
+    `+${char.proficiencyBonus}`,
+    fonts
+  )
+  tileX += statsGridW + gap
+
+  // ── ARMOR CLASS ────────────────────────────────────────────────────────
+  drawHeaderBox(page, tileX, idY, acTileW, stripH, "Armor Class", fonts)
+  drawTextCenter(
+    page,
+    String(char.armorClass),
+    tileX + acTileW / 2,
+    idY + stripH / 2 - 14,
+    fonts.bold,
+    28
+  )
+  tileX += acTileW + gap
+
+  // ── HIT POINTS ─────────────────────────────────────────────────────────
+  drawHeaderBox(page, tileX, idY, hpTileW, stripH, "Hit Points", fonts)
+  const hpTop = idY + stripH - 11
+  const hpSubH = (stripH - 11) / 2
+  drawLine(page, tileX, hpTop - hpSubH, tileX + hpTileW, hpTop - hpSubH, { thickness: THIN_W })
+  drawTextCenter(page, "CURRENT / MAX", tileX + hpTileW / 2, hpTop - 8, fonts.bold, 6, MUTED)
+  drawTextCenter(
+    page,
+    `${char.currentHP} / ${char.maxHitPoints}`,
+    tileX + hpTileW / 2,
+    hpTop - hpSubH + 10,
+    fonts.bold,
+    17
+  )
+  drawTextCenter(page, "TEMP", tileX + hpTileW / 2, hpTop - hpSubH - 8, fonts.bold, 6, MUTED)
+  drawLine(page, tileX + 10, hpTop - hpSubH - 24, tileX + hpTileW - 10, hpTop - hpSubH - 24, {
+    thickness: THIN_W,
+  })
+  tileX += hpTileW + gap
+
+  // ── HIT DICE — list each die as a small tile; cross out used ones ──────
+  drawHeaderBox(page, tileX, idY, hdTileW, stripH, "Hit Dice", fonts)
+  const usedDice: number[] = []
+  const availDice: number[] = []
+  const remainingHd = char.availableHitDice.slice()
+  for (const d of char.hitDice) {
+    const idxR = remainingHd.indexOf(d)
+    if (idxR >= 0) {
+      remainingHd.splice(idxR, 1)
+      availDice.push(d)
+    } else {
+      usedDice.push(d)
+    }
+  }
+  const allDice = [...availDice, ...usedDice]
+  const usedSet = new Set<number>()
+  for (let i = availDice.length; i < allDice.length; i++) usedSet.add(i)
+  const dieTileW = 16
+  const dieTileH = 11
+  const perRow = Math.max(1, Math.floor((hdTileW - 6) / (dieTileW + 2)))
+  let dieRow = 0
+  let dieCol = 0
+  for (let i = 0; i < allDice.length; i++) {
+    const dx = tileX + 4 + dieCol * (dieTileW + 2)
+    const dy = idY + stripH - 11 - 6 - (dieRow + 1) * (dieTileH + 2)
+    drawRect(page, dx, dy, dieTileW, dieTileH, { thickness: THIN_W })
+    drawTextCenter(page, `d${allDice[i]}`, dx + dieTileW / 2, dy + 2, fonts.regular, 7)
+    if (usedSet.has(i)) {
+      drawLine(page, dx + 1, dy + 1, dx + dieTileW - 1, dy + dieTileH - 1, { thickness: THIN_W })
+      drawLine(page, dx + 1, dy + dieTileH - 1, dx + dieTileW - 1, dy + 1, { thickness: THIN_W })
+    }
+    dieCol++
+    if (dieCol >= perRow) {
+      dieCol = 0
+      dieRow++
     }
   }
 
-  return rows
+  return stripBottom
 }
 
-// Resolve cantrip damage dice at the character's current level. Cantrips scale
-// at thresholds (1/5/11/17 typically); pick the highest threshold ≤ level.
-function cantripDiceAtLevel(spell: Spell, charLevel: number): number[] {
-  const baseDice = spell.damage?.[0]?.dice
-  if (!baseDice) return []
-  if (spell.damageScaling?.mode !== "characterLevel") return baseDice
+// ─── Left column: vertical ability cards ──────────────────────────────────
 
-  const sortedDescending = Object.keys(spell.damageScaling.progression)
+function drawAbilityCard(
+  page: PDFPage,
+  char: ComputedCharacter,
+  ab: AbilityType,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fonts: Fonts
+): void {
+  drawTabbedBox(page, x, y, w, h, ab, fonts)
+  const score = char.abilityScores[ab]
+
+  // Card is divided into two zones by a horizontal rule:
+  //   top zone (≈70%): modifier + score
+  //   bottom zone (≈30%): saving throw
+  const saveZoneH = 18
+  const ruleY = y + saveZoneH
+  drawLine(page, x + 4, ruleY, x + w - 4, ruleY, { thickness: THIN_W })
+
+  // ── Top zone: modifier (big) over score chip ────────────────────────
+  const cx = x + w / 2
+  const topZoneTop = y + h
+  const topZoneH = topZoneTop - ruleY
+  // modifier
+  drawTextCenter(page, fmtMod(score.modifier), cx, ruleY + topZoneH - 24, fonts.bold, 22)
+  // score chip
+  const chipW = 26
+  const chipH = 11
+  const chipY = ruleY + 4
+  drawRect(page, cx - chipW / 2, chipY, chipW, chipH, { fill: TAB_FILL, thickness: THIN_W })
+  drawTextCenter(page, String(score.score), cx, chipY + 3, fonts.bold, 9)
+
+  // ── Bottom zone: saving throw row ───────────────────────────────────
+  // Centered: [○|●] +N  Save
+  const savePieceLabel = "SAVE"
+  const saveValue = fmtMod(score.savingThrow)
+  const labelW = fonts.bold.widthOfTextAtSize(savePieceLabel, 7)
+  const valueW = fonts.bold.widthOfTextAtSize(saveValue, 10)
+  const discR = 2.8
+  const piecesW = discR * 2 + 4 + valueW + 5 + labelW
+  const startX = x + (w - piecesW) / 2
+  const saveCy = y + saveZoneH / 2 - 2
+  if (score.proficient) {
+    drawDisc(page, startX + discR, saveCy + 3, discR)
+  } else {
+    drawCircleOutline(page, startX + discR, saveCy + 3, discR)
+  }
+  drawText(page, saveValue, startX + discR * 2 + 4, saveCy, { size: 10, font: fonts.bold })
+  drawText(page, savePieceLabel, startX + discR * 2 + 4 + valueW + 5, saveCy + 1, {
+    size: 7,
+    font: fonts.bold,
+    color: MUTED,
+  })
+}
+
+function drawAbilityColumn(
+  page: PDFPage,
+  char: ComputedCharacter,
+  x: number,
+  topY: number,
+  w: number,
+  bottomY: number,
+  fonts: Fonts
+): void {
+  const gap = 5
+  const totalGap = gap * (Abilities.length - 1)
+  const totalTabs = TAB_H * Abilities.length
+  const each = (topY - bottomY - totalGap - totalTabs) / Abilities.length
+  let y = topY - TAB_H - each
+  for (const ab of Abilities) {
+    drawAbilityCard(page, char, ab, x, y, w, each, fonts)
+    y -= each + gap + TAB_H
+  }
+}
+
+// ─── Right column sections ────────────────────────────────────────────────
+
+interface RightSection {
+  key: string
+  label: string
+  preferredH: number
+  draw: (x: number, y: number, w: number, h: number) => void
+}
+
+function drawWeaponsTable(
+  page: PDFPage,
+  char: ComputedCharacter,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fonts: Fonts
+): void {
+  drawTabbedBox(page, x, y, w, h, "Weapons", fonts)
+  const innerX = x + 8
+  const innerW = w - 16
+  // Column widths — Atk is left as a write-in line (we don't precompute it).
+  const nameW = innerW * 0.34
+  const atkW = innerW * 0.16
+  const dmgW = innerW * 0.3
+  const noteW = innerW - nameW - atkW - dmgW
+
+  let yy = y + h - 14
+  drawText(page, "Name", innerX, yy, { size: 7, font: fonts.bold, color: MUTED })
+  drawText(page, "Atk", innerX + nameW, yy, { size: 7, font: fonts.bold, color: MUTED })
+  drawText(page, "Damage & Type", innerX + nameW + atkW, yy, {
+    size: 7,
+    font: fonts.bold,
+    color: MUTED,
+  })
+  drawText(page, "Notes", innerX + nameW + atkW + dmgW, yy, {
+    size: 7,
+    font: fonts.bold,
+    color: MUTED,
+  })
+  drawLine(page, innerX, yy - 3, innerX + innerW, yy - 3, { thickness: THIN_W })
+  yy -= 12
+
+  const rows: Array<{ name: string; dmg: string; notes: string }> = []
+  for (const it of char.equippedItems.filter((it) => it.wielded)) {
+    rows.push({
+      name: it.name,
+      dmg: it.humanReadableDamage.join(", ") || "—",
+      notes: it.mastery ? titleCase(it.mastery) : "",
+    })
+  }
+
+  const maxRows = Math.floor((yy - (y + 6)) / 12)
+  const visibleRows = rows.slice(0, maxRows)
+  for (const row of visibleRows) {
+    drawText(page, ellipsize(fonts.regular, 9, row.name, nameW - 4), innerX, yy, { size: 9 })
+    // Atk: write-in underline rather than a value
+    drawLine(page, innerX + nameW, yy - 3, innerX + nameW + atkW - 6, yy - 3, { thickness: THIN_W })
+    drawText(page, ellipsize(fonts.regular, 9, row.dmg, dmgW - 4), innerX + nameW + atkW, yy, {
+      size: 9,
+    })
+    drawText(
+      page,
+      ellipsize(fonts.regular, 8, row.notes, noteW - 4),
+      innerX + nameW + atkW + dmgW,
+      yy,
+      { size: 8, color: MUTED }
+    )
+    drawLine(page, innerX, yy - 3, innerX + innerW, yy - 3, { thickness: THIN_W })
+    yy -= 12
+  }
+  // Blank write-in rows fill the remainder
+  while (yy >= y + 6) {
+    drawLine(page, innerX, yy - 3, innerX + innerW, yy - 3, { thickness: THIN_W })
+    yy -= 12
+  }
+}
+
+function drawSkillsBox(
+  page: PDFPage,
+  char: ComputedCharacter,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fonts: Fonts
+): void {
+  drawTabbedBox(page, x, y, w, h, "Skills", fonts)
+  const innerX = x + 6
+  const innerY = y + 6
+  const innerW = w - 12
+  const innerH = h - 12
+
+  // Two columns of 9 skills each
+  const colW = innerW / 2
+  const rowH = innerH / 9
+  for (let i = 0; i < Skills.length; i++) {
+    const sk = Skills[i] as SkillType
+    const colIdx = Math.floor(i / 9)
+    const rowIdx = i % 9
+    const sx = innerX + colIdx * colW
+    const sy = innerY + innerH - (rowIdx + 1) * rowH + 2
+    const s = char.skills[sk]
+
+    // proficiency indicator: hollow circle, filled disc if proficient, doubled disc if expert
+    const cx = sx + 5
+    const cy = sy + 4
+    if (s.proficiency === "expert") {
+      drawDisc(page, cx, cy, 3)
+      drawDisc(page, cx, cy, 1.5, WHITE)
+    } else if (s.proficiency === "proficient" || s.proficiency === "half") {
+      drawDisc(page, cx, cy, 3)
+    } else {
+      drawCircleOutline(page, cx, cy, 3)
+    }
+
+    drawText(page, fmtMod(s.modifier), sx + 13, sy, { size: 9, font: fonts.bold })
+    const nameAndAbil = `${titleCase(sk)} (${ab3(s.ability)})`
+    drawText(page, ellipsize(fonts.regular, 8.5, nameAndAbil, colW - 36), sx + 33, sy + 1, {
+      size: 8.5,
+    })
+  }
+}
+
+// Spellcasting box: per-class spellcasting stats (DC / Atk / Ability) followed
+// by slot tiles. Each slot is a small bordered tile with "L1" / "L2" / ...
+// inside; used slots get a diagonal X (same visual pattern as Hit Dice).
+function drawSpellcastingBox(
+  page: PDFPage,
+  char: ComputedCharacter,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fonts: Fonts
+): void {
+  drawTabbedBox(page, x, y, w, h, "Spellcasting", fonts)
+  const innerX = x + 8
+  const innerW = w - 16
+
+  if (char.spells.length === 0) {
+    drawTextCenter(page, "no spellcasting", x + w / 2, y + h / 2 - 4, fonts.regular, 9, MUTED)
+    return
+  }
+
+  // Per-class stat lines at the top
+  let yy = y + h - 14
+  for (const sp of char.spells) {
+    const className = `${titleCase(sp.class)}${char.spells.length > 1 ? "" : ""}`
+    drawText(page, className, innerX, yy, { size: 9, font: fonts.bold })
+    const dcLabel = "Save DC"
+    const atkLabel = "Atk"
+    const abLabel = "Ability"
+    const xDC = innerX + 70
+    const xAtk = xDC + 70
+    const xAb = xAtk + 60
+    drawText(page, dcLabel, xDC, yy + 1, { size: 6.5, font: fonts.bold, color: MUTED })
+    drawText(page, String(sp.spellSaveDC), xDC + 38, yy, { size: 9, font: fonts.bold })
+    drawText(page, atkLabel, xAtk, yy + 1, { size: 6.5, font: fonts.bold, color: MUTED })
+    drawText(page, fmtMod(sp.spellAttackBonus), xAtk + 20, yy, { size: 9, font: fonts.bold })
+    drawText(page, abLabel, xAb, yy + 1, { size: 6.5, font: fonts.bold, color: MUTED })
+    drawText(page, ab3(sp.ability), xAb + 30, yy, { size: 9, font: fonts.bold })
+    yy -= 12
+  }
+
+  // Slot tiles: one row of small tiles, grouped by level.
+  // Use the same look as hit dice: bordered box with label inside, X if used.
+  const totalByLvl: Record<number, number> = {}
+  const availByLvl: Record<number, number> = {}
+  for (const lvl of char.spellSlots) totalByLvl[lvl] = (totalByLvl[lvl] ?? 0) + 1
+  for (const lvl of char.availableSpellSlots) availByLvl[lvl] = (availByLvl[lvl] ?? 0) + 1
+  const levels = Object.keys(totalByLvl)
     .map(Number)
-    .sort((a, b) => b - a)
-  for (const threshold of sortedDescending) {
-    if (threshold <= charLevel) {
-      return spell.damageScaling.progression[threshold] ?? baseDice
-    }
+    .sort((a, b) => a - b)
+  const pactByLvl: Record<number, number> = {}
+  for (const lvl of char.pactMagicSlots ?? []) pactByLvl[lvl] = (pactByLvl[lvl] ?? 0) + 1
+  const pactLevels = Object.keys(pactByLvl)
+    .map(Number)
+    .sort((a, b) => a - b)
+
+  const slotTileW = 16
+  const slotTileH = 11
+  const slotGap = 2
+  const groupGap = 8
+
+  type Group = { label: string; level: number; total: number; used: number }
+  const groups: Group[] = []
+  for (const lvl of levels) {
+    groups.push({
+      label: `L${lvl}`,
+      level: lvl,
+      total: totalByLvl[lvl] ?? 0,
+      used: (totalByLvl[lvl] ?? 0) - (availByLvl[lvl] ?? 0),
+    })
   }
-  return baseDice
+  for (const lvl of pactLevels) {
+    groups.push({
+      label: `P${lvl}`,
+      level: lvl,
+      total: pactByLvl[lvl] ?? 0,
+      used: 0,
+    })
+  }
+
+  if (groups.length === 0) return
+
+  // Render tiles starting at the current yy, leaving 3pt below for breathing
+  const slotsY = yy - slotTileH + 1
+  let sx = innerX
+  for (const g of groups) {
+    drawText(page, g.label, sx, slotsY + 2, { size: 6.5, font: fonts.bold, color: MUTED })
+    sx += 14
+    for (let i = 0; i < g.total; i++) {
+      drawRect(page, sx, slotsY, slotTileW, slotTileH, { thickness: THIN_W })
+      drawTextCenter(page, `L${g.level}`, sx + slotTileW / 2, slotsY + 2, fonts.regular, 7)
+      if (i < g.used) {
+        drawLine(page, sx + 1, slotsY + 1, sx + slotTileW - 1, slotsY + slotTileH - 1, {
+          thickness: THIN_W,
+        })
+        drawLine(page, sx + 1, slotsY + slotTileH - 1, sx + slotTileW - 1, slotsY + 1, {
+          thickness: THIN_W,
+        })
+      }
+      sx += slotTileW + slotGap
+      // wrap if we run out of horizontal space
+      if (sx + slotTileW > innerX + innerW) {
+        sx = innerX + 14
+        // (no vertical wrap support in v1 — extremely rare to need it)
+        break
+      }
+    }
+    sx += groupGap
+  }
 }
 
-function formatDamageDice(dice: number[]): string {
-  if (dice.length === 0) return ""
-  const die = dice[0]
-  if (die === undefined) return ""
-  return `${dice.length}d${die}`
+// Two-column list inside a tabbed box. Items split column-major: items[0..mid]
+// fill the left column top-to-bottom, items[mid..] fill the right.
+function drawTwoColList<T>(
+  page: PDFPage,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  items: T[],
+  renderItem: (item: T, x: number, y: number, colW: number) => void,
+  bottomReservedH = 0
+): void {
+  const innerX = x + 8
+  const innerW = w - 16
+  const colGap = 8
+  const colW = (innerW - colGap) / 2
+  const leftX = innerX
+  const rightX = innerX + colW + colGap
+
+  const rowH = 11
+  const top = y + h - 14
+  const bottom = y + 6 + bottomReservedH
+  const rowsPerCol = Math.max(1, Math.floor((top - bottom) / rowH))
+  const capacity = rowsPerCol * 2
+
+  const visible = items.slice(0, capacity)
+  const mid = Math.ceil(visible.length / 2)
+  const leftItems = visible.slice(0, mid)
+  const rightItems = visible.slice(mid)
+
+  let yy = top
+  for (const it of leftItems) {
+    renderItem(it, leftX, yy, colW)
+    yy -= rowH
+  }
+  yy = top
+  for (const it of rightItems) {
+    renderItem(it, rightX, yy, colW)
+    yy -= rowH
+  }
+
+  const overflowCount = items.length - visible.length
+  if (overflowCount > 0) {
+    drawText(page, `… and ${overflowCount} more`, innerX, y + 8, {
+      size: 7.5,
+      color: MUTED,
+    })
+  }
 }
 
-function formatRange(range: Spell["range"]): string {
-  if (range.type === "distance") return `${range.feet} ft.`
-  if (range.type === "self") return "Self"
-  if (range.type === "touch") return "Touch"
-  return ""
+function drawFeaturesBox(
+  page: PDFPage,
+  char: ComputedCharacter,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fonts: Fonts
+): void {
+  drawTabbedBox(page, x, y, w, h, "Features & Traits", fonts)
+
+  drawTwoColList(page, x, y, w, h, char.traits, (t, ix, iy, colW) => {
+    const sourceTag =
+      t.source === "class" || t.source === "subclass"
+        ? "C"
+        : t.source === "species" || t.source === "lineage"
+          ? "S"
+          : t.source === "background"
+            ? "B"
+            : "·"
+    drawText(page, sourceTag, ix, iy, { size: 7, font: fonts.bold, color: MUTED })
+    drawText(page, ellipsize(fonts.regular, 9, t.name, colW - 12), ix + 10, iy, { size: 9 })
+  })
 }
 
-interface AttackEntry {
-  name: string
-  modAbility: string // MPMB attack-mod dropdown abbrev: Str/Dex/Con/Int/Wis/Cha
-  range: string
-  toHit: number
-  damageDice: string
-  damageType: string
-  description: string
+function drawEquipmentBox(
+  page: PDFPage,
+  char: ComputedCharacter,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fonts: Fonts
+): void {
+  drawTabbedBox(page, x, y, w, h, "Equipment", fonts)
+  const innerX = x + 8
+  const innerW = w - 16
+
+  // Coins line at the very bottom
+  const coinsY = y + 6
+  const coins = char.coins
+  const coinParts = [
+    `${coins?.cp ?? 0} CP`,
+    `${coins?.sp ?? 0} SP`,
+    `${coins?.ep ?? 0} EP`,
+    `${coins?.gp ?? 0} GP`,
+    `${coins?.pp ?? 0} PP`,
+  ]
+  drawText(page, "Coins:", innerX, coinsY, { size: 7, font: fonts.bold, color: MUTED })
+  drawText(page, coinParts.join("   ·   "), innerX + 28, coinsY, { size: 8 })
+  drawLine(page, innerX, coinsY + 11, innerX + innerW, coinsY + 11, { thickness: THIN_W })
+
+  const sorted = [...char.equippedItems].sort((a, b) => a.name.localeCompare(b.name))
+  drawTwoColList(
+    page,
+    x,
+    y,
+    w,
+    h,
+    sorted,
+    (it, ix, iy, colW) => {
+      // tag: x (wielded) / w (worn) / · (carried)
+      const tag = it.wielded ? "x" : it.worn ? "w" : "·"
+      drawText(page, tag, ix, iy, { size: 7, font: fonts.bold, color: MUTED })
+      const textW = colW - 12
+      let suffix = ""
+      if (it.chargeLabel) {
+        const lbl = it.chargeLabel === "ammunition" ? "ammo" : "ch"
+        suffix = `  (${lbl}: ${it.currentCharges})`
+      }
+      const name = ellipsize(fonts.regular, 9, `${it.name}${suffix}`, textW)
+      drawText(page, name, ix + 10, iy, { size: 9 })
+    },
+    18 // reserve room at the bottom for the coins line
+  )
 }
 
-function attackCantripsFor(character: ComputedCharacter): AttackEntry[] {
-  const charLevel = totalLevel(character)
-  const entries: AttackEntry[] = []
+// ─── Overflow pages: spells, full traits/inventory, wild shape ────────────
 
-  for (const spellInfo of character.spells as SpellInfoForClass[]) {
-    for (const cantrip of spellInfo.cantripSlots) {
-      if (!cantrip.spell_id) continue
-      const spell = allSpells.find((s) => s.id === cantrip.spell_id)
-      if (!spell) continue
-      if (spell.resolution.kind !== "attack") continue
+function startPage(doc: PDFDocument): Cursor {
+  const page = doc.addPage([PAGE_W, PAGE_H])
+  return { page, y: PAGE_H - MARGIN }
+}
 
-      const damage = spell.damage?.[0]
-      entries.push({
-        name: spell.name,
-        modAbility: ABILITY_TO_MPMB[spellInfo.ability],
-        range: formatRange(spell.range),
-        toHit: spellInfo.spellAttackBonus,
-        damageDice: formatDamageDice(cantripDiceAtLevel(spell, charLevel)),
-        damageType: damage ? titleCase(damage.type) : "",
-        description: spell.briefDescription,
+function ensureSpace(doc: PDFDocument, c: Cursor, need: number): Cursor {
+  if (c.y - need < MARGIN + 16) {
+    return startPage(doc)
+  }
+  return c
+}
+
+function drawOverflowSectionHeader(
+  page: PDFPage,
+  label: string,
+  x: number,
+  y: number,
+  w: number,
+  fonts: Fonts
+): void {
+  // Centered label between two horizontal rules
+  const labelText = label.toUpperCase()
+  const labelW = fonts.bold.widthOfTextAtSize(labelText, 9)
+  const midGap = 6
+  const ruleY = y - 4
+  drawLine(page, x, ruleY, x + (w - labelW) / 2 - midGap, ruleY, { thickness: LINE_W })
+  drawLine(page, x + (w + labelW) / 2 + midGap, ruleY, x + w, ruleY, { thickness: LINE_W })
+  drawTextCenter(page, labelText, x + w / 2, y - 8, fonts.bold, 9)
+}
+
+function drawSpellsPages(
+  doc: PDFDocument,
+  cIn: Cursor,
+  char: ComputedCharacter,
+  fonts: Fonts
+): Cursor {
+  if (char.spells.length === 0) return cIn
+
+  let c = cIn
+  for (const sp of char.spells) {
+    c = ensureSpace(doc, c, 40)
+    drawOverflowSectionHeader(c.page, `${titleCase(sp.class)} Spells`, MARGIN, c.y, INNER_W, fonts)
+    c.y -= 18
+
+    const stats = `Save DC ${sp.spellSaveDC}   ·   Spell Attack ${fmtMod(sp.spellAttackBonus)}   ·   Casting Ability: ${ab3(sp.ability)}`
+    drawText(c.page, stats, MARGIN + 4, c.y, { size: 9, color: MUTED })
+    c.y -= 14
+
+    const drawSlot = (
+      slot: { spell_id: string | null; alwaysPrepared: boolean },
+      isPrepared: boolean
+    ) => {
+      c = ensureSpace(doc, c, 12)
+      drawText(c.page, "•", MARGIN + 8, c.y, { size: 9, color: MUTED })
+      if (slot.spell_id) {
+        const name = lookupSpellName(slot.spell_id)
+        drawText(c.page, name, MARGIN + 18, c.y, {
+          size: 9,
+          font: isPrepared && slot.alwaysPrepared ? fonts.bold : fonts.regular,
+        })
+        if (slot.alwaysPrepared) {
+          drawTextRight(
+            c.page,
+            "always prepared",
+            MARGIN + INNER_W - 4,
+            c.y,
+            fonts.regular,
+            7,
+            MUTED
+          )
+        }
+      } else {
+        // empty slot: a write-in line
+        drawLine(c.page, MARGIN + 18, c.y - 2, MARGIN + 180, c.y - 2, { thickness: THIN_W })
+      }
+      c.y -= 12
+    }
+
+    if (sp.cantripSlots.length > 0) {
+      c = ensureSpace(doc, c, 14)
+      drawText(c.page, "Cantrips", MARGIN + 4, c.y, { size: 8, font: fonts.bold, color: MUTED })
+      c.y -= 11
+      for (const s of sp.cantripSlots) drawSlot(s, false)
+      c.y -= 3
+    }
+
+    if (sp.preparedSpells.length > 0) {
+      c = ensureSpace(doc, c, 14)
+      drawText(c.page, "Prepared / Known", MARGIN + 4, c.y, {
+        size: 8,
+        font: fonts.bold,
+        color: MUTED,
       })
+      c.y -= 11
+      for (const s of sp.preparedSpells) drawSlot(s, true)
+      c.y -= 3
+    }
+
+    if (sp.knownSpells && sp.knownSpells.length > 0) {
+      c = ensureSpace(doc, c, 14)
+      drawText(c.page, "Spellbook", MARGIN + 4, c.y, {
+        size: 8,
+        font: fonts.bold,
+        color: MUTED,
+      })
+      c.y -= 11
+      const names = sp.knownSpells.map(lookupSpellName).sort().join(", ")
+      for (const ln of wrapLines(fonts.regular, 9, names, INNER_W - 16)) {
+        c = ensureSpace(doc, c, 11)
+        drawText(c.page, ln, MARGIN + 14, c.y, { size: 9 })
+        c.y -= 11
+      }
+      c.y -= 6
+    }
+  }
+  return c
+}
+
+function drawWildShapePage(
+  doc: PDFDocument,
+  cIn: Cursor,
+  char: ComputedCharacter,
+  fonts: Fonts
+): Cursor {
+  const ws = char.wildShape
+  if (!ws) return cIn
+
+  let c = ensureSpace(doc, cIn, 50)
+  drawOverflowSectionHeader(c.page, "Wild Shape", MARGIN, c.y, INNER_W, fonts)
+  c.y -= 18
+
+  const summary = [
+    `Uses: ${ws.usesAvailable} / ${ws.maxUses}`,
+    `Max CR: ${ws.limits.maxCR}`,
+    ws.knownForms !== null ? `Known forms: ${ws.beasts.length} / ${ws.knownForms}` : null,
+  ].filter(Boolean) as string[]
+  drawText(c.page, summary.join("   ·   "), MARGIN + 4, c.y, { size: 9 })
+  c.y -= 13
+
+  const constraints: string[] = []
+  if (!ws.limits.canSwim) constraints.push("no swim speed")
+  if (!ws.limits.canFly) constraints.push("no fly speed")
+  if (constraints.length > 0) {
+    drawText(c.page, `Form restrictions: ${constraints.join(", ")}`, MARGIN + 4, c.y, {
+      size: 9,
+      color: MUTED,
+    })
+    c.y -= 13
+  }
+
+  if (ws.beasts.length > 0) {
+    drawText(c.page, "Known beasts", MARGIN + 4, c.y, {
+      size: 8,
+      font: fonts.bold,
+      color: MUTED,
+    })
+    c.y -= 11
+    const line = ws.beasts.map(titleCase).join(", ")
+    for (const ln of wrapLines(fonts.regular, 9, line, INNER_W - 16)) {
+      c = ensureSpace(doc, c, 11)
+      drawText(c.page, ln, MARGIN + 14, c.y, { size: 9 })
+      c.y -= 11
     }
   }
 
-  return entries
+  if (ws.currentBeast && ws.ongoingTransformation) {
+    c.y -= 4
+    c = ensureSpace(doc, c, 14)
+    drawText(
+      c.page,
+      `Currently transformed: ${titleCase(ws.currentBeast.name)} (HP ${ws.ongoingTransformation.currentBeastHp} / ${ws.currentBeast.hitPoints}, AC ${ws.currentBeast.ac})`,
+      MARGIN + 4,
+      c.y,
+      { size: 9, font: fonts.bold }
+    )
+    c.y -= 13
+  }
+
+  c.y -= 6
+  return c
 }
 
-function fillAttackCantrips(form: PDFForm, character: ComputedCharacter): void {
-  const cantrips = attackCantripsFor(character)
-  // MPMB page 1 has 5 attack rows. Cantrips go after weapons (we don't fill
-  // weapons yet, so they start at row 1).
-  //
-  // The visible "Attack Name" widget is the Weapon Selection dropdown, not the
-  // Weapon text field (they're stacked at the same coordinates). The dropdown
-  // has 93 predefined weapon/cantrip options; setDropdown adds the name as a
-  // new option if it isn't already present.
-  for (let i = 0; i < Math.min(cantrips.length, 5); i++) {
-    const c = cantrips[i]
-    if (!c) continue
-    const num = i + 1
-    setDropdown(form, `Attack.${num}.Weapon Selection`, c.name)
-    setDropdown(form, `Attack.${num}.Mod`, c.modAbility)
-    if (c.range) setText(form, `Attack.${num}.Range`, c.range)
-    setText(form, `Attack.${num}.To Hit`, unsignedFmt(c.toHit))
-    if (c.damageDice) setText(form, `Attack.${num}.Damage`, c.damageDice)
-    if (c.damageType) setDropdown(form, `Attack.${num}.Damage Type`, c.damageType)
-    setText(form, `Attack.${num}.Description`, c.description)
+// ─── Footers ──────────────────────────────────────────────────────────────
+
+function drawFooters(doc: PDFDocument, char: ComputedCharacter, fonts: Fonts): void {
+  const pages = doc.getPages()
+  const today = new Date().toISOString().slice(0, 10)
+  pages.forEach((p, i) => {
+    drawText(p, `${char.name} — csheet.net`, MARGIN, 12, {
+      size: 7,
+      font: fonts.regular,
+      color: MUTED,
+    })
+    drawTextRight(
+      p,
+      `${today} · page ${i + 1} of ${pages.length}`,
+      MARGIN + INNER_W,
+      12,
+      fonts.regular,
+      7,
+      MUTED
+    )
+  })
+}
+
+// ─── Page 1 assembly ──────────────────────────────────────────────────────
+
+function drawPage1(
+  page: PDFPage,
+  char: ComputedCharacter,
+  playerName: string | undefined,
+  fonts: Fonts
+): void {
+  const afterTopStrip = drawTopStrip(page, char, playerName, fonts)
+
+  // Main 2-col area starts directly after the top strip.
+  const mainTop = afterTopStrip - 8
+  const mainBottom = MARGIN + 24 // room for footer
+
+  const abilityColW = 92
+  const colGap = 8
+  const rightColX = MARGIN + abilityColW + colGap
+  const rightColW = INNER_W - abilityColW - colGap
+
+  drawAbilityColumn(page, char, MARGIN, mainTop, abilityColW, mainBottom, fonts)
+
+  const sections: RightSection[] = [
+    {
+      key: "weapons",
+      label: "Weapons",
+      preferredH: 78,
+      draw: (x, y, w, h) => drawWeaponsTable(page, char, x, y, w, h, fonts),
+    },
+    {
+      key: "skills",
+      label: "Skills",
+      preferredH: 150,
+      draw: (x, y, w, h) => drawSkillsBox(page, char, x, y, w, h, fonts),
+    },
+    {
+      key: "spellcasting",
+      label: "Spellcasting",
+      preferredH: char.spells.length > 0 ? 56 + char.spells.length * 10 : 40,
+      draw: (x, y, w, h) => drawSpellcastingBox(page, char, x, y, w, h, fonts),
+    },
+    {
+      key: "features",
+      label: "Features & Traits",
+      preferredH: 96,
+      draw: (x, y, w, h) => drawFeaturesBox(page, char, x, y, w, h, fonts),
+    },
+    {
+      key: "equipment",
+      label: "Equipment",
+      preferredH: 104,
+      draw: (x, y, w, h) => drawEquipmentBox(page, char, x, y, w, h, fonts),
+    },
+  ]
+
+  const sectionGap = 4
+  const totalPreferred = sections.reduce((s, sec) => s + sec.preferredH, 0)
+  const totalTabs = TAB_H * sections.length
+  const totalGaps = sectionGap * (sections.length - 1)
+  const available = mainTop - mainBottom - totalTabs - totalGaps
+  const scale = available / totalPreferred
+
+  let y = mainTop - TAB_H
+  for (const sec of sections) {
+    const h = sec.preferredH * scale
+    sec.draw(rightColX, y - h, rightColW, h)
+    y -= h + sectionGap + TAB_H
   }
 }
 
-function fillCharacterFields(
-  form: PDFForm,
+// ─── Public API ───────────────────────────────────────────────────────────
+
+async function buildCharacterPdfDoc(
+  character: ComputedCharacter,
+  playerName: string | undefined
+): Promise<PDFDocument> {
+  const doc = await PDFDocument.create()
+  doc.setTitle(`${character.name} — Character Sheet`)
+  doc.setProducer("csheet")
+  doc.setCreator("csheet")
+
+  const regular = await doc.embedFont(StandardFonts.Helvetica)
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
+  const fonts: Fonts = { regular, bold }
+
+  const page1 = doc.addPage([PAGE_W, PAGE_H])
+  drawPage1(page1, character, playerName, fonts)
+
+  // Overflow pages
+  let c: Cursor = { page: page1, y: MARGIN }
+  // Force a new page for overflow content
+  c = startPage(doc)
+  const beforeOverflow = doc.getPageCount()
+
+  c = drawWildShapePage(doc, c, character, fonts)
+  c = drawSpellsPages(doc, c, character, fonts)
+
+  // If the overflow page was added but nothing drew on it, remove it.
+  if (!character.wildShape && character.spells.length === 0) {
+    const overflowPageIdx = beforeOverflow - 1
+    if (doc.getPages()[overflowPageIdx]) {
+      doc.removePage(overflowPageIdx)
+    }
+  }
+
+  drawFooters(doc, character, fonts)
+  return doc
+}
+
+export async function generateCharacterPdf(
   character: ComputedCharacter,
   playerName?: string
-): void {
-  // Identity
-  setText(form, "PC Name", character.name)
-  if (playerName) setText(form, "Player Name", playerName)
-  setText(form, "Class and Levels", classString(character))
-  setText(form, "Character Level", String(totalLevel(character)))
-  if (character.background) setDropdown(form, "Background", character.background)
-  const speciesText = character.lineage
-    ? `${character.species} (${character.lineage})`
-    : character.species
-  setDropdown(form, "Race", speciesText)
-  if (character.alignment) setDropdown(form, "Alignment", character.alignment)
-
-  // Abilities + saving throws. The big ability-mod box uses fmt() (raw value
-  // with sign). ST Mod is a small field with a pre-rendered "+" in the layout.
-  for (const ability of Abilities) {
-    const prefix = ABILITY_TO_MPMB[ability]
-    const score = character.abilityScores[ability]
-    setText(form, prefix, String(score.score))
-    setText(form, `${prefix} Mod`, fmt(score.modifier))
-    setText(form, `${prefix} ST Mod`, unsignedFmt(score.savingThrow))
-    if (score.proficient) checkBox(form, `${prefix} ST Prof`)
-  }
-
-  // Skills — modifier, plus proficient/expert flags. Expertise implies prof.
-  for (const skill of Skills) {
-    const prefix = SKILL_TO_MPMB[skill]
-    const skillScore = character.skills[skill]
-    setText(form, prefix, unsignedFmt(skillScore.modifier))
-    if (skillScore.proficiency === "proficient" || skillScore.proficiency === "expert") {
-      checkBox(form, `${prefix} Prof`)
-    }
-    if (skillScore.proficiency === "expert") {
-      checkBox(form, `${prefix} Exp`)
-    }
-  }
-
-  // Combat block — all of these have "+" pre-rendered, so use unsigned.
-  setText(form, "AC", String(character.armorClass))
-  setText(form, "Initiative bonus", unsignedFmt(character.initiative))
-  setText(form, "Speed", String(character.speed))
-  setText(form, "HP Max", String(character.maxHitPoints))
-  setText(form, "HP Current", String(character.currentHP))
-  setText(form, "Proficiency Bonus", unsignedFmt(character.proficiencyBonus))
-  setText(form, "Passive Perception", String(character.passivePerception))
-
-  // Hit dice — MPMB has 3 rows (HD1/HD2/HD3) for multi-class characters
-  const hd = groupHitDice(character)
-  for (let i = 0; i < Math.min(hd.length, 3); i++) {
-    const row = hd[i]
-    if (!row) continue
-    const idx = i + 1
-    setText(form, `HD${idx} Die`, `d${row.die}`)
-    setText(form, `HD${idx} Level`, String(row.total))
-    if (row.used > 0) setText(form, `HD${idx} Used`, String(row.used))
-  }
-
-  // Spellcasting stats + slot tracking (only if character has any spellcasting)
-  if (character.spells.length > 0) {
-    fillSpellcasterFields(form, character)
-    fillLimitedFeatures(form, spellSlotLimitedFeatures(character))
-    fillAttackCantrips(form, character)
-  }
-}
-
-// MPMB's "CRITICAL FAIL!" d20 overlay is a form button that is visible by
-// default and hidden by MPMB's AcroForm JavaScript when running in Adobe
-// Acrobat. We don't execute that JS, so we must remove the button ourselves.
-function removeD20Warning(form: PDFForm): void {
-  try {
-    form.removeField(form.getButton("d20warning"))
-  } catch {
-    // Field not present in this template version; nothing to do
-  }
+): Promise<Uint8Array> {
+  const doc = await buildCharacterPdfDoc(character, playerName)
+  return doc.save()
 }
 
 export interface CampaignPdfEntry {
@@ -375,76 +1259,9 @@ export interface CampaignPdfEntry {
   playerName?: string
 }
 
-// Build a single-page PDFDocument for one character. Returns the doc rather
-// than saved bytes so it can be either serialized (generateCharacterPdf) or
-// concatenated with others (generateCampaignPdf).
-async function buildCharacterPdfDoc(
-  character: ComputedCharacter,
-  playerName?: string
-): Promise<PDFDocument> {
-  const templatePath = TEMPLATE_PATHS[character.ruleset]
-  const templateFile = Bun.file(templatePath)
-  if (!(await templateFile.exists())) {
-    throw new Error(
-      `MPMB template not found at ${templatePath}. ` +
-        "Download from https://www.flapkan.com/download/#charactersheets and place at that path."
-    )
-  }
-
-  const templateBytes = await templateFile.arrayBuffer()
-  const pdfDoc = await PDFDocument.load(templateBytes)
-  const form = pdfDoc.getForm()
-
-  logger.info("pdf: loaded template", {
-    ruleset: character.ruleset,
-    fieldCount: form.getFields().length,
-    characterId: character.id,
-  })
-
-  fillCharacterFields(form, character, playerName)
-  removeD20Warning(form)
-
-  // Tell PDF viewers and print engines to regenerate appearance streams from
-  // /V on the fly. Without this flag, in-browser viewers (Chrome, Firefox)
-  // auto-render values fine on screen, but their print pipelines fall back to
-  // the stored /AP — which is stale because we save with
-  // updateFieldAppearances: false. The result is that banner/identity/dropdown
-  // fields come up blank in print. Setting NeedAppearances forces regeneration
-  // by the renderer, which handles MPMB's rich text fields without crashing.
-  const acroForm = form.acroForm.dict
-  acroForm.set(PDFName.of("NeedAppearances"), PDFBool.True)
-
-  // Keep only page 1 (front of main sheet). Remove from the end backwards so
-  // indices stay valid. We use removePage rather than copyPages because copyPages
-  // doesn't bring the document-level AcroForm definition with it — the new doc
-  // would have orphan widget annotations referencing nonexistent fields.
-  for (let i = pdfDoc.getPageCount() - 1; i >= 1; i--) {
-    pdfDoc.removePage(i)
-  }
-
-  return pdfDoc
-}
-
-// We deliberately do NOT call form.flatten() — MPMB's template contains rich
-// text fields and buttons with missing appearance streams that crash pdf-lib's
-// flattener. Leaving the form intact still renders the filled values correctly
-// in all major PDF viewers (Chrome, Firefox, Preview, Evince).
-//
-// updateFieldAppearances: false skips pdf-lib's auto-regeneration of every
-// field's visual stream on save. Without it, MPMB's rich text fields trip
-// RichTextFieldReadError, and regenerating 3600 fields takes seconds.
-const SAVE_OPTIONS = { updateFieldAppearances: false } as const
-
-export async function generateCharacterPdf(
-  character: ComputedCharacter,
-  playerName?: string
-): Promise<Uint8Array> {
-  const pdfDoc = await buildCharacterPdfDoc(character, playerName)
-  return pdfDoc.save(SAVE_OPTIONS)
-}
-
-// Concatenate per-character single-page PDFs into one party-wide document.
-// Pages are copied in the order characters are supplied.
+// Concatenate each character's full PDF back-to-back. A 4-character party
+// with two spellcasters will run 8+ pages; that's intentional — the
+// campaign PDF is a convenience print for the DM.
 export async function generateCampaignPdf(entries: CampaignPdfEntry[]): Promise<Uint8Array> {
   if (entries.length === 0) {
     throw new Error("Cannot generate campaign PDF with zero characters")
@@ -453,9 +1270,13 @@ export async function generateCampaignPdf(entries: CampaignPdfEntry[]): Promise<
   const combined = await PDFDocument.create()
   for (const entry of entries) {
     const charDoc = await buildCharacterPdfDoc(entry.character, entry.playerName)
-    const [page] = await combined.copyPages(charDoc, [0])
-    combined.addPage(page)
+    const pageCount = charDoc.getPageCount()
+    const copied = await combined.copyPages(
+      charDoc,
+      Array.from({ length: pageCount }, (_, i) => i)
+    )
+    for (const page of copied) combined.addPage(page)
   }
 
-  return combined.save(SAVE_OPTIONS)
+  return combined.save()
 }

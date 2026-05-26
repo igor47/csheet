@@ -88,6 +88,68 @@ describe("generateCharacterPdf", () => {
       expect(readText(out, "Int Mod")).toBe("+3")
     })
 
+    test("fills combat block: AC, initiative, speed, HP, prof bonus, passive perception", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+      const out = await loadPdf(bytes)
+
+      // Save/init/prof fields use unsigned format (layout supplies "+").
+      expect(readText(out, "AC")).toBe(String(computed.armorClass))
+      expect(readText(out, "Initiative bonus")).toBe(String(computed.initiative))
+      expect(readText(out, "Speed")).toBe(String(computed.speed))
+      expect(readText(out, "HP Max")).toBe(String(computed.maxHitPoints))
+      expect(readText(out, "HP Current")).toBe(String(computed.currentHP))
+      expect(readText(out, "Proficiency Bonus")).toBe("2") // level 4 → +2
+      expect(readText(out, "Passive Perception")).toBe(String(computed.passivePerception))
+    })
+
+    test("fills skill modifiers", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+      const out = await loadPdf(bytes)
+
+      // Skill fields use unsigned format; "-1" keeps its minus, "+2" becomes "2".
+      expect(readText(out, "Arc")).toBe(String(computed.skills.arcana.modifier))
+      expect(readText(out, "Acr")).toBe(String(computed.skills.acrobatics.modifier))
+      expect(readText(out, "Ath")).toBe(String(computed.skills.athletics.modifier))
+    })
+
+    test("fills hit dice for single-class character", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+      const out = await loadPdf(bytes)
+
+      // Wizard 4 → 4 d6 hit dice
+      expect(readText(out, "HD1 Die")).toBe("d6")
+      expect(readText(out, "HD1 Level")).toBe("4")
+    })
+
+    test("fills Player Name when supplied", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed, "Igor")
+      const out = await loadPdf(bytes)
+
+      expect(readText(out, "Player Name")).toBe("Igor")
+    })
+
+    test("leaves Player Name blank when not supplied", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+      const out = await loadPdf(bytes)
+
+      expect(readText(out, "Player Name")).toBe("")
+    })
+
     test("removes the d20warning overlay", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
@@ -175,7 +237,7 @@ describe("generateCampaignPdf", () => {
   // Each MPMB template parse takes ~1.5s; 3-character campaigns exceed the
   // default 5s timeout. Bump these to 20s.
   test("concatenates one page per character", async () => {
-    const chars = []
+    const entries = []
     for (let i = 0; i < 3; i++) {
       const dbChar = await characterFactory.create(
         { user_id: user.id, ruleset: "srd52", species: "human", name: `Hero ${i}` },
@@ -183,10 +245,10 @@ describe("generateCampaignPdf", () => {
       )
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")
-      chars.push(computed)
+      entries.push({ character: computed, playerName: `Player ${i}` })
     }
 
-    const bytes = await generateCampaignPdf(chars)
+    const bytes = await generateCampaignPdf(entries)
     const out = await PDFDocument.load(bytes)
 
     expect(out.getPageCount()).toBe(3)
@@ -205,7 +267,7 @@ describe("generateCampaignPdf", () => {
     const cb = await computeCharacter(testCtx.db, b.id)
     if (!ca || !cb) throw new Error("computeCharacter returned null")
 
-    const bytes = await generateCampaignPdf([ca, cb])
+    const bytes = await generateCampaignPdf([{ character: ca }, { character: cb }])
     const out = await PDFDocument.load(bytes)
 
     expect(out.getPageCount()).toBe(2)

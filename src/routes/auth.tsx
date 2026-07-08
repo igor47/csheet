@@ -43,11 +43,13 @@ authRoutes.post("/login", async (c) => {
   const redirect = formData.get("redirect") as string | null
 
   if (!email) {
-    return c.text("Email is required", 400)
+    await setFlashMsg(c, "Email is required.", "error")
+    return c.redirect(redirect ? `/login?${new URLSearchParams({ redirect })}` : "/login")
   }
 
   if (typeof email !== "string" || !email.includes("@")) {
-    return c.text("Invalid email", 400)
+    await setFlashMsg(c, "Please enter a valid email address.", "error")
+    return c.redirect(redirect ? `/login?${new URLSearchParams({ redirect })}` : "/login")
   }
 
   // Verify ALTCHA proof-of-work before anything that sends email or touches the

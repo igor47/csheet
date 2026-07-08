@@ -6,6 +6,7 @@ static/htmx.min.js
 static/htmx-ext-sse.js
 static/idiomorph-ext.min.js
 static/cropper.min.js
+static/altcha.min.js
 
 # output
 out

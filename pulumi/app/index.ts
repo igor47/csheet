@@ -48,6 +48,12 @@ const cookieSecret = new random.RandomPassword("cookie-secret", {
   special: false, // Avoid special chars for consistency
 })
 
+// HMAC key that signs ALTCHA proof-of-work challenges on the login form.
+const altchaHmacKey = new random.RandomPassword("altcha-hmac-key", {
+  length: 32,
+  special: false,
+})
+
 // Helper to create a secret with a value
 const createSecret = (name: string, value: pulumi.Input<string>) => {
   const secret = new gcp.secretmanager.Secret(name, {
@@ -76,6 +82,7 @@ const createSecret = (name: string, value: pulumi.Input<string>) => {
 // Create secrets for all config values
 const secrets = {
   cookieSecret: createSecret("cookie-secret", cookieSecret.result),
+  altchaHmacKey: createSecret("altcha-hmac-key", altchaHmacKey.result),
   postgresPassword: createSecret("postgres-password", databasePassword),
   postgresHost: createSecret("postgres-host", databaseHost),
   postgresUser: createSecret("postgres-user", databaseUser),
@@ -116,6 +123,7 @@ const env: pulumi.Input<gcp.types.input.cloudrunv2.JobTemplateTemplateContainerE
   secretEnv("POSTGRES_PASSWORD", secrets.postgresPassword),
   secretEnv("POSTGRES_DB", secrets.postgresDb),
   secretEnv("COOKIE_SECRET", secrets.cookieSecret),
+  secretEnv("ALTCHA_HMAC_KEY", secrets.altchaHmacKey),
   { name: "S3_ENDPOINT", value: s3Endpoint },
   { name: "S3_REGION", value: s3Region },
   secretEnv("S3_ACCESS_KEY_ID", secrets.s3AccessKeyId),

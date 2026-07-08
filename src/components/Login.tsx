@@ -17,6 +17,10 @@ export const Login = ({ redirect }: LoginProps) => (
                 </label>
                 <input type="email" class="form-control" id="email" name="email" required />
               </div>
+              {/* ALTCHA proof-of-work: solves in-browser and injects a hidden
+                  "altcha" field the server verifies. Starts on focus so the
+                  solution is ready by the time the user submits. */}
+              <altcha-widget class="mb-3 d-block" challenge="/login/challenge" auto="onfocus" />
               <button type="submit" class="btn btn-primary w-100">
                 Login
               </button>
@@ -25,5 +29,6 @@ export const Login = ({ redirect }: LoginProps) => (
         </div>
       </div>
     </div>
+    <script async defer type="module" src="/static/altcha.min.js" />
   </div>
 )

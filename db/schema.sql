@@ -1,7 +1,7 @@
-\restrict bdxk7HhlJ2tBMIAhfsHW7NEJV2Tds4pzM26GncBVgMc3cGjqhK0wZpDjytIrYWa
+\restrict 9facubht6eOgIN5ZfffWxw8wzXfFDMqEaygOo1ceslRHiWxsDisfqohd7KJPOnP
 
 -- Dumped from database version 16.10
--- Dumped by pg_dump version 18.3
+-- Dumped by pg_dump version 18.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -32,6 +32,17 @@ $$;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: altcha_solutions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.altcha_solutions (
+    salt text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expires_at timestamp with time zone NOT NULL
+);
+
 
 --
 -- Name: auth_tokens; Type: TABLE; Schema: public; Owner: -
@@ -560,6 +571,14 @@ CREATE TABLE public.users (
 
 
 --
+-- Name: altcha_solutions altcha_solutions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.altcha_solutions
+    ADD CONSTRAINT altcha_solutions_pkey PRIMARY KEY (salt);
+
+
+--
 -- Name: auth_tokens auth_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -813,6 +832,13 @@ ALTER TABLE ONLY public.uploads
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_altcha_solutions_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_altcha_solutions_expires_at ON public.altcha_solutions USING btree (expires_at);
 
 
 --
@@ -1559,7 +1585,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bdxk7HhlJ2tBMIAhfsHW7NEJV2Tds4pzM26GncBVgMc3cGjqhK0wZpDjytIrYWa
+\unrestrict 9facubht6eOgIN5ZfffWxw8wzXfFDMqEaygOo1ceslRHiWxsDisfqohd7KJPOnP
 
 
 --
@@ -1617,4 +1643,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260312190134'),
     ('20260312200000'),
     ('20260313211721'),
-    ('20260320000127');
+    ('20260320000127'),
+    ('20260708065853');

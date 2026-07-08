@@ -31,6 +31,12 @@ export const config = {
   otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || "15", 10),
   otpRateLimitPerHour: parseInt(process.env.OTP_RATE_LIMIT_PER_HOUR || "3", 10),
 
+  // ALTCHA proof-of-work protects the login form (always on). The dev default
+  // key mirrors cookieSecret; production overrides via ALTCHA_HMAC_KEY secret.
+  altchaHmacKey: process.env.ALTCHA_HMAC_KEY || "dev-altcha-hmac-key-not-for-production",
+  altchaChallengeExpiryMinutes: parseInt(process.env.ALTCHA_CHALLENGE_EXPIRY_MINUTES || "10", 10),
+  altchaMaxNumber: parseInt(process.env.ALTCHA_MAX_NUMBER || "250000", 10),
+
   resendApiKey: process.env.RESEND_API_KEY || "",
   resendWebhookSecret: process.env.RESEND_WEBHOOK_SECRET || "",
   resendSegmentId: process.env.RESEND_SEGMENT_ID || "",

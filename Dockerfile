@@ -31,8 +31,11 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application files first
 COPY . .
 
-# Then overlay the generated htmx files from deps stage (after postinstall)
-COPY --from=deps /app/static/htmx.min.js /app/static/htmx-ext-sse.js /app/static/idiomorph-ext.min.js ./static/
+# Then overlay the postinstall-generated vendor bundles from the deps stage, so
+# they're present even if the build context lacks them (they're gitignored).
+# altcha.min.js is required for login (the proof-of-work widget), so it must
+# always be here.
+COPY --from=deps /app/static/htmx.min.js /app/static/htmx-ext-sse.js /app/static/idiomorph-ext.min.js /app/static/altcha.min.js ./static/
 
 ENV NODE_ENV=production \
     PORT=3000

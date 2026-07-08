@@ -5,6 +5,7 @@ import { config, isSmtpConfigured } from "@src/config"
 import { getDb } from "@src/db"
 import * as authTokens from "@src/db/auth_tokens"
 import * as campaignMembers from "@src/db/campaign_members"
+import { createLoginChallenge, verifyLoginSolution } from "@src/lib/altcha"
 import { sendOtpEmail } from "@src/lib/email"
 import { logger } from "@src/lib/logger"
 import { getBaseUrl, safeRedirect } from "@src/lib/url"
@@ -28,6 +29,14 @@ authRoutes.get("/login", (c) => {
   return c.render(<Login redirect={redirect} />, { title: "Login" })
 })
 
+// Mints an ALTCHA proof-of-work challenge for the login widget to solve.
+authRoutes.get("/login/challenge", async (c) => {
+  // Each challenge is single-use; never let a browser or proxy cache it (a
+  // stale challenge would fail as expired/replayed on submit).
+  c.header("Cache-Control", "no-store")
+  return c.json(await createLoginChallenge())
+})
+
 authRoutes.post("/login", async (c) => {
   const formData = await c.req.formData()
   const email = formData.get("email") as string
@@ -39,6 +48,21 @@ authRoutes.post("/login", async (c) => {
 
   if (typeof email !== "string" || !email.includes("@")) {
     return c.text("Invalid email", 400)
+  }
+
+  // Verify ALTCHA proof-of-work before anything that sends email or touches the
+  // OTP rate limiter. A bot without a solved challenge is stopped here, so it
+  // can't relay spam or burn a victim's OTP request budget.
+  const altchaPayload = formData.get("altcha")
+  const altchaResult =
+    typeof altchaPayload === "string" && altchaPayload
+      ? await verifyLoginSolution(getDb(c), altchaPayload)
+      : "invalid"
+  if (altchaResult !== "ok") {
+    logger.warn("ALTCHA verification failed", { result: altchaResult, email })
+    await setFlashMsg(c, "Verification failed. Please try again.", "error")
+    const params = redirect ? `?${new URLSearchParams({ redirect })}` : ""
+    return c.redirect(`/login${params}`)
   }
 
   // If SMTP is not configured, fall back to instant login

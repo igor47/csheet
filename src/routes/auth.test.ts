@@ -3,11 +3,13 @@ import { config } from "@src/config"
 import type { CreateAuthTokenResult } from "@src/db/auth_tokens"
 import type { Campaign } from "@src/db/campaigns"
 import type { User } from "@src/db/users"
+import { solvedAltchaPayload } from "@src/test/altcha"
 import { useTestApp } from "@src/test/app"
 import { authTokenFactory } from "@src/test/factories/auth_token"
 import { campaignFactory, campaignMemberFactory } from "@src/test/factories/campaign"
 import { userFactory } from "@src/test/factories/user"
-import { expectElement, makeRequest, parseHtml } from "@src/test/http"
+import { elementExists, expectElement, makeRequest, parseHtml } from "@src/test/http"
+import { createChallenge, solveChallenge } from "altcha-lib/v1"
 
 const ORIGINAL_SMTP_HOST = config.smtpHost
 
@@ -27,6 +29,7 @@ describe("POST /login", () => {
 
       const formData = new FormData()
       formData.append("email", user.email)
+      formData.append("altcha", await solvedAltchaPayload())
 
       const response = await makeRequest(testCtx.app, "/login", {
         method: "POST",
@@ -41,6 +44,7 @@ describe("POST /login", () => {
     test("redirects to OTP form for new user", async () => {
       const formData = new FormData()
       formData.append("email", "newuser@example.com")
+      formData.append("altcha", await solvedAltchaPayload())
 
       const response = await makeRequest(testCtx.app, "/login", {
         method: "POST",
@@ -56,6 +60,7 @@ describe("POST /login", () => {
       const formData = new FormData()
       formData.append("email", "test@example.com")
       formData.append("redirect", "/custom-page")
+      formData.append("altcha", await solvedAltchaPayload())
 
       const response = await makeRequest(testCtx.app, "/login", {
         method: "POST",
@@ -72,6 +77,7 @@ describe("POST /login", () => {
     test("creates and logs in new user", async () => {
       const formData = new FormData()
       formData.append("email", "instant@example.com")
+      formData.append("altcha", await solvedAltchaPayload())
 
       const response = await makeRequest(testCtx.app, "/login", {
         method: "POST",
@@ -93,6 +99,7 @@ describe("POST /login", () => {
 
       const formData = new FormData()
       formData.append("email", user.email)
+      formData.append("altcha", await solvedAltchaPayload())
 
       const response = await makeRequest(testCtx.app, "/login", {
         method: "POST",
@@ -110,6 +117,7 @@ describe("POST /login", () => {
       const formData = new FormData()
       formData.append("email", user.email)
       formData.append("redirect", "/campaigns")
+      formData.append("altcha", await solvedAltchaPayload())
 
       const response = await makeRequest(testCtx.app, "/login", {
         method: "POST",
@@ -145,6 +153,140 @@ describe("POST /login", () => {
 
     expect(response.status).toBe(400)
     expect(await response.text()).toContain("Invalid email")
+  })
+})
+
+describe("ALTCHA login protection", () => {
+  const testCtx = useTestApp()
+
+  test("GET /login renders the widget and vendored script", async () => {
+    const response = await makeRequest(testCtx.app, "/login")
+    const document = await parseHtml(response)
+
+    // The widget must point at our challenge endpoint via the `challenge`
+    // attribute (altcha v3 renamed it from `challengeurl`); a wrong name means
+    // the widget silently can't fetch a challenge and login breaks.
+    const widget = expectElement(document, "altcha-widget")
+    expect(widget.getAttribute("challenge")).toBe("/login/challenge")
+    expect(elementExists(document, 'script[src="/static/altcha.min.js"]')).toBe(true)
+  })
+
+  test("GET /login/challenge returns a signed challenge", async () => {
+    const response = await makeRequest(testCtx.app, "/login/challenge")
+
+    expect(response.status).toBe(200)
+    const challenge = (await response.json()) as Record<string, unknown>
+    expect(challenge.algorithm).toBe("SHA-256")
+    expect(typeof challenge.challenge).toBe("string")
+    expect(typeof challenge.salt).toBe("string")
+    expect(typeof challenge.signature).toBe("string")
+    expect(challenge.maxnumber).toBeGreaterThan(0)
+  })
+
+  test("rejects POST /login with no altcha payload", async () => {
+    const formData = new FormData()
+    formData.append("email", "nobody@example.com")
+
+    const response = await makeRequest(testCtx.app, "/login", {
+      method: "POST",
+      body: formData,
+    })
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe("/login")
+    expect(response.headers.get("Set-Cookie")).toContain("flash")
+
+    // No email was sent and no OTP budget was consumed.
+    const tokens = await testCtx.db`SELECT count(*)::int AS count FROM auth_tokens`
+    expect(tokens[0].count).toBe(0)
+  })
+
+  test("rejects POST /login with a malformed altcha payload", async () => {
+    const formData = new FormData()
+    formData.append("email", "nobody@example.com")
+    formData.append("altcha", "not-a-valid-payload")
+
+    const response = await makeRequest(testCtx.app, "/login", {
+      method: "POST",
+      body: formData,
+    })
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe("/login")
+    expect(response.headers.get("Set-Cookie")).toContain("flash")
+  })
+
+  test("accepts a valid solved payload and records it", async () => {
+    const formData = new FormData()
+    formData.append("email", "solver@example.com")
+    formData.append("altcha", await solvedAltchaPayload())
+
+    const response = await makeRequest(testCtx.app, "/login", {
+      method: "POST",
+      body: formData,
+    })
+
+    // Instant-login path (no SMTP in tests): got past ALTCHA and logged in.
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toContain("/welcome")
+
+    const solutions = await testCtx.db`SELECT count(*)::int AS count FROM altcha_solutions`
+    expect(solutions[0].count).toBe(1)
+  })
+
+  test("rejects a replayed payload", async () => {
+    const payload = await solvedAltchaPayload()
+
+    const first = new FormData()
+    first.append("email", "replay@example.com")
+    first.append("altcha", payload)
+    const firstRes = await makeRequest(testCtx.app, "/login", { method: "POST", body: first })
+    expect(firstRes.status).toBe(302)
+    expect(firstRes.headers.get("Location")).toContain("/welcome")
+
+    // Same solved challenge again — must be refused.
+    const second = new FormData()
+    second.append("email", "replay@example.com")
+    second.append("altcha", payload)
+    const secondRes = await makeRequest(testCtx.app, "/login", { method: "POST", body: second })
+    expect(secondRes.status).toBe(302)
+    expect(secondRes.headers.get("Location")).toBe("/login")
+    expect(secondRes.headers.get("Set-Cookie")).toContain("flash")
+  })
+
+  test("rejects an expired challenge", async () => {
+    const challenge = await createChallenge({
+      hmacKey: config.altchaHmacKey,
+      algorithm: "SHA-256",
+      maxnumber: 1000,
+      expires: new Date(Date.now() - 1000), // already expired
+    })
+    const { promise } = solveChallenge(
+      challenge.challenge,
+      challenge.salt,
+      challenge.algorithm,
+      challenge.maxnumber
+    )
+    const solution = await promise
+    if (!solution) throw new Error("failed to solve challenge")
+    const payload = btoa(
+      JSON.stringify({
+        algorithm: challenge.algorithm,
+        challenge: challenge.challenge,
+        number: solution.number,
+        salt: challenge.salt,
+        signature: challenge.signature,
+      })
+    )
+
+    const formData = new FormData()
+    formData.append("email", "expired@example.com")
+    formData.append("altcha", payload)
+
+    const response = await makeRequest(testCtx.app, "/login", { method: "POST", body: formData })
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe("/login")
+    expect(response.headers.get("Set-Cookie")).toContain("flash")
   })
 })
 
@@ -487,6 +629,7 @@ describe("OTP rate limiting", () => {
     for (let i = 0; i < 3; i++) {
       const formData = new FormData()
       formData.append("email", email)
+      formData.append("altcha", await solvedAltchaPayload())
 
       const response = await makeRequest(testCtx.app, "/login", {
         method: "POST",
@@ -500,6 +643,7 @@ describe("OTP rate limiting", () => {
     // Fourth request should be rate limited
     const formData = new FormData()
     formData.append("email", email)
+    formData.append("altcha", await solvedAltchaPayload())
 
     const response = await makeRequest(testCtx.app, "/login", {
       method: "POST",

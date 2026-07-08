@@ -129,7 +129,7 @@ describe("POST /login", () => {
     })
   })
 
-  test("rejects empty email", async () => {
+  test("rejects empty email with a flash and redirect", async () => {
     const formData = new FormData()
     formData.append("email", "")
 
@@ -138,11 +138,12 @@ describe("POST /login", () => {
       body: formData,
     })
 
-    expect(response.status).toBe(400)
-    expect(await response.text()).toContain("Email is required")
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe("/login")
+    expect(response.headers.get("Set-Cookie")).toContain("flash")
   })
 
-  test("rejects invalid email", async () => {
+  test("rejects invalid email with a flash and redirect", async () => {
     const formData = new FormData()
     formData.append("email", "not-an-email")
 
@@ -151,8 +152,9 @@ describe("POST /login", () => {
       body: formData,
     })
 
-    expect(response.status).toBe(400)
-    expect(await response.text()).toContain("Invalid email")
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe("/login")
+    expect(response.headers.get("Set-Cookie")).toContain("flash")
   })
 })
 

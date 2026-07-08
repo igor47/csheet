@@ -4,6 +4,7 @@ import { authMiddleware } from "./middleware/auth"
 import type { FlashVariables } from "./middleware/flash"
 import { flashMiddleware } from "./middleware/flash"
 import { htmxMiddleware } from "./middleware/htmx"
+import { ipBlocklistMiddleware } from "./middleware/ipBlocklist"
 import type { NotificationsVariables } from "./middleware/notifications"
 import { notificationsMiddleware } from "./middleware/notifications"
 import { requestLoggingMiddleware } from "./middleware/requestLogging"
@@ -16,6 +17,7 @@ declare module "hono" {
 
 export function applyMiddleware(app: Hono) {
   app.use("*", requestLoggingMiddleware)
+  app.use("*", ipBlocklistMiddleware)
   app.use("*", authMiddleware)
   app.use("*", notificationsMiddleware)
   app.use("*", flashMiddleware)

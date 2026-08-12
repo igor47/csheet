@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG BUN_VERSION=1.3.1
+ARG BUN_VERSION=1.3.14
 ARG DBMATE_VERSION=2.28.0
 
 FROM ghcr.io/amacneil/dbmate:${DBMATE_VERSION} AS dbmate

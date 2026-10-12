@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import { create as createSpellPrepared } from "@src/db/char_spells_prepared"
 import { create as createCharTrait } from "@src/db/char_traits"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
@@ -56,6 +57,27 @@ describe("generateCharacterPdf", () => {
 
   beforeEach(async () => {
     user = await userFactory.create({}, testCtx.db)
+  })
+
+  describe("an SRD 5.1 warlock with Hex, an SRD 5.2.1 spell, from before the split", () => {
+    test("labels Hex with its ruleset", async () => {
+      const dbChar = await characterFactory.create(
+        { user_id: user.id, ruleset: "srd51", class: "warlock", level: 3, charisma: 16 },
+        testCtx.db
+      )
+      await createSpellPrepared(testCtx.db, {
+        character_id: dbChar.id,
+        class: "warlock",
+        spell_id: "srd_hex",
+        action: "prepare",
+        always_prepared: false,
+        note: null,
+      })
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+
+      const bytes = await generateCharacterPdf(computed!)
+      expect(await pdfContainsText(bytes, "Hex (SRD 5.2.1)")).toBe(true)
+    })
   })
 
   describe("a wizard character", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { getSpells } from "@src/lib/dnd/spells"
 import { useTestApp } from "@src/test/app"
-import { elementExists, expectElement, makeRequest, parseHtml } from "@src/test/http"
+import { elementExists, expectElement, getElements, makeRequest, parseHtml } from "@src/test/http"
 
 // /spells shows SRD 5.1 unless a ruleset is picked
 const spells = getSpells("srd51")
@@ -101,6 +101,91 @@ describe("GET /spells", () => {
   })
 })
 
+describe("GET /spells with a ruleset picked", () => {
+  const testCtx = useTestApp()
+
+  async function spellNames(path: string, headers: Record<string, string> = {}) {
+    const response = await makeRequest(testCtx.app, path, { headers })
+    const document = await parseHtml(response)
+    return getElements(document, "#spells-table tbody tr td:first-child").map((td) =>
+      td.textContent?.trim()
+    )
+  }
+
+  test("lists SRD 5.1 spells by default", async () => {
+    const response = await makeRequest(testCtx.app, "/spells")
+    const document = await parseHtml(response)
+    const names = getElements(document, "#spells-table tbody tr td:first-child").map((td) =>
+      td.textContent?.trim()
+    )
+
+    expect(names).toContain("Feeblemind")
+    expect(names).not.toContain("Hex")
+    const selected = expectElement(document, "#ruleset-filter option[selected]")
+    expect(selected.getAttribute("value")).toBe("srd51")
+  })
+
+  test("lists SRD 5.2 spells when SRD 5.2 is picked", async () => {
+    const names = await spellNames("/spells?ruleset=srd52")
+
+    expect(names).toContain("Hex")
+    expect(names).not.toContain("Feeblemind")
+  })
+
+  test("switches the table when the picker changes", async () => {
+    const names = await spellNames("/spells?ruleset=srd52&search=hex", { "HX-Request": "true" })
+
+    expect(names).toEqual(["Hex"])
+  })
+
+  test("keeps the ruleset and search in sort and spell links", async () => {
+    const response = await makeRequest(testCtx.app, "/spells?ruleset=srd52&search=cure", {
+      headers: { "HX-Request": "true" },
+    })
+    const document = await parseHtml(response)
+
+    const sortLink = expectElement(document, "#spells-table th [hx-get]")
+    expect(sortLink.getAttribute("hx-get")).toContain("ruleset=srd52")
+    expect(sortLink.getAttribute("hx-get")).toContain("search=cure")
+    const spellLink = expectElement(document, "#spells-table tbody button[hx-get]")
+    expect(spellLink.getAttribute("hx-get")).toContain("?ruleset=srd52")
+    expect(spellLink.getAttribute("hx-push-url")).toContain("ruleset=srd52")
+  })
+
+  test("matches straight and curly apostrophes in either ruleset", async () => {
+    expect(await spellNames("/spells?ruleset=srd52&search=hunter's mark")).toEqual([
+      "Hunter’s Mark",
+    ])
+    expect(await spellNames("/spells?ruleset=srd51&search=hunter’s mark")).toEqual([
+      "Hunter's Mark",
+    ])
+  })
+
+  test("shows the picked ruleset's version of a spell", async () => {
+    const detail = async (ruleset: string) => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/spells/srd_cure_wounds?ruleset=${ruleset}`,
+        {
+          headers: { "HX-Request": "true" },
+        }
+      )
+      return (await parseHtml(response)).body.textContent || ""
+    }
+
+    expect(await detail("srd51")).toContain("1d8 + your spellcasting ability modifier")
+    expect(await detail("srd52")).toContain("2d8 plus your spellcasting ability modifier")
+  })
+
+  test("opens a spell from the other ruleset with a badge", async () => {
+    const response = await makeRequest(testCtx.app, "/spells?ruleset=srd51&openSpell=srd_hex")
+    const document = await parseHtml(response)
+
+    expect(expectElement(document, ".modal-title").textContent).toContain("Hex")
+    expect(elementExists(document, ".modal-title .spell-issue-badge")).toBe(true)
+  })
+})
+
 describe("GET /spells/:id", () => {
   const testCtx = useTestApp()
   const spell = spells[0]!
@@ -121,6 +206,6 @@ describe("GET /spells/:id", () => {
     const response = await makeRequest(testCtx.app, `/spells/${spell.id}`)
 
     expect(response.status).toBe(302)
-    expect(response.headers.get("Location")).toContain(`/spells?openSpell=${spell.id}`)
+    expect(response.headers.get("Location")).toBe(`/spells?openSpell=${spell.id}&ruleset=srd51`)
   })
 })

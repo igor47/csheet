@@ -152,6 +152,8 @@ export async function executeChatRequest(
 
     // Capture usage data from AI SDK
     const usageData = await result.usage
+    // the SDK only reports prompt-cache writes in the provider metadata
+    const cacheWrites = (await result.providerMetadata)?.anthropic?.cacheCreationInputTokens
     const usage: Usage | null = usageData
       ? {
           provider: model.provider,
@@ -159,6 +161,7 @@ export async function executeChatRequest(
           inputTokens: usageData.inputTokens || 0,
           outputTokens: usageData.outputTokens || 0,
           cachedInputTokens: usageData.cachedInputTokens,
+          cacheWriteInputTokens: typeof cacheWrites === "number" ? cacheWrites : undefined,
           totalTokens: usageData.totalTokens || 0,
         }
       : null

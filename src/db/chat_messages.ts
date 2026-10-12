@@ -28,7 +28,9 @@ export const UsageSchema = z.object({
   modelId: z.string(),
   inputTokens: z.number(),
   outputTokens: z.number(),
+  // prompt-cache reads and writes; inputTokens counts neither
   cachedInputTokens: z.number().optional(),
+  cacheWriteInputTokens: z.number().optional(),
   totalTokens: z.number(),
 })
 

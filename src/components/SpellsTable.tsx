@@ -1,9 +1,11 @@
+import type { RulesetId } from "@src/lib/dnd/rulesets"
 import type { Spell } from "@src/lib/dnd/spells"
 
 export interface SpellsTableProps {
   spells: Spell[]
   sortBy?: string
   sortOrder?: string
+  selectedRuleset: RulesetId
   selectedClass?: string
   selectedMaxLevel?: string
   selectedSchool?: string
@@ -15,6 +17,7 @@ const SortableHeader = ({
   label,
   currentSort,
   currentOrder,
+  selectedRuleset,
   selectedClass,
   selectedMaxLevel,
   selectedSchool,
@@ -24,6 +27,7 @@ const SortableHeader = ({
   label: string
   currentSort?: string
   currentOrder?: string
+  selectedRuleset: RulesetId
   selectedClass?: string
   selectedMaxLevel?: string
   selectedSchool?: string
@@ -34,6 +38,7 @@ const SortableHeader = ({
 
   // Build URL with sort params, preserving current filters
   const params = new URLSearchParams()
+  params.set("ruleset", selectedRuleset)
   if (selectedClass) params.set("class", selectedClass)
   if (selectedMaxLevel) params.set("maxLevel", selectedMaxLevel)
   if (selectedSchool) params.set("school", selectedSchool)
@@ -63,6 +68,7 @@ export const SpellsTable = ({
   spells,
   sortBy = "level",
   sortOrder = "asc",
+  selectedRuleset,
   selectedClass,
   selectedMaxLevel,
   selectedSchool,
@@ -77,6 +83,7 @@ export const SpellsTable = ({
             label="Name"
             currentSort={sortBy}
             currentOrder={sortOrder}
+            selectedRuleset={selectedRuleset}
             selectedClass={selectedClass}
             selectedMaxLevel={selectedMaxLevel}
             selectedSchool={selectedSchool}
@@ -87,6 +94,7 @@ export const SpellsTable = ({
             label="Level"
             currentSort={sortBy}
             currentOrder={sortOrder}
+            selectedRuleset={selectedRuleset}
             selectedClass={selectedClass}
             selectedMaxLevel={selectedMaxLevel}
             selectedSchool={selectedSchool}
@@ -97,6 +105,7 @@ export const SpellsTable = ({
             label="School"
             currentSort={sortBy}
             currentOrder={sortOrder}
+            selectedRuleset={selectedRuleset}
             selectedClass={selectedClass}
             selectedMaxLevel={selectedMaxLevel}
             selectedSchool={selectedSchool}
@@ -117,6 +126,7 @@ export const SpellsTable = ({
           spells.map((spell) => {
             // Build URL with openSpell param, preserving current filters
             const params = new URLSearchParams()
+            params.set("ruleset", selectedRuleset)
             if (selectedClass) params.set("class", selectedClass)
             if (selectedMaxLevel) params.set("maxLevel", selectedMaxLevel)
             if (selectedSchool) params.set("school", selectedSchool)
@@ -133,7 +143,7 @@ export const SpellsTable = ({
                     class="btn btn-link p-0 text-start"
                     data-bs-toggle="modal"
                     data-bs-target="#detailModal"
-                    hx-get={`/spells/${spell.id}`}
+                    hx-get={`/spells/${spell.id}?ruleset=${selectedRuleset}`}
                     hx-target="#detailModalContent"
                     hx-swap="innerHTML"
                     hx-push-url={`/spells?${params.toString()}`}

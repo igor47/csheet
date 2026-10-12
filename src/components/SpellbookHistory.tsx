@@ -1,11 +1,14 @@
 import type { CharSpellLearned } from "@src/db/char_spells_learned"
-import { spells } from "@src/lib/dnd/spells"
+import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { findSpellById } from "@src/lib/dnd/spells"
 
 export interface SpellbookHistoryProps {
   events: CharSpellLearned[]
+  /** The character\'s ruleset, for looking up spell names */
+  ruleset: RulesetId
 }
 
-export const SpellbookHistory = ({ events }: SpellbookHistoryProps) => {
+export const SpellbookHistory = ({ events, ruleset }: SpellbookHistoryProps) => {
   return (
     <>
       <div class="modal-header">
@@ -27,7 +30,7 @@ export const SpellbookHistory = ({ events }: SpellbookHistoryProps) => {
               </thead>
               <tbody>
                 {events.map((event) => {
-                  const spell = spells.find((s) => s.id === event.spell_id)
+                  const spell = findSpellById(ruleset, event.spell_id)
                   const spellName = spell ? spell.name : `Unknown (${event.spell_id})`
 
                   return (

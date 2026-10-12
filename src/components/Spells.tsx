@@ -2,22 +2,26 @@ import { SpellDetail } from "@src/components/SpellDetail"
 import { SpellsTable } from "@src/components/SpellsTable"
 import { DetailModal } from "@src/components/ui/DetailModal"
 import { ClassNames } from "@src/lib/dnd"
-import type { Spell } from "@src/lib/dnd/spells"
+import { RULESET_LABELS, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
+import { spellIssue } from "@src/lib/dnd/spellIssues"
+import type { FoundSpell, Spell } from "@src/lib/dnd/spells"
 import { SpellSchools } from "@src/lib/dnd/spells"
 
 export interface SpellsProps {
   spells: Spell[]
+  selectedRuleset: RulesetId
   selectedClass?: string
   selectedMaxLevel?: string
   selectedSchool?: string
   searchQuery?: string
   sortBy?: string
   sortOrder?: string
-  openSpell?: Spell
+  openSpell?: FoundSpell
 }
 
 export const Spells = ({
   spells,
+  selectedRuleset,
   selectedClass,
   selectedMaxLevel,
   selectedSchool,
@@ -49,7 +53,7 @@ export const Spells = ({
               <input type="hidden" id="sortBy" name="sortBy" value={sortBy || "level"} />
               <input type="hidden" id="sortOrder" name="sortOrder" value={sortOrder || "asc"} />
 
-              <div class="col-12 col-lg-5">
+              <div class="col-12 col-lg-4">
                 <label for="search-filter" class="form-label">
                   Search
                 </label>
@@ -63,7 +67,20 @@ export const Spells = ({
                 />
               </div>
 
-              <div class="col-12 col-md-4 col-lg-3">
+              <div class="col-6 col-md-3 col-lg-2">
+                <label for="ruleset-filter" class="form-label">
+                  Ruleset
+                </label>
+                <select id="ruleset-filter" name="ruleset" class="form-select">
+                  {RULESETS.map((r) => (
+                    <option value={r.id} selected={selectedRuleset === r.id}>
+                      {RULESET_LABELS[r.id]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div class="col-6 col-md-3 col-lg-2">
                 <label for="class-filter" class="form-label">
                   Class
                 </label>
@@ -82,7 +99,7 @@ export const Spells = ({
                 </select>
               </div>
 
-              <div class="col-12 col-md-4 col-lg-2">
+              <div class="col-6 col-md-3 col-lg-2">
                 <label for="level-filter" class="form-label">
                   Max Level
                 </label>
@@ -107,7 +124,7 @@ export const Spells = ({
                 </select>
               </div>
 
-              <div class="col-12 col-md-4 col-lg-2">
+              <div class="col-6 col-md-3 col-lg-2">
                 <label for="school-filter" class="form-label">
                   School
                 </label>
@@ -135,6 +152,7 @@ export const Spells = ({
               spells={spells}
               sortBy={sortBy}
               sortOrder={sortOrder}
+              selectedRuleset={selectedRuleset}
               selectedClass={selectedClass}
               selectedMaxLevel={selectedMaxLevel}
               selectedSchool={selectedSchool}
@@ -145,7 +163,11 @@ export const Spells = ({
       </div>
 
       {/* Spell Detail Modal */}
-      <DetailModal size="lg">{openSpell ? <SpellDetail spell={openSpell} /> : null}</DetailModal>
+      <DetailModal size="lg">
+        {openSpell ? (
+          <SpellDetail spell={openSpell.spell} issue={spellIssue(selectedRuleset, openSpell)} />
+        ) : null}
+      </DetailModal>
     </>
   )
 }

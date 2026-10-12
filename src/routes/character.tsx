@@ -1105,6 +1105,7 @@ characterRoutes.post("/characters/:id/castspell", async (c) => {
   return c.html(
     <>
       <SpellCastResult
+        ruleset={char.ruleset}
         message={result.result.note}
         spellId={result.result.spellId}
         attackInfo={result.result.attackInfo}
@@ -1824,14 +1825,18 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     const preparedSpellEvents = await findPreparedSpellChanges(getDb(c), characterId)
     // Reverse to show most recent first
     preparedSpellEvents.reverse()
-    return c.html(<PreparedSpellsHistory events={preparedSpellEvents} />)
+    return c.html(
+      <PreparedSpellsHistory events={preparedSpellEvents} ruleset={authResult.character.ruleset} />
+    )
   }
 
   if (field === "spellbook") {
     const spellbookEvents = await findLearnedSpellChanges(getDb(c), characterId)
     // Reverse to show most recent first
     spellbookEvents.reverse()
-    return c.html(<SpellbookHistory events={spellbookEvents} />)
+    return c.html(
+      <SpellbookHistory events={spellbookEvents} ruleset={authResult.character.ruleset} />
+    )
   }
 
   if (field === "traits") {

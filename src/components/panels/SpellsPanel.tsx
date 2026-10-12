@@ -1,6 +1,9 @@
 import { LabeledValue } from "@src/components/ui/LabeledValue"
+import { SpellIssueBadge } from "@src/components/ui/SpellIssueBadge"
 import { SpellSlotsDisplay } from "@src/components/ui/SpellSlotsDisplay"
-import { spells } from "@src/lib/dnd/spells"
+import type { ClassNameType } from "@src/lib/dnd"
+import { spellIssue } from "@src/lib/dnd/spellIssues"
+import { findSpell } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
 
@@ -9,6 +12,10 @@ export interface SpellsPanelProps {
   swapOob?: boolean
   isReadOnly?: boolean
 }
+
+/** The spell's detail page, in the character's ruleset */
+const spellHref = (character: ComputedCharacter, spellId: string) =>
+  `/spells/${spellId}?ruleset=${character.ruleset}`
 
 export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPanelProps) => {
   const formatBonus = (value: number) => (value >= 0 ? `+${value}` : `${value}`)
@@ -109,6 +116,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
         (() => {
           type SlotRow = {
             className: string
+            spellList: ClassNameType
             type: "Cantrip" | "Spell"
             spell_id: string | null
             alwaysPrepared: boolean
@@ -122,6 +130,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
             spellInfo.cantripSlots.forEach((slot, idx) => {
               allSlots.push({
                 className: spellInfo.class,
+                spellList: spellInfo.spellList,
                 type: "Cantrip",
                 spell_id: slot.spell_id,
                 alwaysPrepared: slot.alwaysPrepared,
@@ -133,6 +142,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
             spellInfo.preparedSpells.forEach((slot, idx) => {
               allSlots.push({
                 className: spellInfo.class,
+                spellList: spellInfo.spellList,
                 type: "Spell",
                 spell_id: slot.spell_id,
                 alwaysPrepared: slot.alwaysPrepared,
@@ -185,9 +195,18 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                     </thead>
                     <tbody>
                       {allSlots.map((row) => {
-                        const spell = row.spell_id
-                          ? spells.find((s) => s.id === row.spell_id)
+                        const found = row.spell_id
+                          ? findSpell(character.ruleset, row.spell_id)
                           : null
+                        const spell = found?.spell
+                        // always-prepared spells (e.g. domain spells) needn't be on the class list
+                        const issue =
+                          found &&
+                          spellIssue(
+                            character.ruleset,
+                            found,
+                            row.alwaysPrepared ? undefined : row.spellList
+                          )
 
                         return (
                           <tr>
@@ -197,8 +216,8 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                               {spell ? (
                                 <>
                                   <a
-                                    href="/spells/{spell.id}"
-                                    hx-get={`/spells/${spell.id}`}
+                                    href={spellHref(character, spell.id)}
+                                    hx-get={spellHref(character, spell.id)}
                                     hx-target="#detailModalContent"
                                     hx-swap="innerHTML"
                                     data-bs-toggle="modal"
@@ -207,6 +226,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                                   >
                                     {spell.name}
                                   </a>
+                                  {issue && <SpellIssueBadge issue={issue} onSheet />}
                                   {row.alwaysPrepared && (
                                     <span
                                       class="badge bg-secondary ms-1"
@@ -277,12 +297,12 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
           if (!wizardInfo?.knownSpells) return null
 
           // Sort spells by level then name
-          const sortedSpells = [...wizardInfo.knownSpells]
-            .map((spellId) => spells.find((s) => s.id === spellId)!)
-            .filter(Boolean)
+          const sortedSpells = wizardInfo.knownSpells
+            .map((spellId) => findSpell(character.ruleset, spellId))
+            .filter((found) => found !== undefined)
             .sort((a, b) => {
-              if (a?.level !== b?.level) return a?.level - b?.level
-              return a?.name.localeCompare(b?.name)
+              if (a.spell.level !== b.spell.level) return a.spell.level - b.spell.level
+              return a.spell.name.localeCompare(b.spell.name)
             })
 
           return (
@@ -333,8 +353,9 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedSpells.map((spell) => {
-                      if (!spell) return null
+                    {sortedSpells.map((found) => {
+                      const { spell } = found
+                      const issue = spellIssue(character.ruleset, found, wizardInfo.spellList)
 
                       // Check if in cantrip or prepared slots
                       const isInCantripSlot = wizardInfo.cantripSlots.some(
@@ -360,7 +381,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                           <i class="bi bi-circle text-muted" title="Not prepared"></i>
                         )
 
-                      const prepIcon = (
+                      const prepButton = (
                         <button
                           type="button"
                           class={clsx("btn btn-sm butn-outline-info border p-0", {
@@ -374,10 +395,23 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                           hx-swap="innerHTML"
                           data-bs-toggle="modal"
                           data-bs-target="#detailModal"
-                          disabled={isInPreparedSlot || isInCantripSlot}
+                          disabled={isInPreparedSlot || isInCantripSlot || issue !== undefined}
                         >
                           <i class="bi bi-plus-circle" />
                         </button>
+                      )
+                      // a disabled button gets no hover events, so the reason goes on a wrapper
+                      const prepIcon = issue ? (
+                        <span
+                          class="d-inline-block"
+                          tabindex={0}
+                          data-bs-toggle="tooltip"
+                          title={`Can't prepare: ${issue.reason}`}
+                        >
+                          {prepButton}
+                        </span>
+                      ) : (
+                        prepButton
                       )
                       const ritualCastIcon = spell.ritual && (
                         <button
@@ -400,8 +434,8 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                         <tr>
                           <td>
                             <a
-                              href="/spells/{spell.id}"
-                              hx-get={`/spells/${spell.id}`}
+                              href={spellHref(character, spell.id)}
+                              hx-get={spellHref(character, spell.id)}
                               hx-target="#detailModalContent"
                               hx-swap="innerHTML"
                               data-bs-toggle="modal"
@@ -410,6 +444,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
                             >
                               {spell.name}
                             </a>
+                            {issue && <SpellIssueBadge issue={issue} onSheet />}
                           </td>
                           <td>{spell.level === 0 ? "Cantrip" : spell.level}</td>
                           <td>{preparedIcon}</td>

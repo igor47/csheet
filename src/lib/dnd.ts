@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { RulesetId } from "./dnd/rulesets"
 
 export const Sizes = ["tiny", "small", "medium", "large", "huge", "gargantuan"] as const
 export const SizeSchema = z.enum(Sizes)
@@ -444,7 +445,7 @@ export interface ClassDef {
 export type SlotProgression = { level: number; slots: number[] }[]
 
 export interface Ruleset {
-  id: string
+  id: RulesetId
   description: string
   species: Species[]
   classes: Record<ClassNameType, ClassDef>

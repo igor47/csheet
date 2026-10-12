@@ -3,7 +3,7 @@ import { Beasts } from "@src/components/Beasts"
 import { BeastsTable } from "@src/components/BeastsTable"
 import type { SizeType } from "@src/lib/dnd"
 import { getBeastById, getBeasts } from "@src/lib/dnd/beasts"
-import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { parseRulesetParam } from "@src/lib/dnd/rulesets"
 import { Hono } from "hono"
 
 export const beastsRoutes = new Hono()
@@ -17,12 +17,8 @@ const SIZE_ORDER: Record<SizeType, number> = {
   gargantuan: 5,
 }
 
-function normalizeRuleset(value: string | undefined): RulesetId {
-  return value === "srd52" ? "srd52" : "srd51"
-}
-
 beastsRoutes.get("/beasts", async (c) => {
-  const ruleset = normalizeRuleset(c.req.query("ruleset"))
+  const ruleset = parseRulesetParam(c.req.query("ruleset"))
   const sizeFilter = c.req.query("size") as SizeType | undefined
   const maxCRStr = c.req.query("maxCR")
   const maxCR = maxCRStr ? Number.parseFloat(maxCRStr) : undefined
@@ -137,7 +133,7 @@ beastsRoutes.get("/beasts/:id", async (c) => {
   const beastId = c.req.param("id")
   const isHtmxRequest = c.req.header("HX-Request") === "true"
 
-  const ruleset = normalizeRuleset(c.req.query("ruleset"))
+  const ruleset = parseRulesetParam(c.req.query("ruleset"))
 
   if (!isHtmxRequest) {
     return c.redirect(`/beasts?openBeast=${beastId}&ruleset=${ruleset}`)

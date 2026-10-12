@@ -3,7 +3,8 @@ import { ModalContent } from "@src/components/ui/DetailModal"
 import { Select } from "@src/components/ui/Select"
 import { SpellPicker } from "@src/components/ui/SpellPicker"
 import type { ClassNameType } from "@src/lib/dnd"
-import { type Spell, spells } from "@src/lib/dnd/spells"
+import { spellIssue } from "@src/lib/dnd/spellIssues"
+import { findSpell, getSpellById, getSpells, type Spell } from "@src/lib/dnd/spells"
 import { toTitleCase } from "@src/lib/strings"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { clsx } from "clsx"
@@ -50,10 +51,12 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
     ? selectedSI.cantripSlots.filter((s) => s.spell_id !== null)
     : selectedSI.preparedSpells.filter((s) => s.spell_id !== null)
   const replaceableIds = currentlyPrepared.filter((s) => !s.alwaysPrepared).map((s) => s.spell_id)
-  const replaceOpts = replaceableIds.map((id) => ({
-    value: id!,
-    label: spells.find((s) => s.id === id)!.name,
-  }))
+  const replaceOpts = replaceableIds.map((id) => {
+    const found = findSpell(character.ruleset, id!)
+    if (!found) return { value: id!, label: `Unknown spell (${id})` }
+    const issue = spellIssue(character.ruleset, found, selectedSI.spellList)
+    return { value: id!, label: issue ? `${found.spell.name} (${issue.label})` : found.spell.name }
+  })
 
   // Get all prepared spells across ALL classes to avoid duplicates
   const alreadyPreppedIds: string[] = []
@@ -73,7 +76,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
     // Wizard
     if (isCantrip) {
       // Wizards can prepare ANY wizard cantrip (not limited to spellbook)
-      availableSpells = spells
+      availableSpells = getSpells(character.ruleset)
         .filter((s) => s.classes.includes(selectedSI.spellList))
         .filter((s) => s.level === 0)
         .filter((s) => !alreadyPreppedIds.includes(s.id))
@@ -83,9 +86,12 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
         })
     } else {
       // Wizards can only prepare leveled spells from their spellbook
+      // (spells from the other ruleset, or no longer on the wizard list, stay in the spellbook,
+      // but can't be prepared)
       availableSpells = selectedSI.knownSpells
-        .map((spellId) => spells.find((s) => s.id === spellId)!)
-        .filter(Boolean)
+        .map((spellId) => getSpellById(character.ruleset, spellId))
+        .filter((s) => s !== undefined)
+        .filter((s) => s.classes.includes(selectedSI.spellList))
         .filter((s) => s.level > 0)
         .filter((s) => !alreadyPreppedIds.includes(s.id))
         .sort((a, b) => {
@@ -95,7 +101,7 @@ function PrepareSpellFormBody({ character, values = {}, errors = {} }: PrepareSp
     }
   } else {
     // Other classes: can prepare any spell from class list
-    availableSpells = spells
+    availableSpells = getSpells(character.ruleset)
       .filter((s) => s.classes.includes(selectedSI.spellList))
       .filter((s) =>
         isCantrip ? s.level === 0 : s.level > 0 && s.level <= selectedSI.maxSpellLevel

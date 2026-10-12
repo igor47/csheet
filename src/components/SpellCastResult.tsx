@@ -1,16 +1,26 @@
 import { ModalContent } from "@src/components/ui/DetailModal"
-import { spells } from "@src/lib/dnd/spells"
+import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { spellIssue } from "@src/lib/dnd/spellIssues"
+import { findSpell } from "@src/lib/dnd/spells"
 import type { AttackInfo } from "@src/services/castSpell"
 import { SpellDetail } from "./SpellDetail"
 
 export interface SpellCastResultProps {
+  /** The caster's ruleset */
+  ruleset: RulesetId
   message: string
   spellId: string
   attackInfo?: AttackInfo
 }
 
-export const SpellCastResult = ({ message, spellId, attackInfo }: SpellCastResultProps) => {
-  const spell = spells.find((s) => s.id === spellId)
+export const SpellCastResult = ({
+  ruleset,
+  message,
+  spellId,
+  attackInfo,
+}: SpellCastResultProps) => {
+  const found = findSpell(ruleset, spellId)
+  const spell = found?.spell
 
   if (!spell) {
     return (
@@ -110,7 +120,12 @@ export const SpellCastResult = ({ message, spellId, attackInfo }: SpellCastResul
         )}
 
         {/* Spell details with accordion */}
-        <SpellDetail spell={spell} compact={true} />
+        <SpellDetail
+          spell={spell}
+          issue={found && spellIssue(ruleset, found)}
+          onSheet
+          compact={true}
+        />
       </div>
 
       <div class="modal-footer">

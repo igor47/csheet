@@ -1,6 +1,7 @@
 import { SpellDetail } from "@src/components/SpellDetail"
 import { ModalContent } from "@src/components/ui/DetailModal"
-import { spells } from "@src/lib/dnd/spells"
+import { spellIssue } from "@src/lib/dnd/spellIssues"
+import { findSpell } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 import { Select } from "./ui/Select"
@@ -12,7 +13,8 @@ export interface CastSpellFormProps {
 }
 
 export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpellFormProps) => {
-  const spell = spells.find((s) => s.id === values.spell_id)
+  const found = values.spell_id ? findSpell(character.ruleset, values.spell_id) : undefined
+  const spell = found?.spell
   const title = spell ? `Cast ${spell.name}` : "Cast Spell"
 
   if (!spell) {
@@ -83,7 +85,13 @@ export const CastSpellForm = ({ character, values = {}, errors = {} }: CastSpell
         </div>
 
         {/* Spell Details */}
-        <SpellDetail spell={spell} compact={true} class="mb-3" />
+        <SpellDetail
+          spell={spell}
+          issue={found && spellIssue(character.ruleset, found)}
+          onSheet
+          compact={true}
+          class="mb-3"
+        />
 
         <ModalForm id="cast-spell-form" endpoint={`/characters/${character.id}/castspell`}>
           {/* Hidden fields */}

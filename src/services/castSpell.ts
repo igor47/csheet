@@ -1,6 +1,6 @@
 import type { AbilityType, SpellLevelType } from "@src/lib/dnd"
 import type { DamageType, Spell } from "@src/lib/dnd/spells"
-import { spells } from "@src/lib/dnd/spells"
+import { findSpellById } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
@@ -167,7 +167,8 @@ export async function castSpell(
   const errors: Record<string, string> = {}
 
   // Validate spell exists
-  const spell = spells.find((s) => s.id === checkD.data.spell_id)
+  // a spell from the other ruleset can still be cast if it's on the sheet
+  const spell = checkD.data.spell_id ? findSpellById(char.ruleset, checkD.data.spell_id) : undefined
   if (!spell) {
     errors.spell_id = "Spell not found"
     return { complete: false, errors, values: data }
@@ -350,11 +351,11 @@ export async function executeCastSpell(
  */
 export function formatCastSpellApproval(
   parameters: ToolInput<typeof castSpellTool>,
-  _char: ComputedCharacter
+  char: ComputedCharacter
 ): string {
   const { spell_id, as_ritual, slot_level, note } = parameters
 
-  const spell = spells.find((s) => s.id === spell_id)
+  const spell = findSpellById(char.ruleset, spell_id)
   const spellName = spell?.name || spell_id
   const isCantrip = spell?.level === 0
 

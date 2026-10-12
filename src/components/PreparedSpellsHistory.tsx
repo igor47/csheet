@@ -1,12 +1,15 @@
 import type { CharSpellPrepared } from "@src/db/char_spells_prepared"
-import { spells } from "@src/lib/dnd/spells"
+import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { findSpellById } from "@src/lib/dnd/spells"
 import { toTitleCase } from "@src/lib/strings"
 
 export interface PreparedSpellsHistoryProps {
   events: CharSpellPrepared[]
+  /** The character\'s ruleset, for looking up spell names */
+  ruleset: RulesetId
 }
 
-export const PreparedSpellsHistory = ({ events }: PreparedSpellsHistoryProps) => {
+export const PreparedSpellsHistory = ({ events, ruleset }: PreparedSpellsHistoryProps) => {
   return (
     <>
       <div class="modal-header">
@@ -29,7 +32,7 @@ export const PreparedSpellsHistory = ({ events }: PreparedSpellsHistoryProps) =>
               </thead>
               <tbody>
                 {events.map((event) => {
-                  const spell = spells.find((s) => s.id === event.spell_id)
+                  const spell = findSpellById(ruleset, event.spell_id)
                   const spellName = spell ? spell.name : `Unknown (${event.spell_id})`
                   const action = event.action === "prepare" ? "Prepared" : "Unprepared"
                   const eventDescription = `${action} ${spellName}`

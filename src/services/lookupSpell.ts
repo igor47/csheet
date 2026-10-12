@@ -1,6 +1,10 @@
-import { type Spell, spells } from "@src/lib/dnd/spells"
+import { RULESET_LABELS } from "@src/lib/dnd/rulesets"
+import { getSpells, type Spell } from "@src/lib/dnd/spells"
+import { SRD51_ID } from "@src/lib/dnd/srd51"
+import { SRD52_ID } from "@src/lib/dnd/srd52"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import { normalizeSpellName } from "@src/lib/srd/spells"
 import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
@@ -32,7 +36,7 @@ export const lookupSpellTool = {
  */
 export async function executeLookupSpell(
   _db: SQL,
-  _char: ComputedCharacter,
+  char: ComputedCharacter,
   parameters: ToolInput<typeof lookupSpellTool>,
   _isCheck?: boolean
 ): Promise<ServiceResult<Spell>> {
@@ -47,23 +51,29 @@ export async function executeLookupSpell(
   }
 
   const { spell_name } = parsed.data
-  const searchTerm = spell_name.toLowerCase().trim()
+  // normalized, since 5.2 names use curly apostrophes ("Hunter’s Mark") and 5.1 names straight ones
+  const searchTerm = normalizeSpellName(spell_name.trim())
+  // only the character's ruleset: the other edition's version of a spell has different numbers
+  const spells = getSpells(char.ruleset)
 
   // Find exact match first
-  let spell = spells.find((s) => s.name.toLowerCase() === searchTerm)
+  let spell = spells.find((s) => normalizeSpellName(s.name) === searchTerm)
 
   // If no exact match, try partial match
   if (!spell) {
-    const matches = spells.filter((s) => s.name.toLowerCase().includes(searchTerm))
+    const matches = spells.filter((s) => normalizeSpellName(s.name).includes(searchTerm))
 
     if (matches.length === 0) {
-      return {
-        complete: false,
-        values: parameters,
-        errors: {
-          spell_name: `No spell found matching "${spell_name}". Try a different name or partial name.`,
-        },
-      }
+      const rulesetName = RULESET_LABELS[char.ruleset]
+      const otherRuleset = char.ruleset === SRD52_ID ? SRD51_ID : SRD52_ID
+      const elsewhere = getSpells(otherRuleset).filter((s) =>
+        normalizeSpellName(s.name).includes(searchTerm)
+      )
+      const message =
+        elsewhere.length > 0
+          ? `${elsewhere.map((s) => s.name).join(", ")} ${elsewhere.length === 1 ? "is" : "are"} in ${RULESET_LABELS[otherRuleset]} but not in ${rulesetName}, which this character uses.`
+          : `No spell found matching "${spell_name}" in ${rulesetName}. Try a different name or partial name.`
+      return { complete: false, values: parameters, errors: { spell_name: message } }
     }
 
     if (matches.length === 1) {

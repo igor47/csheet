@@ -2,14 +2,17 @@ import { SpellDetail } from "@src/components/SpellDetail"
 import { Spells } from "@src/components/Spells"
 import { SpellsTable } from "@src/components/SpellsTable"
 import type { ClassNameType } from "@src/lib/dnd"
-import type { SpellSchoolType } from "@src/lib/dnd/spells"
-import { spells } from "@src/lib/dnd/spells"
+import { parseRulesetParam } from "@src/lib/dnd/rulesets"
+import { spellIssue } from "@src/lib/dnd/spellIssues"
+import { findSpell, getSpells, type SpellSchoolType } from "@src/lib/dnd/spells"
+import { normalizeSpellName } from "@src/lib/srd/spells"
 import { Hono } from "hono"
 
 export const spellsRoutes = new Hono()
 
 spellsRoutes.get("/spells", async (c) => {
   // Parse query parameters
+  const ruleset = parseRulesetParam(c.req.query("ruleset"))
   const classFilter = c.req.query("class") as ClassNameType | undefined
   const maxLevelStr = c.req.query("maxLevel")
   const maxLevel = maxLevelStr ? parseInt(maxLevelStr, 10) : undefined
@@ -20,7 +23,7 @@ spellsRoutes.get("/spells", async (c) => {
   const openSpellId = c.req.query("openSpell")
 
   // Filter spells
-  let filteredSpells = [...spells]
+  let filteredSpells = [...getSpells(ruleset)]
 
   if (classFilter) {
     filteredSpells = filteredSpells.filter((spell) => spell.classes.includes(classFilter))
@@ -35,12 +38,13 @@ spellsRoutes.get("/spells", async (c) => {
   }
 
   if (searchQuery && searchQuery.trim().length > 0) {
-    const query = searchQuery.toLowerCase()
+    // normalized, since 5.2 text uses curly apostrophes and 5.1 text straight ones
+    const query = normalizeSpellName(searchQuery)
     filteredSpells = filteredSpells.filter(
       (spell) =>
-        spell.name.toLowerCase().includes(query) ||
-        spell.description.toLowerCase().includes(query) ||
-        spell.briefDescription.toLowerCase().includes(query)
+        normalizeSpellName(spell.name).includes(query) ||
+        normalizeSpellName(spell.description).includes(query) ||
+        normalizeSpellName(spell.briefDescription).includes(query)
     )
   }
 
@@ -77,6 +81,7 @@ spellsRoutes.get("/spells", async (c) => {
           spells={filteredSpells}
           sortBy={sortBy}
           sortOrder={sortOrder}
+          selectedRuleset={ruleset}
           selectedClass={classFilter}
           selectedMaxLevel={maxLevelStr}
           selectedSchool={schoolFilter}
@@ -86,13 +91,15 @@ spellsRoutes.get("/spells", async (c) => {
     )
   }
 
-  // Find spell to open if openSpell param is present
-  const openSpell = openSpellId ? spells.find((s) => s.id === openSpellId) : undefined
+  // Find spell to open if openSpell param is present; a character sheet links to
+  // its spells in its own ruleset, which can include ones from the other ruleset
+  const openSpell = openSpellId ? findSpell(ruleset, openSpellId) : undefined
 
   // Return full page for initial load
   return c.render(
     <Spells
       spells={filteredSpells}
+      selectedRuleset={ruleset}
       selectedClass={classFilter}
       selectedMaxLevel={maxLevelStr}
       selectedSchool={schoolFilter}
@@ -107,17 +114,18 @@ spellsRoutes.get("/spells", async (c) => {
 
 spellsRoutes.get("/spells/:id", async (c) => {
   const spellId = c.req.param("id")
+  const ruleset = parseRulesetParam(c.req.query("ruleset"))
   const isHtmxRequest = c.req.header("HX-Request") === "true"
 
   // If not HTMX, redirect to /spells?openSpell=:id
   if (!isHtmxRequest) {
-    return c.redirect(`/spells?openSpell=${spellId}`)
+    return c.redirect(`/spells?openSpell=${spellId}&ruleset=${ruleset}`)
   }
 
   // Find spell by ID
-  const spell = spells.find((s) => s.id === spellId)
+  const found = findSpell(ruleset, spellId)
 
-  if (!spell) {
+  if (!found) {
     return c.html(
       <>
         <div class="modal-header">
@@ -136,5 +144,5 @@ spellsRoutes.get("/spells/:id", async (c) => {
     )
   }
 
-  return c.html(<SpellDetail spell={spell} />)
+  return c.html(<SpellDetail spell={found.spell} issue={spellIssue(ruleset, found)} />)
 })

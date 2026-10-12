@@ -10,7 +10,7 @@ import type {
   Ruleset,
   SpellChangeEventType,
 } from "@src/lib/dnd"
-import { type Spell, spells } from "@src/lib/dnd/spells"
+import { findSpellById, type Spell } from "@src/lib/dnd/spells"
 import type { AbilityScore, CharacterClass } from "@src/services/computeCharacter"
 import type { SQL } from "bun"
 
@@ -87,12 +87,12 @@ async function computeSpellsForClass(
 
   // Separate cantrip and leveled spell records
   const cantripRecords = classPreparedRecords.filter((r) => {
-    const spell = spells.find((s) => s.id === r.spell_id)
+    const spell = findSpellById(ruleset.id, r.spell_id)
     return spell && spell.level === 0
   })
 
   const leveledSpellRecords = classPreparedRecords.filter((r) => {
-    const spell = spells.find((s) => s.id === r.spell_id)
+    const spell = findSpellById(ruleset.id, r.spell_id)
     return spell && spell.level > 0
   })
 
@@ -102,8 +102,9 @@ async function computeSpellsForClass(
   // Wizard: uses spellbook (char_spells_learned) for all spells
   let knownSpells: string[] | null = null
   if (charClass.class === "wizard") {
-    const classSpells = wizardSpellbookSpells.filter((s) => s.classes.includes(charClass.class))
-    knownSpells = classSpells.map((s) => s.id) // Includes both cantrips and leveled spells
+    // Every spell in the book, even one that isn't on the wizard list in this ruleset (lists
+    // changed between editions); the sheet flags those, and they can't be prepared.
+    knownSpells = wizardSpellbookSpells.map((s) => s.id) // Includes both cantrips and leveled spells
   }
 
   const maxPrepared =
@@ -180,7 +181,7 @@ export async function computeSpells(
   // Fetch wizard spellbook (char_spells_learned)
   const learnedSpellIds = await getCurrentLearnedSpells(db, characterId)
   const wizardSpellbookSpells = learnedSpellIds
-    .map((spellId) => spells.find((s) => s.id === spellId))
+    .map((spellId) => findSpellById(ruleset.id, spellId))
     .filter(Boolean) as Spell[]
 
   // Fetch all prepared spell records (char_spells_prepared)

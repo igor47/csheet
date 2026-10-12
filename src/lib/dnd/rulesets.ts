@@ -14,3 +14,13 @@ export function getRuleset(ruleset: RulesetId): Ruleset {
   }
   return srd51
 }
+
+/** A ruleset from a query parameter, defaulting to SRD 5.1 */
+export function parseRulesetParam(value: string | undefined): RulesetId {
+  return value === SRD52_ID ? SRD52_ID : SRD51_ID
+}
+
+export const RULESET_LABELS: Record<RulesetId, string> = {
+  [SRD51_ID]: "SRD 5.1",
+  [SRD52_ID]: "SRD 5.2",
+}

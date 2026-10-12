@@ -1,7 +1,7 @@
 import { SpellDetail } from "@src/components/SpellDetail"
 import { ModalContent } from "@src/components/ui/DetailModal"
 import { SpellPicker } from "@src/components/ui/SpellPicker"
-import { spells } from "@src/lib/dnd/spells"
+import { getSpells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
 
@@ -21,7 +21,7 @@ function LearnSpellFormBody({ character, values = {}, errors = {} }: LearnSpellF
 
   // Figure out which spells are available to add (only leveled spells, not cantrips)
   const maxSpellLevel = allowHighLevel ? 9 : wizardSI.maxSpellLevel
-  const availableSpells = spells
+  const availableSpells = getSpells(character.ruleset)
     .filter((s) => s.classes.includes("wizard"))
     .filter((s) => s.level > 0 && s.level <= maxSpellLevel)
     .filter((s) => !currentList.includes(s.id))

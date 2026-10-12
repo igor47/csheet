@@ -1,7 +1,8 @@
 import { beginOrSavepoint } from "@src/db"
 import { create as createSpellPrepared } from "@src/db/char_spells_prepared"
 import { ClassNames, ClassNamesSchema } from "@src/lib/dnd"
-import { spells } from "@src/lib/dnd/spells"
+import { RULESET_LABELS } from "@src/lib/dnd/rulesets"
+import { findSpell, findSpellById } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
@@ -79,9 +80,12 @@ export async function prepareSpell(
 
   // Validate spell
   if (values.spell_id) {
-    const spell = spells.find((s) => s.id === values.spell_id)
+    const found = findSpell(char.ruleset, values.spell_id)
+    const spell = found?.spell
     if (!spell) {
       errors.spell_id = `Spell with ID ${values.spell_id} not found`
+    } else if (!found.inRuleset) {
+      errors.spell_id = `${spell.name} isn't part of ${RULESET_LABELS[char.ruleset]}`
     } else if (si) {
       // Check if spell belongs to class
       if (!spell.classes.includes(si.spellList)) {
@@ -127,7 +131,8 @@ export async function prepareSpell(
 
   // Validate current_spell_id if provided
   if (values.current_spell_id) {
-    const currentSpell = spells.find((s) => s.id === values.current_spell_id)
+    // the spell being swapped out may be from the other ruleset (kept from before the split)
+    const currentSpell = findSpell(char.ruleset, values.current_spell_id)
     if (!currentSpell) {
       errors.current_spell_id = `Current spell with ID ${values.current_spell_id} not found`
     }
@@ -158,7 +163,7 @@ export async function prepareSpell(
     return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
-  const newSpell = spells.find((sp) => sp.id === result.data.spell_id)!
+  const newSpell = findSpellById(char.ruleset, result.data.spell_id)!
 
   await beginOrSavepoint(db, async (tx) => {
     // If replacing, unprepare old spell first
@@ -224,11 +229,11 @@ export async function executePrepareSpell(
  */
 export function formatPrepareSpellApproval(
   parameters: ToolInput<typeof prepareSpellTool>,
-  _char: ComputedCharacter
+  char: ComputedCharacter
 ): string {
   const { class: className, spell_id, spell_type, current_spell_id, note } = parameters
 
-  const spell = spells.find((s) => s.id === spell_id)
+  const spell = findSpellById(char.ruleset, spell_id)
   const spellName = spell?.name || spell_id
   const isSwap = !!current_spell_id
 

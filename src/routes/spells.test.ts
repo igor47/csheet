@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { spells } from "@src/lib/dnd/spells"
+import { getSpells } from "@src/lib/dnd/spells"
 import { useTestApp } from "@src/test/app"
 import { elementExists, expectElement, makeRequest, parseHtml } from "@src/test/http"
+
+// /spells shows SRD 5.1 unless a ruleset is picked
+const spells = getSpells("srd51")
 
 describe("GET /spells", () => {
   const testCtx = useTestApp()

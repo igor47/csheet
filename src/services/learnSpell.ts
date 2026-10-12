@@ -1,5 +1,6 @@
 import { create as createSpellLearned } from "@src/db/char_spells_learned"
-import { spells } from "@src/lib/dnd/spells"
+import { RULESET_LABELS } from "@src/lib/dnd/rulesets"
+import { findSpell, findSpellById } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
@@ -50,9 +51,12 @@ export async function learnSpell(
 
   // Validate spell
   if (values.spell_id) {
-    const spell = spells.find((s) => s.id === values.spell_id)
+    const found = findSpell(char.ruleset, values.spell_id)
+    const spell = found?.spell
     if (!spell) {
       errors.spell_id = `Spell with ID ${values.spell_id} not found`
+    } else if (!found.inRuleset) {
+      errors.spell_id = `${spell.name} isn't part of ${RULESET_LABELS[char.ruleset]}`
     } else {
       // Check if spell is on wizard list
       if (!spell.classes.includes("wizard")) {
@@ -136,11 +140,11 @@ export async function executeLearnSpell(
  */
 export function formatLearnSpellApproval(
   parameters: ToolInput<typeof learnSpellTool>,
-  _char: ComputedCharacter
+  char: ComputedCharacter
 ): string {
   const { spell_id, note } = parameters
 
-  const spell = spells.find((s) => s.id === spell_id)
+  const spell = findSpellById(char.ruleset, spell_id)
   const spellName = spell?.name || spell_id
 
   let message = `Add ${spellName} to spellbook`

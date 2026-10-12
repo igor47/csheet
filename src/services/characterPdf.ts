@@ -1,10 +1,18 @@
-import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
+import {
+  Abilities,
+  type AbilityType,
+  type ClassNameType,
+  Skills,
+  type SkillType,
+} from "@src/lib/dnd"
 import {
   formatProficiencyName,
   ProficiencyKindLabels,
   ProficiencyKinds,
 } from "@src/lib/dnd/proficiencies"
-import { spells as allSpells } from "@src/lib/dnd/spells"
+import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { spellIssue } from "@src/lib/dnd/spellIssues"
+import { findSpell } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib"
 
@@ -39,7 +47,13 @@ const titleCase = (s: string): string => s.replace(/\b\w/g, (c) => c.toUpperCase
 
 const ab3 = (a: AbilityType): string => a.slice(0, 3).toUpperCase()
 
-const lookupSpellName = (id: string): string => allSpells.find((s) => s.id === id)?.name ?? id
+/** A spell's name, marked if it's from the other ruleset or not on the class's list */
+const lookupSpellName = (ruleset: RulesetId, id: string, spellList?: ClassNameType): string => {
+  const found = findSpell(ruleset, id)
+  if (!found) return id
+  const issue = spellIssue(ruleset, found, spellList)
+  return issue ? `${found.spell.name} (${issue.label})` : found.spell.name
+}
 
 // ─── Primitives ────────────────────────────────────────────────────────────
 
@@ -1057,7 +1071,11 @@ function drawSpellsPages(
       c = ensureSpace(doc, c, 12)
       drawText(c.page, "•", MARGIN + 8, c.y, { size: 9, color: MUTED })
       if (slot.spell_id) {
-        const name = lookupSpellName(slot.spell_id)
+        const name = lookupSpellName(
+          char.ruleset,
+          slot.spell_id,
+          slot.alwaysPrepared ? undefined : sp.spellList
+        )
         drawText(c.page, name, MARGIN + 18, c.y, {
           size: 9,
           font: isPrepared && slot.alwaysPrepared ? fonts.bold : fonts.regular,
@@ -1108,7 +1126,10 @@ function drawSpellsPages(
         color: MUTED,
       })
       c.y -= 11
-      const names = sp.knownSpells.map(lookupSpellName).sort().join(", ")
+      const names = sp.knownSpells
+        .map((id) => lookupSpellName(char.ruleset, id, sp.spellList))
+        .sort()
+        .join(", ")
       for (const ln of wrapLines(fonts.regular, 9, names, INNER_W - 16)) {
         c = ensureSpace(doc, c, 11)
         drawText(c.page, ln, MARGIN + 14, c.y, { size: 9 })

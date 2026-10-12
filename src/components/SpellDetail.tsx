@@ -1,3 +1,5 @@
+import { SpellIssueBadge } from "@src/components/ui/SpellIssueBadge"
+import type { SpellIssue } from "@src/lib/dnd/spellIssues"
 import type { Components, Spell } from "@src/lib/dnd/spells"
 import {
   formatAreaOfEffect,
@@ -11,6 +13,10 @@ import type { Child } from "hono/jsx"
 
 export interface SpellDetailProps {
   spell: Spell
+  /** Flags a spell from the other ruleset, or one not on its class's list */
+  issue?: SpellIssue
+  /** Shown on a character sheet rather than the spell list */
+  onSheet?: boolean
   compact?: boolean
   class?: string
 }
@@ -225,7 +231,13 @@ const SpellDetailInner = ({ spell, className }: { spell: Spell; className: strin
   )
 }
 
-export const SpellDetail = ({ spell, compact, class: className }: SpellDetailProps) => {
+export const SpellDetail = ({
+  spell,
+  issue,
+  onSheet,
+  compact,
+  class: className,
+}: SpellDetailProps) => {
   if (compact) {
     return (
       <div class={clsx("accordion", className)}>
@@ -241,6 +253,7 @@ export const SpellDetail = ({ spell, compact, class: className }: SpellDetailPro
             >
               {spell.name}
               {spell.ritual && <span class="badge bg-secondary ms-2">Ritual</span>}
+              {issue && <SpellIssueBadge issue={issue} onSheet={onSheet} />}
             </button>
           </h2>
           <div id="spell-brief" class="accordion-collapse collapse show">
@@ -273,6 +286,7 @@ export const SpellDetail = ({ spell, compact, class: className }: SpellDetailPro
           <h5 class="modal-title">
             {spell.name}
             {spell.ritual && <span class="badge bg-secondary ms-2">Ritual</span>}
+            {issue && <SpellIssueBadge issue={issue} onSheet={onSheet} />}
           </h5>
           <button
             type="button"

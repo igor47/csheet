@@ -1,17 +1,13 @@
 import { Rules, RulesSection, rulesPageTitle } from "@src/components/Rules"
-import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { parseRulesetParam } from "@src/lib/dnd/rulesets"
 import { ancestors, findSection, readSection, resolvePage, rulesHref } from "@src/lib/srd/sections"
 import { getToc } from "@src/lib/srd/toc"
 import { Hono } from "hono"
 
 export const rulesRoutes = new Hono()
 
-function normalizeRuleset(value: string | undefined): RulesetId {
-  return value === "srd52" ? "srd52" : "srd51"
-}
-
 rulesRoutes.get("/rules", async (c) => {
-  const ruleset = normalizeRuleset(c.req.query("ruleset"))
+  const ruleset = parseRulesetParam(c.req.query("ruleset"))
   const sectionId = c.req.query("section")
   const toc = await getToc(ruleset)
 

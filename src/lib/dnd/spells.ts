@@ -176,10 +176,30 @@ export function getSpells(ruleset: RulesetId): Spell[] {
   return ruleset === "srd52" ? srd52Spells : srd51Spells
 }
 
-/** A spell in a ruleset's catalog */
+/** A spell in a ruleset's catalog; use this to check a spell a character is about to gain */
 export function getSpellById(ruleset: RulesetId, id: string): Spell | undefined {
   return getSpells(ruleset).find((s) => s.id === id)
 }
 
-/** TEMPORARY: the 5.2 catalog, until callers pass a ruleset */
-export const spells = srd52Spells
+export interface FoundSpell {
+  spell: Spell
+  /** False for a spell from the other ruleset's catalog */
+  inRuleset: boolean
+}
+
+/**
+ * Finds a spell a character already has. Before spells were split by ruleset,
+ * SRD 5.1 characters could learn SRD 5.2.1-only spells; those are still on
+ * their sheets, so this falls back to the other ruleset's catalog.
+ */
+export function findSpell(ruleset: RulesetId, id: string): FoundSpell | undefined {
+  const spell = getSpellById(ruleset, id)
+  if (spell) return { spell, inRuleset: true }
+  const other = getSpellById(ruleset === "srd52" ? "srd51" : "srd52", id)
+  return other ? { spell: other, inRuleset: false } : undefined
+}
+
+/** Like findSpell, for when the caller doesn't care which catalog it came from */
+export function findSpellById(ruleset: RulesetId, id: string): Spell | undefined {
+  return findSpell(ruleset, id)?.spell
+}

@@ -424,7 +424,6 @@ const CreateItemToolSchema = z.object({
  * This tool requires approval before execution
  */
 export const createItemTool = tool({
-  name: createItemToolName,
   description: [
     "Create a new item and add it to the character's inventory.",
     "The item will be added to inventory but not equipped.",

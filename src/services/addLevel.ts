@@ -245,7 +245,6 @@ export async function addLevel(
 // Vercel AI SDK tool definition
 export const addLevelToolName = "add_level" as const
 export const addLevelTool = tool({
-  name: addLevelToolName,
   description: `Add a level to the character (level up). Automatically adds class traits/features for the new level. Ask the user to roll their hit die for HP.`,
   inputSchema: AddLevelApiSchema.omit({ level: true }),
 })

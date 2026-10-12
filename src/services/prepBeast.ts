@@ -148,7 +148,6 @@ export async function prepBeast(
 // Vercel AI SDK tool definition
 export const prepBeastToolName = "prep_beast" as const
 export const prepBeastTool = tool({
-  name: prepBeastToolName,
   description: `Add a beast to a druid's known forms (SRD 5.2 only). Requires beast_id - use lookup_beast first to get it. Only druids with the Wild Shape trait can use this tool. The beast must meet CR and movement type restrictions based on druid level. When at the known forms limit, use replace_beast_id to swap out an existing form.`,
   inputSchema: PrepBeastApiSchema,
 })

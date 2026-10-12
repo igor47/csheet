@@ -135,6 +135,7 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
                 class="btn btn-sm btn-outline-secondary"
                 title="Download character sheet PDF"
                 aria-label="Download character sheet PDF"
+                rel="noopener"
               >
                 <i class="bi bi-printer"></i>
               </a>

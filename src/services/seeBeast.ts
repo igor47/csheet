@@ -98,7 +98,6 @@ export async function seeBeast(
 // Vercel AI SDK tool definition
 export const seeBeastToolName = "see_beast" as const
 export const seeBeastTool = tool({
-  name: seeBeastToolName,
   description: `Record a beast that a druid has seen for Wild Shape. Requires beast_id - use lookup_beast first to get it. Only druids with the Wild Shape trait can use this tool. Note: CR limits apply to transforming into a beast, not to recording it. A druid can record any beast they've seen regardless of level.`,
   inputSchema: SeeBeastApiSchema,
 })

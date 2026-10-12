@@ -23,7 +23,6 @@ export type CharacterStatusResult = Omit<ComputedCharacter, "traits"> & {
  * This is a read-only informational tool that returns current character state
  */
 export const characterStatusTool = tool({
-  name: characterStatusToolName,
   description:
     "Get the current character status including all computed stats, resources, and abilities. Use this whenever you need to reference ability scores, skills, combat stats (HP/AC/Initiative), resources (coins, spell slots, hit dice), equipment, or spellcasting information.",
   inputSchema: z.object({}),

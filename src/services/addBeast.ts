@@ -27,7 +27,6 @@ export const AddBeastApiSchema = z.object({
 export const addBeastToolName = "add_beast" as const
 
 export const addBeastTool = tool({
-  name: addBeastToolName,
   description: `Add a beast to the druid's known/seen forms for Wild Shape.
 
 Ruleset differences:

@@ -104,7 +104,6 @@ export async function manageCharge(
 // Vercel AI SDK tool definition
 export const manageChargeToolName = "manage_item_charge" as const
 export const manageChargeTool = tool({
-  name: manageChargeToolName,
   description: `Manage charges on a charged item (wands, staffs, ammunition, etc.). Use action="use" to consume charges or action="add" to restore charges. The item must have enough charges available when using. Many magical items regain charges at dawn or after a rest.`,
   inputSchema: ManageChargeApiSchema.omit({ override: true, is_check: true }),
 })

@@ -4,7 +4,7 @@ import * as users from "@src/db/users"
 import { logger } from "@src/lib/logger"
 import { Hono } from "hono"
 import type { WebhookEventPayload } from "resend"
-import { Webhook } from "svix"
+import { Webhook } from "standardwebhooks"
 
 export const webhookRoutes = new Hono()
 
@@ -19,10 +19,11 @@ webhookRoutes.post("/webhooks/resend", async (c) => {
 
   let event: WebhookEventPayload
   try {
+    // Resend signs with Svix, which follows the Standard Webhooks spec under svix-* header names
     event = new Webhook(secret).verify(payload, {
-      "svix-id": c.req.header("svix-id") || "",
-      "svix-timestamp": c.req.header("svix-timestamp") || "",
-      "svix-signature": c.req.header("svix-signature") || "",
+      "webhook-id": c.req.header("svix-id") || "",
+      "webhook-timestamp": c.req.header("svix-timestamp") || "",
+      "webhook-signature": c.req.header("svix-signature") || "",
     }) as WebhookEventPayload
   } catch {
     logger.warn("Resend webhook signature verification failed")

@@ -3,6 +3,9 @@ runtime:
   name: nodejs
   options:
     packagemanager: bun
+    # Node strips the types itself; `mise run check` type-checks
+    typescript: false
+main: index.ts
 description: Cloud Run service and migration job for the CSheet application
 backend:
   url: "gs://csheet-pulumi-state"

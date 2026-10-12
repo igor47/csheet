@@ -12,7 +12,6 @@ export const characterTraitsToolName = "character_traits" as const
  * This is a read-only informational tool that returns the character's traits
  */
 export const characterTraitsTool = tool({
-  name: characterTraitsToolName,
   description:
     "Get the character's traits (racial traits, class features, feats, etc.). Use this when you need to reference specific abilities or features the character has.",
   inputSchema: z.object({}),

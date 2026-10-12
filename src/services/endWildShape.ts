@@ -117,7 +117,6 @@ export async function endWildShape(
 export const endWildShapeToolName = "end_wild_shape" as const
 
 export const endWildShapeTool = tool({
-  name: endWildShapeToolName,
   description: `End the current Wild Shape transformation and return to normal form.
 
 A druid can end Wild Shape at any time. Common reasons:

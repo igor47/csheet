@@ -152,7 +152,6 @@ const CreateItemEffectToolSchema = z.object({
  * This tool requires approval before execution
  */
 export const createItemEffectTool = tool({
-  name: createItemEffectToolName,
   description: [
     "Add a magical or special effect to an item.",
     "Effects can modify skills, abilities, AC, speed, attack rolls, damage, initiative, or passive perception.",

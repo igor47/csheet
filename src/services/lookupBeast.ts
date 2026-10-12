@@ -21,7 +21,6 @@ export const lookupBeastToolName = "lookup_beast" as const
  * This is a read-only informational tool that doesn't modify character state
  */
 export const lookupBeastTool = tool({
-  name: lookupBeastToolName,
   description:
     "Look up a beast by name to get its ID and stat block. Use this FIRST whenever a beast is mentioned by name, before using see_beast. Returns the beast's ID, CR, HP, AC, speed, abilities, attacks, and traits.",
   inputSchema: LookupBeastApiSchema,

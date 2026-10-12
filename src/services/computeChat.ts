@@ -1,7 +1,14 @@
 import type { ChatMessage as DbChatMessage } from "@src/db/chat_messages"
 import { findByChatId as getChatHistory } from "@src/db/chat_messages"
 import { isReadOnly } from "@src/tools"
-import type { JSONValue, ModelMessage, TextPart, ToolCallPart, ToolResultPart } from "ai"
+import type {
+  JSONValue,
+  ModelMessage,
+  SystemModelMessage,
+  TextPart,
+  ToolCallPart,
+  ToolResultPart,
+} from "ai"
 import type { SQL } from "bun"
 
 /**
@@ -30,6 +37,7 @@ export interface UnresolvedToolCall {
 export interface ComputedChat {
   chatId: string
   messages: UiChatMessage[]
+  llmInstructions?: SystemModelMessage
   llmMessages: ModelMessage[]
   shouldStream: boolean
   unresolvedToolCalls: UnresolvedToolCall[]
@@ -87,8 +95,9 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
         const content: ToolResultPart[] = []
 
         for (const call of msg.tool_calls || []) {
-          // must be present due to hasAllToolResults check
-          const result = msg.tool_results?.[call.id]!
+          const result = msg.tool_results?.[call.id]
+          // hasAllToolResults guarantees this; the API would reject a tool call without a result
+          if (!result) throw new Error(`Missing result for tool call ${call.id}`)
 
           // compute the output
           let output: ToolResultPart["output"]
@@ -132,13 +141,7 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
         })
       }
     } else if (msg.role === "system") {
-      messages.push({
-        role: "system",
-        content: msg.content,
-        providerOptions: {
-          anthropic: { cacheControl: { type: "ephemeral" } },
-        },
-      })
+      // the system prompt is sent separately, as instructions
     } else {
       messages.push({
         role: "user" as const,
@@ -273,6 +276,22 @@ function countConsecutiveErrors(dbMessages: DbChatMessage[]): number {
 }
 
 /**
+ * The chat's system prompt, marked for prompt caching
+ */
+function toLlmInstructions(dbMessages: DbChatMessage[]): SystemModelMessage | undefined {
+  const systemMsg = dbMessages.find((msg) => msg.role === "system")
+  if (!systemMsg) return undefined
+
+  return {
+    role: "system",
+    content: systemMsg.content,
+    providerOptions: {
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    },
+  }
+}
+
+/**
  * Compute chat data structure from database messages
  * Transforms raw database messages into a format suitable for UI and LLM consumption
  */
@@ -283,6 +302,7 @@ export async function computeChat(db: SQL, chatId: string): Promise<ComputedChat
   return {
     chatId,
     messages: toUiMessages(dbMessages),
+    llmInstructions: toLlmInstructions(dbMessages),
     llmMessages: toLlmMessages(dbMessages),
     shouldStream: shouldInitiateStream(dbMessages),
     unresolvedToolCalls: findUnresolvedToolCalls(dbMessages),

@@ -15,7 +15,7 @@ export function getBaseUrl(c: Context): string {
  * Returns the fallback if the path is missing, empty, or absolute (e.g. https://evil.com).
  */
 export function safeRedirect(path: string | null | undefined, fallback: string): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+  if (!path?.startsWith("/") || path.startsWith("//")) {
     return fallback
   }
   return path

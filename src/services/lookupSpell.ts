@@ -21,7 +21,6 @@ export const lookupSpellToolName = "lookup_spell" as const
  * This is a read-only informational tool that doesn't modify character state
  */
 export const lookupSpellTool = tool({
-  name: lookupSpellToolName,
   description:
     "Look up a spell by name to get its ID and details. ALWAYS use this FIRST whenever a spell is mentioned by name, before using prepare_spell, cast_spell, or learn_spell. Returns the spell's ID, description, components, casting time, range, duration, damage, and other mechanical details.",
   inputSchema: LookupSpellApiSchema,

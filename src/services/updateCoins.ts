@@ -29,7 +29,6 @@ export const UpdateCoinsApiSchema = z.object({
 // Vercel AI SDK tool definition
 export const updateCoinsToolName = "update_coins" as const
 export const updateCoinsTool = tool({
-  name: updateCoinsToolName,
   description: `Update the character's coin purse. Used whenever the character gains or spends coins.
 
 Each field represents the change (delta) in that coin type (positive for gains, negative for losses).

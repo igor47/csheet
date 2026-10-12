@@ -107,7 +107,6 @@ export async function learnSpell(
 // Vercel AI SDK tool definition
 export const learnSpellToolName = "learn_spell" as const
 export const learnSpellTool = tool({
-  name: learnSpellToolName,
   description: `Add a spell to a wizard's spellbook. Requires spell_id - use lookup_spell first to get it. Used when a wizard learns a new spell by copying it from a scroll, another spellbook, or as part of leveling up. Only wizards can use this tool.`,
   inputSchema: LearnSpellApiSchema,
 })

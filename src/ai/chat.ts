@@ -93,6 +93,7 @@ export async function executeChatRequest(
     requestBody = {
       model,
       maxOutputTokens: options.maxOutputTokens ?? 1024,
+      instructions: computedChat.llmInstructions,
       messages: computedChat.llmMessages,
       tools: TOOL_DEFINITIONS,
       onError: ({ error }: { error: unknown }) => {
@@ -152,16 +153,14 @@ export async function executeChatRequest(
 
     // Capture usage data from AI SDK
     const usageData = await result.usage
-    // the SDK only reports prompt-cache writes in the provider metadata
-    const cacheWrites = (await result.providerMetadata)?.anthropic?.cacheCreationInputTokens
     const usage: Usage | null = usageData
       ? {
           provider: model.provider,
           modelId: model.modelId,
           inputTokens: usageData.inputTokens || 0,
           outputTokens: usageData.outputTokens || 0,
-          cachedInputTokens: usageData.cachedInputTokens,
-          cacheWriteInputTokens: typeof cacheWrites === "number" ? cacheWrites : undefined,
+          cachedInputTokens: usageData.inputTokenDetails.cacheReadTokens,
+          cacheWriteInputTokens: usageData.inputTokenDetails.cacheWriteTokens,
           totalTokens: usageData.totalTokens || 0,
         }
       : null

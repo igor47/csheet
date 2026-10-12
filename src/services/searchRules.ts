@@ -19,7 +19,6 @@ export const SearchRulesApiSchema = z.object({
 export const searchRulesToolName = "search_rules" as const
 
 export const searchRulesTool = tool({
-  name: searchRulesToolName,
   description:
     "Search the System Reference Document (the official open D&D rules) for the character's ruleset. Use this before answering any rules question instead of relying on memory. Returns the best-matching sections, each with an id, its location in the rules, a short excerpt, and a link. Then call read_rule with the id of the section that answers the question.",
   inputSchema: SearchRulesApiSchema,

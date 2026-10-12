@@ -151,7 +151,6 @@ export async function activateWildShape(
 export const activateWildShapeToolName = "activate_wild_shape" as const
 
 export const activateWildShapeTool = tool({
-  name: activateWildShapeToolName,
   description: `Transform into a beast form using Wild Shape.
 
 Requirements:

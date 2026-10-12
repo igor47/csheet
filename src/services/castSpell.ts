@@ -309,7 +309,6 @@ export async function castSpell(
 // Vercel AI SDK tool definition
 export const castSpellToolName = "cast_spell" as const
 export const castSpellTool = tool({
-  name: castSpellToolName,
   description: `Cast a spell. Requires a spell id, which you must *always* get beforehand using lookup_spell tool. If casting a cantrip or casting as a ritual, this *does not* require using a spell slot. Feel free to assume a spell slot level if the spell has a minimum or if the character only has certain slots available.
 
 IMPORTANT: After casting an attack or damage spell, always inform the user of the combat results. Include:

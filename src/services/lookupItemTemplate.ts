@@ -26,7 +26,6 @@ export const lookupItemTemplateToolName = "lookup_item_template" as const
  * This is a read-only informational tool that doesn't modify character state
  */
 export const lookupItemTemplateTool = tool({
-  name: lookupItemTemplateToolName,
   description:
     "Look up common items by name to get their details from the D&D SRD. Use this to discover available items and their properties before creating items. Returns an array of all matching templates (supports substring search). Each template includes full details like damage, armor class, properties, and other mechanical information. The template details can then be passed to the create_item tool.",
   inputSchema: LookupItemTemplateApiSchema,

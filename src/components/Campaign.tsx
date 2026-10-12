@@ -205,6 +205,7 @@ export const Campaign = ({ campaign }: CampaignProps) => {
                     target="_blank"
                     class="btn btn-outline-secondary btn-sm"
                     title="Download party PDF"
+                    rel="noopener"
                   >
                     <i class="bi bi-printer me-1"></i>
                     Print All

@@ -1,54 +1,51 @@
 {
   "name": "csheet",
   "version": "0.1.0",
-  "description": "Open-source, self-hostable D&D 5e character sheet supporting both 2014 and 2024 rulesets",
-  "homepage": "https://www.csheet.net",
   "repository": {
     "type": "git",
     "url": "https://github.com/igor47/csheet"
   },
-  "license": "FSL-1.1-MIT",
   "module": "index.ts",
-  "type": "module",
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.78",
+    "@aws-sdk/client-s3": "^3.1149.0",
+    "@aws-sdk/s3-request-presigner": "^3.1149.0",
+    "ai": "^7.0.137",
+    "altcha": "^3.3.0",
+    "altcha-lib": "^2.6.0",
+    "clsx": "^2.1.1",
+    "cropperjs": "^2.3.0",
+    "hono": "^4.13.13",
+    "htmx-ext-sse": "^2.2.4",
+    "htmx.org": "^2.0.11",
+    "idiomorph": "^0.8.0",
+    "marked": "^18.1.0",
+    "nodemailer": "^10.1.0",
+    "pdf-lib": "^1.17.1",
+    "resend": "^6.32.1",
+    "standardwebhooks": "^1.1.1",
+    "ulid": "^3.0.2",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@faker-js/faker": "^10.6.0",
+    "@pulumi/gcp": "^10.1.0",
+    "@pulumi/pulumi": "^3.268.0",
+    "@pulumi/random": "^4.21.2",
+    "@types/bun": "^1.4.2",
+    "@types/node": "^26.6.5",
+    "@types/nodemailer": "^8.0.2",
+    "fishery": "^2.4.0",
+    "linkedom": "^0.18.13",
+    "typescript": "^7.0.2"
+  },
+  "description": "Open-source, self-hostable D&D 5e character sheet supporting both 2014 and 2024 rulesets",
+  "homepage": "https://www.csheet.net",
+  "license": "FSL-1.1-MIT",
   "private": true,
   "scripts": {
     "postinstall": "mkdir -p static && cp node_modules/htmx.org/dist/htmx.min.js static/ && cp node_modules/htmx-ext-sse/sse.js static/htmx-ext-sse.js && cp node_modules/idiomorph/dist/idiomorph-ext.min.js static/idiomorph-ext.min.js && cp node_modules/cropperjs/dist/cropper.min.js static/ && cp node_modules/altcha/dist/main/altcha.min.js static/"
   },
-  "devDependencies": {
-    "@biomejs/biome": "^2.2.6",
-    "@faker-js/faker": "^10.1.0",
-    "@pulumi/gcp": "^9.3.0",
-    "@pulumi/pulumi": "^3.203.0",
-    "@pulumi/random": "^4.18.4",
-    "@types/bun": "latest",
-    "@types/node": "^24.9.1",
-    "@types/nodemailer": "^7.0.3",
-    "fishery": "^2.3.1",
-    "linkedom": "^0.18.12",
-    "ts-node": "^10.9.2"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.39",
-    "@aws-sdk/client-s3": "^3.913.0",
-    "@aws-sdk/s3-request-presigner": "^3.913.0",
-    "@types/marked": "^6.0.0",
-    "ai": "^5.0.82",
-    "altcha": "^3.1.0",
-    "altcha-lib": "^2.2.0",
-    "clsx": "^2.1.1",
-    "cropperjs": "^2.1.0",
-    "hono": "^4.9.6",
-    "htmx-ext-sse": "^2.2.4",
-    "htmx.org": "^2.0.8",
-    "idiomorph": "^0.7.4",
-    "marked": "^16.4.1",
-    "nodemailer": "^7.0.10",
-    "pdf-lib": "^1.17.1",
-    "resend": "^6.9.3",
-    "ulid": "^3.0.1",
-    "zod": "^4.1.11"
-  }
+  "type": "module"
 }

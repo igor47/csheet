@@ -154,7 +154,6 @@ export async function updateSpellSlots(
 // Vercel AI SDK tool definition
 export const updateSpellSlotsToolName = "update_spell_slots" as const
 export const updateSpellSlotsTool = tool({
-  name: updateSpellSlotsToolName,
   description: `Manually use or restore a spell slot. This is useful for features that restore spell slots (like Arcane Recovery) or consume them for non-spell purposes. For casting spells, use the cast_spell tool instead.`,
   inputSchema: UpdateSpellSlotsApiSchema,
 })

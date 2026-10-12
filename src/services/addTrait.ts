@@ -97,7 +97,6 @@ export async function addTrait(
 // Vercel AI SDK tool definition
 export const addTraitToolName = "add_trait" as const
 export const addTraitTool = tool({
-  name: addTraitToolName,
   description: `Add a trait, feature, or feat to the character. This can be used for custom traits, feats gained, or features from magic items.`,
   inputSchema: AddTraitApiSchema,
 })

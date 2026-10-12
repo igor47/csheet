@@ -16,7 +16,6 @@ export const ItemEffectSchema = z.object({
 export const CreateItemEffectSchema = ItemEffectSchema.omit({
   id: true,
   created_at: true,
-  updated_at: true,
 })
 
 export type ItemEffect = z.infer<typeof ItemEffectSchema>

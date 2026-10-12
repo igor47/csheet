@@ -16,7 +16,6 @@ export const ItemDamageSchema = z.object({
 export const CreateItemDamageSchema = ItemDamageSchema.omit({
   id: true,
   created_at: true,
-  updated_at: true,
 })
 
 export type ItemDamage = z.infer<typeof ItemDamageSchema>

@@ -20,7 +20,6 @@ export const ReadRuleApiSchema = z.object({
 export const readRuleToolName = "read_rule" as const
 
 export const readRuleTool = tool({
-  name: readRuleToolName,
   description:
     "Read the full text of a rules section from the System Reference Document, by id. Get ids from search_rules. A broad section returns its introduction plus a list of child_sections to read next. When you answer from a section, link it for the player as a markdown link using its url, e.g. [Grappled](url).",
   inputSchema: ReadRuleApiSchema,

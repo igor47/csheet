@@ -10,7 +10,6 @@ export const CharacterBeastsApiSchema = z.object({})
 export const characterBeastsToolName = "character_beasts" as const
 
 export const characterBeastsTool = tool({
-  name: characterBeastsToolName,
   description: `Browse all beasts available for this character's Wild Shape based on their current level limits.
 
 Returns all beasts from the catalog that meet CR/fly/swim restrictions, organized into:

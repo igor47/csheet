@@ -25,7 +25,6 @@ export const UpdateHitPointsApiSchema = z.object({
 // Vercel AI SDK tool definition
 export const updateHitPointsToolName = "update_hit_points" as const
 export const updateHitPointsTool = tool({
-  name: updateHitPointsToolName,
   description: `Update the character's hit points. Used when the character takes damage or receives healing.
 
 Specify the action ("restore" for healing, "lose" for damage) and the amount of hit points to change.

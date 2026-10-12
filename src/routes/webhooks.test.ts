@@ -4,7 +4,7 @@ import type { User } from "@src/db/users"
 import { useTestApp } from "@src/test/app"
 import { userFactory } from "@src/test/factories/user"
 import { makeRequest } from "@src/test/http"
-import { Webhook } from "svix"
+import { Webhook } from "standardwebhooks"
 
 const TEST_WEBHOOK_SECRET = "whsec_dGVzdF9zZWNyZXRfZm9yX3dlYmhvb2tz"
 

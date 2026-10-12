@@ -157,7 +157,6 @@ export async function longRest(
 // Vercel AI SDK tool definition
 export const longRestToolName = "long_rest" as const
 export const longRestTool = tool({
-  name: longRestToolName,
   description: `Take a long rest (8 hours of sleep). Restores all HP to maximum, restores half of spent hit dice (rounded down, largest first), and restores all spell slots.`,
   inputSchema: LongRestApiSchema.omit({ is_check: true }),
 })

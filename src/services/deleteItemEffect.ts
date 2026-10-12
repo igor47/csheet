@@ -89,7 +89,6 @@ const DeleteItemEffectToolSchema = z.object({
  * This tool requires approval before execution
  */
 export const deleteItemEffectTool = tool({
-  name: deleteItemEffectToolName,
   description: [
     "Delete an effect from an item.",
     "This removes a magical or special effect that was previously added to an item.",

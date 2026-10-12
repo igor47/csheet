@@ -176,7 +176,6 @@ export async function updateHitDice(
 // Vercel AI SDK tool definitions
 export const useHitDieToolName = "use_hit_die" as const
 export const useHitDieTool = tool({
-  name: useHitDieToolName,
   description: `Spend a hit die during a short rest to regain HP. The character rolls the hit die and regains that much HP (plus Constitution modifier). Ask the user to roll the die and provide the result.`,
   inputSchema: UpdateHitDiceApiSchema.omit({ action: true, is_check: true }).required({
     die_value: true,
@@ -186,7 +185,6 @@ export const useHitDieTool = tool({
 
 export const restoreHitDieToolName = "restore_hit_die" as const
 export const restoreHitDieTool = tool({
-  name: restoreHitDieToolName,
   description: `Restore a spent hit die. This can happen from features like the Durable feat or certain class abilities. Long rests automatically restore half of spent hit dice.`,
   inputSchema: UpdateHitDiceApiSchema.omit({
     action: true,

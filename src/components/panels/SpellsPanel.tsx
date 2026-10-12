@@ -274,7 +274,7 @@ export const SpellsPanel = ({ character, swapOob, isReadOnly = false }: SpellsPa
       {character.spells.some((si) => si.knownSpells !== null) &&
         (() => {
           const wizardInfo = character.spells.find((si) => si.knownSpells !== null)
-          if (!wizardInfo || !wizardInfo.knownSpells) return null
+          if (!wizardInfo?.knownSpells) return null
 
           // Sort spells by level then name
           const sortedSpells = [...wizardInfo.knownSpells]

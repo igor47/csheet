@@ -92,7 +92,6 @@ export async function equipItem(
 // Vercel AI SDK tool definition
 export const equipItemToolName = "equip_item" as const
 export const equipItemTool = tool({
-  name: equipItemToolName,
   description: `Equip or unequip an item. Set worn=true for armor/clothing, wielded=true for weapons/shields. Both can be true (e.g., wearing magical armor).`,
   inputSchema: EquipItemApiSchema.omit({ is_check: true }),
 })

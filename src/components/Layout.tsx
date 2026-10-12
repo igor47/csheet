@@ -135,6 +135,7 @@ export const Layout = ({
         <script src="/static/detail-modal.js"></script>
         <script src="/static/flash.js"></script>
         <script src="/static/htmx-auth.js"></script>
+        <script src="/static/htmx-history.js"></script>
       </body>
     </html>
   )

@@ -1,7 +1,7 @@
-import type { ToolResult } from "@src/db/chat_messages"
+import { findById as findMessageById, type ToolResult } from "@src/db/chat_messages"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { UnresolvedToolCall } from "@src/services/computeChat"
-import { TOOL_EXECUTORS, type ToolExecutorResult } from "@src/tools"
+import { TOOL_EXECUTORS, TOOLS, type ToolExecutorResult } from "@src/tools"
 import type { SQL } from "bun"
 
 /**
@@ -135,4 +135,46 @@ export async function rejectTool(
   await updateToolResult(db, toolCall.messageId, toolCall.toolCallId, result)
 
   return result
+}
+
+/**
+ * Validate the next tool call in a message that needs approval, before the user sees it
+ * A call that fails validation is stored as failed so the LLM can self-correct, and the
+ * call after it is checked. Later calls are only checked once the ones before them are
+ * resolved, since they may depend on them (e.g. learn a spell, then prepare it)
+ */
+export async function validateNextApprovalTool(
+  db: SQL,
+  char: ComputedCharacter,
+  messageId: string
+): Promise<void> {
+  const message = await findMessageById(db, messageId)
+  if (!message?.tool_calls || !message.tool_results) {
+    return
+  }
+
+  for (const call of message.tool_calls) {
+    // Skip calls that are already resolved
+    if (message.tool_results[call.id]) {
+      continue
+    }
+
+    // Skip read-only tools, which are executed without approval
+    const toolRegistration = TOOLS.find((t) => t.name === call.name)
+    if (!toolRegistration?.formatApprovalMessage) {
+      continue
+    }
+
+    const result = await executeTool(
+      db,
+      char,
+      { messageId, toolCallId: call.id, toolName: call.name, parameters: call.parameters },
+      true // isCheck = true for validation mode
+    )
+
+    // Stop at the first call that passes; it's the one the user sees next
+    if (result.status !== "failed") {
+      return
+    }
+  }
 }

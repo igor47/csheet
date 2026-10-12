@@ -3,6 +3,7 @@ import type { SQL } from "bun"
 import { z } from "zod"
 
 export const ToolCallSchema = z.object({
+  id: z.string(),
   name: z.string(),
   parameters: z.record(z.string(), z.any()),
 })
@@ -37,7 +38,8 @@ export const ChatMessageSchema = z.object({
   chat_id: z.string(),
   role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
-  tool_calls: z.record(z.string(), ToolCallSchema).nullable().default(null),
+  // an array, so tool calls keep the order the model made them in (jsonb sorts object keys)
+  tool_calls: z.array(ToolCallSchema).nullable().default(null),
   tool_results: z.record(z.string(), ToolResultSchema.nullable()).nullable().default(null),
   error: MessageErrorSchema.nullable().default(null),
   usage: UsageSchema.nullable().default(null),
@@ -93,6 +95,14 @@ export async function create(db: SQL, message: CreateChatMessage): Promise<ChatM
   `
 
   return parseMessageRow(result[0])
+}
+
+export async function findById(db: SQL, id: string): Promise<ChatMessage | null> {
+  const result = await db`
+    SELECT * FROM chat_messages WHERE id = ${id}
+  `
+
+  return result[0] ? parseMessageRow(result[0]) : null
 }
 
 // Chat-specific functions

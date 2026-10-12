@@ -69,10 +69,10 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
         content.push({ type: "text", text: msg.content })
       }
 
-      for (const [id, call] of Object.entries(msg.tool_calls || {})) {
+      for (const call of msg.tool_calls || []) {
         content.push({
           type: "tool-call" as const,
-          toolCallId: id,
+          toolCallId: call.id,
           toolName: call.name,
           input: call.parameters,
         })
@@ -86,9 +86,9 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
       if (hasAllToolResults(msg)) {
         const content: ToolResultPart[] = []
 
-        for (const [id, call] of Object.entries(msg.tool_calls || {})) {
+        for (const call of msg.tool_calls || []) {
           // must be present due to hasAllToolResults check
-          const result = msg.tool_results?.[id]!
+          const result = msg.tool_results?.[call.id]!
 
           // compute the output
           let output: ToolResultPart["output"]
@@ -119,7 +119,7 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
           // add the tool result to the message
           content.push({
             type: "tool-result" as const,
-            toolCallId: id,
+            toolCallId: call.id,
             toolName: call.name,
             output,
           })
@@ -157,8 +157,8 @@ function hasAllToolResults(msg: DbChatMessage) {
   if (!msg.tool_calls) return false
   if (!msg.tool_results) return false
 
-  for (const id of Object.keys(msg.tool_calls)) {
-    if (!msg.tool_results[id]) {
+  for (const call of msg.tool_calls) {
+    if (!msg.tool_results[call.id]) {
       return false
     }
   }
@@ -201,6 +201,7 @@ function shouldInitiateStream(dbMessages: DbChatMessage[]): boolean {
 /**
  * Find unresolved tool calls (tool calls where tool_results[id] is null)
  * Only returns tools that require approval - read-only tools are filtered out
+ * Returned in the order the model made them; they must be resolved in that order
  */
 function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCall[] {
   const unresolved: UnresolvedToolCall[] = []
@@ -211,8 +212,8 @@ function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCal
     // Check if this is an assistant message with tool calls
     if (msg.role === "assistant" && msg.tool_calls && msg.tool_results) {
       // Find IDs where tool_results is null
-      for (const [id, call] of Object.entries(msg.tool_calls)) {
-        if (!msg.tool_results[id]) {
+      for (const call of msg.tool_calls) {
+        if (!msg.tool_results[call.id]) {
           // Check if this tool requires approval (has a formatter)
           const toolRegistration = TOOLS.find((t) => t.name === call.name)
           const requiresApproval = !!toolRegistration?.formatApprovalMessage
@@ -221,7 +222,7 @@ function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCal
           if (requiresApproval) {
             unresolved.push({
               messageId: msg.id,
-              toolCallId: id,
+              toolCallId: call.id,
               toolName: call.name,
               parameters: call.parameters,
             })

@@ -31,7 +31,7 @@ describe("executeSearchRules", () => {
       const [top] = result.result.results
       expect(top?.location).toBe("Rules Glossary > Rules Definitions > Grappled [Condition]")
       expect(top?.excerpt).toContain("Speed")
-      expect(top?.url).toBe(`/rules?ruleset=srd52&section=${encodeURIComponent(top!.id)}`)
+      expect(top?.url).toBe(`/rules?ruleset=srd52&section=${top!.id}`)
     })
 
     test("finds sections from words in their text", async () => {

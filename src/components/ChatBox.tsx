@@ -1,37 +1,9 @@
 import { isAiEnabled } from "@src/config"
+import { renderUntrustedMarkdown } from "@src/lib/markdown"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat, UnresolvedToolCall } from "@src/services/computeChat"
 import { TOOL_FORMATTERS } from "@src/tools"
 import { clsx } from "clsx"
-import { marked, type Tokens } from "marked"
-
-/**
- * Convert markdown to sanitized HTML
- * Marked handles sanitization by default in modern versions
- */
-function markdownToHtml(markdown: string, icon?: string): string {
-  let isFirstParagraph = true
-  const renderer = new marked.Renderer()
-
-  if (icon) {
-    renderer.paragraph = function (tokens: Tokens.Paragraph) {
-      const text = this.parser.parseInline(tokens.tokens)
-
-      if (isFirstParagraph) {
-        isFirstParagraph = false
-        return `<p>${icon} ${text}</p>`
-      }
-      return `<p>${text}</p>`
-    }
-  }
-
-  return marked.parse(markdown, {
-    renderer,
-    async: false,
-    breaks: true, // Convert \n to <br>
-    gfm: true, // GitHub Flavored Markdown
-  }) as string
-}
 
 export interface ChatBoxProps {
   character: ComputedCharacter
@@ -217,10 +189,9 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
   }
 
   // Convert markdown to HTML for rendering
-  const htmlContent = markdownToHtml(
-    content,
-    isAssistant ? `<i class="bi bi-book me-1"></i>` : undefined
-  )
+  const htmlContent = renderUntrustedMarkdown(content, {
+    icon: isAssistant ? `<i class="bi bi-book me-1"></i>` : undefined,
+  })
 
   const divClass = clsx("rounded px-3 py-2", {
     "bg-primary text-white": !isAssistant,
@@ -230,7 +201,7 @@ export const ChatMessageBubble = ({ id, chatRole, content }: ChatMessageBubblePr
   return (
     <div class="row g-0 mb-2 chat-message" id={`msg-${id}`}>
       <div class={isAssistant ? "col-10" : "col-10 offset-2"}>
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: this HTML is sanitized */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: renderUntrustedMarkdown escapes raw HTML and unsafe links */}
         <div dangerouslySetInnerHTML={{ __html: htmlContent }} class={divClass} />
       </div>
     </div>

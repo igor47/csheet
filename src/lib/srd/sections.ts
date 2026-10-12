@@ -26,11 +26,14 @@ export function hasChildPages(entry: TocEntry): boolean {
   return entry.level < TOC_DEPTH && entry.children.length > 0
 }
 
-/** Link to a section (or the landing page) in the /rules browser. */
+/**
+ * Link to a section (or the landing page) in the /rules browser.
+ * Slashes in section ids stay readable: "/" is allowed in a query string.
+ */
 export function rulesHref(ruleset: RulesetId, sectionId?: string): string {
-  const params = new URLSearchParams({ ruleset })
-  if (sectionId) params.set("section", sectionId)
-  return `/rules?${params.toString()}`
+  const base = `/rules?ruleset=${encodeURIComponent(ruleset)}`
+  if (!sectionId) return base
+  return `${base}&section=${encodeURIComponent(sectionId).replaceAll("%2F", "/")}`
 }
 
 export function findSection(toc: SrdToc, id: string): TocEntry | undefined {

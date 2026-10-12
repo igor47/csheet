@@ -65,8 +65,18 @@ describe("GET /rules", () => {
       )
       expect(response.status).toBe(302)
       expect(response.headers.get("Location")).toBe(
-        "/rules?ruleset=srd52&section=monsters-a-z%2Faboleth%2Faboleth"
+        "/rules?ruleset=srd52&section=monsters-a-z/aboleth/aboleth"
       )
+    })
+
+    test("still accepts links with encoded slashes", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        "/rules?ruleset=srd52&section=spells%2Fspell-descriptions%2Ffireball"
+      )
+      expect(response.status).toBe(200)
+      const document = await parseHtml(response)
+      expect(expectElement(document, "#rules-content h2").textContent).toBe("Fireball")
     })
 
     test("redirects an unknown section to the landing page", async () => {

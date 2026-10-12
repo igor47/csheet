@@ -47,7 +47,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   const result = await db`
     SELECT * FROM char_hp
     WHERE character_id = ${characterId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   return result.map((row: CharHP) =>

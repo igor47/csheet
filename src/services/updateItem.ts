@@ -345,7 +345,7 @@ export async function updateItem(
       SELECT worn, wielded
       FROM char_items
       WHERE character_id = ${characterId} AND item_id = ${itemId}
-      ORDER BY created_at DESC
+      ORDER BY id DESC
       LIMIT 1
     `
 

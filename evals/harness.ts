@@ -129,9 +129,10 @@ async function readTranscript(db: SQL, chatId: string): Promise<Transcript> {
  * Run one trial of a case. Edits Reed makes really run, so later calls see them.
  *
  * This deliberately doesn't use a rolled-back transaction like the tests do: Postgres fixes
- * CURRENT_TIMESTAMP at the start of a transaction, so the fixture's rows and Reed's edits would
- * share a created_at and "latest row" lookups (coins, notes, ...) would pick one at random. Each
- * write commits on its own, as in prod, so this must only run against the scratch test database
+ * CURRENT_TIMESTAMP at the start of a transaction, so every row in a trial would share one
+ * created_at, and code that compares timestamps (rests, wild shape, note backups) would behave
+ * unlike prod. Each write commits on its own, as in prod, so this must only run against the
+ * scratch test database
  */
 export async function runTrial(
   db: SQL,

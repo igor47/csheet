@@ -192,7 +192,7 @@ describe("POST /characters/:id/edit/skills", () => {
           SELECT * FROM char_skills
           WHERE character_id = ${character.id}
           AND skill = 'acrobatics'
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(updatedSkills[0].proficiency).toBe("proficient")
@@ -253,7 +253,7 @@ describe("POST /characters/:id/edit/skills", () => {
           SELECT * FROM char_skills
           WHERE character_id = ${character.id}
           AND skill = 'acrobatics'
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(acrobaticsSkill[0].proficiency).toBe("proficient")
@@ -264,7 +264,7 @@ describe("POST /characters/:id/edit/skills", () => {
           SELECT * FROM char_skills
           WHERE character_id = ${character.id}
           AND skill = 'stealth'
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(stealthSkill[0].proficiency).toBe("expert")
@@ -275,7 +275,7 @@ describe("POST /characters/:id/edit/skills", () => {
           SELECT * FROM char_skills
           WHERE character_id = ${character.id}
           AND skill = 'perception'
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(perceptionSkill[0].proficiency).toBe("half")
@@ -317,8 +317,8 @@ describe("POST /characters/:id/edit/skills", () => {
           SELECT skill, proficiency
           FROM char_skills
           WHERE character_id = ${character.id}
-          AND created_at IN (
-            SELECT MAX(created_at)
+          AND id IN (
+            SELECT MAX(id)
             FROM char_skills
             WHERE character_id = ${character.id}
             GROUP BY skill

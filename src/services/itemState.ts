@@ -24,7 +24,7 @@ export async function changeItemState(
     WHERE character_id = ${characterId}
       AND item_id = ${itemId}
       AND dropped_at IS NULL
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT 1
   `
 

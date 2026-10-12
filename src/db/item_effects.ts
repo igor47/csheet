@@ -54,7 +54,7 @@ export async function findByItemId(db: SQL, itemId: string): Promise<ItemEffect[
   const result = await db`
     SELECT * FROM item_effects
     WHERE item_id = ${itemId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   return result.map(parseItemEffect)

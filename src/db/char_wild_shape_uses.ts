@@ -67,7 +67,7 @@ export async function findUnrecovered(db: SQL, characterId: string): Promise<Cha
   const result = await db`
     SELECT * FROM char_wild_shape_uses
     WHERE character_id = ${characterId} AND recovered_at IS NULL
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
@@ -108,7 +108,7 @@ export async function recoverOne(db: SQL, characterId: string): Promise<boolean>
     WHERE id = (
       SELECT id FROM char_wild_shape_uses
       WHERE character_id = ${characterId} AND recovered_at IS NULL AND ended_at IS NOT NULL
-      ORDER BY created_at ASC
+      ORDER BY id ASC
       LIMIT 1
     )
   `
@@ -152,7 +152,7 @@ export async function findByCharacterId(
   const result = await db`
     SELECT * FROM char_wild_shape_uses
     WHERE character_id = ${characterId}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT ${limit}
   `
 

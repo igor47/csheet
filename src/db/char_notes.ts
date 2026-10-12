@@ -49,7 +49,7 @@ export async function getCurrent(db: SQL, characterId: string): Promise<CharNote
   const result = await db`
     SELECT * FROM char_notes
     WHERE character_id = ${characterId}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT 1
   `
 
@@ -67,7 +67,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   const result = await db`
     SELECT * FROM char_notes
     WHERE character_id = ${characterId}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
   `
 
   return result.map((row: CharNote) =>

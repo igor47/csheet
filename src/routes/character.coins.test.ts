@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 import type { Character } from "@src/db/characters"
 import type { User } from "@src/db/users"
+import { ulid } from "@src/lib/ids"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
@@ -139,7 +140,7 @@ describe("POST /characters/:id/edit/coins", () => {
         const updatedCoins = await testCtx.db`
           SELECT * FROM char_coins
           WHERE character_id = ${character.id}
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(updatedCoins[0].pp).toBe(5)
@@ -148,6 +149,35 @@ describe("POST /characters/:id/edit/coins", () => {
         expect(updatedCoins[0].sp).toBe(50)
         expect(updatedCoins[0].cp).toBe(25)
         expect(updatedCoins[0].note).toBe("Quest reward!")
+      })
+
+      test("spends from the newest coins when rows share a timestamp", async () => {
+        // Rows written in one transaction share created_at (it's the transaction's start time),
+        // so only the id says which is newest
+        await testCtx.db`
+          INSERT INTO char_coins (id, character_id, pp, gp, ep, sp, cp, created_at, updated_at)
+          VALUES (${ulid()}, ${character.id}, 0, 1, 0, 0, 0, NOW(), NOW())
+        `
+        await testCtx.db`
+          INSERT INTO char_coins (id, character_id, pp, gp, ep, sp, cp, created_at, updated_at)
+          VALUES (${ulid()}, ${character.id}, 0, 100, 0, 0, 0, NOW(), NOW())
+        `
+
+        const formData = new FormData()
+        formData.append("gp", "-50")
+        await makeRequest(testCtx.app, `/characters/${character.id}/edit/coins`, {
+          user,
+          method: "POST",
+          body: formData,
+        })
+
+        const [latest] = await testCtx.db`
+          SELECT gp FROM char_coins
+          WHERE character_id = ${character.id}
+          ORDER BY id DESC
+          LIMIT 1
+        `
+        expect(latest.gp).toBe(50)
       })
 
       test("returns OOB swap for inventory panel", async () => {

@@ -89,7 +89,7 @@ describe("GET /characters/:id/edit/abilities", () => {
         SELECT score FROM char_abilities
         WHERE character_id = ${character.id}
         AND ability = 'strength'
-        ORDER BY created_at DESC
+        ORDER BY id DESC
         LIMIT 1
       `
       const currentStrength = currentAbilities[0].score
@@ -228,7 +228,7 @@ describe("POST /characters/:id/edit/abilities", () => {
           SELECT * FROM char_abilities
           WHERE character_id = ${character.id}
           AND ability = 'strength'
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(updatedAbilities[0].score).toBe(18)
@@ -315,7 +315,7 @@ describe("POST /characters/:id/edit/abilities", () => {
           SELECT * FROM char_abilities
           WHERE character_id = ${character.id}
           AND ability = 'strength'
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(strengthAbility[0].score).toBe(18)
@@ -327,7 +327,7 @@ describe("POST /characters/:id/edit/abilities", () => {
           SELECT * FROM char_abilities
           WHERE character_id = ${character.id}
           AND ability = 'dexterity'
-          ORDER BY created_at DESC
+          ORDER BY id DESC
           LIMIT 1
         `
         expect(dexAbility[0].score).toBe(14)
@@ -432,8 +432,8 @@ describe("POST /characters/:id/edit/abilities", () => {
           SELECT ability, score, proficiency
           FROM char_abilities
           WHERE character_id = ${character.id}
-          AND created_at IN (
-            SELECT MAX(created_at)
+          AND id IN (
+            SELECT MAX(id)
             FROM char_abilities
             WHERE character_id = ${character.id}
             GROUP BY ability

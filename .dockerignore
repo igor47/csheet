@@ -5,6 +5,8 @@
 
 # not using mise or docker inside docker
 mise.toml
+# local mise settings hold secrets like ANTHROPIC_API_KEY
+mise.local.toml
 docker-compose.yml
 
 # linter settings

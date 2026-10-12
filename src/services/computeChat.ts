@@ -1,5 +1,5 @@
 import type { ChatMessage as DbChatMessage } from "@src/db/chat_messages"
-import { findByChatId as getChatHistory } from "@src/db/chat_messages"
+import { findSystemMessage, findByChatId as getChatHistory } from "@src/db/chat_messages"
 import { isReadOnly } from "@src/tools"
 import type {
   JSONValue,
@@ -278,8 +278,7 @@ function countConsecutiveErrors(dbMessages: DbChatMessage[]): number {
 /**
  * The chat's system prompt, marked for prompt caching
  */
-function toLlmInstructions(dbMessages: DbChatMessage[]): SystemModelMessage | undefined {
-  const systemMsg = dbMessages.find((msg) => msg.role === "system")
+function toLlmInstructions(systemMsg: DbChatMessage | null): SystemModelMessage | undefined {
   if (!systemMsg) return undefined
 
   return {
@@ -302,7 +301,7 @@ export async function computeChat(db: SQL, chatId: string): Promise<ComputedChat
   return {
     chatId,
     messages: toUiMessages(dbMessages),
-    llmInstructions: toLlmInstructions(dbMessages),
+    llmInstructions: toLlmInstructions(await findSystemMessage(db, chatId)),
     llmMessages: toLlmMessages(dbMessages),
     shouldStream: shouldInitiateStream(dbMessages),
     unresolvedToolCalls: findUnresolvedToolCalls(dbMessages),

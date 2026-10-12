@@ -124,6 +124,19 @@ export async function findByChatId(db: SQL, chatId: string, limit = 50): Promise
   ) // Return in chronological order (oldest first)
 }
 
+/**
+ * The chat's system prompt, which can fall outside the recent-history window of a long chat
+ */
+export async function findSystemMessage(db: SQL, chatId: string): Promise<ChatMessage | null> {
+  const result = await db`
+    SELECT * FROM chat_messages
+    WHERE chat_id = ${chatId} AND role = 'system'
+    ORDER BY id
+    LIMIT 1
+  `
+  return result[0] ? parseMessageRow(result[0]) : null
+}
+
 export interface ChatPreview {
   chat_id: string
   character_id: string

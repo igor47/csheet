@@ -93,7 +93,7 @@ const WeaponItemUpdateSchema = z.discriminatedUnion("weapon_type", [
       z
         .number({
           error: (iss) =>
-            iss === undefined ? "Normal range is required" : "Must be a valid number",
+            iss.input == null ? "Normal range is required" : "Must be a valid number",
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })
@@ -101,7 +101,7 @@ const WeaponItemUpdateSchema = z.discriminatedUnion("weapon_type", [
     long_range: NumberField(
       z
         .number({
-          error: (iss) => (iss === undefined ? "Long range is required" : "Must be a valid number"),
+          error: (iss) => (iss.input == null ? "Long range is required" : "Must be a valid number"),
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })
@@ -113,7 +113,7 @@ const WeaponItemUpdateSchema = z.discriminatedUnion("weapon_type", [
       z
         .number({
           error: (iss) =>
-            iss === undefined ? "Normal range is required" : "Must be a valid number",
+            iss.input == null ? "Normal range is required" : "Must be a valid number",
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })
@@ -121,7 +121,7 @@ const WeaponItemUpdateSchema = z.discriminatedUnion("weapon_type", [
     long_range: NumberField(
       z
         .number({
-          error: (iss) => (iss === undefined ? "Long range is required" : "Must be a valid number"),
+          error: (iss) => (iss.input == null ? "Long range is required" : "Must be a valid number"),
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })

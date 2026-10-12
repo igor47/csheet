@@ -13,7 +13,7 @@ export const UpdateHitPointsApiSchema = z.object({
   amount: NumberField(
     z
       .number({
-        error: (iss) => (iss.value === null ? "Amount is required" : "Must be a valid number"),
+        error: (iss) => (iss.input == null ? "Amount is required" : "Must be a valid number"),
       })
       .int({ message: "Must be a whole number" })
       .min(1, { message: "Must be at least 1" })

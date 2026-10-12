@@ -22,7 +22,7 @@ const AbilityScoreField = () =>
     z
       .number({
         error: (iss) =>
-          iss === undefined ? "Ability score is required" : "Must be a valid number",
+          iss.input == null ? "Ability score is required" : "Must be a valid number",
       })
       .int({ message: "Must be a whole number" })
       .min(1, { message: "Must be at least 1" })

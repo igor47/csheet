@@ -43,6 +43,30 @@ describe("updateHitPoints", () => {
       expect(result.result.newHP).toBe(computedChar.currentHP - 5)
     })
 
+    test("says the amount is required when it is blank", async () => {
+      const result = await updateHitPoints(testCtx.db, computedChar, {
+        action: "lose",
+        amount: "",
+        note: "",
+      })
+
+      expect(result.complete).toBe(false)
+      if (result.complete) return
+      expect(result.errors.amount).toBe("Amount is required")
+    })
+
+    test("says the amount must be a number when it is not", async () => {
+      const result = await updateHitPoints(testCtx.db, computedChar, {
+        action: "lose",
+        amount: "lots",
+        note: "",
+      })
+
+      expect(result.complete).toBe(false)
+      if (result.complete) return
+      expect(result.errors.amount).toBe("Must be a valid number")
+    })
+
     test("increases HP when healing", async () => {
       // First reduce HP so we can heal
       await createCharHP(testCtx.db, {

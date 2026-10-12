@@ -84,7 +84,7 @@ const MultiClassSchema = z.object({
 const AbilityScoreField = NumberField(
   z
     .number({
-      error: (iss) => (iss === undefined ? "Ability score is required" : "Must be a number"),
+      error: (iss) => (iss.input == null ? "Ability score is required" : "Must be a number"),
     })
     .int({ message: "Must be a whole number" })
     .min(3, { message: "Must be at least 3" })

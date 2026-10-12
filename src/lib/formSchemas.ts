@@ -110,7 +110,7 @@ export function coerceString(val: unknown): string | null {
  * ```typescript
  * NumberField(
  *   z.number({
- *     error: (iss) => iss === undefined ? "Amount is required" : "Invalid number"
+ *     error: (iss) => iss.input == null ? "Amount is required" : "Invalid number"
  *   })
  *   .int({ message: "Must be a whole number" })
  *   .positive({ message: "Must be greater than zero" })
@@ -234,7 +234,7 @@ export function Checkbox() {
 export function RequiredNumber() {
   return NumberField(
     z.number({
-      error: (iss) => (iss === undefined ? "This field is required" : "Must be a valid number"),
+      error: (iss) => (iss.input == null ? "This field is required" : "Must be a valid number"),
     })
   )
 }
@@ -269,7 +269,7 @@ export function RequiredString() {
   return StringField(
     z
       .string({
-        error: (iss) => (iss === undefined ? "This field is required" : "Must be a valid string"),
+        error: (iss) => (iss.input == null ? "This field is required" : "Must be a valid string"),
       })
       .min(1, { message: "This field is required" })
   )

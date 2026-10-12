@@ -313,7 +313,20 @@ export interface TemplateItem {
   armor_modifier?: number
 }
 
-export interface Lineage {
+/**
+ * Weapon, armor, tool, and language proficiencies granted by a species, lineage, or class
+ * Names are lowercase; weapons are categories ("simple weapons", "martial weapons") or a single
+ * weapon ("longsword"), armor is "light armor", "medium armor", "heavy armor", or "shields"
+ * A Choice is up to the player, so it isn't granted automatically
+ */
+export interface GrantedProficiencies {
+  armorProficiencies?: string[]
+  weaponProficiencies?: string[]
+  toolProficiencies?: (string | Choice<string>)[]
+  languages?: string[]
+}
+
+export interface Lineage extends GrantedProficiencies {
   name: string
   description: string
 
@@ -323,7 +336,7 @@ export interface Lineage {
   traits?: Trait[]
 }
 
-export interface Species {
+export interface Species extends GrantedProficiencies {
   name: string
   size: SizeType
   speed: number
@@ -408,6 +421,16 @@ export interface ClassDef {
   armorProficiencies: string[]
   weaponProficiencies: string[]
   toolProficiencies: (string | Choice<string>)[]
+  // the reduced set gained when this class is taken as a multiclass, rather than as the first class
+  multiclassProficiencies: {
+    armor: string[]
+    weapons: string[]
+    tools: (string | Choice<string>)[]
+  }
+  // languages that come with the class's level 1 features (Druidic, Thieves' Cant)
+  languages?: string[]
+  // a caveat on the class's armor proficiencies, e.g. the SRD 5.1 druid's
+  armorNote?: string
 
   skillChoices: Choice<SkillType>
 

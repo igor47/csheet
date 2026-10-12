@@ -3,9 +3,11 @@ import { create as createAbilityDb } from "@src/db/char_abilities"
 import { create as createCharLevel } from "@src/db/char_levels"
 import type { Character, CreateCharacter } from "@src/db/characters"
 import { create as createCharacter } from "@src/db/characters"
-import { Abilities, type ClassNameType } from "@src/lib/dnd"
+import { Abilities, type ClassNameType, getRuleset } from "@src/lib/dnd"
+import { defaultProficiencies } from "@src/lib/dnd/proficiencies"
 import type { RulesetId } from "@src/lib/dnd/rulesets"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
+import { grantProficiencies } from "@src/services/grantProficiencies"
 import type { SQL } from "bun"
 import { Factory } from "fishery"
 
@@ -20,6 +22,8 @@ interface CharacterFactoryParams {
   class?: ClassNameType
   level?: number
   subclass?: string
+  // skip the proficiencies addLevel would grant, like characters stored before they were tracked
+  legacy?: boolean
   // Ability scores (default 10)
   strength?: number
   dexterity?: number
@@ -132,6 +136,15 @@ export const characterFactory = {
           note: null,
         })
       }
+    }
+
+    // grant the proficiencies addLevel would have
+    if (params.class && params.level && !params.legacy) {
+      await grantProficiencies(
+        db,
+        character.id,
+        defaultProficiencies(getRuleset(character.ruleset), character, [params.class])
+      )
     }
 
     return character

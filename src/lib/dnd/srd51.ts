@@ -16,6 +16,7 @@ export const SRD51_DESCRIPTION = "D&D 5e (2014)"
 const SpeciesData: Species[] = [
   {
     name: "dragonborn",
+    languages: ["common", "draconic"],
     description:
       "Dragonborn look very much like dragons standing erect in humanoid form, though they lack wings or a tail. They are tall and strongly built, often standing close to 6½ feet tall and weighing 300 pounds or more. Their draconic heritage manifests in a variety of traits they share with true dragons.",
     size: "medium",
@@ -176,6 +177,11 @@ const SpeciesData: Species[] = [
   },
   {
     name: "dwarf",
+    languages: ["common", "dwarvish"],
+    weaponProficiencies: ["battleaxe", "handaxe", "light hammer", "warhammer"],
+    toolProficiencies: [
+      { choose: 1, from: ["smith's tools", "brewer's supplies", "mason's tools"] },
+    ],
     description:
       "Bold and hardy, dwarves are known as skilled warriors, miners, and workers of stone and metal. Though they stand well under 5 feet tall, dwarves are so broad and compact that they can weigh as much as a human standing nearly two feet taller.",
     size: "medium",
@@ -229,6 +235,7 @@ const SpeciesData: Species[] = [
       },
       {
         name: "mountain dwarf",
+        armorProficiencies: ["light armor", "medium armor"],
         description:
           "As a mountain dwarf, you're strong and hardy, accustomed to a difficult life in rugged terrain.",
         abilityScoreModifiers: { strength: 2 },
@@ -243,6 +250,7 @@ const SpeciesData: Species[] = [
   },
   {
     name: "elf",
+    languages: ["common", "elvish"],
     description:
       "Elves are a magical people of otherworldly grace, living in the world but not entirely part of it. They live in places of ethereal beauty, in the midst of ancient forests or in silvery spires glittering with faerie light.",
     size: "medium",
@@ -277,6 +285,7 @@ const SpeciesData: Species[] = [
     lineages: [
       {
         name: "high elf",
+        weaponProficiencies: ["longsword", "shortsword", "shortbow", "longbow"],
         description:
           "As a high elf, you have a keen mind and a mastery of at least the basics of magic.",
         abilityScoreModifiers: { intelligence: 1 },
@@ -299,6 +308,7 @@ const SpeciesData: Species[] = [
       },
       {
         name: "wood elf",
+        weaponProficiencies: ["longsword", "shortsword", "shortbow", "longbow"],
         description:
           "As a wood elf, you have keen senses and deep intuition, and your fleet feet carry you quickly and stealthily through your native forests.",
         abilityScoreModifiers: { wisdom: 1 },
@@ -321,6 +331,7 @@ const SpeciesData: Species[] = [
       },
       {
         name: "drow",
+        weaponProficiencies: ["rapier", "shortsword", "hand crossbow"],
         description:
           "Descended from an earlier subterranean elf society, the drow were banished from the surface world for following the goddess Lolth down the path to evil and corruption.",
         abilityScoreModifiers: { charisma: 1 },
@@ -350,6 +361,7 @@ const SpeciesData: Species[] = [
   },
   {
     name: "halfling",
+    languages: ["common", "halfling"],
     description:
       "The diminutive halflings survive in a world full of larger creatures by avoiding notice or, barring that, avoiding offense. Standing about 3 feet tall, they appear relatively harmless and so have managed to survive for centuries in the shadow of empires.",
     size: "small",
@@ -407,6 +419,7 @@ const SpeciesData: Species[] = [
   },
   {
     name: "human",
+    languages: ["common"],
     description:
       "In the reckonings of most worlds, humans are the youngest of the common species, late to arrive on the world scene and short-lived in comparison to dwarves, elves, and dragons. Their capacity for expansion and adaptability makes them highly diverse in tastes, morals, and customs.",
     size: "medium",
@@ -429,6 +442,7 @@ const SpeciesData: Species[] = [
   },
   {
     name: "gnome",
+    languages: ["common", "gnomish"],
     description:
       "A constant hum of busy activity pervades the warrens and neighborhoods where gnomes form their close-knit communities. Louder sounds punctuate the hum: a crunch of grinding gears here, a minor explosion there, a yelp of surprise or triumph, and especially bursts of laughter. Gnomes take delight in life, enjoying every moment of invention, exploration, investigation, creation, and play.",
     size: "small",
@@ -472,6 +486,7 @@ const SpeciesData: Species[] = [
       },
       {
         name: "rock gnome",
+        toolProficiencies: ["tinker's tools"],
         description:
           "As a rock gnome, you have a natural inventiveness and hardiness beyond that of other gnomes. Most gnomes in the worlds of D&D are rock gnomes, including the tinker gnomes of the Dragonlance setting.",
         abilityScoreModifiers: { constitution: 1 },
@@ -509,6 +524,7 @@ const SpeciesData: Species[] = [
   },
   {
     name: "half-elf",
+    languages: ["common", "elvish"],
     description:
       "Walking in two worlds but truly belonging to neither, half-elves combine what some say are the best qualities of their elf and human parents: human curiosity, inventiveness, and ambition tempered by the refined senses, love of nature, and artistic tastes of the elves.",
     size: "medium",
@@ -541,6 +557,7 @@ const SpeciesData: Species[] = [
   },
   {
     name: "half-orc",
+    languages: ["common", "orc"],
     description:
       "Whether united under the leadership of a mighty warlock or having fought to a standstill after years of conflict, orc and human tribes sometimes form alliances, joining forces into a larger horde to the terror of civilized lands nearby. When these alliances are sealed by marriages, half-orcs are born.",
     size: "medium",
@@ -575,6 +592,7 @@ const SpeciesData: Species[] = [
   },
   {
     name: "tiefling",
+    languages: ["common", "infernal"],
     description:
       "To be greeted with stares and whispers, to suffer violence and insult on the street, to see mistrust and fear in every eye: this is the lot of the tiefling. And to twist the knife, tieflings know that this is because a pact struck generations ago infused the essence of Asmodeus into their bloodline.",
     size: "medium",
@@ -986,9 +1004,14 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 12,
     primaryAbilities: ["strength", "constitution"],
     savingThrows: ["strength", "constitution"],
-    armorProficiencies: ["light", "medium", "shields"],
-    weaponProficiencies: ["simple", "martial"],
+    armorProficiencies: ["light armor", "medium armor", "shields"],
+    weaponProficiencies: ["simple weapons", "martial weapons"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: ["shields"],
+      weapons: ["simple weapons", "martial weapons"],
+      tools: [],
+    },
     skillChoices: {
       choose: 2,
       from: ["animal handling", "athletics", "intimidation", "nature", "perception", "survival"],
@@ -1145,8 +1168,8 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 8,
     primaryAbilities: ["charisma", "dexterity"],
     savingThrows: ["dexterity", "charisma"],
-    armorProficiencies: ["light"],
-    weaponProficiencies: ["simple", "hand crossbow", "longsword", "rapier", "shortsword"],
+    armorProficiencies: ["light armor"],
+    weaponProficiencies: ["simple weapons", "hand crossbow", "longsword", "rapier", "shortsword"],
     toolProficiencies: [
       {
         choose: 3,
@@ -1164,6 +1187,27 @@ const Classes: Record<ClassNameType, ClassDef> = {
         ],
       },
     ],
+    multiclassProficiencies: {
+      armor: ["light armor"],
+      weapons: [],
+      tools: [
+        {
+          choose: 1,
+          from: [
+            "bagpipes",
+            "drum",
+            "dulcimer",
+            "flute",
+            "lute",
+            "lyre",
+            "horn",
+            "pan flute",
+            "shawm",
+            "viol",
+          ],
+        },
+      ],
+    },
     skillChoices: {
       choose: 3,
       from: [
@@ -1315,9 +1359,14 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 8,
     primaryAbilities: ["wisdom"],
     savingThrows: ["wisdom", "charisma"],
-    armorProficiencies: ["light", "medium", "heavy", "shields"],
-    weaponProficiencies: ["simple"],
+    armorProficiencies: ["light armor", "medium armor", "heavy armor", "shields"],
+    weaponProficiencies: ["simple weapons"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: ["light armor", "medium armor", "shields"],
+      weapons: [],
+      tools: [],
+    },
     skillChoices: { choose: 2, from: ["history", "insight", "medicine", "persuasion", "religion"] },
     traits: [
       {
@@ -1647,20 +1696,27 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 8,
     primaryAbilities: ["wisdom"],
     savingThrows: ["intelligence", "wisdom"],
-    armorProficiencies: ["light (nonmetal)", "medium (nonmetal)", "shields (nonmetal)"],
+    armorProficiencies: ["light armor", "medium armor", "shields"],
     weaponProficiencies: [
-      "clubs",
-      "daggers",
-      "darts",
-      "javelins",
-      "maces",
-      "quarterstaffs",
-      "scimitars",
-      "sickles",
-      "slings",
-      "spears",
+      "club",
+      "dagger",
+      "dart",
+      "javelin",
+      "mace",
+      "quarterstaff",
+      "scimitar",
+      "sickle",
+      "sling",
+      "spear",
     ],
     toolProficiencies: ["herbalism kit"],
+    multiclassProficiencies: {
+      armor: ["light armor", "medium armor", "shields"],
+      weapons: [],
+      tools: [],
+    },
+    languages: ["druidic"],
+    armorNote: "Druids will not wear armor or use shields made of metal",
     skillChoices: {
       choose: 2,
       from: [
@@ -1797,9 +1853,14 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 10,
     primaryAbilities: ["strength", "dexterity", "constitution"],
     savingThrows: ["strength", "constitution"],
-    armorProficiencies: ["light", "medium", "heavy", "shields"],
-    weaponProficiencies: ["simple", "martial"],
+    armorProficiencies: ["light armor", "medium armor", "heavy armor", "shields"],
+    weaponProficiencies: ["simple weapons", "martial weapons"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: ["light armor", "medium armor", "shields"],
+      weapons: ["simple weapons", "martial weapons"],
+      tools: [],
+    },
     skillChoices: {
       choose: 2,
       from: [
@@ -1978,8 +2039,13 @@ const Classes: Record<ClassNameType, ClassDef> = {
     primaryAbilities: ["dexterity", "wisdom"],
     savingThrows: ["strength", "dexterity"],
     armorProficiencies: [],
-    weaponProficiencies: ["simple", "shortsword"],
+    weaponProficiencies: ["simple weapons", "shortsword"],
     toolProficiencies: [{ choose: 1, from: ["artisan's tools", "musical instrument"] }],
+    multiclassProficiencies: {
+      armor: [],
+      weapons: ["simple weapons", "shortsword"],
+      tools: [],
+    },
     skillChoices: {
       choose: 2,
       from: ["acrobatics", "athletics", "history", "insight", "religion", "stealth"],
@@ -2198,9 +2264,14 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 10,
     primaryAbilities: ["strength", "charisma"],
     savingThrows: ["wisdom", "charisma"],
-    armorProficiencies: ["light", "medium", "heavy", "shields"],
-    weaponProficiencies: ["simple", "martial"],
+    armorProficiencies: ["light armor", "medium armor", "heavy armor", "shields"],
+    weaponProficiencies: ["simple weapons", "martial weapons"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: ["light armor", "medium armor", "shields"],
+      weapons: ["simple weapons", "martial weapons"],
+      tools: [],
+    },
     skillChoices: {
       choose: 2,
       from: ["athletics", "insight", "intimidation", "medicine", "persuasion", "religion"],
@@ -2401,9 +2472,14 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 10,
     primaryAbilities: ["dexterity", "wisdom"],
     savingThrows: ["strength", "dexterity"],
-    armorProficiencies: ["light", "medium", "shields"],
-    weaponProficiencies: ["simple", "martial"],
+    armorProficiencies: ["light armor", "medium armor", "shields"],
+    weaponProficiencies: ["simple weapons", "martial weapons"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: ["light armor", "medium armor", "shields"],
+      weapons: ["simple weapons", "martial weapons"],
+      tools: [],
+    },
     skillChoices: {
       choose: 3,
       from: [
@@ -2565,9 +2641,15 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 8,
     primaryAbilities: ["dexterity"],
     savingThrows: ["dexterity", "intelligence"],
-    armorProficiencies: ["light"],
-    weaponProficiencies: ["simple", "hand crossbow", "longsword", "rapier", "shortsword"],
+    armorProficiencies: ["light armor"],
+    weaponProficiencies: ["simple weapons", "hand crossbow", "longsword", "rapier", "shortsword"],
     toolProficiencies: ["thieves' tools"],
+    multiclassProficiencies: {
+      armor: ["light armor"],
+      weapons: [],
+      tools: ["thieves' tools"],
+    },
+    languages: ["thieves' cant"],
     skillChoices: {
       choose: 4,
       from: [
@@ -2784,6 +2866,11 @@ const Classes: Record<ClassNameType, ClassDef> = {
     armorProficiencies: [],
     weaponProficiencies: ["dagger", "dart", "sling", "quarterstaff", "light crossbow"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: [],
+      weapons: [],
+      tools: [],
+    },
     skillChoices: {
       choose: 2,
       from: ["arcana", "deception", "insight", "intimidation", "persuasion", "religion"],
@@ -2906,9 +2993,14 @@ const Classes: Record<ClassNameType, ClassDef> = {
     hitDie: 8,
     primaryAbilities: ["charisma"],
     savingThrows: ["wisdom", "charisma"],
-    armorProficiencies: ["light"],
-    weaponProficiencies: ["simple"],
+    armorProficiencies: ["light armor"],
+    weaponProficiencies: ["simple weapons"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: ["light armor"],
+      weapons: ["simple weapons"],
+      tools: [],
+    },
     skillChoices: {
       choose: 2,
       from: [
@@ -3073,6 +3165,11 @@ const Classes: Record<ClassNameType, ClassDef> = {
     armorProficiencies: [],
     weaponProficiencies: ["dagger", "dart", "sling", "quarterstaff", "light crossbow"],
     toolProficiencies: [],
+    multiclassProficiencies: {
+      armor: [],
+      weapons: [],
+      tools: [],
+    },
     skillChoices: {
       choose: 2,
       from: ["arcana", "history", "insight", "investigation", "medicine", "religion"],

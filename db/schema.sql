@@ -1,4 +1,4 @@
-\restrict p2hgwHs0TgFaKjcqTvTkE8cGgKiQF0OnshXcBz6BXIvB4ZRf2hfmXM0HK4s6Sym
+\restrict IUFtfp8Ve96S7gnRVRmZBnc30URTVaduHdadpLyUYMUFLYpdXIopBcsic7lyN76
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.6
@@ -267,6 +267,28 @@ CREATE TABLE public.char_notes (
     restored_from_id character varying(26),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: char_proficiencies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_proficiencies (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    kind text NOT NULL,
+    name text NOT NULL,
+    action text NOT NULL,
+    source text NOT NULL,
+    source_detail text,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT char_proficiencies_action_check CHECK ((action = ANY (ARRAY['add'::text, 'remove'::text]))),
+    CONSTRAINT char_proficiencies_kind_check CHECK ((kind = ANY (ARRAY['weapon'::text, 'armor'::text, 'tool'::text, 'language'::text]))),
+    CONSTRAINT char_proficiencies_name_check CHECK ((name <> ''::text)),
+    CONSTRAINT char_proficiencies_source_check CHECK ((source = ANY (ARRAY['species'::text, 'lineage'::text, 'background'::text, 'class'::text, 'custom'::text])))
 );
 
 
@@ -718,6 +740,14 @@ ALTER TABLE ONLY public.char_notes
 
 
 --
+-- Name: char_proficiencies char_proficiencies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_proficiencies
+    ADD CONSTRAINT char_proficiencies_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_rests char_rests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1023,6 +1053,13 @@ CREATE INDEX idx_char_notes_char_id_id ON public.char_notes USING btree (charact
 
 
 --
+-- Name: idx_char_proficiencies_char_id_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_proficiencies_char_id_id ON public.char_proficiencies USING btree (character_id, id);
+
+
+--
 -- Name: idx_char_rests_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1275,6 +1312,13 @@ CREATE TRIGGER char_levels_updated_at BEFORE UPDATE ON public.char_levels FOR EA
 
 
 --
+-- Name: char_proficiencies char_proficiencies_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_proficiencies_updated_at BEFORE UPDATE ON public.char_proficiencies FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: char_rests char_rests_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1503,6 +1547,14 @@ ALTER TABLE ONLY public.char_notes
 
 
 --
+-- Name: char_proficiencies char_proficiencies_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_proficiencies
+    ADD CONSTRAINT char_proficiencies_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
 -- Name: char_rests char_rests_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1634,7 +1686,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict p2hgwHs0TgFaKjcqTvTkE8cGgKiQF0OnshXcBz6BXIvB4ZRf2hfmXM0HK4s6Sym
+\unrestrict IUFtfp8Ve96S7gnRVRmZBnc30URTVaduHdadpLyUYMUFLYpdXIopBcsic7lyN76
 
 
 --
@@ -1696,4 +1748,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260708065853'),
     ('20261012022202'),
     ('20261012050000'),
-    ('20261012170526');
+    ('20261012170526'),
+    ('20261012170728');

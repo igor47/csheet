@@ -5,6 +5,10 @@ import { findSinceLastUp as findDeathSaveEvents } from "@src/db/char_death_saves
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { getHpDelta } from "@src/db/char_hp"
 import { findByCharacterId as getAllLevels, getCurrentLevels } from "@src/db/char_levels"
+import {
+  type CurrentProficiency,
+  findByCharacterId as findProficiencyChanges,
+} from "@src/db/char_proficiencies"
 import { currentByCharacterId as getCurrentSkills } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
 import { type CharTrait, findByCharacterId as findTraits } from "@src/db/char_traits"
@@ -28,6 +32,7 @@ import {
 } from "@src/lib/dnd"
 import { type Beast, getBeastById } from "@src/lib/dnd/beasts"
 import { computeHitPoints, type DeathSaves } from "@src/lib/dnd/deathSaves"
+import { currentProficiencies } from "@src/lib/dnd/proficiencies"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import {
   getKnownFormsLimit,
@@ -110,6 +115,7 @@ export interface ComputedCharacter extends Character {
   pactMagicSlots: SpellSlotsType | null
   spells: SpellInfoForClass[]
   traits: CharTrait[]
+  proficiencies: CurrentProficiency[]
   coins: CurrentCoins | null
   equippedItems: EquippedComputedItem[]
   affectedAttributes: Record<string, ItemEffectInfo[]>
@@ -468,6 +474,9 @@ export async function computeCharacter(
   // Fetch all traits for this character
   const traits = await findTraits(db, characterId)
 
+  // Weapon, armor, tool, and language proficiencies, from their history
+  const proficiencies = currentProficiencies(await findProficiencyChanges(db, characterId))
+
   // Check if character has Wild Shape and compute wildShape info if so
   let wildShape: WildShapeInfo | null = null
   const druidClass = classes.find((c) => c.class === "druid")
@@ -573,6 +582,7 @@ export async function computeCharacter(
     pactMagicSlots,
     spells,
     traits,
+    proficiencies,
     coins: currentCoins,
     equippedItems,
     affectedAttributes,

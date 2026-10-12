@@ -16,6 +16,7 @@ import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
+import { grantProficiencies, levelProficiencies } from "./grantProficiencies"
 
 export const AddLevelApiSchema = z.object({
   class: ClassNamesSchema.describe("The class to add a level in (e.g., 'fighter', 'wizard')"),
@@ -237,6 +238,14 @@ export async function addLevel(
         })
       }
     }
+
+    // Weapon, armor, tool, and language proficiencies: origin and first class at level 1,
+    // the reduced multiclassing set when taking a level in a new class
+    await grantProficiencies(
+      tx,
+      char.id,
+      levelProficiencies(char, result.data.class, classLevelNew, totalLevelNew)
+    )
   })
 
   return { complete: true, result: {} }

@@ -30,6 +30,10 @@ export interface SrdToc {
   /** Path to the markdown file, relative to the project root */
   filePath: string
   entries: TocEntry[]
+  /** Every entry, keyed by id */
+  byId: Map<string, TocEntry>
+  /** The markdown file's lines, indexed by `lineStart - 1` */
+  lines: string[]
 }
 
 export const SRD_FILES: Record<RulesetId, string> = {
@@ -108,14 +112,34 @@ export function parseToc(markdown: string): TocEntry[] {
 
 const tocCache = new Map<RulesetId, Promise<SrdToc>>()
 
-/** Returns the parsed TOC for a ruleset, reading the markdown file on first use. */
+function indexEntries(entries: TocEntry[], byId = new Map<string, TocEntry>()) {
+  for (const entry of entries) {
+    byId.set(entry.id, entry)
+    indexEntries(entry.children, byId)
+  }
+  return byId
+}
+
+/**
+ * Returns the parsed TOC for a ruleset, reading the markdown file on first use.
+ * The file's lines are kept in memory alongside the TOC for reading sections.
+ */
 export function getToc(ruleset: RulesetId): Promise<SrdToc> {
   let toc = tocCache.get(ruleset)
   if (!toc) {
     const filePath = SRD_FILES[ruleset]
     toc = Bun.file(`${import.meta.dir}/../../../${filePath}`)
       .text()
-      .then((markdown) => ({ ruleset, filePath, entries: parseToc(markdown) }))
+      .then((markdown) => {
+        const entries = parseToc(markdown)
+        return {
+          ruleset,
+          filePath,
+          entries,
+          byId: indexEntries(entries),
+          lines: markdown.split("\n"),
+        }
+      })
       .catch((error) => {
         // don't cache a failed read
         tocCache.delete(ruleset)

@@ -1,6 +1,6 @@
-import { Rules, RulesSection, rulesHref, rulesPageTitle } from "@src/components/Rules"
+import { Rules, RulesSection, rulesPageTitle } from "@src/components/Rules"
 import type { RulesetId } from "@src/lib/dnd/rulesets"
-import { ancestors, findSection, readSection, resolvePage } from "@src/lib/srd/sections"
+import { ancestors, findSection, readSection, resolvePage, rulesHref } from "@src/lib/srd/sections"
 import { getToc } from "@src/lib/srd/toc"
 import { Hono } from "hono"
 

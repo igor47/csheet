@@ -9,6 +9,7 @@
  * 5.1 puts monsters (`###`) directly under their chapter (`#`).
  */
 
+import type { RulesetId } from "@src/lib/dnd/rulesets"
 import type { SrdToc, TocEntry } from "@src/lib/srd/toc"
 
 export const TOC_DEPTH = 3
@@ -23,6 +24,13 @@ export interface SectionContent {
 /** True if the entry's children are pages of their own rather than part of its content. */
 export function hasChildPages(entry: TocEntry): boolean {
   return entry.level < TOC_DEPTH && entry.children.length > 0
+}
+
+/** Link to a section (or the landing page) in the /rules browser. */
+export function rulesHref(ruleset: RulesetId, sectionId?: string): string {
+  const params = new URLSearchParams({ ruleset })
+  if (sectionId) params.set("section", sectionId)
+  return `/rules?${params.toString()}`
 }
 
 export function findSection(toc: SrdToc, id: string): TocEntry | undefined {

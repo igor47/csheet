@@ -108,6 +108,8 @@ import {
   prepareSpellTool,
   prepareSpellToolName,
 } from "./services/prepareSpell"
+import { executeReadRule, readRuleTool, readRuleToolName } from "./services/readRule"
+import { executeSearchRules, searchRulesTool, searchRulesToolName } from "./services/searchRules"
 import {
   executeShortRest,
   formatShortRestApproval,
@@ -245,6 +247,18 @@ export const TOOLS: ToolRegistration[] = [
     name: characterTraitsToolName,
     tool: characterTraitsTool,
     executor: executeCharacterTraits,
+  },
+
+  // Rules reference (Read-only)
+  {
+    name: searchRulesToolName,
+    tool: searchRulesTool,
+    executor: executeSearchRules,
+  },
+  {
+    name: readRuleToolName,
+    tool: readRuleTool,
+    executor: executeReadRule,
   },
 
   // Spellcasting

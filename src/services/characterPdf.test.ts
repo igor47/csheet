@@ -93,6 +93,15 @@ describe("generateCharacterPdf", () => {
       expect(out.getPageCount()).toBeGreaterThanOrEqual(1)
     })
 
+    test("has death save bubbles in the hit points box", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      expect(await pdfContainsText(bytes, "DEATH SAVES")).toBe(true)
+    })
+
     test("sets the document title to the character name", async () => {
       const computed = await computeCharacter(testCtx.db, dbChar.id)
       if (!computed) throw new Error("computeCharacter returned null")

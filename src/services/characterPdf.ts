@@ -448,6 +448,26 @@ function drawTopStrip(
   drawLine(page, tileX + 10, hpTop - hpSubH - 24, tileX + hpTileW - 10, hpTop - hpSubH - 24, {
     thickness: THIN_W,
   })
+
+  // Death saves: three bubbles each for successes and failures, filled as far as the
+  // character has got. Stable fills the successes and dead the failures, as on a paper sheet
+  drawTextCenter(page, "DEATH SAVES", tileX + hpTileW / 2, idY + 13, fonts.bold, 5.5, MUTED)
+  const deathSaves = char.deathSaves
+  const saveCounts = {
+    S: deathSaves?.status === "stable" ? 3 : (deathSaves?.successes ?? 0),
+    F: deathSaves?.status === "dead" ? 3 : (deathSaves?.failures ?? 0),
+  }
+  const bubbleY = idY + 6
+  let bubbleX = tileX + 16
+  for (const [label, count] of Object.entries(saveCounts)) {
+    drawText(page, label, bubbleX - 4, bubbleY - 2.5, { size: 6.5, font: fonts.bold, color: MUTED })
+    for (let i = 0; i < 3; i++) {
+      const cx = bubbleX + 6 + i * 8
+      if (i < count) drawDisc(page, cx, bubbleY, 2.6)
+      else drawCircleOutline(page, cx, bubbleY, 2.6)
+    }
+    bubbleX += 40
+  }
   tileX += hpTileW + gap
 
   // ── HIT DICE — list each die as a small tile; cross out used ones ──────

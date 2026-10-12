@@ -1,4 +1,4 @@
-\restrict PKRxUlFhhohb1dIfsM4clqGR3YzRB8dk7h09KnbG7Lc86DE3g60CQbYQbYrOsfd
+\restrict p2hgwHs0TgFaKjcqTvTkE8cGgKiQF0OnshXcBz6BXIvB4ZRf2hfmXM0HK4s6Sym
 
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 18.6
@@ -166,6 +166,25 @@ CREATE TABLE public.char_coins (
     CONSTRAINT char_coins_gp_check CHECK ((gp >= 0)),
     CONSTRAINT char_coins_pp_check CHECK ((pp >= 0)),
     CONSTRAINT char_coins_sp_check CHECK ((sp >= 0))
+);
+
+
+--
+-- Name: char_death_saves; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.char_death_saves (
+    id character varying(26) NOT NULL,
+    character_id character varying(26) NOT NULL,
+    kind text NOT NULL,
+    amount integer DEFAULT 1 NOT NULL,
+    roll integer,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT char_death_saves_amount_check CHECK (((amount >= 0) AND (amount <= 2))),
+    CONSTRAINT char_death_saves_kind_check CHECK ((kind = ANY (ARRAY['down'::text, 'success'::text, 'failure'::text, 'stable'::text, 'dead'::text, 'up'::text]))),
+    CONSTRAINT char_death_saves_roll_check CHECK (((roll >= 1) AND (roll <= 20)))
 );
 
 
@@ -651,6 +670,14 @@ ALTER TABLE ONLY public.char_coins
 
 
 --
+-- Name: char_death_saves char_death_saves_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_death_saves
+    ADD CONSTRAINT char_death_saves_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: char_hit_dice char_hit_dice_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -947,6 +974,13 @@ CREATE INDEX idx_char_coins_char_id_id ON public.char_coins USING btree (charact
 
 
 --
+-- Name: idx_char_death_saves_char_id_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_death_saves_char_id_id ON public.char_death_saves USING btree (character_id, id);
+
+
+--
 -- Name: idx_char_hit_dice_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1206,6 +1240,13 @@ CREATE TRIGGER char_coins_updated_at BEFORE UPDATE ON public.char_coins FOR EACH
 
 
 --
+-- Name: char_death_saves char_death_saves_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER char_death_saves_updated_at BEFORE UPDATE ON public.char_death_saves FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: char_hit_dice char_hit_dice_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1398,6 +1439,14 @@ ALTER TABLE ONLY public.char_coins
 
 
 --
+-- Name: char_death_saves char_death_saves_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.char_death_saves
+    ADD CONSTRAINT char_death_saves_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
 -- Name: char_hit_dice char_hit_dice_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1585,7 +1634,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PKRxUlFhhohb1dIfsM4clqGR3YzRB8dk7h09KnbG7Lc86DE3g60CQbYQbYrOsfd
+\unrestrict p2hgwHs0TgFaKjcqTvTkE8cGgKiQF0OnshXcBz6BXIvB4ZRf2hfmXM0HK4s6Sym
 
 
 --
@@ -1646,4 +1695,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260320000127'),
     ('20260708065853'),
     ('20261012022202'),
-    ('20261012050000');
+    ('20261012050000'),
+    ('20261012170526');

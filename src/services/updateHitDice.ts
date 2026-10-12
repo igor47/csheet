@@ -1,5 +1,4 @@
 import { create as createHitDiceDb } from "@src/db/char_hit_dice"
-import { create as createHPDb } from "@src/db/char_hp"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
@@ -8,6 +7,7 @@ import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
+import { healCharacter } from "./hitPointChanges"
 
 export const UpdateHitDiceApiSchema = z.object({
   action: z
@@ -87,7 +87,9 @@ export async function updateHitDice(
 
   // Validate spend action
   if (checkD.data.action === "spend") {
-    if (availableHitDice.length === 0) {
+    if (char.deathSaves?.status === "dead") {
+      errors.action = `${char.name} is dead and can't regain hit points until restored to life`
+    } else if (availableHitDice.length === 0) {
       errors.action = "No hit dice available to spend"
     }
 
@@ -161,12 +163,13 @@ export async function updateHitDice(
     // Create HP restoration record (capped at max HP)
     const hpToRestore = Math.min(hpGain, char.maxHitPoints - char.currentHP)
     if (hpToRestore > 0) {
-      await createHPDb(db, {
-        character_id: char.id,
-        delta: hpToRestore,
-        note: `Spent a D${result.data.die_value} hit die - Rolled ${result.data.hp_rolled} + ${conMod} CON`,
-      })
-      newHP = char.currentHP + hpToRestore
+      // at 0 HP this also brings the character back up, resetting their death saves
+      newHP = await healCharacter(
+        db,
+        char,
+        hpToRestore,
+        `Spent a D${result.data.die_value} hit die - Rolled ${result.data.hp_rolled} + ${conMod} CON`
+      )
     }
   }
 

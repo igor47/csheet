@@ -6,6 +6,7 @@ import {
   recoverOne as recoverOneWildShapeUse,
 } from "@src/db/char_wild_shape_uses"
 import type { HitDieType } from "@src/lib/dnd"
+import { restBlocker } from "@src/lib/dnd/deathSaves"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import {
@@ -93,6 +94,8 @@ export async function shortRest(
 
   // Stage 2: Custom validation
   const errors: Record<string, string> = {}
+  const blocker = restBlocker(char, "short")
+  if (blocker) errors.rest = blocker
 
   // Parse and validate hit dice
   const selectedDice: Array<{ index: number; die: HitDieType; roll?: number }> = []

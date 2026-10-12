@@ -10,6 +10,7 @@ import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { activateWildShape } from "./activateWildShape"
 import { type ComputedCharacter, computeCharacter } from "./computeCharacter"
+import { updateHitPoints } from "./updateHitPoints"
 
 describe("activateWildShape", () => {
   const testCtx = useTestApp()
@@ -83,6 +84,43 @@ describe("activateWildShape", () => {
         const char = await computeCharacter(testCtx.db, character.id)
         if (!char) throw new Error("Character not found")
         computedChar = char
+      })
+
+      describe("when the character is at 0 HP", () => {
+        beforeEach(async () => {
+          await updateHitPoints(testCtx.db, computedChar, {
+            action: "lose",
+            amount: String(computedChar.currentHP),
+          })
+          computedChar = (await computeCharacter(testCtx.db, character.id))!
+        })
+
+        test("refuses, since they're unconscious", async () => {
+          const cat = getBeasts("srd52").find((b) => b.name.toLowerCase() === "cat")!
+
+          const result = await activateWildShape(testCtx.db, computedChar, { beast_id: cat.id })
+
+          expect(result.complete).toBe(false)
+          if (result.complete) return
+          expect(result.errors._form).toContain("is at 0 HP and unconscious")
+          const after = await computeCharacter(testCtx.db, character.id)
+          expect(after?.wildShape?.ongoingTransformation).toBeNull()
+        })
+
+        test("refuses when they're dead", async () => {
+          await updateHitPoints(testCtx.db, computedChar, {
+            action: "lose",
+            amount: String(computedChar.maxHitPoints),
+          })
+          const dead = (await computeCharacter(testCtx.db, character.id))!
+          const cat = getBeasts("srd52").find((b) => b.name.toLowerCase() === "cat")!
+
+          const result = await activateWildShape(testCtx.db, dead, { beast_id: cat.id })
+
+          expect(result.complete).toBe(false)
+          if (result.complete) return
+          expect(result.errors._form).toContain("is dead")
+        })
       })
 
       test("succeeds with valid beast", async () => {

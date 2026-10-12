@@ -58,6 +58,15 @@ export async function activateWildShape(
     return { complete: false, errors, values: data }
   }
 
+  // Character is conscious; at 0 HP they're dying, stable (and unconscious) or dead
+  if (char.deathSaves) {
+    errors._form =
+      char.deathSaves.status === "dead"
+        ? `${char.name} is dead and can't use Wild Shape`
+        : `${char.name} is at 0 HP and unconscious, and can't use Wild Shape`
+    return { complete: false, errors, values: data }
+  }
+
   const { limits, usesAvailable, beasts, maxUses, unrecoveredCount } = char.wildShape
 
   // Validation 2: Beast exists in known/seen beasts

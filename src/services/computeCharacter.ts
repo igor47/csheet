@@ -1,6 +1,7 @@
 import { currentByCharacterId as getCurrentAbilities } from "@src/db/char_abilities"
 import { getCurrentSeenBeasts } from "@src/db/char_beasts_seen"
 import { type CurrentCoins, currentByCharacterId as getCurrentCoins } from "@src/db/char_coins"
+import { findSinceLastUp as findDeathSaveEvents } from "@src/db/char_death_saves"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { getHpDelta } from "@src/db/char_hp"
 import { findByCharacterId as getAllLevels, getCurrentLevels } from "@src/db/char_levels"
@@ -26,6 +27,7 @@ import {
   type SpellSlotsType,
 } from "@src/lib/dnd"
 import { type Beast, getBeastById } from "@src/lib/dnd/beasts"
+import { computeHitPoints, type DeathSaves } from "@src/lib/dnd/deathSaves"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import {
   getKnownFormsLimit,
@@ -99,7 +101,8 @@ export interface ComputedCharacter extends Character {
   initiative: number
   passivePerception: number
   maxHitPoints: number
-  currentHP: number
+  currentHP: number // never below 0
+  deathSaves: DeathSaves | null // Populated at 0 HP: dying, stable or dead
   hitDice: HitDieType[]
   availableHitDice: HitDieType[]
   spellSlots: SpellSlotsType
@@ -163,6 +166,7 @@ export async function computeCharacter(
   const currentSkills = await getCurrentSkills(db, characterId)
   const currentCoins = await getCurrentCoins(db, characterId)
   const hpDelta = await getHpDelta(db, characterId)
+  const deathSaveEvents = await findDeathSaveEvents(db, characterId)
   const hitDiceChanges = await findHitDiceChanges(db, characterId)
   const spellSlotChanges = await findSpellSlotChanges(db, characterId)
 
@@ -305,8 +309,8 @@ export async function computeCharacter(
   const conModifier = abilityScores.constitution.modifier
   maxHitPoints += conModifier * totalLevel
 
-  // Compute current HP
-  const currentHP = maxHitPoints + hpDelta
+  // Compute current HP, never below 0, and whether the character is down
+  const { currentHP, deathSaves } = computeHitPoints(deathSaveEvents, maxHitPoints + hpDelta)
 
   // Compute available hit dice by applying uses and restores
   const availableHitDice = [...hitDice]
@@ -561,6 +565,7 @@ export async function computeCharacter(
     passivePerception,
     maxHitPoints,
     currentHP,
+    deathSaves,
     hitDice,
     availableHitDice,
     spellSlots,

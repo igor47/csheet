@@ -3,6 +3,7 @@ import { create as createHPDb } from "@src/db/char_hp"
 import { create as createRestRecord } from "@src/db/char_rests"
 import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import { recoverAll as recoverAllWildShapeUses } from "@src/db/char_wild_shape_uses"
+import { restBlocker } from "@src/lib/dnd/deathSaves"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
@@ -46,8 +47,10 @@ export async function longRest(
     return { complete: false, values: data, errors: zodToFormErrors(checkD.error) }
   }
 
-  // Stage 2: Custom validation (none needed for long rest)
+  // Stage 2: Custom validation
   const errors: Record<string, string> = {}
+  const blocker = restBlocker(char, "long")
+  if (blocker) errors.rest = blocker
 
   // Stage 3: Early return for check mode
   if (checkD.data.is_check || Object.keys(errors).length > 0) {

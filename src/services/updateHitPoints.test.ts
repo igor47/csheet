@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import { findByCharacterId as findDeathSaveEvents } from "@src/db/char_death_saves"
 import { create as createCharHP } from "@src/db/char_hp"
 import { create as createTrait } from "@src/db/char_traits"
 import type { Character } from "@src/db/characters"
@@ -10,7 +11,7 @@ import { charWildShapeUseFactory } from "@src/test/factories/char_wild_shape_use
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
 import { type ComputedCharacter, computeCharacter } from "./computeCharacter"
-import { updateHitPoints } from "./updateHitPoints"
+import { formatUpdateHitPointsApproval, updateHitPoints } from "./updateHitPoints"
 
 describe("updateHitPoints", () => {
   const testCtx = useTestApp()
@@ -88,15 +89,31 @@ describe("updateHitPoints", () => {
       expect(result.result.newHP).toBe(damagedChar.currentHP + 5)
     })
 
-    test("prevents HP from going below 0", async () => {
+    test("stops HP at 0 and starts the character dying", async () => {
       const result = await updateHitPoints(testCtx.db, computedChar, {
         action: "lose",
-        amount: String(computedChar.currentHP + 10),
+        amount: String(computedChar.currentHP + 1),
       })
 
-      expect(result.complete).toBe(false)
-      if (result.complete) return
-      expect(result.errors.amount).toContain("would go below 0")
+      expect(result.complete).toBe(true)
+      if (!result.complete) return
+      expect(result.result.newHP).toBe(0)
+      expect(result.result.deathSaves).toEqual({ status: "dying", successes: 0, failures: 0 })
+      expect(result.result.instantDeath).toBeUndefined()
+    })
+
+    test("warns in the approval message what damage does at 0 HP", () => {
+      const hp = computedChar.currentHP
+      const max = computedChar.maxHitPoints
+      const format = (amount: number) =>
+        formatUpdateHitPointsApproval(
+          { action: "lose", amount, note: null, critical: false },
+          computedChar
+        )
+
+      expect(format(1)).toBe("Take 1 damage")
+      expect(format(hp)).toBe(`Take ${hp} damage (drops to 0 HP)`)
+      expect(format(hp + max)).toBe(`Take ${hp + max} damage (kills outright: massive damage)`)
     })
 
     test("prevents healing above max HP", async () => {
@@ -243,6 +260,39 @@ describe("updateHitPoints", () => {
       // Overflow should be clamped to character's current HP (5), not raw overflow (20)
       expect(result.result.overflowDamage).toBe(5)
       expect(result.result.newHP).toBe(0) // HP should be exactly 0, not negative
+    })
+
+    describe("when overflow damage reaches the character's HP", () => {
+      test("taking them to exactly 0 starts them dying", async () => {
+        const result = await updateHitPoints(testCtx.db, computedChar, {
+          action: "lose",
+          amount: String(wolfBeastHp + computedChar.currentHP),
+        })
+
+        expect(result.complete).toBe(true)
+        if (!result.complete) return
+        expect(result.result.newHP).toBe(0)
+        expect(result.result.deathSaves).toEqual({ status: "dying", successes: 0, failures: 0 })
+        const events = await findDeathSaveEvents(testCtx.db, character.id)
+        expect(events.map((event) => event.kind)).toEqual(["down"])
+        const after = (await computeCharacter(testCtx.db, character.id))!
+        expect(after.wildShape?.ongoingTransformation).toBeNull()
+        expect(after.deathSaves?.status).toBe("dying")
+      })
+
+      test("with their maximum to spare kills them outright", async () => {
+        const result = await updateHitPoints(testCtx.db, computedChar, {
+          action: "lose",
+          amount: String(wolfBeastHp + computedChar.currentHP + computedChar.maxHitPoints),
+        })
+
+        expect(result.complete).toBe(true)
+        if (!result.complete) return
+        expect(result.result.instantDeath).toBe(true)
+        expect(result.result.deathSaves?.status).toBe("dead")
+        const events = await findDeathSaveEvents(testCtx.db, character.id)
+        expect(events.map((event) => event.kind)).toEqual(["down", "dead"])
+      })
     })
   })
 })

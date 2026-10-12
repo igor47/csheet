@@ -18,6 +18,9 @@ CLAUDE.md
 .claude/
 pulumi/
 
+# Reed evals run locally against the API, never in the app
+evals/
+
 # data files
 database.db
 database.db-shm

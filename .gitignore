@@ -48,3 +48,6 @@ database.db-wal
 database.db-shm
 !migrations/*.sql
 !db/schema.sql
+
+# Reed eval results
+evals/results/

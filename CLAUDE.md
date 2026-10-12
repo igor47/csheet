@@ -522,3 +522,19 @@ Each test runs inside a PostgreSQL transaction that rolls back after completion,
 - **Make tests readable** - Tests should read like specifications
 
 See `src/routes/character.test.ts` for a comprehensive example.
+
+## Reed Evals
+
+`evals/` holds an eval suite for Reed, the chat assistant. Each case builds a fixture character, plays scripted player messages through the real chat code (`prepareChatRequest`, `executeChatRequest`, `advanceToolCalls`) against the live model, auto-approves every edit, and checks the character afterwards and Reed's reply. Trials commit their writes (a rolled-back transaction would give every row the same `CURRENT_TIMESTAMP`), so the runner only runs against the test database, which `mise run eval` recreates.
+
+```bash
+mise run eval                                       # all cases, 3 trials, default model
+mise run eval --model claude-haiku-5-5 --trials 5
+mise run eval --case spells-  --category rules      # filter by id substring or category
+```
+
+- It calls the Anthropic API, so it isn't part of `mise run test` or CI
+- Cases live in `evals/cases/`, grouped by category; checks in `evals/checks.ts`
+- `expect` decides pass/fail; `grounding` (did Reed look it up?) and link validity are reported separately
+- Results are saved as JSON in `evals/results/` (gitignored)
+- Base new cases on real failures, but keep player data out: paraphrase messages and rebuild the character with `makeCharacter`

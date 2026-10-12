@@ -83,3 +83,60 @@
     width: 0%;
   }
 }
+
+/* Rules reference: sticky sidebar with an independently scrolling TOC */
+@media (min-width: 768px) {
+  .rules-sidebar {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* the ruleset picker stays put; only the TOC list scrolls */
+  .rules-sidebar #rules-toc {
+    overflow-y: auto;
+    min-height: 0;
+  }
+}
+
+/* small screens: the opened TOC is a bounded panel above the content */
+@media (max-width: 767.98px) {
+  .rules-sidebar #rules-toc {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+  }
+}
+
+.rules-toc-list {
+  list-style: none;
+  padding-left: 0.75rem;
+  margin-bottom: 0;
+}
+
+#rules-toc > .rules-toc-list {
+  padding-left: 0;
+}
+
+.rules-toc-list summary {
+  cursor: pointer;
+}
+
+.rules-toc-link {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  color: var(--bs-body-color);
+  text-decoration: none;
+}
+
+.rules-toc-link:hover {
+  background-color: var(--bs-tertiary-bg);
+}
+
+.rules-toc-link.active {
+  background-color: var(--bs-primary);
+  color: #fff;
+}

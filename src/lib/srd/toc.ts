@@ -41,6 +41,14 @@ export const SRD_FILES: Record<RulesetId, string> = {
   [SRD52_ID]: "refdocs/SRD_CC_v5.2.1.md",
 }
 
+/** Attribution statements required by each SRD's CC-BY-4.0 license, verbatim. */
+export const SRD_ATTRIBUTIONS: Record<RulesetId, string> = {
+  [SRD51_ID]:
+    'This work includes material taken from the System Reference Document 5.1 ("SRD 5.1") by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.',
+  [SRD52_ID]:
+    'This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.',
+}
+
 const HEADING_RE = /^(#{1,6})\s+(.+?)\s*#*\s*$/
 
 /** Removes markdown backslash escapes, e.g. "Attack \[Action\]" -> "Attack [Action]" */

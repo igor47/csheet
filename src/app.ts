@@ -14,6 +14,7 @@ import { chatRoutes } from "./routes/chat"
 import { healthRoutes } from "./routes/health"
 import { indexRoutes } from "./routes/index"
 import { profileRoutes } from "./routes/profile"
+import { rulesRoutes } from "./routes/rules"
 import { spellsRoutes } from "./routes/spells"
 import { uploadsRoutes } from "./routes/uploads"
 import { webhookRoutes } from "./routes/webhooks"
@@ -74,6 +75,7 @@ export function createApp(db?: SQL) {
   app.route("/", authRoutes)
   app.route("/", spellsRoutes)
   app.route("/", beastsRoutes)
+  app.route("/", rulesRoutes)
 
   // Protected routes (auth required)
   const protectedRoutes = new Hono()

@@ -115,6 +115,10 @@ description = "Show app activity summary (--period <days> --prod)"
 run = "bun utils/backfill-resend-contacts.ts \"$@\""
 description = "Backfill all users to Resend contacts (--prod --dry-run)"
 
+[tasks."utils:backfill-proficiencies"]
+run = "bun utils/backfill-proficiencies.ts \"$@\""
+description = "Give characters from before proficiencies were tracked their default proficiencies (--prod)"
+
 [tasks."srd:sync"]
 run = "bun utils/sync-srd.ts"
 description = "Download vendored SRD markdown from your5e/5e-srd-markdown into refdocs/"

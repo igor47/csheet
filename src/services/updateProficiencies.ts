@@ -8,7 +8,9 @@ import {
   ProficiencyKinds,
 } from "@src/lib/dnd/proficiencies"
 import type { ServiceResult } from "@src/lib/serviceResult"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
+import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
 
 export interface ProficiencyRef {
@@ -178,4 +180,94 @@ export async function updateProficiencies(
     }
   }
   return { complete: true, result: { added: result.added, removed: result.removed } }
+}
+
+// ─── Reed tool ─────────────────────────────────────────────────────────────
+
+const ProficiencyRefSchema = z.object({
+  kind: ProficiencyKindSchema.describe("weapon, armor, tool, or language"),
+  name: z
+    .string()
+    .min(1)
+    .describe(
+      "Weapons: 'simple weapons', 'martial weapons', or one weapon like 'longsword'. Armor: 'light armor', 'medium armor', 'heavy armor', or 'shields'. Tools and languages by name, like \"thieves' tools\" or 'elvish'."
+    ),
+})
+
+export const UpdateProficienciesApiSchema = z.object({
+  add: z
+    .array(ProficiencyRefSchema)
+    .optional()
+    .default([])
+    .describe("Proficiencies or languages the character gains"),
+  remove: z
+    .array(ProficiencyRefSchema)
+    .optional()
+    .default([])
+    .describe("Proficiencies or languages the character loses"),
+  source: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Where the added proficiencies come from, e.g. 'Weapon Master feat'"),
+  note: z.string().nullable().optional().describe("Optional note for the history"),
+})
+
+export const updateProficienciesToolName = "update_proficiencies" as const
+export const updateProficienciesTool = {
+  description: `Add or remove the character's weapon, armor, tool, and language proficiencies.
+
+The character's current proficiencies are in character_status. The ones from their species, background, and classes (including the reduced set for multiclassing) are granted automatically, so use this for everything else: feats, training, DM rulings, and choices the rules leave to the player (a musical instrument, an extra language). Removing a granted proficiency is allowed, e.g. for a DM ruling.
+
+Weapon proficiency decides whether the proficiency bonus is added to attack rolls with a weapon; armor proficiency, whether the character can wear armor (or, in SRD 5.2, use a shield) without penalty.`,
+  inputSchema: UpdateProficienciesApiSchema,
+} satisfies ToolSpec
+
+/**
+ * Execute the update_proficiencies tool from the AI assistant
+ */
+export async function executeUpdateProficiencies(
+  db: SQL,
+  char: ComputedCharacter,
+  parameters: ToolInput<typeof updateProficienciesTool>,
+  isCheck?: boolean
+): Promise<UpdateProficienciesResult> {
+  const result = await changeProficiencies(
+    db,
+    char,
+    {
+      add: parameters.add,
+      remove: parameters.remove,
+      sourceDetail: parameters.source?.trim() || null,
+      note: parameters.note?.trim() || null,
+    },
+    !!isCheck
+  )
+
+  if (!result.complete) {
+    return { complete: false, values: {}, errors: result.errors }
+  }
+  return { complete: true, result: { added: result.added, removed: result.removed } }
+}
+
+/**
+ * Format approval message for update_proficiencies tool calls
+ */
+export function formatUpdateProficienciesApproval(
+  parameters: ToolInput<typeof updateProficienciesTool>,
+  char: ComputedCharacter
+): string {
+  const list = (refs: ProficiencyRef[]) =>
+    refs
+      .map((r) => formatProficiencyName(normalizeProficiencyName(r.kind, r.name, char.ruleset)))
+      .join(", ")
+
+  const parts: string[] = []
+  if (parameters.add.length > 0) parts.push(`Add proficiency in ${list(parameters.add)}`)
+  if (parameters.remove.length > 0) parts.push(`Remove proficiency in ${list(parameters.remove)}`)
+
+  let message = parts.join("; ") || "Change no proficiencies"
+  if (parameters.source) message += ` (from ${parameters.source})`
+  if (parameters.note) message += ` with note '${parameters.note}'`
+  return message
 }

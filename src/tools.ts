@@ -149,6 +149,12 @@ import {
   updateHitPointsToolName,
 } from "./services/updateHitPoints"
 import {
+  executeUpdateProficiencies,
+  formatUpdateProficienciesApproval,
+  updateProficienciesTool,
+  updateProficienciesToolName,
+} from "./services/updateProficiencies"
+import {
   executeUpdateSpellSlots,
   formatUpdateSpellSlotsApproval,
   updateSpellSlotsTool,
@@ -406,6 +412,12 @@ export const TOOLS: ToolRegistration[] = [
     tool: addTraitTool,
     executor: executeAddTrait,
     formatApprovalMessage: formatAddTraitApproval,
+  }),
+  registerTool({
+    name: updateProficienciesToolName,
+    tool: updateProficienciesTool,
+    executor: executeUpdateProficiencies,
+    formatApprovalMessage: formatUpdateProficienciesApproval,
   }),
 ]
 

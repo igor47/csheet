@@ -11,6 +11,7 @@ import {
 import type { User } from "@src/db/users"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { ulid } from "@src/lib/ids"
+import { executeCharacterStatus } from "@src/services/characterStatus"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { recordDeathSave } from "@src/services/deathSaves"
 import { advanceToolCalls, SKIPPED_TOOL_CALL_ERROR } from "@src/services/toolExecution"
@@ -426,5 +427,175 @@ describe("Reed's death save tools", () => {
       expect(char.currentHP).toBe(3)
       expect(char.deathSaves).toBeNull()
     })
+  })
+})
+
+describe("Reed's update_proficiencies tool", () => {
+  const testCtx = useTestApp()
+  const originalApiKey = config.anthropicApiKey
+  const CALL_ID = "toolu_prof"
+
+  beforeEach(() => {
+    ;(config as { anthropicApiKey: string }).anthropicApiKey = "test-key"
+  })
+
+  afterEach(() => {
+    ;(config as { anthropicApiKey: string }).anthropicApiKey = originalApiKey
+  })
+
+  let user: User
+  let character: Character
+  let chatId: string
+  let assistantMsg: ChatMessage
+
+  async function createProficiencyChat(parameters: Record<string, unknown>) {
+    chatId = ulid()
+    const base = {
+      character_id: character.id,
+      chat_id: chatId,
+      tool_calls: null,
+      tool_results: null,
+      error: null,
+      usage: null,
+    }
+    await createChatMessage(testCtx.db, { ...base, role: "system", content: "system prompt" })
+    await createChatMessage(testCtx.db, {
+      ...base,
+      role: "user",
+      content: "I took the Weapon Master feat",
+    })
+    assistantMsg = await createChatMessage(testCtx.db, {
+      ...base,
+      role: "assistant",
+      content: "Noted.",
+      tool_calls: [{ id: CALL_ID, name: "update_proficiencies", parameters }],
+      tool_results: { [CALL_ID]: null },
+    })
+  }
+
+  const approvePath = () => `/characters/${character.id}/chat/${chatId}/tool/${CALL_ID}/approve`
+
+  async function currentProficiencies() {
+    const char = await computeCharacter(testCtx.db, character.id)
+    return char!.proficiencies.map((p) => `${p.kind}:${p.name}`)
+  }
+
+  beforeEach(async () => {
+    user = await userFactory.create({}, testCtx.db)
+    character = await characterFactory.create(
+      { user_id: user.id, class: "wizard", level: 3, species: "human", ruleset: SRD51_ID },
+      testCtx.db
+    )
+  })
+
+  describe("adding weapons, the way a player might write them", () => {
+    beforeEach(async () => {
+      await createProficiencyChat({
+        add: [
+          { kind: "weapon", name: "Longswords" },
+          { kind: "weapon", name: "Crossbow, hand" },
+          { kind: "language", name: "Giant" },
+        ],
+        source: "Weapon Master feat",
+      })
+    })
+
+    test("shows what it will do in the approval card", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/characters/${character.id}/chat/${chatId}/load`,
+        { user }
+      )
+      const document = await parseHtml(response)
+      const card = getElements(document, "[id^='tool-']")[0]!
+      expect(card.textContent).toContain(
+        "Add proficiency in Longsword, Hand Crossbow, Giant (from Weapon Master feat)"
+      )
+    })
+
+    test("adds them once approved, and refreshes the panel", async () => {
+      const response = await makeRequest(testCtx.app, approvePath(), { user, method: "POST" })
+      expect(response.status).toBe(200)
+
+      expect(await currentProficiencies()).toEqual(
+        expect.arrayContaining(["weapon:longsword", "weapon:hand crossbow", "language:giant"])
+      )
+      const document = await parseHtml(response)
+      const panel = getElements(document, "#proficiencies-panel")[0]!
+      expect(panel.textContent).toContain("Hand Crossbow")
+    })
+  })
+
+  describe("removing a proficiency", () => {
+    beforeEach(async () => {
+      await createProficiencyChat({ remove: [{ kind: "weapon", name: "daggers" }] })
+    })
+
+    test("removes it once approved", async () => {
+      expect(await currentProficiencies()).toContain("weapon:dagger")
+      await makeRequest(testCtx.app, approvePath(), { user, method: "POST" })
+
+      expect(await currentProficiencies()).not.toContain("weapon:dagger")
+    })
+  })
+
+  describe("adding and removing the same proficiency", () => {
+    beforeEach(async () => {
+      await createProficiencyChat({
+        add: [{ kind: "weapon", name: "dagger" }],
+        remove: [{ kind: "weapon", name: "Daggers" }],
+      })
+    })
+
+    test("fails the pre-check as no change, before the player sees it", async () => {
+      const char = (await computeCharacter(testCtx.db, character.id))!
+      await advanceToolCalls(testCtx.db, char, assistantMsg.id)
+
+      const msg = await findById(testCtx.db, assistantMsg.id)
+      expect(msg?.tool_results?.[CALL_ID]).toEqual({
+        status: "failed",
+        error: expect.stringContaining("Add or remove at least one proficiency"),
+      })
+    })
+  })
+
+  describe("removing a proficiency the character doesn't have", () => {
+    beforeEach(async () => {
+      await createProficiencyChat({ remove: [{ kind: "armor", name: "heavy armor" }] })
+    })
+
+    test("fails before the player sees it, saying what the character has", async () => {
+      const char = (await computeCharacter(testCtx.db, character.id))!
+      await advanceToolCalls(testCtx.db, char, assistantMsg.id)
+
+      const msg = await findById(testCtx.db, assistantMsg.id)
+      expect(msg?.tool_results?.[CALL_ID]).toEqual({
+        status: "failed",
+        error: expect.stringContaining(
+          "Not proficient with Heavy Armor (current armor proficiencies: none)"
+        ),
+      })
+    })
+  })
+})
+
+describe("Reed's view of the character", () => {
+  const testCtx = useTestApp()
+
+  test("character_status includes proficiencies and weapon attacks", async () => {
+    const user = await userFactory.create({}, testCtx.db)
+    const character = await characterFactory.create(
+      { user_id: user.id, class: "fighter", level: 1, strength: 14 },
+      testCtx.db
+    )
+    const char = (await computeCharacter(testCtx.db, character.id))!
+    const result = await executeCharacterStatus(testCtx.db, char, {})
+
+    expect(result.complete).toBe(true)
+    if (!result.complete) return
+    expect(result.result.proficiencies).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "weapon", name: "martial weapons" })])
+    )
+    expect(result.result.weaponAttacks).toEqual([])
   })
 })

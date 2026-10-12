@@ -6,7 +6,7 @@ import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat } from "@src/services/computeChat"
 import { advanceToolCalls } from "@src/services/toolExecution"
 import { TOOL_DEFINITIONS } from "@src/tools"
-import { type LanguageModel, streamText } from "ai"
+import { streamText } from "ai"
 import type { SQL } from "bun"
 import { buildSystemPrompt } from "./prompts"
 
@@ -15,7 +15,16 @@ export interface ChatResponse {
 }
 
 type StreamChunk = { type: "text"; text: string }
+type ChatModel = ReturnType<typeof getChatModel>
 type StreamHandler = (chunk: StreamChunk) => Promise<void> | void
+
+/**
+ * Overrides for the model request; the evals use these to compare models and settings
+ */
+export interface ChatRequestOptions {
+  model?: ChatModel
+  maxOutputTokens?: number
+}
 
 /**
  * Prepare a chat request by saving user message
@@ -68,7 +77,8 @@ export async function executeChatRequest(
   db: SQL,
   character: ComputedCharacter,
   computedChat: ComputedChat,
-  onMessage?: StreamHandler
+  onMessage?: StreamHandler,
+  options: ChatRequestOptions = {}
 ): Promise<string> {
   // Only execute if the chat is ready to stream
   if (!computedChat.shouldStream) {
@@ -77,12 +87,12 @@ export async function executeChatRequest(
 
   // First try-catch: Prep phase (building request)
   let requestBody: Parameters<typeof streamText>[0]
-  let model: LanguageModel
+  let model: ChatModel
   try {
-    model = getChatModel()
+    model = options.model ?? getChatModel()
     requestBody = {
       model,
-      maxOutputTokens: 1024,
+      maxOutputTokens: options.maxOutputTokens ?? 1024,
       messages: computedChat.llmMessages,
       tools: TOOL_DEFINITIONS,
       onError: ({ error }: { error: unknown }) => {

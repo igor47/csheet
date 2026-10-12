@@ -1,6 +1,8 @@
 import { ModalContent } from "@src/components/ui/DetailModal"
+import { restBlocker } from "@src/lib/dnd/deathSaves"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
+import { RestBlockedNotice } from "./ui/RestBlockedNotice"
 
 export interface LongRestFormProps {
   character: ComputedCharacter
@@ -9,6 +11,26 @@ export interface LongRestFormProps {
 }
 
 export const LongRestForm = ({ character, values, errors }: LongRestFormProps) => {
+  const blocker = restBlocker(character, "long") || errors.rest
+  if (blocker) {
+    return (
+      <ModalContent title="Take a Long Rest">
+        <div class="modal-body">
+          <RestBlockedNotice character={character} rest="long" reason={blocker} />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Close
+          </button>
+          <button type="button" class="btn btn-primary" disabled>
+            <i class="bi bi-moon-stars me-2"></i>
+            Complete Long Rest
+          </button>
+        </div>
+      </ModalContent>
+    )
+  }
+
   // Calculate what will be restored
   // HP to be restored
   const hpLost = character.maxHitPoints - character.currentHP

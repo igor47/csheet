@@ -1,3 +1,5 @@
+import type { DeathSaves } from "@src/lib/dnd/deathSaves"
+import { DeathSavesDisplay } from "./DeathSavesDisplay"
 import { HitPointsBar } from "./HitPointsBar"
 
 interface HitPointsRowProps {
@@ -79,6 +81,9 @@ export interface HitPointsSectionProps {
   beastName?: string
   currentBeastHP?: number
   maxBeastHP?: number
+  // Set at 0 HP
+  deathSaves?: DeathSaves | null
+  deathSaveError?: string
 }
 
 export const HitPointsSection = ({
@@ -90,6 +95,8 @@ export const HitPointsSection = ({
   beastName,
   currentBeastHP = 0,
   maxBeastHP = 0,
+  deathSaves,
+  deathSaveError,
 }: HitPointsSectionProps) => {
   if (isTransformed) {
     return (
@@ -115,14 +122,24 @@ export const HitPointsSection = ({
   }
 
   return (
-    <HitPointsRow
-      label="Hit Points"
-      currentHP={currentHP}
-      maxHP={maxHP}
-      characterId={characterId}
-      showEditButton={true}
-      showHistoryButton={true}
-      isReadOnly={isReadOnly}
-    />
+    <>
+      <HitPointsRow
+        label="Hit Points"
+        currentHP={currentHP}
+        maxHP={maxHP}
+        characterId={characterId}
+        showEditButton={true}
+        showHistoryButton={true}
+        isReadOnly={isReadOnly}
+      />
+      {deathSaves && (
+        <DeathSavesDisplay
+          characterId={characterId}
+          deathSaves={deathSaves}
+          isReadOnly={isReadOnly}
+          error={deathSaveError}
+        />
+      )}
+    </>
   )
 }

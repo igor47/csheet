@@ -6,7 +6,7 @@ export interface HitPointsBarProps {
 }
 
 export const HitPointsBar = ({ currentHP, maxHitPoints }: HitPointsBarProps) => {
-  const hpPercent = (currentHP / maxHitPoints) * 100
+  const hpPercent = Math.max((currentHP / maxHitPoints) * 100, 0)
   const hpProgressCls = clsx("progress-bar", {
     "bg-success": hpPercent > 75,
     "bg-warning": hpPercent > 25 && hpPercent <= 75,
@@ -23,8 +23,14 @@ export const HitPointsBar = ({ currentHP, maxHitPoints }: HitPointsBarProps) => 
         aria-valuemin="0"
         aria-valuemax={maxHitPoints}
       >
-        {currentHP} / {maxHitPoints}
+        {hpPercent > 0 && `${currentHP} / ${maxHitPoints}`}
       </div>
+      {/* an empty bar has no room for the label, so show it on the track instead */}
+      {hpPercent <= 0 && (
+        <span class="w-100 text-center fw-bold text-danger align-self-center small">
+          {currentHP} / {maxHitPoints}
+        </span>
+      )}
     </div>
   )
 }

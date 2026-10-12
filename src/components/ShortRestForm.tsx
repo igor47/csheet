@@ -1,6 +1,8 @@
 import { ModalContent } from "@src/components/ui/DetailModal"
+import { restBlocker } from "@src/lib/dnd/deathSaves"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
+import { RestBlockedNotice } from "./ui/RestBlockedNotice"
 
 export interface ShortRestFormProps {
   character: ComputedCharacter
@@ -9,6 +11,26 @@ export interface ShortRestFormProps {
 }
 
 export const ShortRestForm = ({ character, values, errors }: ShortRestFormProps) => {
+  const blocker = restBlocker(character, "short") || errors.rest
+  if (blocker) {
+    return (
+      <ModalContent title="Take a Short Rest">
+        <div class="modal-body">
+          <RestBlockedNotice character={character} rest="short" reason={blocker} />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Close
+          </button>
+          <button type="button" class="btn btn-primary" disabled>
+            <i class="bi bi-cup-hot me-2"></i>
+            Complete Short Rest
+          </button>
+        </div>
+      </ModalContent>
+    )
+  }
+
   // Check if character is a Wizard (for Arcane Recovery)
   const wizardClass = character.classes.find((c) => c.class === "wizard")
   const hasArcaneRecovery = wizardClass && wizardClass.level >= 1

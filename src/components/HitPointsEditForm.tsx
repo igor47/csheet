@@ -1,4 +1,5 @@
 import { HitPointsBar } from "@src/components/ui/HitPointsBar"
+import type { DeathSaves } from "@src/lib/dnd/deathSaves"
 import { ignoreCheckEmptyErrors } from "@src/lib/formErrors"
 import clsx from "clsx"
 import { ModalForm, ModalFormSubmit } from "./ui/ModalForm"
@@ -12,6 +13,8 @@ export interface HitPointsEditFormProps {
   beastName?: string
   currentBeastHp?: number
   maxBeastHp?: number
+  // Set at 0 HP
+  deathSaves?: DeathSaves | null
   values?: Record<string, string>
   errors?: Record<string, string>
 }
@@ -24,6 +27,7 @@ export const HitPointsEditForm = ({
   beastName,
   currentBeastHp = 0,
   maxBeastHp = 0,
+  deathSaves = null,
   values = {},
   errors = {},
 }: HitPointsEditFormProps) => {
@@ -50,6 +54,25 @@ export const HitPointsEditForm = ({
     }
   }
 
+  const isDead = deathSaves?.status === "dead"
+  const atZero = !isTransformed && currentHP <= 0
+
+  // What the damage does to the character at or past 0 HP
+  let dyingPreview: string | null = null
+  if (!isTransformed && action === "lose" && amount > 0) {
+    const remaining = amount - Math.max(currentHP, 0)
+    if (remaining >= maxHitPoints) {
+      dyingPreview = "Massive damage: the character dies outright"
+    } else if (atZero) {
+      dyingPreview =
+        values?.critical === "on" || values?.critical === "true"
+          ? "Two death save failures (critical hit)"
+          : "One death save failure"
+    } else if (remaining >= 0) {
+      dyingPreview = "Drops to 0 HP: unconscious and dying"
+    }
+  }
+
   const showPreview = amount > 0 && !errors?.amount
   errors = ignoreCheckEmptyErrors(values, errors)
 
@@ -69,6 +92,21 @@ export const HitPointsEditForm = ({
               <i class="bi bi-info-circle me-2"></i>
               You are transformed into <strong>{beastName}</strong>. Damage will be applied to beast
               HP first.
+            </div>
+          )}
+
+          {isDead && (
+            <div class="alert alert-dark mb-3">
+              <i class="bi bi-heartbreak me-2"></i>
+              This character is dead, and can't regain hit points until restored to life.
+            </div>
+          )}
+          {atZero && !isDead && (
+            <div class="alert alert-danger mb-3">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              At 0 HP and {deathSaves?.status === "stable" ? "stable" : "dying"}. Healing brings the
+              character back; damage causes a death save failure, and damage of at least{" "}
+              {maxHitPoints} kills outright.
             </div>
           )}
 
@@ -116,7 +154,7 @@ export const HitPointsEditForm = ({
                 id="hitpoints-action-lose"
                 value="lose"
                 checked={action === "lose"}
-                disabled={isTransformed ? currentBeastHp <= 0 : currentHP <= 0}
+                disabled={isTransformed ? currentBeastHp <= 0 : isDead}
                 autocomplete="off"
               />
               <label class="btn btn-outline-danger" for="hitpoints-action-lose">
@@ -143,6 +181,22 @@ export const HitPointsEditForm = ({
             {errors?.amount && <div class="invalid-feedback d-block">{errors.amount}</div>}
           </div>
 
+          {/* Critical hits only matter at 0 HP, where they cause two death save failures */}
+          {atZero && !isDead && (
+            <div class="mb-3 form-check">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="hitpoints-critical"
+                name="critical"
+                checked={values?.critical === "on" || values?.critical === "true"}
+              />
+              <label class="form-check-label" for="hitpoints-critical">
+                Damage is from a critical hit (two death save failures)
+              </label>
+            </div>
+          )}
+
           {/* Preview */}
           {showPreview && (
             <div class="mb-3">
@@ -156,6 +210,11 @@ export const HitPointsEditForm = ({
                   amount > currentBeastHp &&
                   ` (${amount - currentBeastHp} overflow to character)`}
               </small>
+              {dyingPreview && (
+                <div class="small text-danger fw-bold" id="hitpoints-dying-preview">
+                  {dyingPreview}
+                </div>
+              )}
             </div>
           )}
 

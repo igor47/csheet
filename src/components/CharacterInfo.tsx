@@ -12,6 +12,8 @@ export interface CharacterInfoProps {
   character: ComputedCharacter
   swapOob?: boolean
   isReadOnly?: boolean
+  // Why the last death save couldn't be recorded, shown with the death saves
+  deathSaveError?: string
 }
 
 interface WieldedWeaponRowProps {
@@ -89,7 +91,12 @@ function formatBeastSpeed(speed: BeastSpeed): string {
   return parts.join(", ") || "0 ft."
 }
 
-export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: CharacterInfoProps) => {
+export const CharacterInfo = ({
+  character,
+  swapOob,
+  isReadOnly = false,
+  deathSaveError,
+}: CharacterInfoProps) => {
   // Wild Shape beast info
   const beast = character.wildShape?.currentBeast
   const ongoing = character.wildShape?.ongoingTransformation
@@ -325,6 +332,8 @@ export const CharacterInfo = ({ character, swapOob, isReadOnly = false }: Charac
               beastName={beast?.name}
               currentBeastHP={ongoing?.currentBeastHp}
               maxBeastHP={beast?.hitPoints}
+              deathSaves={character.deathSaves}
+              deathSaveError={deathSaveError}
             />
 
             {/* Hit Dice */}

@@ -58,6 +58,7 @@ import { getDb } from "@src/db"
 import { findByCharacterId as findAbilityChanges } from "@src/db/char_abilities"
 import { getBeastPrepHistory } from "@src/db/char_beasts_seen"
 import { findByCharacterId as findCoinChanges } from "@src/db/char_coins"
+import { findByCharacterId as findDeathSaveEvents } from "@src/db/char_death_saves"
 import { findByCharacterId as findHitDiceChanges } from "@src/db/char_hit_dice"
 import { findByCharacterId as findHPChanges } from "@src/db/char_hp"
 import { getCharItemHistory } from "@src/db/char_items"
@@ -104,6 +105,7 @@ import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
 import { createCharacter } from "@src/services/createCharacter"
 import { type CreateItemResult, createItem } from "@src/services/createItem"
 import { createItemEffect } from "@src/services/createItemEffect"
+import { recordDeathSave, restoreToLife } from "@src/services/deathSaves"
 import { deleteItemEffect } from "@src/services/deleteItemEffect"
 import { endWildShape } from "@src/services/endWildShape"
 import { importCharacter } from "@src/services/importCharacter"
@@ -309,6 +311,12 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
 
   const result = await updateHitPoints(getDb(c), char, body)
 
+  // the sheet's own buttons (like a stable character's Regain 1 HP) have no form to show errors in
+  if (!result.complete && body.from_sheet === "true") {
+    const error = Object.values(result.errors)[0]
+    return c.html(<CharacterInfo character={char} swapOob={true} deathSaveError={error} />)
+  }
+
   if (!result.complete) {
     const isTransformed = !!char.wildShape?.currentBeast
     const beast = char.wildShape?.currentBeast
@@ -323,6 +331,7 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
         beastName={beast?.name}
         currentBeastHp={ongoing?.currentBeastHp}
         maxBeastHp={beast?.hitPoints}
+        deathSaves={char.deathSaves}
         values={result.values}
         errors={result.errors}
       />
@@ -347,6 +356,46 @@ characterRoutes.post("/characters/:id/edit/hitpoints", async (c) => {
     )
   }
 
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
+})
+
+// POST /characters/:id/deathsaves - Record a death saving throw, or being stabilized
+characterRoutes.post("/characters/:id/deathsaves", async (c) => {
+  const characterId = c.req.param("id") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await recordDeathSave(getDb(c), char, body)
+
+  if (!result.complete) {
+    const error = Object.values(result.errors)[0]
+    return c.html(<CharacterInfo character={char} swapOob={true} deathSaveError={error} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
+})
+
+// POST /characters/:id/revive - Bring a dead character back with 1 HP
+characterRoutes.post("/characters/:id/revive", async (c) => {
+  const characterId = c.req.param("id") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await restoreToLife(getDb(c), char, body)
+
+  if (!result.complete) {
+    const error = Object.values(result.errors)[0]
+    return c.html(<CharacterInfo character={char} swapOob={true} deathSaveError={error} />)
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
   return c.html(<CharacterInfo character={updatedChar} swapOob={true} />)
 })
 
@@ -1291,6 +1340,7 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
         beastName={beast?.name}
         currentBeastHp={ongoing?.currentBeastHp}
         maxBeastHp={beast?.hitPoints}
+        deathSaves={char.deathSaves}
         values={values}
       />
     )
@@ -1623,6 +1673,7 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     const hpChanges = await findHPChanges(getDb(c), characterId)
     const levels = await findByCharacterId(getDb(c), characterId)
     const wildShapeUses = await findWildShapeHistory(getDb(c), characterId)
+    const deathSaveEvents = await findDeathSaveEvents(getDb(c), characterId)
 
     // Merge into unified events
     const events: HPHistoryEvent[] = []
@@ -1630,6 +1681,7 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     // Add HP delta events
     for (const hp of hpChanges) {
       events.push({
+        id: hp.id,
         date: hp.created_at,
         type: "delta",
         delta: hp.delta,
@@ -1640,6 +1692,7 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     // Add level-up events (each grants max HP)
     for (const level of levels) {
       events.push({
+        id: level.id,
         date: level.created_at,
         type: "level",
         class: level.class,
@@ -1693,8 +1746,25 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
       }
     }
 
-    // Sort by date descending (most recent first)
-    events.sort((a, b) => b.date.getTime() - a.date.getTime())
+    // Add dropping to 0 HP, death saves, and dying; coming back up shows as the healing
+    for (const event of deathSaveEvents) {
+      if (event.kind === "up") continue
+      events.push({
+        id: event.id,
+        date: event.created_at,
+        type: "deathsave",
+        deathSaveKind: event.kind,
+        amount: event.amount,
+        roll: event.roll ?? undefined,
+        note: event.note || undefined,
+      })
+    }
+
+    // Sort by date descending (most recent first); rows written together share a date, so
+    // fall back to their ids, which are in the order they were written
+    events.sort(
+      (a, b) => b.date.getTime() - a.date.getTime() || (b.id ?? "").localeCompare(a.id ?? "")
+    )
 
     return c.html(<HitPointsHistory events={events} />)
   }

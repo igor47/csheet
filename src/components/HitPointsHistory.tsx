@@ -1,8 +1,10 @@
+import type { DeathSaveKind } from "@src/db/char_death_saves"
 import { toTitleCase } from "@src/lib/strings"
 
 export type HPHistoryEvent = {
+  id?: string
   date: Date
-  type: "delta" | "level" | "wildshape_start" | "wildshape_end" | "wildshape_damage"
+  type: "delta" | "level" | "wildshape_start" | "wildshape_end" | "wildshape_damage" | "deathsave"
   // For delta events:
   delta?: number
   note?: string
@@ -15,6 +17,30 @@ export type HPHistoryEvent = {
   beastMaxHp?: number
   beastFinalHp?: number
   damageAbsorbed?: number
+  // For death save events:
+  deathSaveKind?: DeathSaveKind
+  amount?: number
+  roll?: number
+}
+
+function describeDeathSave(event: HPHistoryEvent): string {
+  const rolled = event.roll ? `Rolled ${event.roll} on a death save: ` : "Death save "
+  switch (event.deathSaveKind) {
+    case "down":
+      return "Dropped to 0 HP, dying"
+    case "success":
+      return event.roll === 20 ? `${rolled}regained 1 HP` : `${rolled}success`
+    case "failure":
+      return `${rolled}${event.amount === 2 ? "two failures" : "failure"}`
+    case "stable":
+      return "Stabilized"
+    case "dead":
+      return "Died"
+    case "up":
+      return "Back up from 0 HP"
+    default:
+      return "Death save"
+  }
 }
 
 export interface HitPointsHistoryProps {
@@ -66,6 +92,13 @@ export const HitPointsHistory = ({ events }: HitPointsHistoryProps) => {
                           <>
                             <i class="bi bi-x-circle me-1"></i>
                             Ended {event.beastName} ({event.beastFinalHp}/{event.beastMaxHp} HP)
+                          </>
+                        )
+                      case "deathsave":
+                        return (
+                          <>
+                            <i class="bi bi-heart-pulse me-1"></i>
+                            {describeDeathSave(event)}
                           </>
                         )
                       case "wildshape_damage":

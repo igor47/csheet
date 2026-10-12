@@ -4,6 +4,7 @@ import { getCurrentLevels } from "@src/db/char_levels"
 import type { Character } from "@src/db/characters"
 import { type ChatMessage, create as createChatMessage, findById } from "@src/db/chat_messages"
 import type { User } from "@src/db/users"
+import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { ulid } from "@src/lib/ids"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
@@ -32,7 +33,7 @@ describe("resolving Reed's tool calls", () => {
   let assistantMsg: ChatMessage
 
   // A level 2 fighter, with Reed asking for levels 3 (picking a subclass) and 4, in that order
-  async function createLevelUpChat(secondRoll: number) {
+  async function createLevelUpChat({ subclass = "champion", secondRoll = 5 } = {}) {
     chatId = ulid()
     const base = {
       character_id: character.id,
@@ -52,7 +53,7 @@ describe("resolving Reed's tool calls", () => {
         {
           id: FIRST_ID,
           name: "add_level",
-          parameters: { class: "fighter", subclass: "champion", hit_die_roll: 6 },
+          parameters: { class: "fighter", subclass, hit_die_roll: 6 },
         },
         {
           id: SECOND_ID,
@@ -71,14 +72,14 @@ describe("resolving Reed's tool calls", () => {
   beforeEach(async () => {
     user = await userFactory.create({}, testCtx.db)
     character = await characterFactory.create(
-      { user_id: user.id, class: "fighter", level: 2 },
+      { user_id: user.id, class: "fighter", level: 2, ruleset: SRD51_ID },
       testCtx.db
     )
   })
 
   describe("with two level-ups that depend on each other", () => {
     beforeEach(async () => {
-      await createLevelUpChat(5)
+      await createLevelUpChat()
     })
 
     test("keeps the tool calls in the order Reed made them", async () => {
@@ -150,7 +151,7 @@ describe("resolving Reed's tool calls", () => {
   describe("when the second call is invalid", () => {
     beforeEach(async () => {
       // a fighter's hit die is a d10
-      await createLevelUpChat(99)
+      await createLevelUpChat({ secondRoll: 99 })
     })
 
     test("checks it only once the first call is approved", async () => {
@@ -183,6 +184,40 @@ describe("resolving Reed's tool calls", () => {
       const after = await findById(testCtx.db, assistantMsg.id)
       expect(after?.tool_results?.[FIRST_ID]).toEqual({ status: "rejected" })
       expect(after?.tool_results?.[SECOND_ID]?.status).toBe("failed")
+    })
+  })
+
+  describe("when Reed writes the subclass name differently", () => {
+    beforeEach(async () => {
+      await createLevelUpChat({ subclass: "The Champion" })
+    })
+
+    test("stores the subclass under its name in the ruleset", async () => {
+      await makeRequest(testCtx.app, toolPath(FIRST_ID, "approve"), { user, method: "POST" })
+
+      expect(await getCurrentLevels(testCtx.db, character.id)).toEqual([
+        expect.objectContaining({ class: "fighter", level: 3, subclass: "champion" }),
+      ])
+    })
+  })
+
+  describe("when Reed asks for a subclass that isn't available", () => {
+    beforeEach(async () => {
+      await createLevelUpChat({ subclass: "Rune Knight" })
+    })
+
+    test("fails, listing the subclasses that are available", async () => {
+      await makeRequest(testCtx.app, toolPath(FIRST_ID, "approve"), { user, method: "POST" })
+
+      const msg = await findById(testCtx.db, assistantMsg.id)
+      const result = msg?.tool_results?.[FIRST_ID]
+      expect(result?.status).toBe("failed")
+      expect(result?.status === "failed" && result.error).toContain(
+        '"Rune Knight" is not a subclass available to this character. Available fighter subclasses: champion, battle master, eldritch knight'
+      )
+      expect(await getCurrentLevels(testCtx.db, character.id)).toEqual([
+        expect.objectContaining({ class: "fighter", level: 2 }),
+      ])
     })
   })
 })

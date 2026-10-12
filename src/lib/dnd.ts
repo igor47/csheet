@@ -495,6 +495,33 @@ export function getTraits(ruleset: Ruleset, forWhom: ForWhom): TraitWithSource[]
   }
 }
 
+function normalizeSubclassName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/^the /, "")
+}
+
+/**
+ * Find one of a class's subclasses by name, the way a player or the LLM might write it
+ * Ignores case and punctuation, and accepts part of the name on word boundaries, such as
+ * "Berserker" for "path of the berserker" or "Life" for "life domain"
+ * Returns undefined if nothing matches, or if a partial name matches more than one subclass
+ */
+export function findSubclass(classDef: ClassDef, name: string): Subclass | undefined {
+  const wanted = normalizeSubclassName(name)
+  if (!wanted) return undefined
+
+  const exact = classDef.subclasses.find((sc) => normalizeSubclassName(sc.name) === wanted)
+  if (exact) return exact
+
+  const partial = classDef.subclasses.filter((sc) =>
+    ` ${normalizeSubclassName(sc.name)} `.includes(` ${wanted} `)
+  )
+  return partial.length === 1 ? partial[0] : undefined
+}
+
 /**
  * D&D 5E Coin Conversion Utilities
  * 1pp = 1000cp, 1gp = 100cp, 1ep = 50cp, 1sp = 10cp

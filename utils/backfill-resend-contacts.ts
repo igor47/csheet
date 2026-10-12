@@ -1,9 +1,9 @@
+import { parseArgs } from "node:util"
 import { config } from "@src/config"
 import { findAll } from "@src/db/users"
 import { findSegmentIdByName } from "@src/lib/resend"
 import { syncContact } from "@src/services/syncContact"
 import { SQL } from "bun"
-import { parseArgs } from "node:util"
 
 // -- CLI args --
 

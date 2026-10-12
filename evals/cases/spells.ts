@@ -1,3 +1,4 @@
+import { SRD52_ID } from "@src/lib/dnd/srd52"
 import {
   called,
   check,
@@ -86,16 +87,16 @@ export const spellCases: EvalCase[] = [
     id: "spells-druid-name-variants",
     category: "spells",
     description:
-      "Players use names that differ from the catalog ('thorn whip' is 'Whip of Thorns', 'enlarge reduce' is 'Enlarge/Reduce'). In prod Reed gave up on Thorn Whip.",
-    setup: (db, user) => makeCharacter(db, user, { class: "druid", level: 4, wisdom: 16 }),
+      "Players use names that differ from the catalog ('enlarge reduce' is 'Enlarge/Reduce'). In prod one failed lookup stopped the rest. 5.2, since Enlarge/Reduce isn't a druid spell in 5.1; prod's other miss, Thorn Whip, isn't in either SRD.",
+    setup: (db, user) =>
+      makeCharacter(db, user, { ruleset: SRD52_ID, class: "druid", level: 4, wisdom: 16 }),
     turns: [
-      "My prepared cantrips are produce flame, shillelagh, and thorn whip.",
+      "My prepared cantrips are produce flame and shillelagh.",
       "And my prepared spells should be enlarge reduce, barkskin, cure wounds and thunderwave.",
     ],
     expect: ({ after }) => [
       isPrepared(after, "srd_produce_flame"),
       isPrepared(after, "srd_shillelagh"),
-      isPrepared(after, "srd_whip_of_thorns"),
       isPrepared(after, "srd_enlarge_reduce"),
       isPrepared(after, "srd_barkskin"),
       isPrepared(after, "srd_cure_wounds"),

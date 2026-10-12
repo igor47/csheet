@@ -35,7 +35,7 @@ async function getCharacter(db: SQL, id: string) {
 
 /**
  * Send one user message and play the conversation out the way the chat routes do, with the
- * player approving every edit Reed proposes. Returns the chat id
+ * player approving every edit Reed proposes
  */
 async function runTurn(
   db: SQL,
@@ -43,7 +43,7 @@ async function runTurn(
   chatId: string | null,
   message: string,
   options: ChatRequestOptions
-): Promise<string> {
+): Promise<{ chatId: string; capped: boolean }> {
   const char = await getCharacter(db, characterId)
   const prepared = await prepareChatRequest(db, char, message, chatId)
 
@@ -61,7 +61,7 @@ async function runTurn(
     }
 
     if (chat.shouldStream) {
-      if (modelCalls >= MAX_MODEL_CALLS_PER_TURN) break
+      if (modelCalls >= MAX_MODEL_CALLS_PER_TURN) return { chatId: prepared.chatId, capped: true }
       modelCalls++
       await executeChatRequest(db, await getCharacter(db, characterId), chat, undefined, options)
       continue
@@ -76,7 +76,7 @@ async function runTurn(
     break
   }
 
-  return prepared.chatId
+  return { chatId: prepared.chatId, capped: false }
 }
 
 /** Read the chat back out of the database, split into user turns */
@@ -87,6 +87,7 @@ async function readTranscript(db: SQL, chatId: string): Promise<Transcript> {
     inputTokens: 0,
     outputTokens: 0,
     cachedInputTokens: 0,
+    cacheWriteInputTokens: 0,
     modelCalls: 0,
   }
 
@@ -95,17 +96,19 @@ async function readTranscript(db: SQL, chatId: string): Promise<Transcript> {
   for (const msg of messages) {
     if (msg.role === "user") {
       if (turn) turn.reply = replies.splice(0).join("\n\n")
-      turn = { user: msg.content, reply: "", calls: [], errors: 0 }
+      turn = { user: msg.content, reply: "", calls: [], errors: 0, capped: false }
       transcript.turns.push(turn)
       continue
     }
     if (msg.role !== "assistant" || !turn) continue
 
+    // a stream error still called the model, but has no usage recorded
+    if (msg.usage || msg.error?.type === "stream") transcript.modelCalls++
     if (msg.usage) {
-      transcript.modelCalls++
       transcript.inputTokens += msg.usage.inputTokens
       transcript.outputTokens += msg.usage.outputTokens
       transcript.cachedInputTokens += msg.usage.cachedInputTokens ?? 0
+      transcript.cacheWriteInputTokens += msg.usage.cacheWriteInputTokens ?? 0
     }
     if (msg.error) turn.errors++
     if (msg.content) replies.push(msg.content)
@@ -147,11 +150,17 @@ export async function runTrial(
     const before = await getCharacter(db, characterId)
 
     let chatId: string | null = null
+    const capped: boolean[] = []
     for (const message of evalCase.turns) {
-      chatId = await runTurn(db, characterId, chatId, message, options)
+      const turn = await runTurn(db, characterId, chatId, message, options)
+      chatId = turn.chatId
+      capped.push(turn.capped)
     }
 
     const transcript = await readTranscript(db, chatId!)
+    transcript.turns.forEach((t, i) => {
+      t.capped = capped[i] ?? false
+    })
     const outcome: Outcome = {
       before,
       after: await getCharacter(db, characterId),
@@ -160,7 +169,14 @@ export async function runTrial(
       calls: transcript.turns.flatMap((t) => t.calls),
     }
 
-    const checks = await evalCase.expect(outcome)
+    // a Reed stuck in a loop fails even if the sheet happens to come out right
+    const checks = [
+      ...(await evalCase.expect(outcome)),
+      check(
+        `finished each turn within ${MAX_MODEL_CALLS_PER_TURN} model calls`,
+        !transcript.turns.some((t) => t.capped)
+      ),
+    ]
     const grounding = (await evalCase.grounding?.(outcome)) ?? []
     return {
       caseId: evalCase.id,
@@ -180,12 +196,13 @@ export async function runTrial(
       pass: false,
       checks: [check("trial ran", false, message)],
       grounding: [],
-      links: check("links point at real rules sections", true),
+      links: check("links point at real rules sections", false, "trial crashed"),
       transcript: {
         turns: [],
         inputTokens: 0,
         outputTokens: 0,
         cachedInputTokens: 0,
+        cacheWriteInputTokens: 0,
         modelCalls: 0,
       },
       crash: message,

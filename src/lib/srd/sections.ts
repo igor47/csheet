@@ -48,3 +48,26 @@ export function isEmptySection(toc: SrdToc, entry: TocEntry): boolean {
     toc.lines.slice(entry.lineStart, entry.lineEnd).join("").trim() === ""
   )
 }
+
+/**
+ * Skips over entries that only wrap a same-titled child, returning the child.
+ *
+ * SRD 5.2.1 groups monsters under a `##` heading even when the group has just
+ * one monster (`## Aboleth` > `### Aboleth`), so the wrapper's own page is empty.
+ */
+export function resolvePage(toc: SrdToc, entry: TocEntry): TocEntry {
+  const only = entry.children.length === 1 ? entry.children[0]! : undefined
+  if (only && only.title === entry.title && readSection(toc, entry).markdown === "") {
+    return resolvePage(toc, only)
+  }
+  return entry
+}
+
+/** The entries above `entry` in the TOC, outermost first. */
+export function ancestors(toc: SrdToc, entry: TocEntry): TocEntry[] {
+  const segments = entry.id.split("/")
+  return segments
+    .slice(0, -1)
+    .map((_, i) => toc.byId.get(segments.slice(0, i + 1).join("/")))
+    .filter((e): e is TocEntry => e !== undefined)
+}

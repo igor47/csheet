@@ -10,8 +10,9 @@ docker-compose.yml
 # linter settings
 biome.json
 
-# documentation
-refdocs/
+# documentation (the SRD markdown is read at runtime)
+refdocs/*.pdf
+refdocs/README.md
 README.md
 CLAUDE.md
 .claude/

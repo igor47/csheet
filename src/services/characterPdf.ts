@@ -1,4 +1,9 @@
 import { Abilities, type AbilityType, Skills, type SkillType } from "@src/lib/dnd"
+import {
+  formatProficiencyName,
+  ProficiencyKindLabels,
+  ProficiencyKinds,
+} from "@src/lib/dnd/proficiencies"
 import { spells as allSpells } from "@src/lib/dnd/spells"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib"
@@ -610,7 +615,7 @@ function drawWeaponsTable(
   drawTabbedBox(page, x, y, w, h, "Weapons", fonts)
   const innerX = x + 8
   const innerW = w - 16
-  // Column widths — Atk is left as a write-in line (we don't precompute it).
+  // Column widths
   const nameW = innerW * 0.34
   const atkW = innerW * 0.16
   const dmgW = innerW * 0.3
@@ -632,12 +637,18 @@ function drawWeaponsTable(
   drawLine(page, innerX, yy - 3, innerX + innerW, yy - 3, { thickness: THIN_W })
   yy -= 12
 
-  const rows: Array<{ name: string; dmg: string; notes: string }> = []
+  const rows: Array<{ name: string; atk: string | null; dmg: string; notes: string }> = []
   for (const it of char.equippedItems.filter((it) => it.wielded)) {
+    const attack = char.weaponAttacks.find((a) => a.itemId === it.id)
+    const notes = [
+      attack && !attack.proficient ? "not proficient" : "",
+      it.mastery ? titleCase(it.mastery) : "",
+    ].filter(Boolean)
     rows.push({
       name: it.name,
-      dmg: it.humanReadableDamage.join(", ") || "—",
-      notes: it.mastery ? titleCase(it.mastery) : "",
+      atk: attack ? fmtMod(attack.attackBonus) : null,
+      dmg: (attack ? attack.damage : it.humanReadableDamage).join(", ") || "—",
+      notes: notes.join(", "),
     })
   }
 
@@ -645,8 +656,14 @@ function drawWeaponsTable(
   const visibleRows = rows.slice(0, maxRows)
   for (const row of visibleRows) {
     drawText(page, ellipsize(fonts.regular, 9, row.name, nameW - 4), innerX, yy, { size: 9 })
-    // Atk: write-in underline rather than a value
-    drawLine(page, innerX + nameW, yy - 3, innerX + nameW + atkW - 6, yy - 3, { thickness: THIN_W })
+    if (row.atk) {
+      drawText(page, row.atk, innerX + nameW, yy, { size: 9, font: fonts.bold })
+    } else {
+      // not a weapon: leave a write-in line
+      drawLine(page, innerX + nameW, yy - 3, innerX + nameW + atkW - 6, yy - 3, {
+        thickness: THIN_W,
+      })
+    }
     drawText(page, ellipsize(fonts.regular, 9, row.dmg, dmgW - 4), innerX + nameW + atkW, yy, {
       size: 9,
     })
@@ -897,6 +914,38 @@ function drawFeaturesBox(
     drawText(page, sourceTag, ix, iy, { size: 7, font: fonts.bold, color: MUTED })
     drawText(page, ellipsize(fonts.regular, 9, t.name, colW - 12), ix + 10, iy, { size: 9 })
   })
+}
+
+function drawProficienciesBox(
+  page: PDFPage,
+  char: ComputedCharacter,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fonts: Fonts
+): void {
+  drawTabbedBox(page, x, y, w, h, "Proficiencies & Languages", fonts)
+  const innerX = x + 8
+  const innerW = w - 16
+  const size = 8
+  const lineH = 10
+
+  let yy = y + h - 13
+  for (const kind of ProficiencyKinds) {
+    const names = char.proficiencies
+      .filter((p) => p.kind === kind)
+      .map((p) => formatProficiencyName(p.name))
+    const label = `${ProficiencyKindLabels[kind]}:`
+    const labelW = fonts.bold.widthOfTextAtSize(label, size) + 4
+    const lines = wrapLines(fonts.regular, size, names.join(", ") || "—", innerW - labelW)
+    for (const [i, line] of lines.entries()) {
+      if (yy < y + 4) return
+      if (i === 0) drawText(page, label, innerX, yy, { size, font: fonts.bold, color: MUTED })
+      drawText(page, line, innerX + labelW, yy, { size })
+      yy -= lineH
+    }
+  }
 }
 
 function drawEquipmentBox(
@@ -1203,6 +1252,12 @@ function drawPage1(
       label: "Features & Traits",
       preferredH: 96,
       draw: (x, y, w, h) => drawFeaturesBox(page, char, x, y, w, h, fonts),
+    },
+    {
+      key: "proficiencies",
+      label: "Proficiencies & Languages",
+      preferredH: 52,
+      draw: (x, y, w, h) => drawProficienciesBox(page, char, x, y, w, h, fonts),
     },
     {
       key: "equipment",

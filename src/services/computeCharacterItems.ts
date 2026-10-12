@@ -25,6 +25,9 @@ export interface EquippedComputedItem {
   finesse: boolean
   mastery: WeaponMasteryType | null
   martial: boolean
+  light: boolean
+  heavy: boolean
+  two_handed: boolean
   created_by: string
   created_at: Date
   updated_at: Date
@@ -170,11 +173,14 @@ export async function computeCharacterItems(
     })
 
     // Parse damage with proper date handling
-    // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
-    const damage: ItemDamage[] = row.damage.map((d: any) => ({
-      ...d,
-      created_at: new Date(d.created_at),
-    }))
+    const damage: ItemDamage[] = row.damage
+      // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
+      .map((d: any) => ({
+        ...d,
+        created_at: new Date(d.created_at),
+      }))
+      // json_agg(DISTINCT ...) has no order; keep the damage in the order it was added
+      .sort((a: ItemDamage, b: ItemDamage) => a.id.localeCompare(b.id))
 
     // Compute human-readable damage strings
     const humanReadableDamage: string[] = damage.map((d) => {
@@ -215,6 +221,9 @@ export async function computeCharacterItems(
       finesse: row.finesse,
       mastery: row.mastery,
       martial: row.martial,
+      light: row.light,
+      heavy: row.heavy,
+      two_handed: row.two_handed,
       created_by: row.created_by,
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),

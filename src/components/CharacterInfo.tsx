@@ -1,7 +1,8 @@
 import type { BeastSpeed } from "@src/lib/dnd/beasts"
 import { getEffectTooltip, hasEffect } from "@src/lib/effectTooltip"
-import type { ComputedCharacter } from "@src/services/computeCharacter"
+import type { ComputedCharacter, WeaponAttack } from "@src/services/computeCharacter"
 import type { EquippedComputedItem } from "@src/services/computeCharacterItems"
+import clsx from "clsx"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { BeastActionsDisplay } from "./ui/BeastActionsDisplay"
 import { HitDiceDisplay } from "./ui/HitDiceDisplay"
@@ -18,14 +19,42 @@ export interface CharacterInfoProps {
 
 interface WieldedWeaponRowProps {
   item: EquippedComputedItem
+  attack?: WeaponAttack
   characterId: string
   isReadOnly?: boolean
 }
 
-const WieldedWeaponRow = ({ item, characterId, isReadOnly = false }: WieldedWeaponRowProps) => {
-  // Use pre-computed human-readable damage
-  const damageDisplay =
-    item.humanReadableDamage.length > 0 ? item.humanReadableDamage.join(", ") : null
+const fmtBonus = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+
+const AttackBadge = ({ attack }: { attack: WeaponAttack }) => {
+  const breakdown = attack.attackBonusParts.join(", ")
+  const title = attack.proficient
+    ? `Proficient. To hit: ${breakdown}`
+    : `Not proficient, so no proficiency bonus. To hit: ${breakdown}`
+  return (
+    <span
+      class={clsx("badge text-nowrap", attack.proficient ? "text-bg-info" : "text-bg-warning")}
+      title={title}
+      data-attack-bonus={attack.attackBonus}
+      data-proficient={attack.proficient ? "true" : "false"}
+    >
+      <i class={clsx("bi me-1", attack.proficient ? "bi-circle-fill" : "bi-circle")}></i>
+      {fmtBonus(attack.attackBonus)} to hit
+      {!attack.proficient && <span class="visually-hidden"> (not proficient)</span>}
+    </span>
+  )
+}
+
+const WieldedWeaponRow = ({
+  item,
+  attack,
+  characterId,
+  isReadOnly = false,
+}: WieldedWeaponRowProps) => {
+  // the damage's parts, spelled out, so a flat bonus that already includes the ability modifier
+  // (entered before the sheet added it) is easy to spot
+  const damage = attack ? attack.damageBreakdown : item.humanReadableDamage
+  const damageDisplay = damage.length > 0 ? damage.join(", ") : null
 
   return (
     <div class="d-flex align-items-center justify-content-between gap-2">
@@ -44,6 +73,7 @@ const WieldedWeaponRow = ({ item, characterId, isReadOnly = false }: WieldedWeap
         {damageDisplay && <span class="text-muted small d-md-none">({damageDisplay})</span>}
       </div>
       <div class="d-flex align-items-center gap-2">
+        {attack && <AttackBadge attack={attack} />}
         {damageDisplay && (
           <span class="text-muted small d-none d-md-inline">({damageDisplay})</span>
         )}
@@ -268,10 +298,19 @@ export const CharacterInfo = ({
                 <LabeledValue
                   label="Armor Class"
                   value={displayAC}
-                  hasEffect={!isTransformed && hasEffect("ac", character.affectedAttributes)}
+                  hasEffect={
+                    !isTransformed &&
+                    (hasEffect("ac", character.affectedAttributes) ||
+                      character.armorClassNotes.length > 0)
+                  }
                   effectTooltip={
                     !isTransformed
-                      ? getEffectTooltip("ac", character.affectedAttributes) || undefined
+                      ? [
+                          getEffectTooltip("ac", character.affectedAttributes),
+                          ...character.armorClassNotes,
+                        ]
+                          .filter(Boolean)
+                          .join("\n") || undefined
                       : undefined
                   }
                   fromBeast={isTransformed}
@@ -295,6 +334,22 @@ export const CharacterInfo = ({
               </div>
             </div>
 
+            {/* Armor the character isn't trained to wear */}
+            {!isTransformed && character.armorWarnings.length > 0 && (
+              <div
+                class="alert alert-warning py-1 px-2 mt-2 mb-0 small"
+                role="alert"
+                id="armor-proficiency-warning"
+              >
+                {character.armorWarnings.map((warning) => (
+                  <div>
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    {warning}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Beast Actions or Weapons in Hand */}
             {beast ? (
               <BeastActionsDisplay actions={beast.actions} beastName={beast.name} />
@@ -311,6 +366,7 @@ export const CharacterInfo = ({
                         {wieldedWeapons.map((weapon) => (
                           <WieldedWeaponRow
                             item={weapon}
+                            attack={character.weaponAttacks.find((a) => a.itemId === weapon.id)}
                             characterId={character.id}
                             isReadOnly={isReadOnly}
                           />

@@ -15,6 +15,7 @@ import { type CharTrait, findByCharacterId as findTraits } from "@src/db/char_tr
 import { findUnrecovered as findUnrecoveredWildShapeUses } from "@src/db/char_wild_shape_uses"
 import { type CharacterAvatar, findByCharacterId as findAvatars } from "@src/db/character_avatars"
 import { type Character, findById } from "@src/db/characters"
+import type { ItemDamage } from "@src/db/item_damage"
 import {
   Abilities,
   type AbilityType,
@@ -32,7 +33,15 @@ import {
 } from "@src/lib/dnd"
 import { type Beast, getBeastById } from "@src/lib/dnd/beasts"
 import { computeHitPoints, type DeathSaves } from "@src/lib/dnd/deathSaves"
-import { currentProficiencies } from "@src/lib/dnd/proficiencies"
+import {
+  currentProficiencies,
+  formatProficiencyName,
+  identifyWeapon,
+  isMonkWeapon,
+  isProficientWithWeapon,
+  requiredArmorProficiency,
+} from "@src/lib/dnd/proficiencies"
+import type { RulesetId } from "@src/lib/dnd/rulesets"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import {
   getKnownFormsLimit,
@@ -65,6 +74,24 @@ export interface SkillScore {
   modifier: number
   proficiency: ProficiencyLevel
   ability: AbilityType
+}
+
+export interface WeaponAttack {
+  itemId: string
+  name: string
+  wielded: boolean
+  /** The standard weapon the item is, e.g. "longsword"; null for custom weapons */
+  baseWeapon: string | null
+  proficient: boolean
+  ability: "strength" | "dexterity"
+  /** Total bonus to hit: ability modifier, proficiency bonus if proficient, and item effects */
+  attackBonus: number
+  /** How the attack bonus adds up, e.g. ["STR +3", "proficiency +2", "Ring of Aim +1"] */
+  attackBonusParts: string[]
+  /** Damage with the ability modifier and item effects added, e.g. "1d8 +3 slashing" */
+  damage: string[]
+  /** How each damage adds up, e.g. "1d8 + 3 STR + 1 bonus slashing" */
+  damageBreakdown: string[]
 }
 
 export interface ItemEffectInfo {
@@ -118,6 +145,11 @@ export interface ComputedCharacter extends Character {
   proficiencies: CurrentProficiency[]
   coins: CurrentCoins | null
   equippedItems: EquippedComputedItem[]
+  weaponAttacks: WeaponAttack[]
+  /** Penalties for wearing armor or wielding a shield the character isn't proficient with */
+  armorWarnings: string[]
+  /** Caveats on the armor class: an untrained shield that adds nothing, untrained armor */
+  armorClassNotes: string[]
   affectedAttributes: Record<string, ItemEffectInfo[]>
   avatars: CharacterAvatarWithUrl[]
   wildShape: WildShapeInfo | null // Populated if character can use Wild Shape
@@ -157,6 +189,115 @@ function computeSkillModifier(
       return abilityModifier + proficiencyBonus
     case "expert":
       return abilityModifier + proficiencyBonus * 2
+  }
+}
+
+const fmtBonus = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+const fmtTerm = (n: number) => (n >= 0 ? `+ ${n}` : `- ${-n}`)
+
+// Items whose "attack" and "damage" effects also count for weapon attacks: things worn on the
+// body, like a ring or bracers. A wand's or staff's +attack is for spell attacks, and potions,
+// scrolls, and gear aren't held while attacking, so their effects don't count
+const WEAPON_BOOSTING_CATEGORIES = ["jewelry", "clothing", "armor"]
+
+const PHYSICAL_DAMAGE: string[] = ["bludgeoning", "piercing", "slashing"]
+
+/**
+ * The attack bonus and damage of a weapon
+ * Melee weapons use STR, ranged weapons DEX, and finesse weapons (and a monk's Martial Arts
+ * weapons) the better of the two
+ * Item effects on "attack" and "damage" count when they're active and come from this weapon or
+ * from a worn item (a ring, say), so one weapon's bonus doesn't leak to another
+ * The ability modifier and damage effects add to the weapon's main damage (and its two-handed
+ * version), not to extra damage like a flame tongue's fire
+ */
+function computeWeaponAttack(
+  item: EquippedComputedItem,
+  ruleset: RulesetId,
+  isMonk: boolean,
+  weaponProficiencies: string[],
+  abilityScores: Record<AbilityType, AbilityScore>,
+  proficiencyBonus: number,
+  activeEffects: { effect: ItemEffect; item: EquippedComputedItem }[]
+): WeaponAttack {
+  const weapon = identifyWeapon(ruleset, item)
+  const effects = activeEffects.filter(
+    (e) => e.item.id === item.id || WEAPON_BOOSTING_CATEGORIES.includes(e.item.category)
+  )
+
+  const proficient =
+    isProficientWithWeapon(weaponProficiencies, weapon, item.name) ||
+    effects.some((e) => e.effect.target === "attack" && e.effect.op === "proficiency")
+
+  const str = abilityScores.strength.modifier
+  const dex = abilityScores.dexterity.modifier
+  let ability: WeaponAttack["ability"] = weapon.ranged ? "dexterity" : "strength"
+  if (weapon.finesse || item.finesse || (isMonk && isMonkWeapon(ruleset, weapon))) {
+    ability = dex > str ? "dexterity" : "strength"
+  }
+  const abilityMod = ability === "dexterity" ? dex : str
+  const abilityAbbr = ability.slice(0, 3).toUpperCase()
+
+  const attackBonusParts = [`${abilityAbbr} ${fmtBonus(abilityMod)}`]
+  let attackBonus = abilityMod
+  if (proficient) {
+    attackBonus += proficiencyBonus
+    attackBonusParts.push(`proficiency ${fmtBonus(proficiencyBonus)}`)
+  }
+
+  const damageEffects: { name: string; value: number }[] = []
+  for (const { effect, item: source } of effects) {
+    if (effect.op !== "add" || effect.value === null) continue
+    if (effect.target === "attack") {
+      attackBonus += effect.value
+      attackBonusParts.push(`${source.name} ${fmtBonus(effect.value)}`)
+    } else if (effect.target === "damage") {
+      damageEffects.push({ name: source.name, value: effect.value })
+    }
+  }
+
+  // the main damage is the first one-handed damage; versatile damage is its two-handed version
+  // the main damage is the weapon's own physical damage (not a rider like a flame tongue's fire),
+  // one-handed if it has that; versatile damage of the same type is its two-handed version
+  const physical = (d: ItemDamage) => PHYSICAL_DAMAGE.includes(d.type)
+  const primary =
+    item.damage.find((d) => !d.versatile && physical(d)) ??
+    item.damage.find((d) => !d.versatile) ??
+    item.damage.find(physical) ??
+    item.damage[0]
+  const damage: string[] = []
+  const damageBreakdown: string[] = []
+  for (const d of item.damage) {
+    const dice = `${d.dice.length}d${d.dice[0]}`
+    const terms: { value: number; label: string }[] = []
+    if (d === primary || (d.versatile && d.type === primary?.type)) {
+      terms.push({ value: abilityMod, label: abilityAbbr })
+      for (const e of damageEffects) terms.push({ value: e.value, label: `from ${e.name}` })
+    }
+    if (d.flat_bonus) terms.push({ value: d.flat_bonus, label: "bonus" })
+
+    const total = terms.reduce((sum, t) => sum + t.value, 0)
+    const twoHanded = d.versatile ? " (2-handed)" : ""
+    damage.push(`${dice}${total !== 0 ? ` ${fmtBonus(total)}` : ""} ${d.type}${twoHanded}`)
+    damageBreakdown.push(
+      `${dice}${terms
+        .filter((t) => t.value !== 0)
+        .map((t) => ` ${fmtTerm(t.value)} ${t.label}`)
+        .join("")} ${d.type}${twoHanded}`
+    )
+  }
+
+  return {
+    itemId: item.id,
+    name: item.name,
+    wielded: item.wielded,
+    baseWeapon: weapon.baseWeapon,
+    proficient,
+    ability,
+    attackBonus,
+    attackBonusParts,
+    damage,
+    damageBreakdown,
   }
 }
 
@@ -305,6 +446,12 @@ export async function computeCharacter(
   const hitDice: HitDieType[] = []
 
   const allLevels = await getAllLevels(db, characterId)
+
+  // Weapon, armor, tool, and language proficiencies, from their history
+  const proficiencies = currentProficiencies(await findProficiencyChanges(db, characterId))
+  const armorProficiencies = new Set(
+    proficiencies.filter((p) => p.kind === "armor").map((p) => p.name)
+  )
   for (const level of allLevels) {
     const classDef = ruleset.classes[level.class]
     hitDice.push(classDef.hitDie)
@@ -360,7 +507,14 @@ export async function computeCharacter(
 
   // Check for wielded shield
   const wieldedShield = equippedItems.find((item) => item.category === "shield" && item.wielded)
-  if (wieldedShield && wieldedShield.armor_modifier !== null) {
+  // SRD 5.2: a shield only adds AC with shield training; SRD 5.1 counts it, with the
+  // untrained-armor penalties
+  const shieldUntrained =
+    !!wieldedShield && SRD52_ID === character.ruleset && !armorProficiencies.has("shields")
+  const armorClassNotes: string[] = []
+  if (wieldedShield && shieldUntrained) {
+    armorClassNotes.push(`${wieldedShield.name} adds no AC without shield training`)
+  } else if (wieldedShield && wieldedShield.armor_modifier !== null) {
     armorClass += wieldedShield.armor_modifier
   }
 
@@ -474,9 +628,6 @@ export async function computeCharacter(
   // Fetch all traits for this character
   const traits = await findTraits(db, characterId)
 
-  // Weapon, armor, tool, and language proficiencies, from their history
-  const proficiencies = currentProficiencies(await findProficiencyChanges(db, characterId))
-
   // Check if character has Wild Shape and compute wildShape info if so
   let wildShape: WildShapeInfo | null = null
   const druidClass = classes.find((c) => c.class === "druid")
@@ -521,7 +672,9 @@ export async function computeCharacter(
   }
 
   /// IGOR: FIX
-  for (const { effect } of activeEffects) {
+  for (const { effect, item } of activeEffects) {
+    // an untrained shield gives no AC in SRD 5.2, magic included
+    if (effect.target === "ac" && shieldUntrained && item.id === wieldedShield?.id) continue
     if (effect.target === "ac" && effect.value !== null) {
       // Armor class effect
       if (effect.op === "add") {
@@ -550,6 +703,36 @@ export async function computeCharacter(
       } else if (effect.op === "set") {
         passivePerception = effect.value
       }
+    }
+  }
+
+  const weaponProficiencies = proficiencies.filter((p) => p.kind === "weapon").map((p) => p.name)
+  const weaponAttacks = equippedItems
+    .filter((item) => item.category === "weapon")
+    .map((item) =>
+      computeWeaponAttack(
+        item,
+        character.ruleset,
+        classes.some((c) => c.class === "monk"),
+        weaponProficiencies,
+        abilityScores,
+        proficiencyBonus,
+        activeEffects
+      )
+    )
+
+  const armorWarnings: string[] = []
+  for (const item of [wornArmor, wieldedShield]) {
+    const required = item && requiredArmorProficiency(item)
+    if (!item || !required || armorProficiencies.has(required)) continue
+    const what = `${item.name} (${formatProficiencyName(required)})`
+    if (item === wieldedShield && shieldUntrained) {
+      armorWarnings.push(`No training with ${what}: it adds no AC.`)
+    } else {
+      const warning = `Not proficient with ${what}: disadvantage on Strength and Dexterity checks, saves, and attacks, and no spellcasting.`
+      armorWarnings.push(warning)
+      // the AC still counts it, but say so where the AC is shown too
+      armorClassNotes.push(warning)
     }
   }
 
@@ -585,6 +768,9 @@ export async function computeCharacter(
     proficiencies,
     coins: currentCoins,
     equippedItems,
+    weaponAttacks,
+    armorWarnings,
+    armorClassNotes,
     affectedAttributes,
     avatars: avatarsWithUrls,
     wildShape,

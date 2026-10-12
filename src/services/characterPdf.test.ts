@@ -5,6 +5,7 @@ import type { User } from "@src/db/users"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
+import { itemFactory } from "@src/test/factories/item"
 import { userFactory } from "@src/test/factories/user"
 import { decodePDFRawStream, PDFDocument, PDFRawStream } from "pdf-lib"
 import { generateCampaignPdf, generateCharacterPdf } from "./characterPdf"
@@ -278,6 +279,38 @@ describe("generateCharacterPdf", () => {
       expect(await pdfContainsText(bytes, "EQUIPMENT")).toBe(true)
       expect(await pdfContainsText(bytes, "Coins:")).toBe(true)
       expect(await pdfContainsText(bytes, "GP")).toBe(true)
+    })
+
+    test("renders a Proficiencies & Languages box", async () => {
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      expect(await pdfContainsText(bytes, "PROFICIENCIES & LANGUAGES")).toBe(true)
+      expect(await pdfContainsText(bytes, "Simple Weapons")).toBe(true)
+      expect(await pdfContainsText(bytes, "Common")).toBe(true)
+    })
+
+    test("fills in the attack bonus and damage of weapons in hand", async () => {
+      await itemFactory.create(
+        {
+          character_id: dbChar.id,
+          user_id: user.id,
+          name: "Quarterstaff",
+          category: "weapon",
+          wielded: true,
+          damage: [{ dice: [6], type: "bludgeoning" }],
+        },
+        testCtx.db
+      )
+      const computed = await computeCharacter(testCtx.db, dbChar.id)
+      if (!computed) throw new Error("computeCharacter returned null")
+
+      const bytes = await generateCharacterPdf(computed)
+
+      // STR 8 is -1 to damage; the attack bonus (+1) is too short to search for
+      expect(await pdfContainsText(bytes, "1d6 -1 bludgeoning")).toBe(true)
     })
 
     test("renders the species (lineage) when a lineage is set", async () => {

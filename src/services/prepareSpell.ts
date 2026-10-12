@@ -3,7 +3,7 @@ import { ClassNames, ClassNamesSchema } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -188,12 +188,12 @@ export async function prepareSpell(
 
 // Vercel AI SDK tool definition
 export const prepareSpellToolName = "prepare_spell" as const
-export const prepareSpellTool = tool({
+export const prepareSpellTool = {
   description: `Prepare a spell in a slot, or swap an existing prepared spell. Requires spell_id - use lookup_spell first to get it. For classes that prepare spells (like Clerics, Druids, Paladins), this changes which spells are available to cast. For Wizards, non-cantrip spells must be in the spellbook before they can be prepared.`,
   inputSchema: PrepareSpellApiSchema.omit({ note: true }).extend({
     note: z.string().optional().describe("Optional note about why this spell is being prepared"),
   }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the prepare_spell tool from AI assistant
@@ -202,8 +202,7 @@ export const prepareSpellTool = tool({
 export async function executePrepareSpell(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof prepareSpellTool>,
   isCheck?: boolean
 ) {
   // Convert parameters to string format for service
@@ -223,8 +222,7 @@ export async function executePrepareSpell(
  * Format approval message for prepare_spell tool calls
  */
 export function formatPrepareSpellApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof prepareSpellTool>,
   _char: ComputedCharacter
 ): string {
   const { class: className, spell_id, spell_type, current_spell_id, note } = parameters

@@ -1,7 +1,7 @@
 import { create as createTrait, TraitSourceSchema } from "@src/db/char_traits"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -96,10 +96,10 @@ export async function addTrait(
 
 // Vercel AI SDK tool definition
 export const addTraitToolName = "add_trait" as const
-export const addTraitTool = tool({
+export const addTraitTool = {
   description: `Add a trait, feature, or feat to the character. This can be used for custom traits, feats gained, or features from magic items.`,
   inputSchema: AddTraitApiSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute the add_trait tool from AI assistant
@@ -107,8 +107,7 @@ export const addTraitTool = tool({
 export async function executeAddTrait(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof addTraitTool>,
   isCheck?: boolean
 ) {
   const data: Record<string, string> = {
@@ -128,8 +127,7 @@ export async function executeAddTrait(
  * Format approval message for add_trait tool calls
  */
 export function formatAddTraitApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof addTraitTool>,
   _char: ComputedCharacter
 ): string {
   const { name, source, source_detail, note } = parameters

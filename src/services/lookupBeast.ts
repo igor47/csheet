@@ -1,7 +1,7 @@
 import { type Beast, getBeasts } from "@src/lib/dnd/beasts"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -20,11 +20,11 @@ export const lookupBeastToolName = "lookup_beast" as const
  * Vercel AI SDK tool definition for beast lookup
  * This is a read-only informational tool that doesn't modify character state
  */
-export const lookupBeastTool = tool({
+export const lookupBeastTool = {
   description:
-    "Look up a beast by name to get its ID and stat block. Use this FIRST whenever a beast is mentioned by name, before using see_beast. Returns the beast's ID, CR, HP, AC, speed, abilities, attacks, and traits.",
+    "Look up a beast by name to get its ID and stat block. Use this FIRST whenever a beast is mentioned by name, before using add_beast. Returns the beast's ID, CR, HP, AC, speed, abilities, attacks, and traits.",
   inputSchema: LookupBeastApiSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute beast lookup
@@ -33,8 +33,7 @@ export const lookupBeastTool = tool({
 export async function executeLookupBeast(
   _db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof lookupBeastTool>,
   _isCheck?: boolean
 ): Promise<ServiceResult<Beast>> {
   const parsed = LookupBeastApiSchema.safeParse(parameters)

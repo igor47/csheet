@@ -4,7 +4,7 @@ import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -175,23 +175,23 @@ export async function updateHitDice(
 
 // Vercel AI SDK tool definitions
 export const useHitDieToolName = "use_hit_die" as const
-export const useHitDieTool = tool({
+export const useHitDieTool = {
   description: `Spend a hit die during a short rest to regain HP. The character rolls the hit die and regains that much HP (plus Constitution modifier). Ask the user to roll the die and provide the result.`,
   inputSchema: UpdateHitDiceApiSchema.omit({ action: true, is_check: true }).required({
     die_value: true,
     hp_rolled: true,
   }),
-})
+} satisfies ToolSpec
 
 export const restoreHitDieToolName = "restore_hit_die" as const
-export const restoreHitDieTool = tool({
+export const restoreHitDieTool = {
   description: `Restore a spent hit die. This can happen from features like the Durable feat or certain class abilities. Long rests automatically restore half of spent hit dice.`,
   inputSchema: UpdateHitDiceApiSchema.omit({
     action: true,
     hp_rolled: true,
     is_check: true,
   }).required({ die_value: true }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the use_hit_die tool from AI assistant
@@ -199,8 +199,7 @@ export const restoreHitDieTool = tool({
 export async function executeUseHitDie(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof useHitDieTool>,
   isCheck?: boolean
 ) {
   const data: Record<string, string> = {
@@ -220,8 +219,7 @@ export async function executeUseHitDie(
 export async function executeRestoreHitDie(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof restoreHitDieTool>,
   isCheck?: boolean
 ) {
   const data: Record<string, string> = {
@@ -238,8 +236,7 @@ export async function executeRestoreHitDie(
  * Format approval message for use_hit_die tool calls
  */
 export function formatUseHitDieApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof useHitDieTool>,
   _char: ComputedCharacter
 ): string {
   const { die_value, hp_rolled, note } = parameters
@@ -257,8 +254,7 @@ export function formatUseHitDieApproval(
  * Format approval message for restore_hit_die tool calls
  */
 export function formatRestoreHitDieApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof restoreHitDieTool>,
   _char: ComputedCharacter
 ): string {
   const { die_value, note } = parameters

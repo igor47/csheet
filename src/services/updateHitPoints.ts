@@ -3,7 +3,7 @@ import { endTransformation, updateBeastHp } from "@src/db/char_wild_shape_uses"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -24,7 +24,7 @@ export const UpdateHitPointsApiSchema = z.object({
 
 // Vercel AI SDK tool definition
 export const updateHitPointsToolName = "update_hit_points" as const
-export const updateHitPointsTool = tool({
+export const updateHitPointsTool = {
   description: `Update the character's hit points. Used when the character takes damage or receives healing.
 
 Specify the action ("restore" for healing, "lose" for damage) and the amount of hit points to change.
@@ -37,7 +37,7 @@ Examples:
 
 The system will prevent healing above max HP or reducing below 0 HP.`,
   inputSchema: UpdateHitPointsApiSchema.omit({ is_check: true }),
-})
+} satisfies ToolSpec
 
 export interface UpdateHitPointsSuccess {
   newHP: number
@@ -208,8 +208,7 @@ export async function updateHitPoints(
 export async function executeUpdateHitPoints(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof updateHitPointsTool>,
   isCheck?: boolean
 ) {
   // Convert parameters to string format for service
@@ -227,8 +226,7 @@ export async function executeUpdateHitPoints(
  * Format approval message for update_hit_points tool calls
  */
 export function formatUpdateHitPointsApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof updateHitPointsTool>,
   _char: ComputedCharacter
 ): string {
   const { action, amount, note } = parameters

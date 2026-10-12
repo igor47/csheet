@@ -2,7 +2,7 @@ import { create as createSpellSlotDb } from "@src/db/char_spell_slots"
 import type { SpellSlotsType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -153,10 +153,10 @@ export async function updateSpellSlots(
 
 // Vercel AI SDK tool definition
 export const updateSpellSlotsToolName = "update_spell_slots" as const
-export const updateSpellSlotsTool = tool({
+export const updateSpellSlotsTool = {
   description: `Manually use or restore a spell slot. This is useful for features that restore spell slots (like Arcane Recovery) or consume them for non-spell purposes. For casting spells, use the cast_spell tool instead.`,
   inputSchema: UpdateSpellSlotsApiSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute the update_spell_slots tool from AI assistant
@@ -165,8 +165,7 @@ export const updateSpellSlotsTool = tool({
 export async function executeUpdateSpellSlots(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof updateSpellSlotsTool>,
   isCheck?: boolean
 ) {
   // Convert parameters to string format for service
@@ -184,8 +183,7 @@ export async function executeUpdateSpellSlots(
  * Format approval message for update_spell_slots tool calls
  */
 export function formatUpdateSpellSlotsApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof updateSpellSlotsTool>,
   _char: ComputedCharacter
 ): string {
   const { action, slot_level, note } = parameters

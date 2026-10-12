@@ -2,7 +2,7 @@ import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import { searchRules } from "@src/lib/srd/search"
 import { rulesHref } from "@src/lib/srd/sections"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -18,11 +18,11 @@ export const SearchRulesApiSchema = z.object({
 
 export const searchRulesToolName = "search_rules" as const
 
-export const searchRulesTool = tool({
+export const searchRulesTool = {
   description:
     "Search the System Reference Document (the official open D&D rules) for the character's ruleset. Use this before answering any rules question instead of relying on memory. Returns the best-matching sections, each with an id, its location in the rules, a short excerpt, and a link. Then call read_rule with the id of the section that answers the question.",
   inputSchema: SearchRulesApiSchema,
-})
+} satisfies ToolSpec
 
 export interface SearchRulesResult {
   ruleset: string
@@ -32,8 +32,7 @@ export interface SearchRulesResult {
 export async function executeSearchRules(
   _db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof searchRulesTool>,
   _isCheck?: boolean
 ): Promise<ServiceResult<SearchRulesResult>> {
   const parsed = SearchRulesApiSchema.safeParse(parameters)

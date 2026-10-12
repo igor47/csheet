@@ -3,7 +3,7 @@ import { getBeastById } from "@src/lib/dnd/beasts"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -116,7 +116,7 @@ export async function endWildShape(
 // Vercel AI SDK tool definition
 export const endWildShapeToolName = "end_wild_shape" as const
 
-export const endWildShapeTool = tool({
+export const endWildShapeTool = {
   description: `End the current Wild Shape transformation and return to normal form.
 
 A druid can end Wild Shape at any time. Common reasons:
@@ -127,7 +127,7 @@ A druid can end Wild Shape at any time. Common reasons:
 
 Returns the duration of the transformation.`,
   inputSchema: EndWildShapeApiSchema.omit({ is_check: true }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the end_wild_shape tool from AI assistant
@@ -136,8 +136,7 @@ Returns the duration of the transformation.`,
 export async function executeEndWildShape(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof endWildShapeTool>,
   isCheck?: boolean
 ): Promise<ServiceResult<EndWildShapeSummary>> {
   // Convert parameters to string format for service
@@ -153,7 +152,7 @@ export async function executeEndWildShape(
  * Format approval message for end_wild_shape tool calls
  */
 export function formatEndWildShapeApproval(
-  _parameters: Record<string, unknown>,
+  _parameters: ToolInput<typeof endWildShapeTool>,
   _char: ComputedCharacter
 ): string {
   return "End Wild Shape transformation"

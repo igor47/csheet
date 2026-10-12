@@ -1,5 +1,5 @@
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -22,11 +22,11 @@ export type CharacterStatusResult = Omit<ComputedCharacter, "traits"> & {
  * Vercel AI SDK tool definition for character status lookup
  * This is a read-only informational tool that returns current character state
  */
-export const characterStatusTool = tool({
+export const characterStatusTool = {
   description:
     "Get the current character status including all computed stats, resources, and abilities. Use this whenever you need to reference ability scores, skills, combat stats (HP/AC/Initiative), resources (coins, spell slots, hit dice), equipment, or spellcasting information.",
   inputSchema: z.object({}),
-})
+} satisfies ToolSpec
 
 /**
  * Execute character status lookup
@@ -35,8 +35,7 @@ export const characterStatusTool = tool({
 export async function executeCharacterStatus(
   _db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  _parameters: Record<string, any>,
+  _parameters: ToolInput<typeof characterStatusTool>,
   _isCheck?: boolean
 ): Promise<ServiceResult<CharacterStatusResult>> {
   // Compute spell slots summary for easier LLM consumption

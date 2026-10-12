@@ -12,8 +12,17 @@ import { useTestApp } from "@src/test/app"
 import { charBeastSeenFactory } from "@src/test/factories/char_beasts_seen"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
+import type { SQL } from "bun"
 import { type ComputedCharacter, computeCharacter } from "./computeCharacter"
-import { executePrepBeast } from "./prepBeast"
+import { prepBeast } from "./prepBeast"
+
+// call the service as the add_beast tool does
+const executePrepBeast = (
+  db: SQL,
+  char: ComputedCharacter,
+  parameters: Record<string, string>,
+  isCheck?: boolean
+) => prepBeast(db, char, { ...parameters, is_check: isCheck ? "true" : "false" })
 
 describe("prepBeast", () => {
   const testCtx = useTestApp()

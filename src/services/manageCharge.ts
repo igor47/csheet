@@ -2,7 +2,7 @@ import { create as createChargeDb, getCurrentCharges } from "@src/db/item_charge
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import { type ToolInput, type ToolSpec, toFormData } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -103,10 +103,10 @@ export async function manageCharge(
 
 // Vercel AI SDK tool definition
 export const manageChargeToolName = "manage_item_charge" as const
-export const manageChargeTool = tool({
+export const manageChargeTool = {
   description: `Manage charges on a charged item (wands, staffs, ammunition, etc.). Use action="use" to consume charges or action="add" to restore charges. The item must have enough charges available when using. Many magical items regain charges at dawn or after a rest.`,
   inputSchema: ManageChargeApiSchema.omit({ override: true, is_check: true }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the manage_item_charge tool from AI assistant
@@ -114,8 +114,7 @@ export const manageChargeTool = tool({
 export async function executeManageCharge(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof manageChargeTool>,
   isCheck?: boolean
 ) {
   // Find the item in character's inventory
@@ -125,7 +124,7 @@ export async function executeManageCharge(
   if (!item) {
     return {
       complete: false as const,
-      values: parameters,
+      values: toFormData(parameters),
       errors: { item_id: "Item not found in character's inventory" },
     }
   }
@@ -146,8 +145,7 @@ export async function executeManageCharge(
  * Format approval message for manage_item_charge tool calls
  */
 export function formatManageChargeApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof manageChargeTool>,
   char: ComputedCharacter
 ): string {
   const { item_id, action, amount = 1, note } = parameters

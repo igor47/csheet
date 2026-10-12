@@ -20,7 +20,7 @@ import {
   OptionalString,
 } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import { type ToolInput, type ToolSpec, toFormData } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -109,7 +109,7 @@ const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
       z
         .number({
           error: (iss) =>
-            iss === undefined ? "Normal range is required" : "Must be a valid number",
+            iss.input == null ? "Normal range is required" : "Must be a valid number",
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })
@@ -117,7 +117,7 @@ const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
     long_range: NumberField(
       z
         .number({
-          error: (iss) => (iss === undefined ? "Long range is required" : "Must be a valid number"),
+          error: (iss) => (iss.input == null ? "Long range is required" : "Must be a valid number"),
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })
@@ -129,7 +129,7 @@ const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
       z
         .number({
           error: (iss) =>
-            iss === undefined ? "Normal range is required" : "Must be a valid number",
+            iss.input == null ? "Normal range is required" : "Must be a valid number",
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })
@@ -137,7 +137,7 @@ const WeaponItemSchema = z.discriminatedUnion("weapon_type", [
     long_range: NumberField(
       z
         .number({
-          error: (iss) => (iss === undefined ? "Long range is required" : "Must be a valid number"),
+          error: (iss) => (iss.input == null ? "Long range is required" : "Must be a valid number"),
         })
         .int({ message: "Must be a whole number" })
         .positive({ message: "Must be greater than zero" })
@@ -423,7 +423,7 @@ const CreateItemToolSchema = z.object({
  * Vercel AI SDK tool definition for item creation
  * This tool requires approval before execution
  */
-export const createItemTool = tool({
+export const createItemTool = {
   description: [
     "Create a new item and add it to the character's inventory.",
     "The item will be added to inventory but not equipped.",
@@ -432,7 +432,7 @@ export const createItemTool = tool({
     "For common items, you can use lookup_item_template tool first to get item details from the SRD, then pass those details here.",
   ].join(" "),
   inputSchema: CreateItemToolSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute the create_item tool from AI assistant
@@ -441,40 +441,17 @@ export const createItemTool = tool({
 export async function executeCreateItem(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof createItemTool>,
   isCheck?: boolean
 ) {
-  // Convert parameters to the format expected by createItem service
-  // biome-ignore lint/suspicious/noExplicitAny: Mixing strings with objects/arrays for form data
-  const data: Record<string, any> = {}
-
-  // Convert each parameter, preserving arrays and objects
-  for (const [key, value] of Object.entries(parameters)) {
-    if (value !== null && value !== undefined) {
-      // Keep arrays and objects as-is for ObjectArrayField to process
-      if (Array.isArray(value) || typeof value === "object") {
-        data[key] = value
-      } else {
-        // Convert primitives to strings
-        data[key] = value.toString()
-      }
-    }
-  }
-
-  // Add is_check flag
-  data.is_check = isCheck ? "true" : "false"
-
-  // Call the existing createItem service and return its result directly
-  return createItem(db, char, data)
+  return createItem(db, char, { ...toFormData(parameters), is_check: isCheck ? "true" : "false" })
 }
 
 /**
  * Format approval message for create_item tool calls
  */
 export function formatCreateItemApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof createItemTool>,
   _char: ComputedCharacter
 ): string {
   const { name, category, description } = parameters

@@ -1,7 +1,7 @@
 import { deleteById as deleteItemEffectDb, findById } from "@src/db/item_effects"
 import { logger } from "@src/lib/logger"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import { type ToolInput, type ToolSpec, toFormData } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -88,14 +88,14 @@ const DeleteItemEffectToolSchema = z.object({
  * Vercel AI SDK tool definition for deleting item effects
  * This tool requires approval before execution
  */
-export const deleteItemEffectTool = tool({
+export const deleteItemEffectTool = {
   description: [
     "Delete an effect from an item.",
     "This removes a magical or special effect that was previously added to an item.",
     "Both the item_id and effect_id must be provided.",
   ].join(" "),
   inputSchema: DeleteItemEffectToolSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute the delete_item_effect tool from AI assistant
@@ -104,29 +104,17 @@ export const deleteItemEffectTool = tool({
 export async function executeDeleteItemEffect(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof deleteItemEffectTool>,
   isCheck?: boolean
 ) {
-  // Convert parameters to the format expected by deleteItemEffect service
-  const data: Record<string, string> = {}
-
-  for (const [key, value] of Object.entries(parameters)) {
-    if (value !== null && value !== undefined) {
-      data[key] = value.toString()
-    }
-  }
-
-  // Call the existing deleteItemEffect service and return its result directly
-  return deleteItemEffect(db, char, data, isCheck)
+  return deleteItemEffect(db, char, toFormData(parameters), isCheck)
 }
 
 /**
  * Format approval message for delete_item_effect tool calls
  */
 export function formatDeleteItemEffectApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof deleteItemEffectTool>,
   char: ComputedCharacter
 ): string {
   const { item_id, effect_id } = parameters

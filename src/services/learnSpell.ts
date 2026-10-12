@@ -2,7 +2,7 @@ import { create as createSpellLearned } from "@src/db/char_spells_learned"
 import { spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -106,10 +106,10 @@ export async function learnSpell(
 
 // Vercel AI SDK tool definition
 export const learnSpellToolName = "learn_spell" as const
-export const learnSpellTool = tool({
+export const learnSpellTool = {
   description: `Add a spell to a wizard's spellbook. Requires spell_id - use lookup_spell first to get it. Used when a wizard learns a new spell by copying it from a scroll, another spellbook, or as part of leveling up. Only wizards can use this tool.`,
   inputSchema: LearnSpellApiSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute the learn_spell tool from AI assistant
@@ -118,8 +118,7 @@ export const learnSpellTool = tool({
 export async function executeLearnSpell(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof learnSpellTool>,
   isCheck?: boolean
 ) {
   // Convert parameters to string format for service
@@ -136,8 +135,7 @@ export async function executeLearnSpell(
  * Format approval message for learn_spell tool calls
  */
 export function formatLearnSpellApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof learnSpellTool>,
   _char: ComputedCharacter
 ): string {
   const { spell_id, note } = parameters

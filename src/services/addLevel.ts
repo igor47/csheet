@@ -12,7 +12,7 @@ import {
 import { getRuleset } from "@src/lib/dnd/rulesets"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -244,10 +244,10 @@ export async function addLevel(
 
 // Vercel AI SDK tool definition
 export const addLevelToolName = "add_level" as const
-export const addLevelTool = tool({
+export const addLevelTool = {
   description: `Add a level to the character (level up). Automatically adds class traits/features for the new level. Ask the user to roll their hit die for HP.`,
   inputSchema: AddLevelApiSchema.omit({ level: true }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the add_level tool from AI assistant
@@ -255,8 +255,7 @@ export const addLevelTool = tool({
 export async function executeAddLevel(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof addLevelTool>,
   isCheck?: boolean
 ) {
   const data: Record<string, string> = {
@@ -274,8 +273,7 @@ export async function executeAddLevel(
  * Format approval message for add_level tool calls
  */
 export function formatAddLevelApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof addLevelTool>,
   _char: ComputedCharacter
 ): string {
   const { class: className, subclass, hit_die_roll, note } = parameters

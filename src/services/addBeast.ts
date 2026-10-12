@@ -1,7 +1,7 @@
 import { getBeastById } from "@src/lib/dnd/beasts"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -26,7 +26,7 @@ export const AddBeastApiSchema = z.object({
 
 export const addBeastToolName = "add_beast" as const
 
-export const addBeastTool = tool({
+export const addBeastTool = {
   description: `Add a beast to the druid's known/seen forms for Wild Shape.
 
 Ruleset differences:
@@ -35,7 +35,7 @@ Ruleset differences:
 
 Use lookup_beast or character_beasts first to get the beast_id.`,
   inputSchema: AddBeastApiSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute the add_beast tool from AI assistant
@@ -44,8 +44,7 @@ Use lookup_beast or character_beasts first to get the beast_id.`,
 export async function executeAddBeast(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof addBeastTool>,
   isCheck?: boolean
 ): Promise<ServiceResult<object>> {
   // Convert parameters to string format for service
@@ -67,8 +66,7 @@ export async function executeAddBeast(
  * Format approval message for add_beast tool calls
  */
 export function formatAddBeastApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof addBeastTool>,
   char: ComputedCharacter
 ): string {
   const { beast_id, replace_beast_id } = parameters

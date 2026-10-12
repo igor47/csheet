@@ -1,7 +1,7 @@
 import { type Spell, spells } from "@src/lib/dnd/spells"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -20,11 +20,11 @@ export const lookupSpellToolName = "lookup_spell" as const
  * Vercel AI SDK tool definition for spell lookup
  * This is a read-only informational tool that doesn't modify character state
  */
-export const lookupSpellTool = tool({
+export const lookupSpellTool = {
   description:
     "Look up a spell by name to get its ID and details. ALWAYS use this FIRST whenever a spell is mentioned by name, before using prepare_spell, cast_spell, or learn_spell. Returns the spell's ID, description, components, casting time, range, duration, damage, and other mechanical details.",
   inputSchema: LookupSpellApiSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute spell lookup
@@ -33,8 +33,7 @@ export const lookupSpellTool = tool({
 export async function executeLookupSpell(
   _db: SQL,
   _char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof lookupSpellTool>,
   _isCheck?: boolean
 ): Promise<ServiceResult<Spell>> {
   const parsed = LookupSpellApiSchema.safeParse(parameters)

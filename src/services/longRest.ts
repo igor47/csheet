@@ -6,7 +6,7 @@ import { recoverAll as recoverAllWildShapeUses } from "@src/db/char_wild_shape_u
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -156,10 +156,10 @@ export async function longRest(
 
 // Vercel AI SDK tool definition
 export const longRestToolName = "long_rest" as const
-export const longRestTool = tool({
+export const longRestTool = {
   description: `Take a long rest (8 hours of sleep). Restores all HP to maximum, restores half of spent hit dice (rounded down, largest first), and restores all spell slots.`,
   inputSchema: LongRestApiSchema.omit({ is_check: true }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the long_rest tool from AI assistant
@@ -168,8 +168,7 @@ export const longRestTool = tool({
 export async function executeLongRest(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof longRestTool>,
   isCheck?: boolean
 ) {
   const data: Record<string, string> = {
@@ -184,8 +183,7 @@ export async function executeLongRest(
  * Format approval message for long_rest tool calls
  */
 export function formatLongRestApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof longRestTool>,
   _char: ComputedCharacter
 ): string {
   const { note } = parameters

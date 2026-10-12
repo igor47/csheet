@@ -2,7 +2,7 @@ import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import { findSection, readSection, resolvePage, rulesHref } from "@src/lib/srd/sections"
 import { getToc } from "@src/lib/srd/toc"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -19,11 +19,11 @@ export const ReadRuleApiSchema = z.object({
 
 export const readRuleToolName = "read_rule" as const
 
-export const readRuleTool = tool({
+export const readRuleTool = {
   description:
     "Read the full text of a rules section from the System Reference Document, by id. Get ids from search_rules. A broad section returns its introduction plus a list of child_sections to read next. When you answer from a section, link it for the player as a markdown link using its url, e.g. [Grappled](url).",
   inputSchema: ReadRuleApiSchema,
-})
+} satisfies ToolSpec
 
 export interface ReadRuleResult {
   id: string
@@ -38,8 +38,7 @@ export interface ReadRuleResult {
 export async function executeReadRule(
   _db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof readRuleTool>,
   _isCheck?: boolean
 ): Promise<ServiceResult<ReadRuleResult>> {
   const parsed = ReadRuleApiSchema.safeParse(parameters)

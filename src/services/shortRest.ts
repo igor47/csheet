@@ -16,7 +16,7 @@ import {
   OptionalString,
 } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -270,12 +270,12 @@ export async function shortRest(
 
 // Vercel AI SDK tool definition
 export const shortRestToolName = "short_rest" as const
-export const shortRestTool = tool({
+export const shortRestTool = {
   description: `Take a short rest (1 hour of downtime). You can spend hit dice to recover HP. Each die recovers HP equal to the roll + Constitution modifier. Wizards can use Arcane Recovery to restore spell slots.`,
   inputSchema: ShortRestApiSchema.omit({ is_check: true, "arcane_slots[]": true }).extend({
     arcane_slots: ShortRestApiSchema.shape["arcane_slots[]"],
   }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the short_rest tool from AI assistant
@@ -284,8 +284,7 @@ export const shortRestTool = tool({
 export async function executeShortRest(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof shortRestTool>,
   isCheck?: boolean
 ) {
   const data: Parameters<typeof shortRest>[2] = {
@@ -311,8 +310,7 @@ export async function executeShortRest(
  * Format approval message for short_rest tool calls
  */
 export function formatShortRestApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof shortRestTool>,
   _char: ComputedCharacter
 ): string {
   const { note, arcane_recovery } = parameters

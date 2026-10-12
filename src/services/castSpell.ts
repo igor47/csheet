@@ -5,7 +5,7 @@ import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import { formatDamageFormula } from "@src/lib/spellFormatters"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -308,7 +308,7 @@ export async function castSpell(
 
 // Vercel AI SDK tool definition
 export const castSpellToolName = "cast_spell" as const
-export const castSpellTool = tool({
+export const castSpellTool = {
   description: `Cast a spell. Requires a spell id, which you must *always* get beforehand using lookup_spell tool. If casting a cantrip or casting as a ritual, this *does not* require using a spell slot. Feel free to assume a spell slot level if the spell has a minimum or if the character only has certain slots available.
 
 IMPORTANT: After casting an attack or damage spell, always inform the user of the combat results. Include:
@@ -321,7 +321,7 @@ Format example: "You cast Fireball at 3rd level. Targets must make a DC 15 Dexte
   inputSchema: CastSpellApiSchema.omit({ note: true, is_check: true }).extend({
     note: z.string().optional().describe("Optional additional notes about the casting"),
   }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the cast_spell tool from AI assistant
@@ -330,8 +330,7 @@ Format example: "You cast Fireball at 3rd level. Targets must make a DC 15 Dexte
 export async function executeCastSpell(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof castSpellTool>,
   isCheck?: boolean
 ) {
   // Convert parameters to string format for service
@@ -350,8 +349,7 @@ export async function executeCastSpell(
  * Format approval message for cast_spell tool calls
  */
 export function formatCastSpellApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof castSpellTool>,
   _char: ComputedCharacter
 ): string {
   const { spell_id, as_ritual, slot_level, note } = parameters

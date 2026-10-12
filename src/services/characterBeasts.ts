@@ -1,6 +1,6 @@
 import { type Beast, getBeasts } from "@src/lib/dnd/beasts"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -9,7 +9,7 @@ export const CharacterBeastsApiSchema = z.object({})
 
 export const characterBeastsToolName = "character_beasts" as const
 
-export const characterBeastsTool = tool({
+export const characterBeastsTool = {
   description: `Browse all beasts available for this character's Wild Shape based on their current level limits.
 
 Returns all beasts from the catalog that meet CR/fly/swim restrictions, organized into:
@@ -22,7 +22,7 @@ Each beast includes: id, name, CR, size, AC, HP, speeds.
 Use lookup_beast with a beast name to get the full stat block (abilities, attacks, traits).
 Use add_beast to add a beast to the character's known forms.`,
   inputSchema: CharacterBeastsApiSchema,
-})
+} satisfies ToolSpec
 
 interface BeastSummary {
   id: string
@@ -80,7 +80,7 @@ function toBeastSummary(beast: Beast): BeastSummary {
 export async function executeCharacterBeasts(
   _db: SQL,
   char: ComputedCharacter,
-  _parameters: Record<string, unknown>,
+  _parameters: ToolInput<typeof characterBeastsTool>,
   _isCheck?: boolean
 ): Promise<ServiceResult<CharacterBeastsResult>> {
   // Check if character has Wild Shape

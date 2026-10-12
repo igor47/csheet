@@ -3,7 +3,6 @@ import { getBeastById } from "@src/lib/dnd/beasts"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -143,66 +142,4 @@ export async function prepBeast(
   })
 
   return { complete: true, result: {} }
-}
-
-// Vercel AI SDK tool definition
-export const prepBeastToolName = "prep_beast" as const
-export const prepBeastTool = tool({
-  description: `Add a beast to a druid's known forms (SRD 5.2 only). Requires beast_id - use lookup_beast first to get it. Only druids with the Wild Shape trait can use this tool. The beast must meet CR and movement type restrictions based on druid level. When at the known forms limit, use replace_beast_id to swap out an existing form.`,
-  inputSchema: PrepBeastApiSchema,
-})
-
-/**
- * Execute the prep_beast tool from AI assistant
- * Converts AI parameters to service format and calls prepBeast
- */
-export async function executePrepBeast(
-  db: SQL,
-  char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
-  isCheck?: boolean
-) {
-  // Convert parameters to string format for service
-  const data: Record<string, string> = {
-    beast_id: parameters.beast_id?.toString() || "",
-    replace_beast_id: parameters.replace_beast_id?.toString() || "",
-    note: parameters.note?.toString() || "",
-    is_check: isCheck ? "true" : "false",
-  }
-
-  return prepBeast(db, char, data)
-}
-
-/**
- * Format approval message for prep_beast tool calls
- */
-export function formatPrepBeastApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
-  char: ComputedCharacter
-): string {
-  const { beast_id, replace_beast_id, note } = parameters
-
-  // Get beast names from IDs
-  const beast = getBeastById(char.ruleset, beast_id)
-  const beastName = beast?.name ?? beast_id
-
-  let replaceName = replace_beast_id
-  if (replace_beast_id) {
-    const replaceBeast = getBeastById(char.ruleset, replace_beast_id)
-    replaceName = replaceBeast?.name ?? replace_beast_id
-  }
-
-  let message = `Learn ${beastName} as a known form`
-
-  if (replace_beast_id) {
-    message += `, replacing ${replaceName}`
-  }
-
-  if (note) {
-    message += ` with note '${note}'`
-  }
-
-  return message
 }

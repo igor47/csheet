@@ -4,7 +4,7 @@ import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, EnumField, NumberField } from "@src/lib/formSchemas"
 import { logger } from "@src/lib/logger"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import { type ToolInput, type ToolSpec, toFormData } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -151,7 +151,7 @@ const CreateItemEffectToolSchema = z.object({
  * Vercel AI SDK tool definition for creating item effects
  * This tool requires approval before execution
  */
-export const createItemEffectTool = tool({
+export const createItemEffectTool = {
   description: [
     "Add a magical or special effect to an item.",
     "Effects can modify skills, abilities, AC, speed, attack rolls, damage, initiative, or passive perception.",
@@ -159,7 +159,7 @@ export const createItemEffectTool = tool({
     "Specify 'applies' as 'worn' or 'wielded' to make the effect conditional, or omit for always-active effects.",
   ].join(" "),
   inputSchema: CreateItemEffectToolSchema,
-})
+} satisfies ToolSpec
 
 /**
  * Execute the create_item_effect tool from AI assistant
@@ -168,32 +168,20 @@ export const createItemEffectTool = tool({
 export async function executeCreateItemEffect(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof createItemEffectTool>,
   isCheck?: boolean
 ) {
-  // Convert parameters to the format expected by createItemEffect service
-  const data: Record<string, string> = {}
-
-  for (const [key, value] of Object.entries(parameters)) {
-    if (value !== null && value !== undefined) {
-      data[key] = value.toString()
-    }
-  }
-
-  // Add is_check flag
-  data.is_check = isCheck ? "true" : "false"
-
-  // Call the existing createItemEffect service and return its result directly
-  return createItemEffect(db, char, data)
+  return createItemEffect(db, char, {
+    ...toFormData(parameters),
+    is_check: isCheck ? "true" : "false",
+  })
 }
 
 /**
  * Format approval message for create_item_effect tool calls
  */
 export function formatCreateItemEffectApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof createItemEffectTool>,
   _char: ComputedCharacter
 ): string {
   const { target, op, value, applies } = parameters

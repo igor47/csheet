@@ -3,7 +3,7 @@ import { applyDeltasWithChange, toCopper } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import { type ToolInput, type ToolSpec, toFormData } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -28,7 +28,7 @@ export const UpdateCoinsApiSchema = z.object({
 
 // Vercel AI SDK tool definition
 export const updateCoinsToolName = "update_coins" as const
-export const updateCoinsTool = tool({
+export const updateCoinsTool = {
   description: `Update the character's coin purse. Used whenever the character gains or spends coins.
 
 Each field represents the change (delta) in that coin type (positive for gains, negative for losses).
@@ -41,7 +41,7 @@ Examples:
 Only include coin types that changed (don't need to specify coins that didn't change).
 `,
   inputSchema: UpdateCoinsApiSchema.omit({ make_change: true, is_check: true }),
-})
+} satisfies ToolSpec
 
 export type UpdateCoinsResult = ServiceResult<{
   newCoins: { pp: number; gp: number; ep: number; sp: number; cp: number }
@@ -158,13 +158,11 @@ export async function updateCoins(
 export async function executeUpdateCoins(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof updateCoinsTool>,
   isCheck?: boolean
 ) {
-  // Convert parameters to string format for service
   const data: Record<string, string> = {
-    ...parameters,
+    ...toFormData(parameters),
     make_change: "true", // Always enable make_change for AI tool calls
     is_check: isCheck ? "true" : "false",
   }
@@ -176,11 +174,16 @@ export async function executeUpdateCoins(
  * Format approval message for update_coins tool calls
  */
 export function formatUpdateCoinsApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof updateCoinsTool>,
   _char: ComputedCharacter
 ): string {
-  const { pp = 0, gp = 0, ep = 0, sp = 0, cp = 0, note } = parameters
+  const { note } = parameters
+  // unchanged coin types may be null
+  const pp = parameters.pp ?? 0
+  const gp = parameters.gp ?? 0
+  const ep = parameters.ep ?? 0
+  const sp = parameters.sp ?? 0
+  const cp = parameters.cp ?? 0
 
   // Build list of coin changes
   const changes: string[] = []

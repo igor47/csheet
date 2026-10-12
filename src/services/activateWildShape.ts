@@ -6,7 +6,7 @@ import { getBeastById } from "@src/lib/dnd/beasts"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -150,7 +150,7 @@ export async function activateWildShape(
 // Vercel AI SDK tool definition
 export const activateWildShapeToolName = "activate_wild_shape" as const
 
-export const activateWildShapeTool = tool({
+export const activateWildShapeTool = {
   description: `Transform into a beast form using Wild Shape.
 
 Requirements:
@@ -163,7 +163,7 @@ Requirements:
 If already transformed, current transformation ends automatically.
 Returns the beast's full stat block including HP, AC, abilities, and attacks.`,
   inputSchema: ActivateWildShapeApiSchema.omit({ is_check: true }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the activate_wild_shape tool from AI assistant
@@ -172,8 +172,7 @@ Returns the beast's full stat block including HP, AC, abilities, and attacks.`,
 export async function executeActivateWildShape(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof activateWildShapeTool>,
   isCheck?: boolean
 ): Promise<ServiceResult<ActivateWildShapeSummary>> {
   // Convert parameters to string format for service
@@ -190,8 +189,7 @@ export async function executeActivateWildShape(
  * Format approval message for activate_wild_shape tool calls
  */
 export function formatActivateWildShapeApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof activateWildShapeTool>,
   char: ComputedCharacter
 ): string {
   const { beast_id } = parameters

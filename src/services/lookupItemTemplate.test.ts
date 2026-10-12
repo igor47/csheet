@@ -2,8 +2,12 @@ import { describe, expect, test } from "bun:test"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
+import { TOOL_EXECUTORS } from "@src/tools"
 import { computeCharacter } from "./computeCharacter"
-import { executeLookupItemTemplate } from "./lookupItemTemplate"
+import { lookupItemTemplateToolName } from "./lookupItemTemplate"
+
+// through the registry, which parses the parameters as an approved call would
+const executeLookupItemTemplate = TOOL_EXECUTORS[lookupItemTemplateToolName]!
 
 describe("executeLookupItemTemplate", () => {
   const testCtx = useTestApp()

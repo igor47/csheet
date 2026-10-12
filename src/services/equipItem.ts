@@ -2,7 +2,7 @@ import { create as createCharItemDb, getCurrentInventory } from "@src/db/char_it
 import { zodToFormErrors } from "@src/lib/formErrors"
 import { Checkbox, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
+import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -91,10 +91,10 @@ export async function equipItem(
 
 // Vercel AI SDK tool definition
 export const equipItemToolName = "equip_item" as const
-export const equipItemTool = tool({
+export const equipItemTool = {
   description: `Equip or unequip an item. Set worn=true for armor/clothing, wielded=true for weapons/shields. Both can be true (e.g., wearing magical armor).`,
   inputSchema: EquipItemApiSchema.omit({ is_check: true }),
-})
+} satisfies ToolSpec
 
 /**
  * Execute the equip_item tool from AI assistant
@@ -102,14 +102,13 @@ export const equipItemTool = tool({
 export async function executeEquipItem(
   db: SQL,
   char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof equipItemTool>,
   isCheck?: boolean
 ) {
   const data: Record<string, string> = {
     item_id: parameters.item_id?.toString() || "",
-    worn: (parameters.worn === true || parameters.worn === "true").toString(),
-    wielded: (parameters.wielded === true || parameters.wielded === "true").toString(),
+    worn: String(parameters.worn),
+    wielded: String(parameters.wielded),
     note: parameters.note?.toString() || "",
     is_check: isCheck ? "true" : "false",
   }
@@ -121,8 +120,7 @@ export async function executeEquipItem(
  * Format approval message for equip_item tool calls
  */
 export function formatEquipItemApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
+  parameters: ToolInput<typeof equipItemTool>,
   char: ComputedCharacter
 ): string {
   const { item_id, worn, wielded, note } = parameters

@@ -3,7 +3,6 @@ import { getBeastById } from "@src/lib/dnd/beasts"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
-import { tool } from "ai"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
@@ -93,55 +92,4 @@ export async function seeBeast(
   })
 
   return { complete: true, result: {} }
-}
-
-// Vercel AI SDK tool definition
-export const seeBeastToolName = "see_beast" as const
-export const seeBeastTool = tool({
-  description: `Record a beast that a druid has seen for Wild Shape. Requires beast_id - use lookup_beast first to get it. Only druids with the Wild Shape trait can use this tool. Note: CR limits apply to transforming into a beast, not to recording it. A druid can record any beast they've seen regardless of level.`,
-  inputSchema: SeeBeastApiSchema,
-})
-
-/**
- * Execute the see_beast tool from AI assistant
- * Converts AI parameters to service format and calls seeBeast
- */
-export async function executeSeeBeast(
-  db: SQL,
-  char: ComputedCharacter,
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
-  isCheck?: boolean
-) {
-  // Convert parameters to string format for service
-  const data: Record<string, string> = {
-    beast_id: parameters.beast_id?.toString() || "",
-    note: parameters.note?.toString() || "",
-    is_check: isCheck ? "true" : "false",
-  }
-
-  return seeBeast(db, char, data)
-}
-
-/**
- * Format approval message for see_beast tool calls
- */
-export function formatSeeBeastApproval(
-  // biome-ignore lint/suspicious/noExplicitAny: Tool parameters can be any valid JSON
-  parameters: Record<string, any>,
-  char: ComputedCharacter
-): string {
-  const { beast_id, note } = parameters
-
-  // Get beast name from ID
-  const beast = getBeastById(char.ruleset, beast_id)
-  const beastName = beast?.name ?? beast_id
-
-  let message = `Record ${beastName} as a seen beast`
-
-  if (note) {
-    message += ` with note '${note}'`
-  }
-
-  return message
 }

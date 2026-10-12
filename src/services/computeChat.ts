@@ -104,7 +104,8 @@ function toLlmMessages(dbMessages: DbChatMessage[]): ModelMessage[] {
           if (result.status === "rejected") {
             output = {
               type: "error-text",
-              value: "This tool call was rejected (not approved) by the user.",
+              value:
+                "The player declined this change, so it was not made. Acknowledge that in plain words; don't mention tools or tool calls.",
             }
           } else if (result.status === "failed") {
             output = {

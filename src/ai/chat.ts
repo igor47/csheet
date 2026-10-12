@@ -174,15 +174,18 @@ export async function executeChatRequest(
 
     // Capture usage data from AI SDK
     const usageData = await result.usage
+    // the SDK counts cache reads and writes as input; we record them separately
+    const inputTokens = usageData?.inputTokenDetails.noCacheTokens ?? usageData?.inputTokens ?? 0
+    const outputTokens = usageData?.outputTokens ?? 0
     const usage: Usage | null = usageData
       ? {
           provider: model.provider,
           modelId: model.modelId,
-          inputTokens: usageData.inputTokens || 0,
-          outputTokens: usageData.outputTokens || 0,
+          inputTokens,
+          outputTokens,
           cachedInputTokens: usageData.inputTokenDetails.cacheReadTokens,
           cacheWriteInputTokens: usageData.inputTokenDetails.cacheWriteTokens,
-          totalTokens: usageData.totalTokens || 0,
+          totalTokens: inputTokens + outputTokens,
         }
       : null
 

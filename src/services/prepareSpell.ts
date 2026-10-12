@@ -1,3 +1,4 @@
+import { beginOrSavepoint } from "@src/db"
 import { create as createSpellPrepared } from "@src/db/char_spells_prepared"
 import { ClassNames, ClassNamesSchema } from "@src/lib/dnd"
 import { spells } from "@src/lib/dnd/spells"
@@ -159,7 +160,7 @@ export async function prepareSpell(
 
   const newSpell = spells.find((sp) => sp.id === result.data.spell_id)!
 
-  await db.begin(async (tx) => {
+  await beginOrSavepoint(db, async (tx) => {
     // If replacing, unprepare old spell first
     if (result.data.current_spell_id) {
       await createSpellPrepared(tx, {

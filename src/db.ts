@@ -1,4 +1,4 @@
-import { SQL, type TransactionSQL } from "bun"
+import { type ReservedSQL, SQL, type TransactionSQL } from "bun"
 import type { Context } from "hono"
 import { config } from "./config"
 
@@ -44,8 +44,32 @@ export function beginOrSavepoint<T>(
   if ("savepoint" in db) {
     // biome-ignore lint/suspicious/noExplicitAny: working around bun type issue
     return (db as TransactionSQL).savepoint((sql) => fn(sql as any))
+  } else if ("release" in db) {
+    // a reserved connection: in this app, only the tests', which already run inside a
+    // transaction that's rolled back afterwards. begin() would COMMIT that transaction and leak
+    // the test's rows into the test database, so use a savepoint instead
+    return reservedSavepoint(db as ReservedSQL, fn as (sql: TransactionSQL) => T | Promise<T>)
   } else {
     // biome-ignore lint/suspicious/noExplicitAny: working around bun type issue
     return db.begin((sql) => fn(sql as any))
+  }
+}
+
+let savepointCounter = 0
+
+async function reservedSavepoint<T>(
+  db: ReservedSQL,
+  fn: (sql: TransactionSQL) => T | Promise<T>
+): Promise<T> {
+  const name = `sp_reserved_${++savepointCounter}`
+  await db.unsafe(`SAVEPOINT ${name}`)
+  try {
+    // biome-ignore lint/suspicious/noExplicitAny: the reserved connection stands in for a transaction
+    const result = await fn(db as any)
+    await db.unsafe(`RELEASE SAVEPOINT ${name}`)
+    return result
+  } catch (error) {
+    await db.unsafe(`ROLLBACK TO SAVEPOINT ${name}`)
+    throw error
   }
 }

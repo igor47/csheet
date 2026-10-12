@@ -328,6 +328,18 @@ export const CharacterNew = ({ values = {}, errors = {} }: CharacterNewProps) =>
               >
                 {fields.map((field) => field)}
 
+                {/* the errors can be far up a long form, so list them next to the button too */}
+                {values.is_check === "false" && Object.keys(errors).length > 0 && (
+                  <div class="alert alert-danger" id="character-new-errors">
+                    <div>Please fix the following before creating your character:</div>
+                    <ul class="mb-0">
+                      {Object.values(errors).map((message) => (
+                        <li>{message}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div class="d-flex gap-2">
                   <button
                     type="submit"

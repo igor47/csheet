@@ -748,3 +748,67 @@ describe("Character archiving - name reuse", () => {
     })
   })
 })
+
+describe("POST /characters/new", () => {
+  const testCtx = useTestApp()
+  let user: User
+
+  beforeEach(async () => {
+    user = await userFactory.create({}, testCtx.db)
+  })
+
+  function characterForm(isCheck: boolean) {
+    const form = new FormData()
+    form.append("is_check", isCheck ? "true" : "false")
+    for (const [field, value] of Object.entries({
+      name: "Duplicate Scores",
+      ruleset: "srd51",
+      species: "dragonborn",
+      lineage: "black",
+      class: "cleric",
+      subclass: "life domain",
+      background: "acolyte",
+      alignment: "Lawful Good",
+      class_proficiency_history: "true",
+      class_proficiency_medicine: "true",
+      ability_method: "standard-array",
+    })) {
+      form.append(field, value)
+    }
+    // 10 twice, so not the standard array
+    for (const [ability, score] of [
+      ["str", "15"],
+      ["dex", "14"],
+      ["con", "13"],
+      ["int", "10"],
+      ["wis", "10"],
+      ["cha", "8"],
+    ]) {
+      form.append(`ability_${ability}`, score as string)
+    }
+    return form
+  }
+
+  test("lists the errors next to the create button on submit", async () => {
+    const response = await makeRequest(testCtx.app, "/characters/new", {
+      user,
+      method: "POST",
+      body: characterForm(false),
+    })
+
+    const document = await parseHtml(response)
+    const summary = expectElement(document, "#character-new-errors")
+    expect(summary.textContent).toContain("Standard array must use exactly the values")
+  })
+
+  test("doesn't list errors during live validation", async () => {
+    const response = await makeRequest(testCtx.app, "/characters/new", {
+      user,
+      method: "POST",
+      body: characterForm(true),
+    })
+
+    const document = await parseHtml(response)
+    expect(document.querySelector("#character-new-errors")).toBeNull()
+  })
+})

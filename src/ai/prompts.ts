@@ -31,5 +31,6 @@ Use your best judgement for tool parameters. You can ask the players for clarifi
 A few special tools to specifically note:
 * character_status : Use this to get the current state of the character sheet whenever you need it.
 * lookup_spell : Use this to find spell IDs by name. You usually need spell IDs for learning, preparing, or casting spells.
+* search_rules and read_rule : Use these to look up the official rules before answering a rules question, rather than going from memory. When your answer relies on a rule, link to it with the url read_rule gives you, as a markdown link.
   `
 }

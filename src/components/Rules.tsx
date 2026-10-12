@@ -1,15 +1,9 @@
 import type { RulesetId } from "@src/lib/dnd/rulesets"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
-import { hasChildPages, isEmptySection, resolvePage } from "@src/lib/srd/sections"
+import { hasChildPages, isEmptySection, resolvePage, rulesHref } from "@src/lib/srd/sections"
 import { SRD_ATTRIBUTIONS, type SrdToc, type TocEntry } from "@src/lib/srd/toc"
 import { marked } from "marked"
-
-export function rulesHref(ruleset: RulesetId, sectionId?: string): string {
-  const params = new URLSearchParams({ ruleset })
-  if (sectionId) params.set("section", sectionId)
-  return `/rules?${params.toString()}`
-}
 
 export function rulesPageTitle(entry?: TocEntry): string {
   return entry ? `${entry.title} - Rules Reference` : "Rules Reference"

@@ -1,6 +1,6 @@
 import type { ChatMessage as DbChatMessage } from "@src/db/chat_messages"
 import { findByChatId as getChatHistory } from "@src/db/chat_messages"
-import { TOOLS } from "@src/tools"
+import { isReadOnly } from "@src/tools"
 import type { JSONValue, ModelMessage, TextPart, ToolCallPart, ToolResultPart } from "ai"
 import type { SQL } from "bun"
 
@@ -214,12 +214,8 @@ function findUnresolvedToolCalls(dbMessages: DbChatMessage[]): UnresolvedToolCal
       // Find IDs where tool_results is null
       for (const call of msg.tool_calls) {
         if (!msg.tool_results[call.id]) {
-          // Check if this tool requires approval (has a formatter)
-          const toolRegistration = TOOLS.find((t) => t.name === call.name)
-          const requiresApproval = !!toolRegistration?.formatApprovalMessage
-
           // Only include tools that require approval
-          if (requiresApproval) {
+          if (!isReadOnly(call.name)) {
             unresolved.push({
               messageId: msg.id,
               toolCallId: call.id,

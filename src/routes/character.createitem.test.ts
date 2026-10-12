@@ -345,6 +345,32 @@ describe("POST /characters/:id/edit/newitem", () => {
         expect(errorDiv.textContent).toContain("required")
       })
 
+      test("says the name and category are required when both are blank", async () => {
+        const formData = new FormData()
+        formData.append("name", "")
+        formData.append("category", "")
+
+        const response = await makeRequest(
+          testCtx.app,
+          `/characters/${character.id}/edit/newitem`,
+          {
+            user,
+            method: "POST",
+            body: formData,
+          }
+        )
+
+        expect(response.status).toBe(200)
+
+        const document = await parseHtml(response)
+        const errors = Array.from(document.querySelectorAll(".invalid-feedback")).map((el) =>
+          el.textContent?.trim()
+        )
+        expect(errors).toContain("Category is required")
+        expect(errors).toContain("Item name is required")
+        expect(errors.join(" ")).not.toContain("discriminator")
+      })
+
       test("returns validation error for weapon missing damage", async () => {
         const formData = new FormData()
         formData.append("name", "Broken Sword")

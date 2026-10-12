@@ -179,6 +179,17 @@ export async function createItem(
   data: Record<string, string>
 ): Promise<CreateItemResult> {
   const errors: Record<string, string> = {}
+  const isCheck = data.is_check === "true"
+
+  // the item schemas are a union on category, so without one zod can only say the union failed
+  if (!data.category) {
+    if (!isCheck) {
+      errors.category = "Category is required"
+      if (!data.name?.trim()) errors.name = "Item name is required"
+    }
+    return { complete: false, values: data, errors }
+  }
+
   const partial = ItemTypeSchemas.and(BaseItemCheckSchema).safeParse(data)
   if (!partial.success) {
     return {
@@ -189,7 +200,6 @@ export async function createItem(
   }
 
   const values = partial.data
-  const isCheck = data.is_check === "true"
 
   // Soft validation for check mode
   if (!values.name) {

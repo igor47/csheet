@@ -60,6 +60,16 @@ import {
   formatCreateItemEffectApproval,
 } from "./services/createItemEffect"
 import {
+  executeRecordDeathSave,
+  executeRestoreToLife,
+  formatRecordDeathSaveApproval,
+  formatRestoreToLifeApproval,
+  recordDeathSaveTool,
+  recordDeathSaveToolName,
+  restoreToLifeTool,
+  restoreToLifeToolName,
+} from "./services/deathSaves"
+import {
   deleteItemEffectTool,
   deleteItemEffectToolName,
   executeDeleteItemEffect,
@@ -224,6 +234,18 @@ export const TOOLS: ToolRegistration[] = [
     tool: updateHitPointsTool,
     executor: executeUpdateHitPoints,
     formatApprovalMessage: formatUpdateHitPointsApproval,
+  }),
+  registerTool({
+    name: recordDeathSaveToolName,
+    tool: recordDeathSaveTool,
+    executor: executeRecordDeathSave,
+    formatApprovalMessage: formatRecordDeathSaveApproval,
+  }),
+  registerTool({
+    name: restoreToLifeToolName,
+    tool: restoreToLifeTool,
+    executor: executeRestoreToLife,
+    formatApprovalMessage: formatRestoreToLifeApproval,
   }),
   registerTool({
     name: useHitDieToolName,

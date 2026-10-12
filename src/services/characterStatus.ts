@@ -24,7 +24,7 @@ export type CharacterStatusResult = Omit<ComputedCharacter, "traits"> & {
  */
 export const characterStatusTool = {
   description:
-    "Get the current character status including all computed stats, resources, and abilities. Use this whenever you need to reference ability scores, skills, combat stats (HP/AC/Initiative), resources (coins, spell slots, hit dice), equipment, or spellcasting information.",
+    "Get the current character status including all computed stats, resources, and abilities. Use this whenever you need to reference ability scores, skills, combat stats (HP/AC/Initiative), resources (coins, spell slots, hit dice), equipment, or spellcasting information. At 0 HP, deathSaves says whether the character is dying, stable or dead, with their death save successes and failures; it's null while they have HP.",
   inputSchema: z.object({}),
 } satisfies ToolSpec
 

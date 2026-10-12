@@ -12,7 +12,9 @@ import type { User } from "@src/db/users"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { ulid } from "@src/lib/ids"
 import { computeCharacter } from "@src/services/computeCharacter"
+import { recordDeathSave } from "@src/services/deathSaves"
 import { advanceToolCalls, SKIPPED_TOOL_CALL_ERROR } from "@src/services/toolExecution"
+import { updateHitPoints } from "@src/services/updateHitPoints"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
@@ -292,6 +294,137 @@ describe("resolving Reed's tool calls", () => {
       const result = msg?.tool_results?.[STATUS_ID]
       expect(result?.status).toBe("success")
       expect(result?.status === "success" && result.data?.totalLevel).toBe(4)
+    })
+  })
+})
+
+describe("Reed's death save tools", () => {
+  const testCtx = useTestApp()
+  const originalApiKey = config.anthropicApiKey
+  const CALL_ID = "toolu_death"
+
+  beforeEach(() => {
+    ;(config as { anthropicApiKey: string }).anthropicApiKey = "test-key"
+  })
+
+  afterEach(() => {
+    ;(config as { anthropicApiKey: string }).anthropicApiKey = originalApiKey
+  })
+
+  let user: User
+  let character: Character
+  let chatId: string
+  let assistantMsg: ChatMessage
+
+  // A chat where Reed asks to make one tool call
+  async function createChat(call: Omit<ToolCall, "id">) {
+    chatId = ulid()
+    const base = {
+      character_id: character.id,
+      chat_id: chatId,
+      tool_calls: null,
+      tool_results: null,
+      error: null,
+      usage: null,
+    }
+    await createChatMessage(testCtx.db, { ...base, role: "system", content: "system prompt" })
+    await createChatMessage(testCtx.db, { ...base, role: "user", content: "help" })
+    assistantMsg = await createChatMessage(testCtx.db, {
+      ...base,
+      role: "assistant",
+      content: "Noted.",
+      tool_calls: [{ id: CALL_ID, ...call }],
+      tool_results: { [CALL_ID]: null },
+    })
+  }
+
+  async function approve() {
+    const response = await makeRequest(
+      testCtx.app,
+      `/characters/${character.id}/chat/${chatId}/tool/${CALL_ID}/approve`,
+      { user, method: "POST" }
+    )
+    expect(response.status).toBe(200)
+    const msg = await findById(testCtx.db, assistantMsg.id)
+    return msg?.tool_results?.[CALL_ID]
+  }
+
+  beforeEach(async () => {
+    user = await userFactory.create({}, testCtx.db)
+    character = await characterFactory.create(
+      { user_id: user.id, class: "fighter", level: 2, ruleset: SRD51_ID },
+      testCtx.db
+    )
+    const char = (await computeCharacter(testCtx.db, character.id))!
+    await updateHitPoints(testCtx.db, char, { action: "lose", amount: String(char.maxHitPoints) })
+  })
+
+  describe("when the character is dying", () => {
+    test("character_status shows the death saves", async () => {
+      await createChat({ name: "character_status", parameters: {} })
+      const char = (await computeCharacter(testCtx.db, character.id))!
+      await advanceToolCalls(testCtx.db, char, assistantMsg.id)
+
+      const msg = await findById(testCtx.db, assistantMsg.id)
+      const result = msg?.tool_results?.[CALL_ID]
+      expect(result?.status === "success" && result.data?.deathSaves).toEqual({
+        status: "dying",
+        successes: 0,
+        failures: 0,
+      })
+    })
+
+    test("record_death_save records the roll", async () => {
+      await createChat({ name: "record_death_save", parameters: { roll: 1 } })
+
+      const result = await approve()
+
+      expect(result?.status).toBe("success")
+      expect(result?.status === "success" && result.data?.deathSaves).toEqual({
+        status: "dying",
+        successes: 0,
+        failures: 2,
+      })
+    })
+
+    test("update_hit_points with a critical hit adds two failures", async () => {
+      await createChat({
+        name: "update_hit_points",
+        parameters: { action: "lose", amount: 4, critical: true },
+      })
+
+      const result = await approve()
+
+      expect(result?.status === "success" && result.data?.deathSaves?.failures).toBe(2)
+    })
+
+    test("restore_to_life fails, since the character isn't dead", async () => {
+      await createChat({ name: "restore_to_life", parameters: {} })
+
+      const result = await approve()
+
+      expect(result).toEqual({ status: "failed", error: expect.stringContaining("isn't dead") })
+    })
+  })
+
+  describe("when the character is dead", () => {
+    beforeEach(async () => {
+      const char = (await computeCharacter(testCtx.db, character.id))!
+      await recordDeathSave(testCtx.db, char, { outcome: "nat1" })
+      await recordDeathSave(testCtx.db, (await computeCharacter(testCtx.db, character.id))!, {
+        outcome: "failure",
+      })
+    })
+
+    test("restore_to_life brings them back", async () => {
+      await createChat({ name: "restore_to_life", parameters: { hp: 3, note: "Revivify" } })
+
+      const result = await approve()
+
+      expect(result).toEqual({ status: "success", data: { newHP: 3 } })
+      const char = (await computeCharacter(testCtx.db, character.id))!
+      expect(char.currentHP).toBe(3)
+      expect(char.deathSaves).toBeNull()
     })
   })
 })

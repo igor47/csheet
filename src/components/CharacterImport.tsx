@@ -7,6 +7,7 @@ import {
   SkillAbilities,
   Skills,
 } from "@src/lib/dnd"
+import { defaultStartingClass } from "@src/lib/dnd/proficiencies"
 import { getRuleset, RULESETS, type RulesetId } from "@src/lib/dnd/rulesets"
 import { toTitleCase } from "@src/lib/strings"
 import clsx from "clsx"
@@ -111,6 +112,49 @@ const MultiClassSelector = ({ values = {}, errors = {} }: MultiClassSelectorProp
           )
         })}
       </div>
+
+      {selectedClasses.length > 1 &&
+        (() => {
+          // follow the default (most levels) until the player picks one themselves
+          const chosen = values.starting_class_chosen === "true" && values.starting_class
+          const startingClass =
+            (chosen && selectedClasses.includes(chosen as (typeof selectedClasses)[number])
+              ? chosen
+              : undefined) ??
+            defaultStartingClass(
+              selectedClasses.map((cls) => ({
+                class: cls,
+                level: Number.parseInt(values[`levels_${cls}`] as string, 10) || 1,
+              }))
+            )
+          return (
+            <div class="mb-2">
+              <label for="charimport-starting-class" class="form-label">
+                Starting class
+              </label>
+              <input
+                type="hidden"
+                name="starting_class_chosen"
+                id="charimport-starting-class-chosen"
+                value={chosen ? "true" : "false"}
+              />
+              <Select
+                name="starting_class"
+                id="charimport-starting-class"
+                style="max-width: 20em;"
+                placeholder="Select the class you started in"
+                options={selectedClasses.map((cls) => ({ value: cls, label: toTitleCase(cls) }))}
+                value={startingClass}
+                onchange="document.getElementById('charimport-starting-class-chosen').value = 'true'"
+                error={errors?.starting_class}
+              />
+              <div class="form-text">
+                Your first class gives its full proficiencies; the others only their multiclassing
+                ones.
+              </div>
+            </div>
+          )
+        })()}
 
       {errors?.classes && <div class="text-danger small mt-2">{errors.classes}</div>}
       {totalLevels > 20 && <div class="text-danger small mt-2">Total level cannot exceed 20</div>}

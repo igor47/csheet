@@ -408,6 +408,20 @@ export function classOrder(levels: { class: string }[]): string[] {
   return order
 }
 
+/**
+ * The class a character most likely started in, when the player doesn't say: the one with the
+ * most levels, or the first of those in the order given on a tie
+ */
+export function defaultStartingClass<C extends string>(
+  classes: { class: C; level: number }[]
+): C | undefined {
+  let best: { class: C; level: number } | undefined
+  for (const c of classes) {
+    if (!best || c.level > best.level) best = c
+  }
+  return best?.class
+}
+
 export interface ProficiencyEvent {
   kind: ProficiencyKind
   name: string

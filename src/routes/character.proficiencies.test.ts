@@ -254,6 +254,128 @@ describe("granting proficiencies", () => {
     })
   })
 
+  describe("importing a fighter 2 / rogue 2", () => {
+    async function importWith(fields: Record<string, string>) {
+      const form = new FormData()
+      for (const [key, value] of Object.entries({
+        name: "Tied Tamsin",
+        species: "human",
+        background: "acolyte",
+        ruleset: SRD51_ID,
+        classes_fighter: "on",
+        levels_fighter: "2",
+        classes_rogue: "on",
+        levels_rogue: "2",
+        ability_strength: "14",
+        ability_dexterity: "12",
+        ability_constitution: "14",
+        ability_intelligence: "10",
+        ability_wisdom: "15",
+        ability_charisma: "8",
+        max_hp: "30",
+        is_check: "false",
+        ...fields,
+      })) {
+        form.append(key, value)
+      }
+      const response = await makeRequest(testCtx.app, "/characters/import", {
+        user,
+        method: "POST",
+        body: form,
+      })
+      expect(response.status).toBe(204)
+      return response.headers.get("HX-Redirect")!.split("/").pop()!
+    }
+
+    test("offers a starting class, defaulting to the first in class order on a tie", async () => {
+      const form = new FormData()
+      for (const [key, value] of Object.entries({
+        classes_fighter: "on",
+        levels_fighter: "2",
+        classes_rogue: "on",
+        levels_rogue: "2",
+        is_check: "true",
+      })) {
+        form.append(key, value)
+      }
+      const response = await makeRequest(testCtx.app, "/characters/import", {
+        user,
+        method: "POST",
+        body: form,
+      })
+      const document = await parseHtml(response)
+      const selected = expectElement(document, "select[name='starting_class'] option[selected]")
+      expect(selected.getAttribute("value")).toBe("fighter")
+    })
+
+    async function liveCheck(fields: Record<string, string>) {
+      const form = new FormData()
+      for (const [key, value] of Object.entries({ is_check: "true", ...fields })) {
+        form.append(key, value)
+      }
+      const response = await makeRequest(testCtx.app, "/characters/import", {
+        user,
+        method: "POST",
+        body: form,
+      })
+      return parseHtml(response)
+    }
+
+    test("keeps the default following the levels until the player picks one", async () => {
+      const document = await liveCheck({
+        classes_fighter: "on",
+        levels_fighter: "2",
+        classes_rogue: "on",
+        levels_rogue: "3",
+        // the default from the last render, posted back unchosen
+        starting_class: "fighter",
+        starting_class_chosen: "false",
+      })
+      const selected = expectElement(document, "select[name='starting_class'] option[selected]")
+      expect(selected.getAttribute("value")).toBe("rogue")
+    })
+
+    test("keeps the player's pick when levels change", async () => {
+      const document = await liveCheck({
+        classes_fighter: "on",
+        levels_fighter: "2",
+        classes_rogue: "on",
+        levels_rogue: "3",
+        starting_class: "fighter",
+        starting_class_chosen: "true",
+      })
+      const selected = expectElement(document, "select[name='starting_class'] option[selected]")
+      expect(selected.getAttribute("value")).toBe("fighter")
+    })
+
+    test("falls back to the default when the chosen class is unchecked", async () => {
+      const document = await liveCheck({
+        classes_fighter: "on",
+        levels_fighter: "2",
+        classes_wizard: "on",
+        levels_wizard: "1",
+        starting_class: "rogue",
+        starting_class_chosen: "true",
+      })
+      const select = expectElement(document, "select[name='starting_class']")
+      expect(select.classList.contains("is-invalid")).toBe(false)
+      const selected = expectElement(document, "select[name='starting_class'] option[selected]")
+      expect(selected.getAttribute("value")).toBe("fighter")
+    })
+
+    test("without a choice, starts as a fighter, with heavy armor", async () => {
+      const characterId = await importWith({})
+      const profs = await proficiencyNames(testCtx.db, characterId)
+      expect(profs.armor).toEqual(["heavy armor", "light armor", "medium armor", "shields"])
+    })
+
+    test("starting as a rogue gets no heavy armor from the fighter multiclass", async () => {
+      const characterId = await importWith({ starting_class: "rogue" })
+      const profs = await proficiencyNames(testCtx.db, characterId)
+      expect(profs.armor).toEqual(["light armor", "medium armor", "shields"])
+    })
+  })
+
   describe("a character created before proficiencies were tracked", () => {
     let character: Character
 

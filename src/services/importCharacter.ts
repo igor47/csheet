@@ -4,6 +4,7 @@ import { create as createSkillDb } from "@src/db/char_skills"
 import { type Character, create as createCharacterDb, nameExistsForUser } from "@src/db/characters"
 import type { User } from "@src/db/users"
 import { Abilities, type AbilityType, ClassNames, type ClassNameType, Skills } from "@src/lib/dnd"
+import { defaultStartingClass } from "@src/lib/dnd/proficiencies"
 import { getRuleset, RULESETS, type RulesetId, RulesetIdSchema } from "@src/lib/dnd/rulesets"
 import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { SQL } from "bun"
@@ -19,6 +20,7 @@ const BaseImportSchema = z.object({
   lineage: OptionalString(),
   background: z.string(),
   custom_background: OptionalString(),
+  starting_class: OptionalString(),
   alignment: OptionalString(),
   ruleset: RulesetIdSchema,
   max_hp: NumberField(
@@ -284,6 +286,17 @@ export async function importCharacter(
     errors.classes = "You must select at least one class"
   }
 
+  // the starting class must be one of the selected classes; while the form is still being filled
+  // in, quietly drop a choice that was unchecked so the default takes over again
+  if (data.starting_class && !selectedClasses.some((c) => c.class === data.starting_class)) {
+    if (isCheck) {
+      delete data.starting_class
+      delete data.starting_class_chosen
+    } else {
+      errors.starting_class = "The starting class must be one of the selected classes"
+    }
+  }
+
   if (totalLevels > 20) {
     errors.classes = `Total level (${totalLevels}) cannot exceed 20`
   }
@@ -423,8 +436,13 @@ export async function importCharacter(
     // Add levels for each selected class using addLevel service
     // addLevel creates the level record AND all associated traits (species/lineage/background/class/subclass)
 
-    // Sort by level descending to add primary class first
-    const sortedClasses = [...selectedClasses].sort((a, b) => b.level - a.level)
+    // The starting class's levels go first, since the first class grants the full starting
+    // proficiencies and the others only their multiclassing ones
+    const startingClass = (validated.starting_class ||
+      defaultStartingClass(selectedClasses)) as ClassNameType
+    const sortedClasses = [...selectedClasses].sort(
+      (a, b) => Number(b.class === startingClass) - Number(a.class === startingClass)
+    )
 
     // Calculate HP distribution across levels
     // maxHitPoints = sum(hit_die_rolls) + (conModifier * totalLevel)

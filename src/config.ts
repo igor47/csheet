@@ -42,7 +42,7 @@ export const config = {
   resendSegmentId: process.env.RESEND_SEGMENT_ID || "",
 
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
-  aiModelName: process.env.AI_MODEL_NAME || "claude-haiku-4-5-20251001",
+  aiModelName: process.env.AI_MODEL_NAME || "claude-haiku-5-5",
 
   showWelcomePage: process.env.SHOW_WELCOME_PAGE !== "false",
 

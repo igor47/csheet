@@ -1,3 +1,4 @@
+import type { AnthropicLanguageModelOptions } from "@ai-sdk/anthropic"
 import { type ChatMessage, create as saveChatMessage, type Usage } from "@src/db/chat_messages"
 import { getChatModel } from "@src/lib/ai"
 import { ulid } from "@src/lib/ids"
@@ -18,12 +19,16 @@ type StreamChunk = { type: "text"; text: string }
 type ChatModel = ReturnType<typeof getChatModel>
 type StreamHandler = (chunk: StreamChunk) => Promise<void> | void
 
+// shown when the model's safety classifiers decline to answer
+const REFUSAL_MESSAGE = "Sorry, I can't help with that one. Try rephrasing your request."
+
 /**
  * Overrides for the model request; the evals use these to compare models and settings
  */
 export interface ChatRequestOptions {
   model?: ChatModel
   maxOutputTokens?: number
+  effort?: AnthropicLanguageModelOptions["effort"]
 }
 
 /**
@@ -90,9 +95,16 @@ export async function executeChatRequest(
   let model: ChatModel
   try {
     model = options.model ?? getChatModel()
+    // We don't store thinking blocks, and the history is a sliding window, so a thinking
+    // model would lose its reasoning mid tool loop. Run without thinking, as Haiku 4.5 did.
+    const anthropicOptions = {
+      thinking: { type: "disabled" },
+      ...(options.effort && { effort: options.effort }),
+    } satisfies AnthropicLanguageModelOptions
     requestBody = {
       model,
-      maxOutputTokens: options.maxOutputTokens ?? 1024,
+      maxOutputTokens: options.maxOutputTokens ?? 2048,
+      providerOptions: { anthropic: anthropicOptions },
       instructions: computedChat.llmInstructions,
       messages: computedChat.llmMessages,
       tools: TOOL_DEFINITIONS,
@@ -151,6 +163,15 @@ export async function executeChatRequest(
       toolResults[id] = null
     }
 
+    let content = messageAggregator.join("")
+    if ((await result.finishReason) === "content-filter") {
+      logger.warn("AI response refused", {
+        chatId: computedChat.chatId,
+        character_id: character.id,
+      })
+      if (!content) content = REFUSAL_MESSAGE
+    }
+
     // Capture usage data from AI SDK
     const usageData = await result.usage
     const usage: Usage | null = usageData
@@ -170,7 +191,7 @@ export async function executeChatRequest(
       character_id: character.id,
       chat_id: computedChat.chatId,
       role: "assistant",
-      content: messageAggregator.join(""),
+      content,
       tool_calls: toolCalls.length > 0 ? toolCalls : null,
       tool_results: Object.keys(toolResults).length > 0 ? toolResults : null,
       error: null,

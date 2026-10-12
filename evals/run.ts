@@ -5,6 +5,7 @@
  *
  *   mise run eval                                   # every case, 3 trials, default model
  *   mise run eval --model claude-haiku-5-5 --trials 5
+ *   mise run eval --effort low                      # low|medium|high (model default if omitted)
  *   mise run eval --case spells-                    # cases whose id contains "spells-"
  *   mise run eval --category rules
  *
@@ -12,6 +13,7 @@
  */
 import { parseArgs } from "node:util"
 import { createAnthropic } from "@ai-sdk/anthropic"
+import type { ChatRequestOptions } from "@src/ai/chat"
 import { config } from "@src/config"
 import { getDbForTests } from "@src/db"
 import { CASES } from "./cases"
@@ -33,7 +35,8 @@ const { values: args } = parseArgs({
     trials: { type: "string", default: "3" },
     case: { type: "string" },
     category: { type: "string" },
-    "max-output-tokens": { type: "string", default: "1024" },
+    "max-output-tokens": { type: "string", default: "2048" },
+    effort: { type: "string" },
     concurrency: { type: "string", default: "4" },
   },
 })
@@ -53,6 +56,19 @@ function costOf(results: TrialResult[], model: string): number | undefined {
     sum((r) => r.transcript.cacheWriteInputTokens) * CACHE_WRITE_RATE
   const output = sum((r) => r.transcript.outputTokens)
   return (input * price.input + output * price.output) / 1e6
+}
+
+// Reed runs without thinking, which the API allows only up to high effort
+const EFFORTS = ["low", "medium", "high"] as const
+
+function effortArg(value: string | undefined): ChatRequestOptions["effort"] {
+  if (value === undefined) return undefined
+  const effort = EFFORTS.find((e) => e === value)
+  if (!effort) {
+    console.error(`--effort must be one of ${EFFORTS.join(", ")}`)
+    process.exit(1)
+  }
+  return effort
 }
 
 function positiveInt(name: string, value: string | undefined): number {
@@ -125,6 +141,7 @@ async function main() {
   const trials = positiveInt("trials", args.trials)
   const concurrency = positiveInt("concurrency", args.concurrency)
   const maxOutputTokens = positiveInt("max-output-tokens", args["max-output-tokens"])
+  const effort = effortArg(args.effort)
 
   let cases: EvalCase[] = CASES
   if (args.case) cases = cases.filter((c) => c.id.includes(args.case!))
@@ -137,6 +154,7 @@ async function main() {
   const options = {
     model: createAnthropic({ apiKey: config.anthropicApiKey })(model),
     maxOutputTokens,
+    effort,
   }
   console.log(`Running ${cases.length} cases x ${trials} trials on ${model}\n`)
 
@@ -220,6 +238,7 @@ async function main() {
         model,
         trials,
         maxOutputTokens: options.maxOutputTokens,
+        effort: options.effort,
         cost: costOf(results, model),
         results,
       },

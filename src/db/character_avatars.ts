@@ -118,7 +118,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   const result = await db`
     SELECT * FROM character_avatars
     WHERE character_id = ${characterId}
-    ORDER BY is_primary DESC, created_at DESC
+    ORDER BY is_primary DESC, created_at DESC, id DESC
   `
 
   return result.map((row: CharacterAvatar) =>

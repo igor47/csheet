@@ -60,7 +60,7 @@ export async function findByItemId(db: SQL, itemId: string): Promise<ItemDamage[
   const result = await db`
     SELECT * FROM item_damage
     WHERE item_id = ${itemId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   return result.map(parseItemDamage)

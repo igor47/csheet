@@ -51,7 +51,7 @@ export async function findByItemId(db: SQL, itemId: string): Promise<ItemCharge[
   const result = await db`
     SELECT * FROM item_charges
     WHERE item_id = ${itemId}
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `
 
   return result.map(parseItemCharge)
@@ -98,7 +98,7 @@ export async function getChargeHistoryByCharacter(
       FROM char_items
       WHERE character_id = ${characterId}
     )
-    ORDER BY ic.created_at DESC
+    ORDER BY ic.id DESC
   `
 
   // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod

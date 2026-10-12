@@ -525,7 +525,7 @@ See `src/routes/character.test.ts` for a comprehensive example.
 
 ## Reed Evals
 
-`evals/` holds an eval suite for Reed, the chat assistant. Each case builds a fixture character, plays scripted player messages through the real chat code (`prepareChatRequest`, `executeChatRequest`, `advanceToolCalls`) against the live model, auto-approves every edit, and checks the character afterwards and Reed's reply. Trials commit their writes (a rolled-back transaction would give every row the same `CURRENT_TIMESTAMP`), so the runner only runs against the test database, which `mise run eval` recreates.
+`evals/` holds an eval suite for Reed, the chat assistant. Each case builds a fixture character, plays scripted player messages through the real chat code (`prepareChatRequest`, `executeChatRequest`, `advanceToolCalls`) against the live model, auto-approves every edit, and checks the character afterwards and Reed's reply. Trials commit their writes, as prod does (inside one transaction every row would share a `CURRENT_TIMESTAMP`), so the runner only runs against the test database, which `mise run eval` recreates.
 
 ```bash
 mise run eval                                       # all cases, 3 trials, default model

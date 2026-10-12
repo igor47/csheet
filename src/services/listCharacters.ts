@@ -126,7 +126,7 @@ export async function listCharacters(
       FROM character_avatars ca
       INNER JOIN uploads u ON u.id = ca.upload_id
       WHERE ca.is_primary = true AND ca.character_id IN (SELECT id FROM character_ids)
-      ORDER BY ca.character_id, ca.created_at DESC
+      ORDER BY ca.character_id, ca.created_at DESC, ca.id DESC
     )
     SELECT
       c.*,

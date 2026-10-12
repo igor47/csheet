@@ -91,7 +91,7 @@ export async function findByCharacterId(db: SQL, characterId: string): Promise<C
   const result = await db`
     SELECT * FROM char_rests
     WHERE character_id = ${characterId}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
   `
 
   // biome-ignore lint/suspicious/noExplicitAny: database row, validated by Zod
@@ -106,7 +106,7 @@ export async function findRecentByCharacterId(
   const result = await db`
     SELECT * FROM char_rests
     WHERE character_id = ${characterId}
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT ${limit}
   `
 

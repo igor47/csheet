@@ -1,7 +1,7 @@
-\restrict 9facubht6eOgIN5ZfffWxw8wzXfFDMqEaygOo1ceslRHiWxsDisfqohd7KJPOnP
+\restrict PKRxUlFhhohb1dIfsM4clqGR3YzRB8dk7h09KnbG7Lc86DE3g60CQbYQbYrOsfd
 
 -- Dumped from database version 16.10
--- Dumped by pg_dump version 18.4
+-- Dumped by pg_dump version 18.6
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -912,10 +912,10 @@ CREATE INDEX idx_campaigns_created_by_archived_at ON public.campaigns USING btre
 
 
 --
--- Name: idx_char_abilities_char_id_ability_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_abilities_char_id_ability_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_abilities_char_id_ability_created_at ON public.char_abilities USING btree (character_id, ability, created_at);
+CREATE INDEX idx_char_abilities_char_id_ability_id ON public.char_abilities USING btree (character_id, ability, id);
 
 
 --
@@ -940,31 +940,31 @@ CREATE INDEX idx_char_beasts_seen_current ON public.char_beasts_seen USING btree
 
 
 --
--- Name: idx_char_coins_char_id_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_coins_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_coins_char_id_created_at ON public.char_coins USING btree (character_id, created_at);
-
-
---
--- Name: idx_char_hit_dice_char_id_die_value_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_char_hit_dice_char_id_die_value_created_at ON public.char_hit_dice USING btree (character_id, die_value, created_at);
+CREATE INDEX idx_char_coins_char_id_id ON public.char_coins USING btree (character_id, id);
 
 
 --
--- Name: idx_char_hp_char_id_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_hit_dice_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_hp_char_id_created_at ON public.char_hp USING btree (character_id, created_at);
+CREATE INDEX idx_char_hit_dice_char_id_id ON public.char_hit_dice USING btree (character_id, id);
 
 
 --
--- Name: idx_char_items_char_id_item_id_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_hp_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_items_char_id_item_id_created_at ON public.char_items USING btree (character_id, item_id, created_at);
+CREATE INDEX idx_char_hp_char_id_id ON public.char_hp USING btree (character_id, id);
+
+
+--
+-- Name: idx_char_items_char_id_item_id_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_items_char_id_item_id_id ON public.char_items USING btree (character_id, item_id, id);
 
 
 --
@@ -975,38 +975,38 @@ CREATE INDEX idx_char_items_item_id ON public.char_items USING btree (item_id);
 
 
 --
--- Name: idx_char_levels_char_id_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_levels_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_levels_char_id_created_at ON public.char_levels USING btree (character_id, created_at);
-
-
---
--- Name: idx_char_notes_character_id_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_char_notes_character_id_created_at ON public.char_notes USING btree (character_id, created_at DESC);
+CREATE INDEX idx_char_levels_char_id_id ON public.char_levels USING btree (character_id, id);
 
 
 --
--- Name: idx_char_rests_character_id_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_notes_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_rests_character_id_created_at ON public.char_rests USING btree (character_id, created_at DESC);
-
-
---
--- Name: idx_char_skills_char_id_skill_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_char_skills_char_id_skill_created_at ON public.char_skills USING btree (character_id, skill, created_at);
+CREATE INDEX idx_char_notes_char_id_id ON public.char_notes USING btree (character_id, id);
 
 
 --
--- Name: idx_char_spell_slots_char_id_slot_level_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_rests_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_spell_slots_char_id_slot_level_created_at ON public.char_spell_slots USING btree (character_id, slot_level, created_at);
+CREATE INDEX idx_char_rests_char_id_id ON public.char_rests USING btree (character_id, id);
+
+
+--
+-- Name: idx_char_skills_char_id_skill_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_skills_char_id_skill_id ON public.char_skills USING btree (character_id, skill, id);
+
+
+--
+-- Name: idx_char_spell_slots_char_id_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_char_spell_slots_char_id_id ON public.char_spell_slots USING btree (character_id, id);
 
 
 --
@@ -1038,17 +1038,17 @@ CREATE INDEX idx_char_spells_prepared_spell_id ON public.char_spells_prepared US
 
 
 --
--- Name: idx_char_traits_char_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_traits_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_traits_char_id ON public.char_traits USING btree (character_id, created_at);
+CREATE INDEX idx_char_traits_char_id_id ON public.char_traits USING btree (character_id, id);
 
 
 --
--- Name: idx_char_wild_shape_uses_character; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_char_wild_shape_uses_char_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_char_wild_shape_uses_character ON public.char_wild_shape_uses USING btree (character_id, created_at DESC);
+CREATE INDEX idx_char_wild_shape_uses_char_id_id ON public.char_wild_shape_uses USING btree (character_id, id);
 
 
 --
@@ -1101,17 +1101,17 @@ CREATE INDEX idx_chat_messages_character_created ON public.chat_messages USING b
 
 
 --
--- Name: idx_chat_messages_chat_created; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_chat_messages_chat_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_chat_messages_chat_created ON public.chat_messages USING btree (character_id, chat_id, created_at DESC);
+CREATE INDEX idx_chat_messages_chat_id_id ON public.chat_messages USING btree (chat_id, id);
 
 
 --
--- Name: idx_item_charges_item_id_created_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_item_charges_item_id_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_item_charges_item_id_created_at ON public.item_charges USING btree (item_id, created_at);
+CREATE INDEX idx_item_charges_item_id_id ON public.item_charges USING btree (item_id, id);
 
 
 --
@@ -1585,7 +1585,7 @@ ALTER TABLE ONLY public.items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9facubht6eOgIN5ZfffWxw8wzXfFDMqEaygOo1ceslRHiWxsDisfqohd7KJPOnP
+\unrestrict PKRxUlFhhohb1dIfsM4clqGR3YzRB8dk7h09KnbG7Lc86DE3g60CQbYQbYrOsfd
 
 
 --
@@ -1645,4 +1645,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260313211721'),
     ('20260320000127'),
     ('20260708065853'),
-    ('20261012022202');
+    ('20261012022202'),
+    ('20261012050000');

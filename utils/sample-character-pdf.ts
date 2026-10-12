@@ -6,12 +6,12 @@
 // With no argument, picks the first non-archived character in the dev DB.
 // Writes to /tmp/csheet-sample.pdf.
 
-import { SQL } from "bun"
-import { findById as findCharacterById, type Character } from "@src/db/characters"
-import { findById as findUserById } from "@src/db/users"
-import { computeCharacter } from "@src/services/computeCharacter"
-import { generateCharacterPdf } from "@src/services/characterPdf"
 import { config } from "@src/config"
+import { type Character, findById as findCharacterById } from "@src/db/characters"
+import { findById as findUserById } from "@src/db/users"
+import { generateCharacterPdf } from "@src/services/characterPdf"
+import { computeCharacter } from "@src/services/computeCharacter"
+import { SQL } from "bun"
 
 const url = `postgres://${config.postgresUser}:${config.postgresPassword}@${config.postgresHost}:${config.postgresPort}/${config.postgresDb}`
 const db = new SQL(url)

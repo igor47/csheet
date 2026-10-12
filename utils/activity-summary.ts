@@ -1,5 +1,5 @@
-import { SQL } from "bun"
 import { parseArgs } from "node:util"
+import { SQL } from "bun"
 
 // -- CLI args --
 
@@ -295,9 +295,18 @@ async function main() {
   printLine("Items acquired:", fmt(actions.itemsAcquired))
   printLine("Short rests:", fmt(actions.shortRests))
   printLine("Long rests:", fmt(actions.longRests))
-  printLine("Hit dice:", `${fmt(actions.hitDiceUsed)} used, ${fmt(actions.hitDiceRestored)} restored`)
-  printLine("Spell slots:", `${fmt(actions.spellSlotsUsed)} used, ${fmt(actions.spellSlotsRestored)} restored`)
-  printLine("Spells prepared:", `${fmt(actions.spellsPrepared)} prepped, ${fmt(actions.spellsUnprepared)} removed`)
+  printLine(
+    "Hit dice:",
+    `${fmt(actions.hitDiceUsed)} used, ${fmt(actions.hitDiceRestored)} restored`
+  )
+  printLine(
+    "Spell slots:",
+    `${fmt(actions.spellSlotsUsed)} used, ${fmt(actions.spellSlotsRestored)} restored`
+  )
+  printLine(
+    "Spells prepared:",
+    `${fmt(actions.spellsPrepared)} prepped, ${fmt(actions.spellsUnprepared)} removed`
+  )
   printLine("Wild shape uses:", fmt(actions.wildShapeUses))
   printLine("Level ups:", fmt(actions.levelUps))
   printLine("Campaigns created:", fmt(actions.campaignsCreated))

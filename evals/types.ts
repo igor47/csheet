@@ -29,13 +29,17 @@ export interface Turn {
   calls: RecordedCall[]
   /** Assistant messages that errored (prep or stream failures) */
   errors: number
+  /** Reed was still going when the turn hit the model-call cap */
+  capped: boolean
 }
 
 export interface Transcript {
   turns: Turn[]
+  /** Uncached input; cache reads and writes are counted separately */
   inputTokens: number
   outputTokens: number
   cachedInputTokens: number
+  cacheWriteInputTokens: number
   modelCalls: number
 }
 

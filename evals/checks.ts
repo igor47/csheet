@@ -1,5 +1,5 @@
 import type { ClassNameType } from "@src/lib/dnd"
-import type { RulesetId } from "@src/lib/dnd/rulesets"
+import { RulesetIdSchema } from "@src/lib/dnd/rulesets"
 import { findSection } from "@src/lib/srd/sections"
 import { getToc } from "@src/lib/srd/toc"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
@@ -143,12 +143,17 @@ function snippet(text: string): string {
   return text.replace(/\s+/g, " ").slice(0, 200)
 }
 
+/** Reply text without markdown emphasis, so "*other* than" matches "other than" */
+function plain(text: string): string {
+  return text.replace(/[*_`]/g, "")
+}
+
 export function replyMatches(o: Outcome, pattern: RegExp, reply = o.reply): Check {
-  return check(`reply matches ${pattern}`, pattern.test(reply), `reply: ${snippet(reply)}`)
+  return check(`reply matches ${pattern}`, pattern.test(plain(reply)), `reply: ${snippet(reply)}`)
 }
 
 export function replyLacks(o: Outcome, pattern: RegExp, reply = o.reply): Check {
-  return check(`reply lacks ${pattern}`, !pattern.test(reply), `reply: ${snippet(reply)}`)
+  return check(`reply lacks ${pattern}`, !pattern.test(plain(reply)), `reply: ${snippet(reply)}`)
 }
 
 /**
@@ -158,7 +163,8 @@ export function replyLacks(o: Outcome, pattern: RegExp, reply = o.reply): Check 
 export async function linksAreValid(o: Outcome): Promise<Check> {
   const text = o.transcript.turns.map((t) => t.reply).join("\n")
   const bad: string[] = []
-  for (const [, url] of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+  // the url, then an optional markdown title: [text](/rules?... "title")
+  for (const [, url] of text.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
     if (!url) continue
     if (!url.startsWith("/rules")) {
       bad.push(url)
@@ -166,8 +172,12 @@ export async function linksAreValid(o: Outcome): Promise<Check> {
     }
     const params = new URL(url, "http://localhost").searchParams
     const section = params.get("section")
-    const ruleset = (params.get("ruleset") ?? o.after.ruleset) as RulesetId
-    if (section && !findSection(await getToc(ruleset), section)) bad.push(url)
+    const ruleset = RulesetIdSchema.safeParse(params.get("ruleset") ?? o.after.ruleset)
+    if (!ruleset.success) {
+      bad.push(url)
+      continue
+    }
+    if (section && !findSection(await getToc(ruleset.data), section)) bad.push(url)
   }
   // bare links outside markdown
   for (const [url] of text.matchAll(/(?<!\]\()https?:\/\/[^\s)]+/g)) bad.push(url)

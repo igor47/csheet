@@ -1,5 +1,5 @@
 import { SRD52_ID } from "@src/lib/dnd/srd52"
-import { check, lookedUpRule, lookedUpSpell, noEdits, replyLacks, replyMatches } from "../checks"
+import { check, lookedUpRule, lookedUpSpell, noEdits, replyMatches } from "../checks"
 import { makeCharacter } from "../fixtures"
 import type { EvalCase } from "../types"
 
@@ -14,8 +14,13 @@ export const rulesCases: EvalCase[] = [
       makeCharacter(db, user, { ruleset: SRD52_ID, class: "fighter", level: 3, strength: 16 }),
     turns: ["What does exhaustion do to me?"],
     expect: (o) => [
-      replyMatches(o, /(-|−|minus |reduced by |by )2\b|2 (times|×|x)|twice/i),
-      replyLacks(o, /disadvantage on ability checks/i),
+      // -2 per level to d20 rolls, and -5 ft speed per level; both new in 5.2
+      replyMatches(
+        o,
+        // "-2", "minus 2", "subtract 2", "penalty of 2 ×", "2 per level", but not a range like "1-2"
+        /(?<![\d–])(-|−|minus |subtract |penalty of |by )2\b|\b2 ?(×|x|times|per)\b/i
+      ),
+      replyMatches(o, /speed[^.]{0,60}\b5\b|\b5\b[^.]{0,60}speed/i),
       noEdits(o),
     ],
     grounding: (o) => [lookedUpRule(o, /exhaustion/i)],
@@ -44,7 +49,11 @@ export const rulesCases: EvalCase[] = [
     turns: ["What happens to me when I'm grappled?"],
     expect: (o) => [
       replyMatches(o, /speed[^.]{0,20}\b0\b|\b0\b[^.]{0,10}speed|can'?t move/i),
-      replyMatches(o, /disadvantage/i),
+      // new in 5.2: disadvantage on attacks against anyone but the grappler
+      replyMatches(
+        o,
+        /disadvantage[^.]{0,120}(other than|isn'?t|is not|anyone but|anyone else|except|besides|aside from|other (creatures|targets))|(other than|isn'?t the|anyone but|anyone else|except)[^.]{0,120}disadvantage/i
+      ),
       noEdits(o),
     ],
     grounding: (o) => [lookedUpRule(o, /grappl/i)],
@@ -100,7 +109,10 @@ export const rulesCases: EvalCase[] = [
         "spare the dying",
         "thaumaturgy",
       ]
-      const named = all.filter((c) => new RegExp(`\\b${c}\\b`, "i").test(o.reply))
+      // "light" is a common word, so only count it capitalized, as a spell name
+      const named = all.filter((c) =>
+        (c === "light" ? /\bLight\b/ : new RegExp(`\\b${c}\\b`, "i")).test(o.reply)
+      )
       return [
         replyMatches(o, /thaumaturgy/i),
         replyMatches(o, /mending/i),

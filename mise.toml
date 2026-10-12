@@ -269,9 +269,22 @@ depends = ["db:test:migrate", "s3:test:setup"]
 [tasks.eval]
 run = """
   CONFIG=$(bun src/config.ts)
-  export POSTGRES_DB=$(echo "$CONFIG" | jq -r '.postgresDbTest')
+  PG_HOST=$(echo "$CONFIG" | jq -r '.postgresHost')
+  PG_PORT=$(echo "$CONFIG" | jq -r '.postgresPort')
+  PG_USER=$(echo "$CONFIG" | jq -r '.postgresUser')
+  PG_PASSWORD=$(echo "$CONFIG" | jq -r '.postgresPassword')
+  # its own database, so evals and tests can run at the same time
+  PG_DB_EVAL="$(echo "$CONFIG" | jq -r '.postgresDb')_eval_test"
+  export PGPASSWORD="$PG_PASSWORD"
+
+  PSQL_CMD="psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d postgres -q"
+  $PSQL_CMD -c "DROP DATABASE IF EXISTS $PG_DB_EVAL"
+  $PSQL_CMD -c "CREATE DATABASE $PG_DB_EVAL"
+  DATABASE_URL="postgres://$PG_USER:$PG_PASSWORD@$PG_HOST:$PG_PORT/$PG_DB_EVAL?sslmode=disable" DBMATE_MIGRATIONS_DIR="./migrations" DBMATE_NO_DUMP_SCHEMA=true dbmate migrate > /dev/null
+
+  export POSTGRES_DB="$PG_DB_EVAL"
   export NODE_ENV="test"
   bun evals/run.ts "$@"
 """
 description = "Run Reed's eval suite against the live API (--model, --trials, --case, --category)"
-depends = ["db:test:migrate"]
+depends = ["deps:up"]

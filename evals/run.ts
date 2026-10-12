@@ -18,7 +18,9 @@ import { CASES } from "./cases"
 import { runTrial, type TrialResult } from "./harness"
 import { CATEGORIES, type Category, type EvalCase } from "./types"
 
-// $ per million tokens; ignores prompt-caching discounts, so costs are a slight overestimate
+// $ per million tokens. Prompt-cache reads cost 0.1x input and writes 1.25x (5-minute cache)
+const CACHE_READ_RATE = 0.1
+const CACHE_WRITE_RATE = 1.25
 const PRICES: Record<string, { input: number; output: number }> = {
   "claude-haiku-4-5": { input: 1, output: 5 },
   "claude-haiku-5-5": { input: 0.1, output: 0.5 },
@@ -44,9 +46,22 @@ function priceFor(model: string) {
 function costOf(results: TrialResult[], model: string): number | undefined {
   const price = priceFor(model)
   if (!price) return undefined
-  const input = results.reduce((n, r) => n + r.transcript.inputTokens, 0)
-  const output = results.reduce((n, r) => n + r.transcript.outputTokens, 0)
+  const sum = (f: (r: TrialResult) => number) => results.reduce((n, r) => n + f(r), 0)
+  const input =
+    sum((r) => r.transcript.inputTokens) +
+    sum((r) => r.transcript.cachedInputTokens) * CACHE_READ_RATE +
+    sum((r) => r.transcript.cacheWriteInputTokens) * CACHE_WRITE_RATE
+  const output = sum((r) => r.transcript.outputTokens)
   return (input * price.input + output * price.output) / 1e6
+}
+
+function positiveInt(name: string, value: string | undefined): number {
+  const n = Number(value)
+  if (!Number.isInteger(n) || n < 1) {
+    console.error(`--${name} must be a positive whole number, got ${value}`)
+    process.exit(1)
+  }
+  return n
 }
 
 function failedCalls(r: TrialResult): number {
@@ -107,7 +122,9 @@ async function main() {
     process.exit(1)
   }
   const model = args.model!
-  const trials = Number.parseInt(args.trials!, 10)
+  const trials = positiveInt("trials", args.trials)
+  const concurrency = positiveInt("concurrency", args.concurrency)
+  const maxOutputTokens = positiveInt("max-output-tokens", args["max-output-tokens"])
 
   let cases: EvalCase[] = CASES
   if (args.case) cases = cases.filter((c) => c.id.includes(args.case!))
@@ -119,7 +136,7 @@ async function main() {
 
   const options = {
     model: createAnthropic({ apiKey: config.anthropicApiKey })(model),
-    maxOutputTokens: Number.parseInt(args["max-output-tokens"]!, 10),
+    maxOutputTokens,
   }
   console.log(`Running ${cases.length} cases x ${trials} trials on ${model}\n`)
 
@@ -140,7 +157,7 @@ async function main() {
       return result
     })
   )
-  const results = await pool(tasks, Number.parseInt(args.concurrency!, 10))
+  const results = await pool(tasks, concurrency)
 
   // per case, with the first failure's details
   console.log("\nCases")

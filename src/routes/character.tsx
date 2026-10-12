@@ -33,8 +33,11 @@ import { NotesSaveIndicator } from "@src/components/NotesSaveIndicator"
 import { PreparedSpellsHistory } from "@src/components/PreparedSpellsHistory"
 import { PrepareSpellForm } from "@src/components/PrepareSpellForm"
 import { PrepBeastForm } from "@src/components/PrepBeastForm"
+import { ProficienciesEditForm } from "@src/components/ProficienciesEditForm"
+import { ProficienciesHistory } from "@src/components/ProficienciesHistory"
 import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
+import { ProficienciesPanel } from "@src/components/panels/ProficienciesPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { TraitsPanel } from "@src/components/panels/TraitsPanel"
@@ -69,6 +72,7 @@ import {
   findByCharacterId as findNotes,
   getCurrent as getCurrentNote,
 } from "@src/db/char_notes"
+import { findByCharacterId as findProficiencyChanges } from "@src/db/char_proficiencies"
 import { findByCharacterId as findRestHistory } from "@src/db/char_rests"
 import { findByCharacterId as findSkillChanges } from "@src/db/char_skills"
 import { findByCharacterId as findSpellSlotChanges } from "@src/db/char_spell_slots"
@@ -126,6 +130,7 @@ import { updateCoins } from "@src/services/updateCoins"
 import { updateHitDice } from "@src/services/updateHitDice"
 import { updateHitPoints } from "@src/services/updateHitPoints"
 import { updateItem } from "@src/services/updateItem"
+import { updateProficiencies } from "@src/services/updateProficiencies"
 import { updateSkills } from "@src/services/updateSkills"
 import { updateSpellSlots } from "@src/services/updateSpellSlots"
 import { updateTraitService } from "@src/services/updateTrait"
@@ -294,6 +299,7 @@ characterRoutes.post("/characters/:id/edit/class", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <ProficienciesPanel character={updatedChar} swapOob={true} />
       <SpellsPanel character={updatedChar} swapOob={true} />
       <TraitsPanel character={updatedChar} swapOob={true} />
       <WildShapePanel character={updatedChar} swapOob={true} />
@@ -1404,6 +1410,10 @@ characterRoutes.get("/characters/:id/edit/:field", async (c) => {
     return c.html(<SkillsEditForm character={char} values={{}} />)
   }
 
+  if (field === "proficiencies") {
+    return c.html(<ProficienciesEditForm character={char} />)
+  }
+
   if (field === "coins") {
     return c.html(<CoinsEditForm character={char} values={{}} />)
   }
@@ -1440,6 +1450,33 @@ characterRoutes.post("/characters/:id/edit/abilities", async (c) => {
       <CharacterInfo character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
       <SpellsPanel character={updatedChar} swapOob={true} />
+    </>
+  )
+})
+
+// POST /characters/:id/edit/proficiencies - Add and remove weapon, armor, tool, language proficiencies
+characterRoutes.post("/characters/:id/edit/proficiencies", async (c) => {
+  const characterId = c.req.param("id") as string
+
+  const authResult = await authorizeCharacter(c, characterId)
+  if (!authResult.allowed) return handleUnallowed(c, authResult.reason)
+  const char = authResult.character
+
+  const body = (await c.req.parseBody()) as Record<string, string>
+  const result = await updateProficiencies(getDb(c), char, body)
+
+  if (!result.complete) {
+    return c.html(
+      <ProficienciesEditForm character={char} values={result.values} errors={result.errors} />
+    )
+  }
+
+  const updatedChar = (await computeCharacter(getDb(c), characterId))!
+  c.header("HX-Trigger", "closeDetailModal")
+  return c.html(
+    <>
+      <ProficienciesPanel character={updatedChar} swapOob={true} />
+      <CharacterInfo character={updatedChar} swapOob={true} />
     </>
   )
 })
@@ -1823,6 +1860,13 @@ characterRoutes.get("/characters/:id/history/:field", async (c) => {
     // Reverse to show most recent first
     skillEvents.reverse()
     return c.html(<SkillsHistory events={skillEvents} />)
+  }
+
+  if (field === "proficiencies") {
+    const proficiencyEvents = await findProficiencyChanges(getDb(c), characterId)
+    // Reverse to show most recent first
+    proficiencyEvents.reverse()
+    return c.html(<ProficienciesHistory events={proficiencyEvents} />)
   }
 
   if (field === "coins") {

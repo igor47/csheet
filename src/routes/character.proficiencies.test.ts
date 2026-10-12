@@ -12,7 +12,7 @@ import { computeCharacter } from "@src/services/computeCharacter"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
-import { makeRequest } from "@src/test/http"
+import { expectElement, makeRequest, parseHtml } from "@src/test/http"
 
 async function proficiencyNames(db: Parameters<typeof computeCharacter>[0], characterId: string) {
   const char = await computeCharacter(db, characterId)
@@ -334,6 +334,227 @@ describe("granting proficiencies", () => {
       expect(profs.armor).toEqual([])
       // the rest of the multiclass set still arrives
       expect(profs.tool).toEqual(["thieves' tools"])
+    })
+  })
+})
+
+describe("the Proficiencies & Languages panel", () => {
+  const testCtx = useTestApp()
+  let user: User
+  let character: Character
+
+  beforeEach(async () => {
+    user = await userFactory.create({}, testCtx.db)
+    character = await characterFactory.create(
+      { user_id: user.id, class: "fighter", level: 1, species: "dwarf", background: "soldier" },
+      testCtx.db
+    )
+  })
+
+  describe("GET /characters/:id", () => {
+    test("shows proficiencies grouped by kind", async () => {
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}`, { user })
+      const document = await parseHtml(response)
+
+      const panel = expectElement(document, "#proficiencies-panel")
+      const weapons = expectElement(
+        panel as unknown as Document,
+        "[data-proficiency-kind='weapon']"
+      )
+      expect(weapons.textContent).toContain("Martial Weapons")
+      expect(weapons.textContent).toContain("Battleaxe")
+      const languages = expectElement(
+        panel as unknown as Document,
+        "[data-proficiency-kind='language']"
+      )
+      expect(languages.textContent).toContain("Dwarvish")
+      expect(panel.textContent).toContain("Vehicles (land)")
+    })
+
+    test("says where each one came from", async () => {
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}`, { user })
+      const document = await parseHtml(response)
+
+      const shields = expectElement(document, "#proficiencies-panel [data-proficiency='shields']")
+      expect(shields.getAttribute("title")).toBe("From Fighter (class)")
+    })
+
+    test("hints that chosen proficiencies are added by hand", async () => {
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}`, { user })
+      const document = await parseHtml(response)
+
+      expect(expectElement(document, "#proficiencies-choices-hint").textContent).toContain(
+        "add them with Edit Proficiencies"
+      )
+    })
+
+    test("no longer has the placeholder box in the skills panel", async () => {
+      const response = await makeRequest(testCtx.app, `/characters/${character.id}`, { user })
+      const document = await parseHtml(response)
+
+      expect(document.querySelector("#skills-panel textarea")).toBeNull()
+    })
+  })
+
+  describe("GET /characters/:id/history/proficiencies", () => {
+    test("is refused for someone else, and writes nothing", async () => {
+      const before = await findProficiencyEvents(testCtx.db, character.id)
+      const stranger = await userFactory.create({}, testCtx.db)
+      const response = await makeRequest(
+        testCtx.app,
+        `/characters/${character.id}/history/proficiencies`,
+        { user: stranger }
+      )
+
+      expect(response.status).not.toBe(200)
+      expect(await findProficiencyEvents(testCtx.db, character.id)).toEqual(before)
+    })
+
+    test("lists the granted proficiencies with their source", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/characters/${character.id}/history/proficiencies`,
+        { user }
+      )
+      const document = await parseHtml(response)
+      const shields = Array.from(document.querySelectorAll("tbody tr")).find((row) =>
+        row.textContent?.includes("Shields")
+      )!
+
+      expect(shields.textContent).toContain("Fighter (class)")
+    })
+  })
+
+  describe("GET /characters/:id/edit/proficiencies", () => {
+    test("renders the edit form with a remove checkbox per proficiency", async () => {
+      const response = await makeRequest(
+        testCtx.app,
+        `/characters/${character.id}/edit/proficiencies`,
+        { user }
+      )
+      const document = await parseHtml(response)
+
+      expect(expectElement(document, ".modal-title").textContent).toBe("Edit Proficiencies")
+      expectElement(document, "input[name='remove:armor:heavy armor'][type='checkbox']")
+      expectElement(document, "select[name='add_kind']")
+      expectElement(document, "datalist#proficiency-suggestions option[value='longsword']")
+    })
+  })
+
+  describe("POST /characters/:id/edit/proficiencies", () => {
+    async function submit(fields: Record<string, string>) {
+      const form = new FormData()
+      for (const [key, value] of Object.entries({ is_check: "false", ...fields })) {
+        form.append(key, value)
+      }
+      return makeRequest(testCtx.app, `/characters/${character.id}/edit/proficiencies`, {
+        user,
+        method: "POST",
+        body: form,
+      })
+    }
+
+    describe("adding tools", () => {
+      let response: Response
+
+      beforeEach(async () => {
+        response = await submit({
+          add_kind: "tool",
+          add_names: "Smith's Tools, poisoner's kit",
+          source_detail: "Downtime training",
+          note: "Learned from the blacksmith",
+        })
+      })
+
+      test("adds them and refreshes the panel", async () => {
+        expect(response.headers.get("HX-Trigger")).toBe("closeDetailModal")
+        const document = await parseHtml(response)
+        const panel = expectElement(document, "#proficiencies-panel[hx-swap-oob='true']")
+        expect(panel.textContent).toContain("Smith's Tools")
+        expect(panel.textContent).toContain("Poisoner's Kit")
+      })
+
+      test("records them as added by hand, with the source and note", async () => {
+        const events = await findProficiencyEvents(testCtx.db, character.id)
+        expect(events.find((e) => e.name === "smith's tools")).toMatchObject({
+          action: "add",
+          source_detail: "Downtime training",
+          note: "Learned from the blacksmith",
+        })
+      })
+
+      test("shows them in the history", async () => {
+        const history = await makeRequest(
+          testCtx.app,
+          `/characters/${character.id}/history/proficiencies`,
+          { user }
+        )
+        const document = await parseHtml(history)
+        const firstRow = expectElement(document, "tbody tr")
+        expect(firstRow.textContent).toContain("Added")
+        expect(document.body.textContent).toContain("Learned from the blacksmith")
+      })
+    })
+
+    describe("removing a proficiency", () => {
+      beforeEach(async () => {
+        await submit({ "remove:armor:heavy armor": "on" })
+      })
+
+      test("removes it", async () => {
+        const profs = await proficiencyNames(testCtx.db, character.id)
+        expect(profs.armor).not.toContain("heavy armor")
+        expect(profs.armor).toContain("medium armor")
+      })
+
+      test("can be added back by hand", async () => {
+        await submit({ add_kind: "armor", add_names: "heavy" })
+        const char = await computeCharacter(testCtx.db, character.id)
+        expect(char!.proficiencies.find((p) => p.name === "heavy armor")).toMatchObject({
+          source: "custom",
+        })
+      })
+    })
+
+    test("rejects adding one the character already has", async () => {
+      const response = await submit({ add_kind: "weapon", add_names: "Battleaxes" })
+      const document = await parseHtml(response)
+
+      expect(document.body.textContent).toContain("Already proficient with Battleaxe")
+    })
+
+    test("rejects removing and adding back the same one as no change", async () => {
+      const before = await findProficiencyEvents(testCtx.db, character.id)
+      const response = await submit({
+        "remove:armor:heavy armor": "on",
+        add_kind: "armor",
+        add_names: "Heavy Armor",
+      })
+      const document = await parseHtml(response)
+
+      expect(document.body.textContent).toContain("Add or remove at least one proficiency")
+      expect(await findProficiencyEvents(testCtx.db, character.id)).toEqual(before)
+    })
+
+    test("rejects a name that doesn't fit the kind", async () => {
+      const response = await submit({ add_kind: "weapon", add_names: "shields" })
+      const document = await parseHtml(response)
+
+      expect(document.body.textContent).toContain("Shields is an armor proficiency")
+    })
+
+    test("rejects an empty change", async () => {
+      const response = await submit({})
+      const document = await parseHtml(response)
+
+      expect(document.body.textContent).toContain("Add or remove at least one proficiency")
+    })
+
+    test("doesn't save anything during live validation", async () => {
+      const before = await findProficiencyEvents(testCtx.db, character.id)
+      await submit({ is_check: "true", add_kind: "language", add_names: "Giant" })
+
+      expect(await findProficiencyEvents(testCtx.db, character.id)).toEqual(before)
     })
   })
 })

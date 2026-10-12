@@ -3,6 +3,7 @@ import { CharacterInfo } from "@src/components/CharacterInfo"
 import { ChatBox } from "@src/components/ChatBox"
 import { AbilitiesPanel } from "@src/components/panels/AbilitiesPanel"
 import { InventoryPanel } from "@src/components/panels/InventoryPanel"
+import { ProficienciesPanel } from "@src/components/panels/ProficienciesPanel"
 import { SkillsPanel } from "@src/components/panels/SkillsPanel"
 import { SpellsPanel } from "@src/components/panels/SpellsPanel"
 import { WildShapePanel } from "@src/components/panels/WildShapePanel"
@@ -164,6 +165,7 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
       <SpellsPanel character={updatedChar} swapOob={true} />
       <AbilitiesPanel character={updatedChar} swapOob={true} />
       <SkillsPanel character={updatedChar} swapOob={true} />
+      <ProficienciesPanel character={updatedChar} swapOob={true} />
       <InventoryPanel character={updatedChar} swapOob={true} />
       {updatedChar.wildShape && <WildShapePanel character={updatedChar} swapOob={true} />}
       <ChatBox character={updatedChar} computedChat={updatedChat} swapOob={true} />

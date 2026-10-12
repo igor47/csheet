@@ -5,6 +5,7 @@ import { CharacterInfo } from "./CharacterInfo"
 import { ChatBox } from "./ChatBox"
 import { AbilitiesPanel } from "./panels/AbilitiesPanel"
 import { InventoryPanel } from "./panels/InventoryPanel"
+import { ProficienciesPanel } from "./panels/ProficienciesPanel"
 import { SkillsPanel } from "./panels/SkillsPanel"
 import { SpellsPanel } from "./panels/SpellsPanel"
 import { TraitsPanel } from "./panels/TraitsPanel"
@@ -47,7 +48,7 @@ const CharacterPanels = ({
       </div>
     </div>
 
-    {/* Skills & Proficiencies */}
+    {/* Skills */}
     <div class="accordion-item">
       <h2 class="accordion-header" id="hdr-skills">
         <button
@@ -59,11 +60,31 @@ const CharacterPanels = ({
           aria-controls="col-skills"
         >
           <i class="bi bi-wrench me-2"></i>
-          Skills & Proficiencies
+          Skills
         </button>
       </h2>
       <div id="col-skills" class={clsx("accordion-collapse collapse", { show: isReadOnly })}>
         <SkillsPanel character={character} isReadOnly={isReadOnly} />
+      </div>
+    </div>
+
+    {/* Proficiencies & Languages */}
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="hdr-proficiencies">
+        <button
+          class={clsx("accordion-button", { collapsed: !isReadOnly })}
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#col-proficiencies"
+          aria-expanded={isReadOnly ? "true" : "false"}
+          aria-controls="col-proficiencies"
+        >
+          <i class="bi bi-tools me-2"></i>
+          Proficiencies & Languages
+        </button>
+      </h2>
+      <div id="col-proficiencies" class={clsx("accordion-collapse collapse", { show: isReadOnly })}>
+        <ProficienciesPanel character={character} isReadOnly={isReadOnly} />
       </div>
     </div>
 

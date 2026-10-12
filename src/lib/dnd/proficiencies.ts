@@ -540,3 +540,19 @@ export function requiredArmorProficiency(item: {
   if (item.category === "armor" && item.armor_type) return `${item.armor_type} armor`
   return null
 }
+
+/**
+ * Names to suggest when adding a proficiency by hand
+ */
+export function proficiencySuggestions(kind: ProficiencyKind, ruleset: RulesetId): string[] {
+  switch (kind) {
+    case "weapon":
+      return [SIMPLE_WEAPONS, MARTIAL_WEAPONS, ...weaponTemplates(ruleset).map((t) => t.name)]
+    case "armor":
+      return ArmorProficiencyNames
+    case "tool":
+      return ToolSuggestions
+    case "language":
+      return LanguageSuggestions
+  }
+}

@@ -137,32 +137,30 @@ export const SkillsPanel = ({ character, swapOob, isReadOnly = false }: SkillsPa
         </div>
       )}
       <div class="row g-2">
-        <div class="col-12 col-md-6">
-          <div class="list-group small">
-            {Skills.map((skill) => {
-              const skillInfo = displaySkills[skill]
-              return (
-                <SkillRow
-                  skill={skill}
-                  skillScore={skillInfo}
-                  hasEffect={!skillInfo.fromBeast && hasEffect(skill, character.affectedAttributes)}
-                  effectTooltip={
-                    !skillInfo.fromBeast
-                      ? getEffectTooltip(skill, character.affectedAttributes) || undefined
-                      : undefined
-                  }
-                  fromBeast={skillInfo.fromBeast}
-                />
-              )
-            })}
+        {[Skills.slice(0, 9), Skills.slice(9)].map((column) => (
+          <div class="col-12 col-md-6">
+            <div class="list-group small">
+              {column.map((skill) => {
+                const skillInfo = displaySkills[skill]
+                return (
+                  <SkillRow
+                    skill={skill}
+                    skillScore={skillInfo}
+                    hasEffect={
+                      !skillInfo.fromBeast && hasEffect(skill, character.affectedAttributes)
+                    }
+                    effectTooltip={
+                      !skillInfo.fromBeast
+                        ? getEffectTooltip(skill, character.affectedAttributes) || undefined
+                        : undefined
+                    }
+                    fromBeast={skillInfo.fromBeast}
+                  />
+                )
+              })}
+            </div>
           </div>
-        </div>
-        <div class="col-12 col-md-6">
-          <div class="form-label small text-muted">Tool & Weapon Proficiencies</div>
-          <textarea class="form-control form-control-sm" rows={6}>
-            Longswords, Shortbows, Thieves' Tools, Herbalism Kit
-          </textarea>
-        </div>
+        ))}
       </div>
     </div>
   )

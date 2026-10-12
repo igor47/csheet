@@ -4,7 +4,7 @@ import { ulid } from "@src/lib/ids"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat } from "@src/services/computeChat"
-import { executeTool } from "@src/services/toolExecution"
+import { executeTool, validateNextApprovalTool } from "@src/services/toolExecution"
 import { TOOL_DEFINITIONS, TOOLS } from "@src/tools"
 import { type LanguageModel, streamText } from "ai"
 import type { SQL } from "bun"
@@ -75,9 +75,9 @@ async function autoExecuteReadOnlyTools(
   }
 
   // Find read-only tools that haven't been executed yet
-  for (const [toolCallId, call] of Object.entries(assistantMsg.tool_calls)) {
+  for (const call of assistantMsg.tool_calls) {
     // Skip if already executed
-    if (assistantMsg.tool_results[toolCallId]) {
+    if (assistantMsg.tool_results[call.id]) {
       continue
     }
 
@@ -90,52 +90,10 @@ async function autoExecuteReadOnlyTools(
     // Execute the tool immediately
     await executeTool(db, character, {
       messageId: assistantMsg.id,
-      toolCallId,
+      toolCallId: call.id,
       toolName: call.name,
       parameters: call.parameters,
     })
-  }
-}
-
-/**
- * Auto-validate tool parameters for tools that require approval
- * Runs validation checks before user sees approval UI, allowing LLM to self-correct
- */
-async function validateApprovalTools(
-  db: SQL,
-  character: ComputedCharacter,
-  assistantMsg: ChatMessage
-): Promise<void> {
-  // Check if message has tool calls
-  if (!assistantMsg.tool_calls || !assistantMsg.tool_results) {
-    return
-  }
-
-  // Find tools that require approval and haven't been executed yet
-  for (const [toolCallId, call] of Object.entries(assistantMsg.tool_calls)) {
-    // Skip if already executed
-    if (assistantMsg.tool_results[toolCallId]) {
-      continue
-    }
-
-    // read-only tools will be executed automatically anyway
-    const toolRegistration = TOOLS.find((t) => t.name === call.name)
-    if (!toolRegistration?.formatApprovalMessage) {
-      continue
-    }
-
-    // Execute the tool in validation mode
-    await executeTool(
-      db,
-      character,
-      {
-        messageId: assistantMsg.id,
-        toolCallId,
-        toolName: call.name,
-        parameters: call.parameters,
-      },
-      true // isCheck = true for validation mode
-    )
   }
 }
 
@@ -204,16 +162,17 @@ export async function executeChatRequest(
       onMessage?.(streamChunk)
     }
 
-    const toolCalls: ChatMessage["tool_calls"] = {}
+    const toolCalls: NonNullable<ChatMessage["tool_calls"]> = []
     const toolResults: ChatMessage["tool_results"] = {}
 
     for (const toolCall of await result.toolCalls) {
       const id = toolCall.toolCallId
-      toolCalls[id] = {
+      toolCalls.push({
+        id,
         name: toolCall.toolName,
         // biome-ignore lint/suspicious/noExplicitAny: Tool input can be any valid JSON
         parameters: toolCall.input as Record<string, any>,
-      }
+      })
       // Initialize result as null (pending approval)
       toolResults[id] = null
     }
@@ -237,7 +196,7 @@ export async function executeChatRequest(
       chat_id: computedChat.chatId,
       role: "assistant",
       content: messageAggregator.join(""),
-      tool_calls: Object.keys(toolCalls).length > 0 ? toolCalls : null,
+      tool_calls: toolCalls.length > 0 ? toolCalls : null,
       tool_results: Object.keys(toolResults).length > 0 ? toolResults : null,
       error: null,
       usage,
@@ -246,8 +205,8 @@ export async function executeChatRequest(
     // Auto-execute any read-only tools immediately
     await autoExecuteReadOnlyTools(db, character, assistantMsg)
 
-    // Validate parameters for tools that require approval
-    await validateApprovalTools(db, character, assistantMsg)
+    // Validate parameters for the first tool that requires approval
+    await validateNextApprovalTool(db, character, assistantMsg.id)
 
     return assistantMsg.id
   } catch (err) {

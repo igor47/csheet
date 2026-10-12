@@ -12,7 +12,7 @@ import { clearChat, getChatsByCharacterId, setMessageRetry } from "@src/db/chat_
 import { logger } from "@src/lib/logger"
 import { computeCharacter } from "@src/services/computeCharacter"
 import { computeChat } from "@src/services/computeChat"
-import { executeTool, rejectTool } from "@src/services/toolExecution"
+import { executeTool, rejectTool, validateNextApprovalTool } from "@src/services/toolExecution"
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 
@@ -139,11 +139,17 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/approve", async (
     return c.json({ error: "Tool call not found or already resolved" }, 404)
   }
 
+  // Tool calls are resolved in the order the model made them, since later ones may depend on earlier ones
+  if (computedChat.unresolvedToolCalls[0]?.toolCallId !== toolCallId) {
+    return c.json({ error: "Earlier tool calls must be resolved first" }, 409)
+  }
+
   // Execute the tool
   const result = await executeTool(db, char, unresolvedTool)
 
-  // Get updated character and chat
+  // Get updated character, check the next tool call against it, and get updated chat
   const updatedChar = (await computeCharacter(db, characterId))!
+  await validateNextApprovalTool(db, updatedChar, unresolvedTool.messageId)
   const updatedChat = await computeChat(db, chatId)
 
   // If tool execution failed, only return the chat box to show the error
@@ -194,8 +200,14 @@ chatRoutes.post("/characters/:id/chat/:chatId/tool/:toolCallId/reject", async (c
     return c.json({ error: "Tool call not found or already resolved" }, 404)
   }
 
-  // Reject the tool via service
+  // Tool calls are resolved in the order the model made them, since later ones may depend on earlier ones
+  if (computedChat.unresolvedToolCalls[0]?.toolCallId !== toolCallId) {
+    return c.json({ error: "Earlier tool calls must be resolved first" }, 409)
+  }
+
+  // Reject the tool via service, and check the next tool call
   await rejectTool(db, unresolvedTool)
+  await validateNextApprovalTool(db, char, unresolvedTool.messageId)
 
   // Get updated chat
   const updatedChat = await computeChat(db, chatId)

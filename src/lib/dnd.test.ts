@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { applyDeltasWithChange, type CoinPurse, toCopper } from "./dnd"
+import { applyDeltasWithChange, type CoinPurse, findSubclass, toCopper } from "./dnd"
+import { getRuleset } from "./dnd/rulesets"
+import { SRD51_ID } from "./dnd/srd51"
+import { SRD52_ID } from "./dnd/srd52"
 
 describe("toCopper", () => {
   test("converts all coins to copper correctly", () => {
@@ -230,5 +233,38 @@ describe("applyDeltasWithChange", () => {
       const expectedCopper = 1000 - 500 - 100 - 30 - 7
       expect(toCopper(result)).toBe(expectedCopper)
     })
+  })
+})
+
+describe("findSubclass", () => {
+  const srd51 = getRuleset(SRD51_ID)
+  const srd52 = getRuleset(SRD52_ID)
+
+  test("matches the full name, ignoring case and punctuation", () => {
+    expect(findSubclass(srd52.classes.barbarian, "Path of the Berserker")?.name).toBe(
+      "path of the berserker"
+    )
+    expect(findSubclass(srd52.classes.fighter, "  CHAMPION! ")?.name).toBe("champion")
+  })
+
+  test("matches part of the name on word boundaries", () => {
+    expect(findSubclass(srd52.classes.barbarian, "Berserker")?.name).toBe("path of the berserker")
+    expect(findSubclass(srd52.classes.cleric, "Life")?.name).toBe("life domain")
+    expect(findSubclass(srd52.classes.monk, "open hand")?.name).toBe("warrior of the open hand")
+    expect(findSubclass(srd51.classes.warlock, "Archfey")?.name).toBe("the archfey")
+  })
+
+  test("doesn't match within a word", () => {
+    expect(findSubclass(srd52.classes.fighter, "champ")).toBeUndefined()
+  })
+
+  test("doesn't match a partial name shared by several subclasses", () => {
+    expect(findSubclass(srd51.classes.wizard, "school")).toBeUndefined()
+  })
+
+  test("doesn't match subclasses that aren't in the ruleset", () => {
+    expect(findSubclass(srd52.classes.fighter, "Battle Master")).toBeUndefined()
+    expect(findSubclass(srd51.classes.fighter, "Rune Knight")).toBeUndefined()
+    expect(findSubclass(srd52.classes.fighter, "")).toBeUndefined()
   })
 })

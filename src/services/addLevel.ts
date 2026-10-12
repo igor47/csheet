@@ -2,7 +2,13 @@ import { beginOrSavepoint } from "@src/db"
 import { create as createCharLevelDb, getCurrentLevels } from "@src/db/char_levels"
 import { create as createTraitDb } from "@src/db/char_traits"
 import type { Character } from "@src/db/characters"
-import { ClassNames, ClassNamesSchema, type ClassNameType, getTraits } from "@src/lib/dnd"
+import {
+  ClassNames,
+  ClassNamesSchema,
+  type ClassNameType,
+  findSubclass,
+  getTraits,
+} from "@src/lib/dnd"
 import { getRuleset } from "@src/lib/dnd/rulesets"
 import { zodToFormErrors } from "@src/lib/formErrors"
 import type { ServiceResult } from "@src/lib/serviceResult"
@@ -26,7 +32,7 @@ export const AddLevelApiSchema = z.object({
     .nullable()
     .optional()
     .describe(
-      "The subclass name (required at subclass level, e.g., 'Evocation' for wizards at level 3)"
+      "The subclass name, required at the level where the class picks a subclass (usually 3). If it's missing or not available to this character, the error lists the available subclasses."
     ),
   hit_die_roll: z
     .number()
@@ -93,15 +99,19 @@ export async function addLevel(
     }
   }
 
-  // Validate subclass if required
-  const subclassNames = classDef.subclasses.map((s) => s.name)
+  // Validate subclass if required, listing the subclasses available to this character
+  const availableSubclasses = `Available ${data.class} subclasses: ${classDef.subclasses.map((s) => s.name).join(", ")}`
   if (level === classDef.subclassLevel) {
+    const subclass = data.subclass ? findSubclass(classDef, data.subclass) : undefined
     if (!data.subclass) {
       if (!isCheck) {
-        errors.subclass = `Subclass is required at level ${classDef.subclassLevel}`
+        errors.subclass = `Subclass is required at level ${classDef.subclassLevel}. ${availableSubclasses}`
       }
-    } else if (!subclassNames.includes(data.subclass)) {
-      errors.subclass = `Invalid subclass for ${data.class}`
+    } else if (!subclass) {
+      errors.subclass = `"${data.subclass}" is not a subclass available to this character. ${availableSubclasses}`
+    } else {
+      // store the subclass under its name in the ruleset, so its traits can be found
+      data.subclass = subclass.name
     }
   }
 
@@ -135,9 +145,11 @@ export async function addLevel(
     return { complete: false, values: data, errors: zodToFormErrors(result.error) }
   }
 
-  // Determine subclass for levels beyond subclass level
+  // The subclass is chosen at the subclass level, and carried over from the previous level after that
   let finalSubclass = result.data.subclass
-  if (result.data.level > classDef.subclassLevel) {
+  if (result.data.level < classDef.subclassLevel) {
+    finalSubclass = null
+  } else if (result.data.level > classDef.subclassLevel) {
     finalSubclass = currentClassLevel?.subclass || null
   }
 

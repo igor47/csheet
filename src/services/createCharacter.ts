@@ -523,7 +523,8 @@ export async function createCharacter(
     // Get saving throw proficiencies from class
     const savingThrowProficiencies = new Set(classDef.savingThrows)
     for (const prof of savingThrowProficiencies) {
-      const existing = scores.find((s) => s.ability === prof)!
+      // the latest record, which includes any species or background bonus
+      const existing = scores.findLast((s) => s.ability === prof)!
       await createAbilityDb(tx, {
         character_id: character.id,
         ability: prof,

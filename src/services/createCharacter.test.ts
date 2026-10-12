@@ -8,6 +8,7 @@ import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { SRD52_ID } from "@src/lib/dnd/srd52"
 import { useTestApp } from "@src/test/app"
 import { userFactory } from "@src/test/factories/user"
+import { computeCharacter } from "./computeCharacter"
 import { type CreateCharacterResult, createCharacter } from "./createCharacter"
 
 /**
@@ -246,6 +247,20 @@ describe("createCharacter", () => {
       })
 
       describe("with dwarf species", () => {
+        it("keeps the lineage bonus on a proficient saving throw", async () => {
+          const user = await userFactory.create({}, testCtx.db)
+          // Cleric is proficient in Wisdom saves, and hill dwarf gives +1 Wisdom
+          const data = buildCharacterData({ species: "dwarf", lineage: "hill dwarf" })
+
+          const result = await createCharacter(testCtx.db, user, data)
+          assertSuccess(result)
+
+          const char = await computeCharacter(testCtx.db, result.character.id)
+          expect(char?.abilityScores.wisdom.score).toBe(11) // 10 + 1 from hill dwarf
+          expect(char?.abilityScores.wisdom.proficient).toBe(true)
+          expect(char?.abilityScores.constitution.score).toBe(15) // 13 + 2 from dwarf
+        })
+
         it("applies species and lineage ability score modifiers", async () => {
           const user = await userFactory.create({}, testCtx.db)
           const data = buildCharacterData({

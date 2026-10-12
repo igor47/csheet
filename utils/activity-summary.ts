@@ -128,6 +128,7 @@ async function queryReed(db: SQL, since: Date) {
       COALESCE(SUM((usage->>'inputTokens')::int), 0)::int as input_tokens,
       COALESCE(SUM((usage->>'outputTokens')::int), 0)::int as output_tokens,
       COALESCE(SUM((usage->>'cachedInputTokens')::int), 0)::int as cached_input_tokens,
+      COALESCE(SUM((usage->>'cacheWriteInputTokens')::int), 0)::int as cache_write_input_tokens,
       COALESCE(SUM((usage->>'totalTokens')::int), 0)::int as total_tokens
     FROM chat_messages
     WHERE created_at >= ${since} AND usage IS NOT NULL
@@ -144,6 +145,7 @@ async function queryReed(db: SQL, since: Date) {
     inputTokens: tokens.input_tokens,
     outputTokens: tokens.output_tokens,
     cachedInputTokens: tokens.cached_input_tokens,
+    cacheWriteInputTokens: tokens.cache_write_input_tokens,
     totalTokens: tokens.total_tokens,
   }
 }
@@ -282,7 +284,8 @@ async function main() {
   console.log("  Token usage:")
   printLine("Input:", fmt(reed.inputTokens), 4)
   printLine("Output:", fmt(reed.outputTokens), 4)
-  printLine("Cached input:", fmt(reed.cachedInputTokens), 4)
+  printLine("Cache reads:", fmt(reed.cachedInputTokens), 4)
+  printLine("Cache writes:", fmt(reed.cacheWriteInputTokens), 4)
   printLine("Total:", fmt(reed.totalTokens), 4)
 
   console.log("\n--- Actions ---")

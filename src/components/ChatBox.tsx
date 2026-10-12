@@ -294,9 +294,12 @@ export const ToolCallApproval = ({
   }
 
   const approvalMessage = formatter(toolCall.parameters, character)
+  const cardId = `tool-${toolCall.messageId}-${toolCall.toolCallId}`
+  // disable both buttons while either request is in flight, so a double-click can't apply the edit twice
+  const disabledElt = `#${cardId} button`
 
   return (
-    <div class="row g-0 mb-2 chat-message" id={`tool-${toolCall.messageId}-${toolCall.toolCallId}`}>
+    <div class="row g-0 mb-2 chat-message" id={cardId}>
       <div class="col-10">
         <div class="card border-warning">
           <div class="card-header bg-warning text-dark py-2">
@@ -313,6 +316,7 @@ export const ToolCallApproval = ({
               class="btn btn-success btn-sm"
               disabled={!isNext}
               hx-post={`/characters/${character.id}/chat/${chatId}/tool/${toolCall.toolCallId}/approve`}
+              hx-disabled-elt={disabledElt}
               hx-target="#chat-box-card"
               hx-swap="outerHTML"
             >
@@ -324,6 +328,7 @@ export const ToolCallApproval = ({
               class="btn btn-danger btn-sm"
               disabled={!isNext}
               hx-post={`/characters/${character.id}/chat/${chatId}/tool/${toolCall.toolCallId}/reject`}
+              hx-disabled-elt={disabledElt}
               hx-target="#chat-box-card"
               hx-swap="outerHTML"
             >

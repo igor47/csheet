@@ -1,7 +1,7 @@
 import { findById as findMessageById, type ToolResult } from "@src/db/chat_messages"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { UnresolvedToolCall } from "@src/services/computeChat"
-import { TOOL_EXECUTORS, TOOLS, type ToolExecutorResult } from "@src/tools"
+import { isReadOnly, TOOL_EXECUTORS, type ToolExecutorResult } from "@src/tools"
 import type { SQL } from "bun"
 
 /**
@@ -137,13 +137,19 @@ export async function rejectTool(
   return result
 }
 
+export const SKIPPED_TOOL_CALL_ERROR = "Not run because an earlier tool call in this message failed"
+
 /**
- * Validate the next tool call in a message that needs approval, before the user sees it
- * A call that fails validation is stored as failed so the LLM can self-correct, and the
- * call after it is checked. Later calls are only checked once the ones before them are
- * resolved, since they may depend on them (e.g. learn a spell, then prepare it)
+ * Advance a message's tool calls in the order the model made them, up to the next one
+ * that needs the user's approval
+ * - read-only calls run as they're reached, so they see the effects of earlier calls
+ * - the next call that needs approval is validated (not run) before the user sees it
+ * - once a call fails, the calls after it aren't run, since they may depend on it; they're
+ *   marked failed so the LLM can see what happened and try again
+ * - a call the user rejected doesn't stop the calls after it
+ * Call this when a message is created, and again each time the user resolves a call
  */
-export async function validateNextApprovalTool(
+export async function advanceToolCalls(
   db: SQL,
   char: ComputedCharacter,
   messageId: string
@@ -153,27 +159,35 @@ export async function validateNextApprovalTool(
     return
   }
 
+  let earlierFailed = false
   for (const call of message.tool_calls) {
-    // Skip calls that are already resolved
-    if (message.tool_results[call.id]) {
+    const existing = message.tool_results[call.id]
+    if (existing) {
+      earlierFailed ||= existing.status === "failed"
       continue
     }
 
-    // Skip read-only tools, which are executed without approval
-    const toolRegistration = TOOLS.find((t) => t.name === call.name)
-    if (!toolRegistration?.formatApprovalMessage) {
+    if (earlierFailed) {
+      await updateToolResult(db, messageId, call.id, {
+        status: "failed",
+        error: SKIPPED_TOOL_CALL_ERROR,
+      })
       continue
     }
 
+    // read-only calls run now; calls that need approval are only validated
+    const needsApproval = !isReadOnly(call.name)
     const result = await executeTool(
       db,
       char,
       { messageId, toolCallId: call.id, toolName: call.name, parameters: call.parameters },
-      true // isCheck = true for validation mode
+      needsApproval
     )
 
-    // Stop at the first call that passes; it's the one the user sees next
-    if (result.status !== "failed") {
+    if (result.status === "failed") {
+      earlierFailed = true
+    } else if (needsApproval) {
+      // wait for the user to approve or reject it
       return
     }
   }

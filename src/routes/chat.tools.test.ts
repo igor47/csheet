@@ -2,10 +2,17 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { config } from "@src/config"
 import { getCurrentLevels } from "@src/db/char_levels"
 import type { Character } from "@src/db/characters"
-import { type ChatMessage, create as createChatMessage, findById } from "@src/db/chat_messages"
+import {
+  type ChatMessage,
+  create as createChatMessage,
+  findById,
+  type ToolCall,
+} from "@src/db/chat_messages"
 import type { User } from "@src/db/users"
 import { SRD51_ID } from "@src/lib/dnd/srd51"
 import { ulid } from "@src/lib/ids"
+import { computeCharacter } from "@src/services/computeCharacter"
+import { advanceToolCalls, SKIPPED_TOOL_CALL_ERROR } from "@src/services/toolExecution"
 import { useTestApp } from "@src/test/app"
 import { characterFactory } from "@src/test/factories/character"
 import { userFactory } from "@src/test/factories/user"
@@ -33,7 +40,11 @@ describe("resolving Reed's tool calls", () => {
   let assistantMsg: ChatMessage
 
   // A level 2 fighter, with Reed asking for levels 3 (picking a subclass) and 4, in that order
-  async function createLevelUpChat({ subclass = "champion", secondRoll = 5 } = {}) {
+  async function createLevelUpChat({
+    subclass = "champion",
+    secondRoll = 5,
+    extraCalls = [] as ToolCall[],
+  } = {}) {
     chatId = ulid()
     const base = {
       character_id: character.id,
@@ -60,8 +71,11 @@ describe("resolving Reed's tool calls", () => {
           name: "add_level",
           parameters: { class: "fighter", hit_die_roll: secondRoll },
         },
+        ...extraCalls,
       ],
-      tool_results: { [FIRST_ID]: null, [SECOND_ID]: null },
+      tool_results: Object.fromEntries(
+        [FIRST_ID, SECOND_ID, ...extraCalls.map((call) => call.id)].map((id) => [id, null])
+      ),
     })
   }
 
@@ -103,6 +117,11 @@ describe("resolving Reed's tool calls", () => {
       ])
       expect(cards[0]!.querySelector("button[disabled]")).toBeNull()
       expect(cards[1]!.querySelectorAll("button[disabled]").length).toBe(2)
+
+      // both buttons are disabled while a request is in flight, so a double-click can't apply it twice
+      for (const button of Array.from(cards[0]!.querySelectorAll("button"))) {
+        expect(button.getAttribute("hx-disabled-elt")).toBe(`#${cards[0]!.id} button`)
+      }
     })
 
     test("refuses to approve the second call before the first", async () => {
@@ -215,9 +234,64 @@ describe("resolving Reed's tool calls", () => {
       expect(result?.status === "failed" && result.error).toContain(
         '"Rune Knight" is not a subclass available to this character. Available fighter subclasses: champion, battle master, eldritch knight'
       )
+      expect(msg?.tool_results?.[SECOND_ID]).toEqual({
+        status: "failed",
+        error: SKIPPED_TOOL_CALL_ERROR,
+      })
       expect(await getCurrentLevels(testCtx.db, character.id)).toEqual([
         expect.objectContaining({ class: "fighter", level: 2 }),
       ])
+    })
+
+    test("when it fails validation, skips the calls after it before the user sees them", async () => {
+      const char = (await computeCharacter(testCtx.db, character.id))!
+      await advanceToolCalls(testCtx.db, char, assistantMsg.id)
+
+      const msg = await findById(testCtx.db, assistantMsg.id)
+      expect(msg?.tool_results?.[FIRST_ID]).toEqual({
+        status: "failed",
+        error: expect.stringContaining("Available fighter subclasses"),
+      })
+      expect(msg?.tool_results?.[SECOND_ID]).toEqual({
+        status: "failed",
+        error: SKIPPED_TOOL_CALL_ERROR,
+      })
+
+      const response = await makeRequest(
+        testCtx.app,
+        `/characters/${character.id}/chat/${chatId}/load`,
+        { user }
+      )
+      const document = await parseHtml(response)
+      expect(getElements(document, "[id^='tool-']")).toHaveLength(0)
+    })
+  })
+
+  describe("with a read-only call after the level-ups", () => {
+    const STATUS_ID = "toolu_3"
+
+    beforeEach(async () => {
+      await createLevelUpChat({
+        extraCalls: [{ id: STATUS_ID, name: "character_status", parameters: {} }],
+      })
+    })
+
+    test("doesn't run it until the calls before it are resolved", async () => {
+      const char = (await computeCharacter(testCtx.db, character.id))!
+      await advanceToolCalls(testCtx.db, char, assistantMsg.id)
+
+      const msg = await findById(testCtx.db, assistantMsg.id)
+      expect(msg?.tool_results?.[STATUS_ID]).toBeNull()
+    })
+
+    test("runs it after them, so it sees their changes", async () => {
+      await makeRequest(testCtx.app, toolPath(FIRST_ID, "approve"), { user, method: "POST" })
+      await makeRequest(testCtx.app, toolPath(SECOND_ID, "approve"), { user, method: "POST" })
+
+      const msg = await findById(testCtx.db, assistantMsg.id)
+      const result = msg?.tool_results?.[STATUS_ID]
+      expect(result?.status).toBe("success")
+      expect(result?.status === "success" && result.data?.totalLevel).toBe(4)
     })
   })
 })

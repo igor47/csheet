@@ -4,8 +4,8 @@ import { ulid } from "@src/lib/ids"
 import { logger } from "@src/lib/logger"
 import type { ComputedCharacter } from "@src/services/computeCharacter"
 import type { ComputedChat } from "@src/services/computeChat"
-import { executeTool, validateNextApprovalTool } from "@src/services/toolExecution"
-import { TOOL_DEFINITIONS, TOOLS } from "@src/tools"
+import { advanceToolCalls } from "@src/services/toolExecution"
+import { TOOL_DEFINITIONS } from "@src/tools"
 import { type LanguageModel, streamText } from "ai"
 import type { SQL } from "bun"
 import { buildSystemPrompt } from "./prompts"
@@ -58,43 +58,6 @@ export async function prepareChatRequest(
   })
 
   return { chatId: finalChatId }
-}
-
-/**
- * Auto-execute read-only tools in a newly created assistant message
- * Finds tool calls that don't require approval and executes them immediately
- */
-async function autoExecuteReadOnlyTools(
-  db: SQL,
-  character: ComputedCharacter,
-  assistantMsg: ChatMessage
-): Promise<void> {
-  // Check if message has tool calls
-  if (!assistantMsg.tool_calls || !assistantMsg.tool_results) {
-    return
-  }
-
-  // Find read-only tools that haven't been executed yet
-  for (const call of assistantMsg.tool_calls) {
-    // Skip if already executed
-    if (assistantMsg.tool_results[call.id]) {
-      continue
-    }
-
-    // Check if this tool is read-only (doesn't require approval)
-    const toolRegistration = TOOLS.find((t) => t.name === call.name)
-    if (toolRegistration?.formatApprovalMessage) {
-      continue
-    }
-
-    // Execute the tool immediately
-    await executeTool(db, character, {
-      messageId: assistantMsg.id,
-      toolCallId: call.id,
-      toolName: call.name,
-      parameters: call.parameters,
-    })
-  }
 }
 
 /**
@@ -202,11 +165,8 @@ export async function executeChatRequest(
       usage,
     })
 
-    // Auto-execute any read-only tools immediately
-    await autoExecuteReadOnlyTools(db, character, assistantMsg)
-
-    // Validate parameters for the first tool that requires approval
-    await validateNextApprovalTool(db, character, assistantMsg.id)
+    // Run read-only tools and validate the first one that needs approval, in order
+    await advanceToolCalls(db, character, assistantMsg.id)
 
     return assistantMsg.id
   } catch (err) {

@@ -398,3 +398,12 @@ export const TOOL_EXECUTORS: Record<string, ToolExecutor> = Object.fromEntries(
 export const TOOL_FORMATTERS: Record<string, ToolFormatter> = Object.fromEntries(
   TOOLS.filter((t) => t.formatApprovalMessage).map((t) => [t.name, t.formatApprovalMessage!])
 )
+
+/**
+ * Whether a tool is read-only, so it runs without asking the user
+ * A tool is read-only when it has no approval formatter; tools that change the character
+ * have one, so the user can see and approve the change
+ */
+export function isReadOnly(toolName: string): boolean {
+  return !(toolName in TOOL_FORMATTERS)
+}

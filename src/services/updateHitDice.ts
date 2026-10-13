@@ -1,13 +1,13 @@
 import { create as createHitDiceDb } from "@src/db/char_hit_dice"
 import type { HitDieType } from "@src/lib/dnd"
 import { zodToFormErrors } from "@src/lib/formErrors"
-import { Checkbox, NumberField, OptionalString } from "@src/lib/formSchemas"
+import { Checkbox, coerceBoolean, NumberField, OptionalString } from "@src/lib/formSchemas"
 import type { ServiceResult } from "@src/lib/serviceResult"
 import type { ToolInput, ToolSpec } from "@src/lib/toolSpec"
 import type { SQL } from "bun"
 import { z } from "zod"
 import type { ComputedCharacter } from "./computeCharacter"
-import { healCharacter } from "./hitPointChanges"
+import { healCharacter, withLockedCharacter } from "./hitPointChanges"
 
 export const UpdateHitDiceApiSchema = z.object({
   action: z
@@ -42,8 +42,18 @@ export type UpdateHitDiceResult = ServiceResult<{ newHP?: number }>
  * Update hit dice by creating appropriate records
  * For restore: creates single restore record for one die
  * For spend: creates use record and HP delta
+ * Checks only validate; changes run against the character as it is inside the transaction
  */
 export async function updateHitDice(
+  db: SQL,
+  char: ComputedCharacter,
+  data: Record<string, string>
+): Promise<UpdateHitDiceResult> {
+  if (coerceBoolean(data.is_check)) return applyHitDiceUpdate(db, char, data)
+  return withLockedCharacter(db, char, (tx, fresh) => applyHitDiceUpdate(tx, fresh, data))
+}
+
+async function applyHitDiceUpdate(
   db: SQL,
   char: ComputedCharacter,
   data: Record<string, string>

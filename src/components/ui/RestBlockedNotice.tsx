@@ -30,7 +30,7 @@ export const RestBlockedNotice = ({ character, rest, reason }: RestBlockedNotice
           them first with the hit points form
           {isStable
             ? ", or use Regain 1 HP on the sheet once 1d4 hours have passed (a stable character wakes up then)."
-            : "; a dying character needs healing or three successful death saves."}
+            : "; three successful death saves only make a dying character stable, still at 0 HP."}
         </p>
       )}
     </div>

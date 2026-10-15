@@ -271,6 +271,16 @@ run = """
 description = "Run tests (pass through arguments to bun test)"
 depends = ["db:test:migrate", "s3:test:setup"]
 
+[tasks."workspace:add"]
+run = "bin/workspace-add.sh \"$@\""
+description = "Create a parallel workspace ../csheet-i<n> with its own databases and port (shares Docker services)"
+depends = ["deps:up"]
+
+[tasks."workspace:rm"]
+run = "bin/workspace-rm.sh \"$@\""
+description = "Remove a workspace made by workspace:add, including its databases"
+depends = ["deps:up"]
+
 [tasks.eval]
 run = """
   CONFIG=$(bun src/config.ts)

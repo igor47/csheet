@@ -17,6 +17,7 @@ refdocs/*.pdf
 refdocs/README.md
 README.md
 CLAUDE.md
+docs/
 .claude/
 pulumi/
 

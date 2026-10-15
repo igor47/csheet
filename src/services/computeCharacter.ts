@@ -256,7 +256,6 @@ function computeWeaponAttack(
     }
   }
 
-  // the main damage is the first one-handed damage; versatile damage is its two-handed version
   // the main damage is the weapon's own physical damage (not a rider like a flame tongue's fire),
   // one-handed if it has that; versatile damage of the same type is its two-handed version
   const physical = (d: ItemDamage) => PHYSICAL_DAMAGE.includes(d.type)
@@ -441,17 +440,17 @@ export async function computeCharacter(
     }
   }
 
-  // Compute hit points and hit dice
-  let maxHitPoints = 0
-  const hitDice: HitDieType[] = []
-
-  const allLevels = await getAllLevels(db, characterId)
-
   // Weapon, armor, tool, and language proficiencies, from their history
   const proficiencies = currentProficiencies(await findProficiencyChanges(db, characterId))
   const armorProficiencies = new Set(
     proficiencies.filter((p) => p.kind === "armor").map((p) => p.name)
   )
+
+  // Compute hit points and hit dice
+  let maxHitPoints = 0
+  const hitDice: HitDieType[] = []
+
+  const allLevels = await getAllLevels(db, characterId)
   for (const level of allLevels) {
     const classDef = ruleset.classes[level.class]
     hitDice.push(classDef.hitDie)

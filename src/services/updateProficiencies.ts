@@ -1,3 +1,4 @@
+import { beginOrSavepoint } from "@src/db"
 import { create as createProficiencyDb } from "@src/db/char_proficiencies"
 import {
   formatProficiencyName,
@@ -101,21 +102,23 @@ export async function changeProficiencies(
     return { complete: false, errors }
   }
 
-  for (const [refs, action] of [
-    [removed, "remove"],
-    [added, "add"],
-  ] as const) {
-    for (const ref of refs) {
-      await createProficiencyDb(db, {
-        character_id: char.id,
-        ...ref,
-        action,
-        source: "custom",
-        source_detail: action === "add" ? changes.sourceDetail : null,
-        note: changes.note,
-      })
+  await beginOrSavepoint(db, async (tx) => {
+    for (const [refs, action] of [
+      [removed, "remove"],
+      [added, "add"],
+    ] as const) {
+      for (const ref of refs) {
+        await createProficiencyDb(tx, {
+          character_id: char.id,
+          ...ref,
+          action,
+          source: "custom",
+          source_detail: action === "add" ? changes.sourceDetail : null,
+          note: changes.note,
+        })
+      }
     }
-  }
+  })
 
   return { complete: true, added, removed }
 }

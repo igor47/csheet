@@ -1,540 +1,89 @@
+# csheet
 
-# CSheet Project Guidelines
+D&D 5e character sheet: Bun, Hono JSX, HTMX, Bootstrap 5, PostgreSQL via `Bun.sql`, Zod. Supports
+the SRD 5.1 (2014) and SRD 5.2.1 (2024) rulesets. Reed, the chat assistant, edits characters through
+approved tool calls. Deployed to Cloud Run. Most changes are made by agents; the maintainer reviews.
 
-Default to using Bun instead of Node.js.
+## Commands
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Bun automatically loads .env, so don't use dotenv.
-
-## Framework
-
-This project uses **Hono** as the web framework with JSX rendering.
-
-- We use `hono/jsx-renderer` for server-side rendering
-- All routes use `c.render()` to render components with the Layout
-- Bootstrap 5 is used for styling (via CDN in Layout)
-
-## Project Structure
-
-```
-src/
-├── app.ts              # Main app entry point, registers routes and middleware
-├── components/         # React/JSX components
-│   ├── Layout.tsx      # Main layout wrapper with Navbar
-│   ├── Welcome.tsx     # Home page component
-│   ├── Character.tsx   # Character sheet component
-│   ├── CharacterNew.tsx # Character creation component
-│   ├── Login.tsx       # Login page component
-│   └── ui/
-│       └── Navbar.tsx  # Navigation bar with auth status
-├── routes/             # Route handlers
-│   ├── index.tsx       # Home route (/)
-│   ├── auth.tsx        # Auth routes (/login, /logout)
-│   └── character.tsx   # Character routes (/character/new, /character/view)
-├── middleware/         # Middleware
-│   └── auth.ts         # Auth middleware (sets c.var.user)
-├── db/                 # Database layer
-│   └── users.ts        # User model and queries
-└── config.ts           # Configuration
-```
-
-## Routes
-
-Routes are defined in `src/routes/` and registered in `src/app.ts`:
-
-```tsx
-// src/routes/index.tsx
-export const indexRoutes = new Hono()
-
-indexRoutes.get('/', (c) => {
-  return c.render(<Welcome user={c.var.user} />, { title: "Welcome to CSheet" })
-})
-```
-
-Register routes in `src/app.ts`:
-
-```tsx
-app.route('/', indexRoutes)
-app.route('/', authRoutes)
-app.route('/character', characterRoutes)
-```
-
-## Components
-
-Components live in `src/components/` and should:
-
-- Use Bootstrap 5 classes for styling
-- Define a TypeScript interface for props (e.g., `WelcomeProps`, `LayoutProps`)
-- Break complex UI into sub-components within the same file
-- Accept `user?: User` prop when auth state is needed
-
-Example:
-
-```tsx
-import type { User } from "@src/db/users";
-
-export interface WelcomeProps {
-  user?: User;
-}
-
-export const Welcome = ({ user }: WelcomeProps) => (
-  <div class="container">
-    {/* ... */}
-  </div>
-)
-```
-
-## Layout & Rendering
-
-The Layout component (`src/components/Layout.tsx`) wraps all pages:
-
-- Automatically receives `user` from auth middleware via renderer
-- Automatically receives `currentPage` from `c.req.path`
-- Passes these props to Navbar for auth UI and active link highlighting
-
-```tsx
-// In src/app.ts
-app.use(jsxRenderer((props, c) => {
-  const user = c.get('user')
-  const currentPage = c.req.path
-  return Layout({ ...props, user, currentPage })
-}))
-```
-
-Routes just need to call `c.render()`:
-
-```tsx
-c.render(<Component />, { title: "Page Title" })
-```
-
-## Authentication
-
-Authentication is handled via signed cookies:
-
-- Middleware: `src/middleware/auth.ts` sets `c.var.user` if authenticated
-- Access user in routes: `c.var.user`
-- Auth functions: `setAuthCookie(c, userId)`, `clearAuthCookie(c)`
-- Login: `/login` (GET shows form, POST authenticates)
-- Logout: `/logout` (GET logs out and redirects to home)
-
-The auth middleware runs on all routes (`app.use('*', authMiddleware)`).
-
-## Navbar
-
-The Navbar (`src/components/ui/Navbar.tsx`):
-
-- Shows username (from email) and logout button when logged in
-- Shows login button when logged out
-- Highlights active page based on `currentPage` prop
-- Uses `getNavLinks()` function to generate nav items with `isActive` flag
-
-## Database
-
-This project uses **PostgreSQL 16** running in Docker.
-
-### Setup
-
-1. Start dependencies: `mise run deps:up`
-2. Run migrations: `mise run db:upgrade`
-3. Start dev server: `mise run app:dev` (automatically starts dependencies)
-
-### Environment Variables
-
-Configure PostgreSQL connection in `.env` (optional, defaults provided):
-
-```env
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=csheet_user
-POSTGRES_PASSWORD=csheet_pass
-POSTGRES_DB=csheet_dev
-```
-
-### Database Tasks
-
-- `mise run deps:up` - Start all Docker services (PostgreSQL and MinIO)
-- `mise run deps:down` - Stop all Docker services
-- `mise run db:upgrade` - Run migrations (common task)
-- `mise run dbmate <command>` - Run specific dbmate commands (new, rollback, status, dump, etc.)
-- `mise run db:psql` - Open PostgreSQL shell
-- `mise run db:logs` - View PostgreSQL container logs
-
-### Migrations
-
-- Migrations are in `migrations/` directory
-- Managed by [dbmate](https://github.com/amacneil/dbmate)
-- Schema file auto-generated at `db/schema.sql`
-- Create new migration: `mise run dbmate new migration_name`
-
-### Database Layer
-
-- Using `Bun.sql` (native PostgreSQL client)
-- Models defined in `src/db/` (e.g., `users.ts`, `characters.ts`)
-- All models export functions like `findById`, `findByEmail`, `create`, etc.
-- Database instance exported from `src/db.ts`
-
-## APIs
-
-- `Bun.sql` for PostgreSQL (native client). Don't use `pg` or `postgres.js`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
-
-## Logging and Observability
-
-This project uses environment-aware structured logging:
-
-### Logger API
-
-Use the logger from `src/lib/logger.ts` instead of `console.*`:
-
-```typescript
-import { logger } from "@src/lib/logger"
-
-// Info logging
-logger.info("User logged in", { userId: user.id, email: user.email })
-
-// Error logging
-try {
-  await dangerousOperation()
-} catch (error) {
-  logger.error("Operation failed", error as Error, { userId: user.id })
-}
-
-// Warning logging
-logger.warn("Rate limit approaching", { requestCount: 95, limit: 100 })
-```
-
-### Environment Behavior
-
-- **Development** (`NODE_ENV !== "production"`): Human-readable console output with `[INFO]`, `[ERROR]`, `[WARN]` prefixes
-- **Production** (`NODE_ENV === "production"`): Structured JSON output for Google Cloud Logging with proper severity levels
-
-### Automatic Features
-
-The application automatically logs:
-- **All HTTP requests** with method, path, status, duration, and authenticated user
-- **Unhandled errors** with stack traces via the global error handler
-
-### Cloud Run Integration
-
-In production (Cloud Run), logs are automatically:
-- Sent to **Google Cloud Logging** for querying and analysis
-- Routed to **Error Reporting** for errors with stack traces
-- Associated with the service, revision, and request traces
-
-View logs in production:
-- Console: https://console.cloud.google.com/run/detail/us-central1/prod-app/logs
-- CLI: `gcloud run services logs read prod-app --region=us-central1 --limit=50`
-
-## Deployment
-
-### Architecture
-
-The application is deployed to **Google Cloud Run** using a multi-stack Pulumi infrastructure:
-
-- **Infrastructure Stack** (`pulumi/infra/`): VPC, Cloud SQL, service accounts, Workload Identity
-- **Application Stack** (`pulumi/app/`): Cloud Run service, migration job, secrets
-
-State is stored in GCS bucket `csheet-pulumi-state` with KMS encryption.
-
-### Local Deployment Testing
-
-Test deployments locally using the deploy service account:
+Everything runs through mise tasks, which set up the environment and databases; `mise tasks` lists
+them all. The common ones:
 
 ```bash
-# First time: Apply infrastructure changes to grant permissions
-mise run infra:up
-
-# Test as deploy service account (requires impersonation permission)
-bin/as-deploy.sh mise run deploy:push   # Build and push image
-bin/as-deploy.sh mise run deploy:up     # Deploy to Cloud Run
+mise run app:dev            # dev server on :3000 (starts postgres + minio in Docker)
+mise run db:upgrade         # apply migrations; mise run dbmate new <name> creates one
+mise run check              # Biome + tsc; check-fix to auto-fix
+mise run test [path] [--test-name-pattern "..."]   # integration tests (own DB, migrated each run)
+mise run eval               # Reed's eval suite against the live API (not part of test/CI)
+mise run utils:backfill-*   # one-off scripts, run by hand after a deploy
+mise run workspace:add <n>  # a sibling workspace with its own DBs and port, to work beside other agents
 ```
 
-The `bin/as-deploy.sh` wrapper impersonates the deploy service account to verify permissions before setting up CI/CD.
-
-### Production Deployment (GitHub Actions)
-
-Deployments to production happen automatically when you **create a GitHub release**:
-
-1. Create a release in the GitHub UI (this creates a git tag)
-2. GitHub Actions workflow triggers automatically
-3. Authenticates using Workload Identity Federation (no secrets needed)
-4. Builds Docker image tagged with commit SHA
-5. Pushes to Artifact Registry
-6. Runs database migrations via Cloud Run Job
-7. Deploys updated service to Cloud Run
-
-**Workflow**: `.github/workflows/deploy.yml`
-
-**Authentication**: Uses Workload Identity Federation - GitHub's OIDC token is exchanged for GCP credentials. No long-lived service account keys are stored in GitHub.
-
-**Image tagging**: Images are tagged with the first 12 characters of the commit SHA (e.g., `33895e5d04c1`), ensuring immutable, traceable deployments.
-
-### Deployment Tasks
-
-```bash
-# Preview infrastructure changes
-mise run infra:preview
-
-# Apply infrastructure changes
-mise run infra:up
-
-# Preview application deployment
-mise run deploy:preview
-
-# Build and push Docker image
-mise run deploy:push
-
-# Deploy application to Cloud Run
-mise run deploy:up
-
-# View production logs
-mise run ops:logs
-```
-
-### Deployment Service Account
-
-The `csheet-app-deploys@csheet-475917.iam.gserviceaccount.com` service account has:
-
-- `roles/artifactregistry.writer` - Push images
-- `roles/run.admin` - Manage Cloud Run services and jobs
-- `roles/secretmanager.admin` - Create/update secrets
-- `roles/iam.serviceAccountUser` - Impersonate runtime SA
-- `roles/storage.objectAdmin` - Access Pulumi state bucket
-
-### Workload Identity Federation
-
-GitHub Actions authenticates via Workload Identity Federation:
-
-- **Identity Pool**: `github-actions`
-- **Provider**: GitHub OIDC (`https://token.actions.githubusercontent.com`)
-- **Repository constraint**: Only `igor47/csheet` repository can deploy
-- **No secrets required**: All authentication is handled via OIDC tokens
-
-## Code Quality
-
-This project uses **Biome** for linting and formatting:
-
-```bash
-# Run checks (linting, formatting, and TypeScript)
-mise run check
-
-# Auto-fix linting and formatting issues
-mise run check-fix
-```
-
-Biome is configured in `biome.json` and runs automatically on save in most editors.
-
-## Testing
-
-Use **Bun's built-in test runner** for all tests. Run via `mise run test` to ensure the test database is properly configured.
-
-```bash
-# Run all tests
-mise run test
-
-# Run specific test file
-mise run test src/routes/character.test.ts
-
-# Run tests matching a pattern
-mise run test --test-name-pattern "when user is authenticated"
-```
-
-### Test Philosophy
-
-- Write **integration tests**, not unit tests
-- Test through HTTP requests to the full application stack
-- Use **RSpec-style nested describe blocks** with fixtures
-- Each test should be readable as a specification
-
-### Test Infrastructure
-
-#### useTestApp()
-
-The `useTestApp()` helper (from `@src/test/app`) sets up test isolation:
-
-```typescript
-import { useTestApp } from "@src/test/app"
-
-describe("GET /characters", () => {
-  const testCtx = useTestApp()  // Don't destructure!
-
-  test("example", async () => {
-    // Access via testCtx.app and testCtx.db
-    const response = await makeRequest(testCtx.app, "/path")
-  })
-})
-```
-
-**How it works:**
-- Creates a fresh app instance for each test
-- Reserves a database connection and starts a transaction with `BEGIN`
-- Injects the test database into the app via `createApp(db)`
-- Automatically rolls back the transaction after each test
-- Ensures clean database state between tests
-
-**Important:** Use `const testCtx = useTestApp()` and access via `testCtx.app` / `testCtx.db`. Don't destructure `const { app, db } = useTestApp()` as values are set in `beforeEach`.
-
-#### Database Fixtures with Factories
-
-Use [fishery](https://github.com/thoughtbot/fishery) factories to create test data:
-
-```typescript
-import { userFactory } from "@src/test/factories/user"
-import { characterFactory } from "@src/test/factories/character"
-
-describe("with a character", () => {
-  let user: User
-  let character: Character
-
-  beforeEach(async () => {
-    user = await userFactory.create({}, testCtx.db)
-    character = await characterFactory.create(
-      { user_id: user.id, name: "Custom Name" },
-      testCtx.db
-    )
-  })
-
-  test("displays the character", async () => {
-    // character is available in this scope
-  })
-})
-```
-
-Factories live in `src/test/factories/` and use [@faker-js/faker](https://fakerjs.dev/) for realistic data.
-
-#### HTTP Test Helpers
-
-Use helpers from `@src/test/http` for making requests and parsing responses:
-
-```typescript
-import { makeRequest, parseHtml, expectElement } from "@src/test/http"
-
-test("renders login page", async () => {
-  // Make request (optionally with authenticated user)
-  const response = await makeRequest(testCtx.app, "/login", { user })
-
-  // Parse HTML response
-  const document = await parseHtml(response)
-
-  // Assert elements exist
-  const title = expectElement(document, "title")
-  expect(title.textContent).toContain("Login")
-})
-```
-
-**makeRequest options:**
-- `user?: User` - Automatically creates signed auth cookie
-- `method?: string` - HTTP method (default: GET)
-- `headers?: Record<string, string>` - Custom headers
-- `body?: string | FormData` - Request body
-- `cookies?: string[]` - Additional cookies
-
-**HTML helpers:**
-- `parseHtml(response)` - Parse response into DOM Document
-- `expectElement(document, selector)` - Assert element exists and return it
-- `getElementText(document, selector)` - Get element text content
-- `elementExists(document, selector)` - Check if element exists
-- `getElements(document, selector)` - Get all matching elements
-
-### Test Structure Example
-
-```typescript
-import { describe, test, expect, beforeEach } from "bun:test"
-import { useTestApp } from "@src/test/app"
-import { userFactory } from "@src/test/factories/user"
-import { characterFactory } from "@src/test/factories/character"
-import { makeRequest, parseHtml, expectElement } from "@src/test/http"
-import type { User } from "@src/db/users"
-import type { Character } from "@src/db/characters"
-
-describe("GET /characters", () => {
-  const testCtx = useTestApp()
-
-  describe("when user is not authenticated", () => {
-    test("redirects to login page", async () => {
-      const response = await makeRequest(testCtx.app, "/characters")
-
-      expect(response.status).toBe(302)
-      expect(response.headers.get("Location")).toContain("/login")
-    })
-  })
-
-  describe("when user is authenticated", () => {
-    let user: User
-
-    beforeEach(async () => {
-      user = await userFactory.create({}, testCtx.db)
-    })
-
-    describe("with no characters", () => {
-      test("redirects to /characters/new", async () => {
-        const response = await makeRequest(testCtx.app, "/characters", { user })
-
-        expect(response.status).toBe(302)
-        expect(response.headers.get("Location")).toBe("/characters/new")
-      })
-    })
-
-    describe("with a character", () => {
-      let character: Character
-
-      beforeEach(async () => {
-        character = await characterFactory.create({ user_id: user.id }, testCtx.db)
-      })
-
-      test("displays the character name", async () => {
-        const response = await makeRequest(testCtx.app, "/characters", { user })
-        const document = await parseHtml(response)
-        const body = document.body.textContent || ""
-
-        expect(body).toContain(character.name)
-      })
-    })
-  })
-})
-```
-
-### Test Database
-
-Tests use a separate `csheet_test` database on the same PostgreSQL instance. The `mise run test` task:
-
-1. Automatically sets `POSTGRES_DB=csheet_test` environment variable
-2. Creates the test database if it doesn't exist
-3. Runs migrations on the test database
-4. Executes tests with proper database connection
-
-Each test runs inside a PostgreSQL transaction that rolls back after completion, ensuring isolation.
-
-### Guidelines
-
-- **Don't use `*` imports** - Import only what you need
-- **Use nested describe blocks** - Organize tests by behavior and context
-- **Use beforeEach for fixtures** - Set up data in the appropriate scope
-- **Test behavior, not implementation** - Focus on what the user sees
-- **Prefer full integration tests** - Test through HTTP, not individual functions
-- **Make tests readable** - Tests should read like specifications
-
-See `src/routes/character.test.ts` for a comprehensive example.
-
-## Reed Evals
-
-`evals/` holds an eval suite for Reed, the chat assistant. Each case builds a fixture character, plays scripted player messages through the real chat code (`prepareChatRequest`, `executeChatRequest`, `advanceToolCalls`) against the live model, auto-approves every edit, and checks the character afterwards and Reed's reply. Trials commit their writes, as prod does (inside one transaction every row would share a `CURRENT_TIMESTAMP`), so the runner only runs against a `*_test` database. `mise run eval` recreates its own (`csheet_dev_eval_test`), so it can run alongside `mise run test`.
-
-```bash
-mise run eval                                       # all cases, 3 trials, default model
-mise run eval --model claude-haiku-5-5 --trials 5
-mise run eval --case spells-  --category rules      # filter by id substring or category
-```
-
-- It calls the Anthropic API, so it isn't part of `mise run test` or CI
-- Cases live in `evals/cases/`, grouped by category; checks in `evals/checks.ts`
-- `expect` decides pass/fail; `grounding` (did Reed look it up?) and link validity are reported separately
-- Results are saved as JSON in `evals/results/` (gitignored)
-- Base new cases on real failures, but keep player data out: paraphrase messages and rebuild the character with `makeCharacter`
+Bun, not Node: `bun <file>`, `bun install`, `Bun.sql`, `Bun.file`, `Bun.$`; but tests through
+`mise run test`, never bare `bun test`. No `pg`, `ioredis`, `ws`, `dotenv`, `execa`. Lint rules: no
+`*` imports, `import type` for types, `logger` from `src/lib/logger.ts` instead of `console`.
+Secrets are in `mise.local.toml`, not `.env`.
+
+## Docs
+
+Read the one for the area you're changing before you start:
+
+- [docs/architecture.md](docs/architecture.md): layers, what imports what, request flow, config.
+- [docs/data-model.md](docs/data-model.md): the character tables (ledger vs state), what is
+  stored vs computed, `computeCharacter`, rulesets vs catalogs, migrations. Before any schema change.
+- [docs/write-path.md](docs/write-path.md): the shape of a service, validation and `is_check`,
+  transactions and locking, authorization, exposing a service as a Reed tool. Before any new write.
+- [docs/htmx-ui.md](docs/htmx-ui.md): panels, the detail modal, `ModalForm`, OOB swaps, history
+  modals, the hygiene checklist. Before any component or route that renders.
+- [docs/reed.md](docs/reed.md): chat storage, the tool-call loop, approvals, evals.
+- [docs/testing.md](docs/testing.md): `useTestApp`, factories, HTTP helpers, what to test.
+- [docs/deploy.md](docs/deploy.md): releases, backfills, production access, CI.
+- [docs/agentic-workflow.md](docs/agentic-workflow.md): design checkpoint, report format, review
+  checklist, repo mechanics, parallel workspaces. Read it once at the start of any task.
+- [docs/plans/](docs/plans/): dated plans for changes that are decided but not made, each tied to
+  issues. Check the latest before building near the write path, `computeCharacter`, or the panel
+  re-render code.
+
+## Rules
+
+Each rule has a reason; if the reason doesn't apply to your task, raise it, don't work around it.
+
+1. **Everything a character gains or chooses is written to its history table when it happens**
+   (creation, level-up, import). Existing characters get a one-off backfill script in `utils/`.
+   Never derive grants from ruleset data at read time; pure formulas and tables (proficiency bonus,
+   slot tables, hit die size) are computed. *The sheet must survive ruleset changes, and the history
+   is the product.*
+2. **Nothing writes to the database on a read path.** `computeCharacter`, `authorize*`, history
+   routes and read-only tools only read. *Reads run before authorization and concurrently.*
+3. **History tables are ledgers by default**: append-only, folded in `id` order, never `UPDATE`d.
+   State tables are the documented exceptions. *Undo and audit depend on it.*
+4. **Writes go through one service** taking `(db, char, formData)` and returning a `ServiceResult`;
+   forms and Reed's tools share it. Multi-row writes run in `beginOrSavepoint`; writes that depend on
+   current values use `withLockedCharacter`. *One validation path; no races between Reed and the
+   sheet.*
+5. **Everything rules-related is keyed by the character's ruleset.** Catalog ids are stable forever;
+   remap with a migration if one must change. *Characters reference them.*
+6. **Routes authorize first**, with `authorizeCharacter`/`authorizeCharacterView`, then call a
+   service, then render. No business logic in routes or components.
+7. **Tests are integration tests through HTTP**, using `useTestApp`, factories and the HTTP helpers.
+8. **One-off scripts stay simple**: idempotent, a log line per character, `--prod`; no locks or
+   dry-run flags.
+9. **Follow-ups become GitHub issues**, not TODOs or notes in a report. Rules-coverage work goes
+   under #114.
+10. **Stop and write a plan** before a new table or column, a new shared helper or pattern, a change
+    to a shared helper, or a deviation from these docs. See the design checkpoint in
+    [docs/agentic-workflow.md](docs/agentic-workflow.md).
+11. **Procedures become mise tasks.** If you would write steps for someone to follow (set up a
+    workspace, run a backfill, regenerate a catalog), write a task in `mise.toml` instead, with the
+    script in `bin/` or `utils/` if it is long, and document the task name. *A task runs the same way
+    every time; a procedure is followed differently by every reader, and the doc rots.*
+
+## Repo
+
+Git, hosted on GitHub. `main` is protected: a PR with green Lint and Test, linear history, merged by
+fast-forwarding `main` to the PR's commits rather than GitHub's merge button. Commit subjects are
+`area: what changed` in the imperative; the body says why, for a human. Push and open PRs only when
+asked. Other agents may be working in sibling workspaces on this machine with their own ports and
+databases: browse your server at `127.0.0.1:<port>`, and don't stop processes you didn't start. The
+maintainer's checkouts are jj workspaces; if `jj root` succeeds in yours, the `csheet-jj` skill in
+`.claude/skills/` covers what that changes (gh without `.git`, pushing, workspaces).
